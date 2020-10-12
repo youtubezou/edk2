@@ -1,50 +1,29 @@
-/*++
+/** @file
+  Function that deletes a file.
 
 Copyright (c) 2005 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
-Module Name:
-
-  delete.c
-
-Abstract:
-
-  Function that deletes a file
-
-Revision History
-
---*/
+**/
 
 #include "Fat.h"
 
+/**
+
+  Deletes the file & Closes the file handle.
+
+  @param  FHand                    - Handle to the file to delete.
+
+  @retval EFI_SUCCESS              - Delete the file successfully.
+  @retval EFI_WARN_DELETE_FAILURE  - Fail to delete the file.
+
+**/
 EFI_STATUS
 EFIAPI
 FatDelete (
   IN EFI_FILE_PROTOCOL  *FHand
   )
-/*++
-
-Routine Description:
-
-  Deletes the file & Closes the file handle.
-
-Arguments:
-
-  FHand                    - Handle to the file to delete.
-
-Returns:
-
-  EFI_SUCCESS              - Delete the file successfully.
-  EFI_WARN_DELETE_FAILURE  - Fail to delete the file.
-
---*/
 {
   FAT_IFILE   *IFile;
   FAT_OFILE   *OFile;
@@ -77,7 +56,7 @@ Returns:
     goto Done;
   }
   //
-  // If the file has a permanant error, skip the delete
+  // If the file has a permanent error, skip the delete
   //
   Status = OFile->Error;
   if (!EFI_ERROR (Status)) {

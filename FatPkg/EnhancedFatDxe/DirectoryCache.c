@@ -1,49 +1,26 @@
-/*++
+/** @file
+  Functions for directory cache operation.
 
 Copyright (c) 2005, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
-Module Name:
-
-  DirectoryCache.c
-
-Abstract:
-
-  Functions for directory cache operation
-
-Revision History
-
---*/
+**/
 
 #include "Fat.h"
 
+/**
+
+  Free the directory structure and release the memory.
+
+  @param  ODir                  - The directory to be freed.
+
+**/
 STATIC
 VOID
 FatFreeODir (
   IN FAT_ODIR    *ODir
   )
-/*++
-
-Routine Description:
-
-  Free the directory structure and release the memory.
-
-Arguments:
-
-  ODir                  - The directory to be freed.
-
-Returns:
-
-  None.
-
---*/
 {
   FAT_DIRENT  *DirEnt;
 
@@ -63,26 +40,18 @@ Returns:
   FreePool (ODir);
 }
 
+/**
+
+  Allocate the directory structure.
+
+  @param  OFile                   - The corresponding OFile.
+
+**/
 STATIC
 FAT_ODIR *
 FatAllocateODir (
   IN FAT_OFILE   *OFile
   )
-/*++
-
-Routine Description:
-
-  Allocate the directory structure.
-
-Arguments:
-
-  OFile                   - The corresponding OFile.
-
-Returns:
-
-  None.
-
---*/
 {
   FAT_ODIR  *ODir;
 
@@ -99,26 +68,18 @@ Returns:
   return ODir;
 }
 
-VOID
-FatDiscardODir (
-  IN FAT_OFILE    *OFile
-  )
-/*++
-
-Routine Description:
+/**
 
   Discard the directory structure when an OFile will be freed.
   Volume will cache this directory if the OFile does not represent a deleted file.
 
-Arguments:
+  @param  OFile                 - The OFile whose directory structure is to be discarded.
 
-  OFile                 - The OFile whose directory structure is to be discarded.
-
-Returns:
-
-  None.
-
---*/
+**/
+VOID
+FatDiscardODir (
+  IN FAT_OFILE    *OFile
+  )
 {
   FAT_ODIR    *ODir;
   FAT_VOLUME  *Volume;
@@ -154,27 +115,20 @@ Returns:
   }
 }
 
-VOID
-FatRequestODir (
-  IN FAT_OFILE    *OFile
-  )
-/*++
+/**
 
-Routine Description:
 
   Request the directory structure when an OFile is newly generated.
   If the directory structure is cached by volume, then just return this directory;
   Otherwise, allocate a new one for OFile.
 
-Arguments:
+  @param  OFile                 - The OFile which requests directory structure.
 
-  OFile                 - The OFile which requests directory structure.
-
-Returns:
-
-  None.
-
---*/
+**/
+VOID
+FatRequestODir (
+  IN FAT_OFILE    *OFile
+  )
 {
   UINTN           DirCacheTag;
   FAT_VOLUME      *Volume;
@@ -208,25 +162,17 @@ Returns:
   OFile->ODir = ODir;
 }
 
+/**
+
+  Clean up all the cached directory structures when the volume is going to be abandoned.
+
+  @param  Volume                - FAT file system volume.
+
+**/
 VOID
 FatCleanupODirCache (
   IN FAT_VOLUME         *Volume
   )
-/*++
-
-Routine Description:
-
-  Clean up all the cached directory structures when the volume is going to be abandoned.
-
-Arguments:
-
-  Volume                - FAT file system volume.
-
-Returns:
-
-  None.
-
---*/
 {
   FAT_ODIR  *ODir;
   while (Volume->DirCacheCount > 0) {

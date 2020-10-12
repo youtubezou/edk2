@@ -1,19 +1,14 @@
 /** @file
   CPU Exception Library provides PEI/DXE/SMM CPU common exception handler.
 
-Copyright (c) 2012 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "CpuExceptionCommon.h"
 #include <Library/DebugLib.h>
+#include <Library/VmgExitLib.h>
+#include "CpuExceptionCommon.h"
 
 /**
   Internal worker function for common exception handler.
@@ -24,7 +19,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 CommonExceptionHandlerWorker (
-  IN EFI_EXCEPTION_TYPE          ExceptionType, 
+  IN EFI_EXCEPTION_TYPE          ExceptionType,
   IN EFI_SYSTEM_CONTEXT          SystemContext,
   IN EXCEPTION_HANDLER_DATA      *ExceptionHandlerData
   )
@@ -33,6 +28,23 @@ CommonExceptionHandlerWorker (
   RESERVED_VECTORS_DATA          *ReservedVectors;
   EFI_CPU_INTERRUPT_HANDLER      *ExternalInterruptHandler;
 
+  if (ExceptionType == VC_EXCEPTION) {
+    EFI_STATUS  Status;
+    //
+    // #VC needs to be handled immediately upon enabling exception handling
+    // and therefore can't use the RegisterCpuInterruptHandler() interface.
+    //
+    // Handle the #VC:
+    //   On EFI_SUCCESS - Exception has been handled, return
+    //   On other       - ExceptionType contains (possibly new) exception
+    //                    value
+    //
+    Status = VmgExitHandleVc (&ExceptionType, SystemContext);
+    if (!EFI_ERROR (Status)) {
+      return;
+    }
+  }
+
   ExceptionHandlerContext  = (EXCEPTION_HANDLER_CONTEXT *) (UINTN) (SystemContext.SystemContextIa32);
   ReservedVectors          = ExceptionHandlerData->ReservedVectors;
   ExternalInterruptHandler = ExceptionHandlerData->ExternalInterruptHandler;
@@ -40,7 +52,8 @@ CommonExceptionHandlerWorker (
   switch (ReservedVectors[ExceptionType].Attribute) {
   case EFI_VECTOR_HANDOFF_HOOK_BEFORE:
     //
-    // Need to jmp to old IDT handler after this exception handler
+    // The new exception handler registered by RegisterCpuInterruptHandler() is executed BEFORE original handler.
+    // Save the original handler to stack so the assembly code can jump to it instead of returning from handler.
     //
     ExceptionHandlerContext->ExceptionDataFlag = (mErrorCodeFlag & (1 << ExceptionType)) ? TRUE : FALSE;
     ExceptionHandlerContext->OldIdtHandler     = ReservedVectors[ExceptionType].ExceptonHandler;
@@ -48,29 +61,32 @@ CommonExceptionHandlerWorker (
   case EFI_VECTOR_HANDOFF_HOOK_AFTER:
     while (TRUE) {
       //
-      // If if anyone has gotten SPIN_LOCK for owner running hook after
+      // If spin-lock can be acquired, it's the first time entering here.
       //
       if (AcquireSpinLockOrFail (&ReservedVectors[ExceptionType].SpinLock)) {
         //
-        // Need to execute old IDT handler before running this exception handler
+        // The new exception handler registered by RegisterCpuInterruptHandler() is executed AFTER original handler.
+        // Save the original handler to stack but skip running the new handler so the original handler is executed
+        // firstly.
         //
         ReservedVectors[ExceptionType].ApicId = GetApicId ();
-        ArchSaveExceptionContext (ExceptionType, SystemContext);
+        ArchSaveExceptionContext (ExceptionType, SystemContext, ExceptionHandlerData);
         ExceptionHandlerContext->ExceptionDataFlag = (mErrorCodeFlag & (1 << ExceptionType)) ? TRUE : FALSE;
         ExceptionHandlerContext->OldIdtHandler     = ReservedVectors[ExceptionType].ExceptonHandler;
         return;
       }
       //
-      // If failed to acquire SPIN_LOCK, check if it was locked by processor itself
+      // If spin-lock cannot be acquired, it's the second time entering here.
+      // 'break' instead of 'return' is used so the new exception handler can be executed.
       //
       if (ReservedVectors[ExceptionType].ApicId == GetApicId ()) {
         //
         // Old IDT handler has been executed, then restore CPU exception content to
         // run new exception handler.
         //
-        ArchRestoreExceptionContext (ExceptionType, SystemContext);
+        ArchRestoreExceptionContext (ExceptionType, SystemContext, ExceptionHandlerData);
         //
-        // Rlease spin lock for ApicId
+        // Release spin lock for ApicId
         //
         ReleaseSpinLock (&ReservedVectors[ExceptionType].SpinLock);
         break;
@@ -87,7 +103,7 @@ CommonExceptionHandlerWorker (
     CpuDeadLoop ();
     break;
   }
-  
+
   if (ExternalInterruptHandler != NULL &&
       ExternalInterruptHandler[ExceptionType] != NULL) {
     (ExternalInterruptHandler[ExceptionType]) (ExceptionType, SystemContext);
@@ -99,9 +115,13 @@ CommonExceptionHandlerWorker (
       CpuPause ();
     }
     //
+    // Initialize the serial port before dumping.
+    //
+    SerialPortInitialize ();
+    //
     // Display ExceptionType, CPU information and Image information
-    //  
-    DumpCpuContent (ExceptionType, SystemContext);
+    //
+    DumpImageAndCpuContent (ExceptionType, SystemContext);
     //
     // Release Spinlock of output message
     //
@@ -192,8 +212,8 @@ UpdateIdtTable (
 
   @param[in]      VectorInfo            Pointer to reserved vector list.
   @param[in, out] ExceptionHandlerData  Pointer to exception handler data.
-  
-  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized 
+
+  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized
                                 with default exception handlers.
   @retval EFI_INVALID_PARAMETER VectorInfo includes the invalid content if VectorInfo is not NULL.
   @retval EFI_UNSUPPORTED       This function is not supported.
@@ -228,7 +248,7 @@ InitializeCpuExceptionHandlersWorker (
   IdtEntryCount = (IdtDescriptor.Limit + 1) / sizeof (IA32_IDT_GATE_DESCRIPTOR);
   if (IdtEntryCount > CPU_EXCEPTION_NUM) {
     //
-    // CPU exeption library only setup CPU_EXCEPTION_NUM exception handler at most
+    // CPU exception library only setup CPU_EXCEPTION_NUM exception handler at most
     //
     IdtEntryCount = CPU_EXCEPTION_NUM;
   }

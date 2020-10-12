@@ -1,14 +1,8 @@
 /** @file
 The tool dumps the contents of a firmware volume
 
-Copyright (c) 1999 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 1999 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -148,6 +142,65 @@ Usage (
   VOID
   );
 
+UINT32
+UnicodeStrLen (
+  IN CHAR16 *String
+  )
+  /*++
+
+  Routine Description:
+
+  Returns the length of a null-terminated unicode string.
+
+  Arguments:
+
+    String - The pointer to a null-terminated unicode string.
+
+  Returns:
+
+    N/A
+
+  --*/
+{
+  UINT32  Length;
+
+  for (Length = 0; *String != L'\0'; String++, Length++) {
+    ;
+  }
+  return Length;
+}
+
+VOID
+Unicode2AsciiString (
+  IN  CHAR16 *Source,
+  OUT CHAR8  *Destination
+  )
+  /*++
+
+  Routine Description:
+
+  Convert a null-terminated unicode string to a null-terminated ascii string.
+
+  Arguments:
+
+    Source      - The pointer to the null-terminated input unicode string.
+    Destination - The pointer to the null-terminated output ascii string.
+
+  Returns:
+
+    N/A
+
+  --*/
+{
+  while (*Source != '\0') {
+    *(Destination++) = (CHAR8) *(Source++);
+  }
+  //
+  // End the ascii with a NULL.
+  //
+  *Destination = '\0';
+}
+
 int
 main (
   int       argc,
@@ -258,13 +311,28 @@ Returns:
       continue;
     }
     if ((stricmp (argv[0], "--hash") == 0)) {
+      if (EnableHash == TRUE) {
+        //
+        // --hash already given in the option, ignore this one
+        //
+        argc --;
+        argv ++;
+        continue;
+      }
       EnableHash = TRUE;
       OpenSslCommand = "openssl";
       OpenSslEnv = getenv("OPENSSL_PATH");
       if (OpenSslEnv == NULL) {
         OpenSslPath = OpenSslCommand;
       } else {
-        OpenSslPath = malloc(strlen(OpenSslEnv)+strlen(OpenSslCommand)+1);
+        //
+        // We add quotes to the Openssl Path in case it has space characters
+        //
+        OpenSslPath = malloc(2+strlen(OpenSslEnv)+strlen(OpenSslCommand)+1);
+        if (OpenSslPath == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return GetUtilityStatus ();
+        }
         CombinePath(OpenSslEnv, OpenSslCommand, OpenSslPath);
       }
       if (OpenSslPath == NULL){
@@ -467,16 +535,16 @@ GetOccupiedSize (
 
 Routine Description:
 
-  This function returns the next larger size that meets the alignment 
+  This function returns the next larger size that meets the alignment
   requirement specified.
 
 Arguments:
 
   ActualSize      The size.
   Alignment       The desired alignment.
-    
+
 Returns:
- 
+
   EFI_SUCCESS             Function completed successfully.
   EFI_ABORTED             The function encountered an error.
 
@@ -526,7 +594,7 @@ Returns:
     //
     // 0x02
     //
-    "EFI_SECTION_GUID_DEFINED",    
+    "EFI_SECTION_GUID_DEFINED",
     //
     // 0x03
     //
@@ -590,11 +658,11 @@ Returns:
     //
     // 0x12
     //
-    "EFI_SECTION_TE",    
+    "EFI_SECTION_TE",
     //
     // 0x13
     //
-    "EFI_SECTION_DXE_DEPEX", 
+    "EFI_SECTION_DXE_DEPEX",
     //
     // 0x14
     //
@@ -661,7 +729,7 @@ ReadHeader (
 
 Routine Description:
 
-  This function determines the size of the FV and the erase polarity.  The 
+  This function determines the size of the FV and the erase polarity.  The
   erase polarity is the FALSE value for file state.
 
 Arguments:
@@ -669,9 +737,9 @@ Arguments:
   InputFile       The file that contains the FV image.
   FvSize          The size of the FV.
   ErasePolarity   The FV erase polarity.
-    
+
 Returns:
- 
+
   EFI_SUCCESS             Function completed successfully.
   EFI_INVALID_PARAMETER   A required parameter was NULL or is out of range.
   EFI_ABORTED             The function encountered an error.
@@ -683,6 +751,7 @@ Returns:
   UINTN                       Signature[2];
   UINTN                       BytesRead;
   UINT32                      Size;
+  size_t                      ReadSize;
 
   BytesRead = 0;
   Size      = 0;
@@ -696,7 +765,10 @@ Returns:
   //
   // Read the header
   //
-  fread (&VolumeHeader, sizeof (EFI_FIRMWARE_VOLUME_HEADER) - sizeof (EFI_FV_BLOCK_MAP_ENTRY), 1, InputFile);
+  ReadSize = fread (&VolumeHeader, sizeof (EFI_FIRMWARE_VOLUME_HEADER) - sizeof (EFI_FV_BLOCK_MAP_ENTRY), 1, InputFile);
+  if (ReadSize != 1) {
+    return EFI_ABORTED;
+  }
   BytesRead     = sizeof (EFI_FIRMWARE_VOLUME_HEADER) - sizeof (EFI_FV_BLOCK_MAP_ENTRY);
   Signature[0]  = VolumeHeader.Signature;
   Signature[1]  = 0;
@@ -820,7 +892,7 @@ Returns:
   if (VolumeHeader.Attributes & EFI_FVB2_ALIGNMENT_64K) {
     printf ("        EFI_FVB2_ALIGNMENT_64K\n");
   }
-  
+
 #else
 
   if (VolumeHeader.Attributes & EFI_FVB2_READ_LOCK_CAP) {
@@ -985,7 +1057,10 @@ Returns:
   printf ("Revision:              0x%04X\n", VolumeHeader.Revision);
 
   do {
-    fread (&BlockMap, sizeof (EFI_FV_BLOCK_MAP_ENTRY), 1, InputFile);
+    ReadSize = fread (&BlockMap, sizeof (EFI_FV_BLOCK_MAP_ENTRY), 1, InputFile);
+    if (ReadSize != 1) {
+      return EFI_ABORTED;
+    }
     BytesRead += sizeof (EFI_FV_BLOCK_MAP_ENTRY);
 
     if (BlockMap.NumBlocks != 0) {
@@ -1002,7 +1077,7 @@ Returns:
   }
 
   if (VolumeHeader.FvLength != Size) {
-    printf ("ERROR: Volume Size not consistant with Block Maps!\n");
+    printf ("ERROR: Volume Size not consistent with Block Maps!\n");
     return EFI_ABORTED;
   }
 
@@ -1049,7 +1124,7 @@ Returns:
   EFI_STATUS          Status;
   UINT8               GuidBuffer[PRINTED_GUID_BUFFER_SIZE];
   UINT32              HeaderSize;
-#if (PI_SPECIFICATION_VERSION < 0x00010000) 
+#if (PI_SPECIFICATION_VERSION < 0x00010000)
   UINT16              *Tail;
 #endif
   //
@@ -1151,7 +1226,7 @@ Returns:
         return EFI_ABORTED;
       }
     }
-#if (PI_SPECIFICATION_VERSION < 0x00010000)    
+#if (PI_SPECIFICATION_VERSION < 0x00010000)
     //
     // Verify tail if present
     //
@@ -1166,7 +1241,7 @@ Returns:
         return EFI_ABORTED;
       }
     }
- #endif   
+ #endif
     break;
 
   default:
@@ -1228,6 +1303,14 @@ Returns:
 
   case EFI_FV_FILETYPE_SMM_CORE:
     printf ("EFI_FV_FILETYPE_SMM_CORE\n");
+    break;
+
+  case EFI_FV_FILETYPE_MM_STANDALONE:
+    printf ("EFI_FV_FILETYPE_MM_STANDALONE\n");
+    break;
+
+  case EFI_FV_FILETYPE_MM_CORE_STANDALONE:
+    printf ("EFI_FV_FILETYPE_MM_CORE_STANDALONE\n");
     break;
 
   case EFI_FV_FILETYPE_FFS_PAD:
@@ -1491,7 +1574,7 @@ Returns:
   //
   // Update Image Base Address
   //
-  if ((ImgHdr->Pe32.OptionalHeader.Magic == EFI_IMAGE_NT_OPTIONAL_HDR32_MAGIC) && (ImgHdr->Pe32.FileHeader.Machine != IMAGE_FILE_MACHINE_IA64)) {
+  if (ImgHdr->Pe32.OptionalHeader.Magic == EFI_IMAGE_NT_OPTIONAL_HDR32_MAGIC) {
     ImgHdr->Pe32.OptionalHeader.ImageBase = (UINT32) NewPe32BaseAddress;
   } else if (ImgHdr->Pe32Plus.OptionalHeader.Magic == EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
     ImgHdr->Pe32Plus.OptionalHeader.ImageBase = NewPe32BaseAddress;
@@ -1519,10 +1602,13 @@ CombinePath (
 )
 {
   UINT32 DefaultPathLen;
+  UINT64 Index;
+  CHAR8  QuotesStr[] = "\"";
+  strcpy(NewPath, QuotesStr);
   DefaultPathLen = strlen(DefaultPath);
-  strcpy(NewPath, DefaultPath);
-  UINT64 Index = 0;
-  for (; Index < DefaultPathLen; Index ++) {
+  strcat(NewPath, DefaultPath);
+  Index = 0;
+  for (; Index < DefaultPathLen + 1; Index ++) {
     if (NewPath[Index] == '\\' || NewPath[Index] == '/') {
       if (NewPath[Index + 1] != '\0') {
         NewPath[Index] = '/';
@@ -1534,6 +1620,7 @@ CombinePath (
     NewPath[Index + 1] = '\0';
   }
   strcat(NewPath, AppendPath);
+  strcat(NewPath, QuotesStr);
   return EFI_SUCCESS;
 }
 
@@ -1557,7 +1644,7 @@ Returns:
 
   EFI_SECTION_ERROR - Problem with section parsing.
                       (a) compression errors
-                      (b) unrecognized section 
+                      (b) unrecognized section
   EFI_UNSUPPORTED - Do not know how to parse the section.
   EFI_SUCCESS - Section successfully parsed.
   EFI_OUT_OF_RESOURCES - Memory allocation failed.
@@ -1587,7 +1674,6 @@ Returns:
   CHAR8               *ExtractionTool;
   CHAR8               *ToolInputFile;
   CHAR8               *ToolOutputFile;
-  CHAR8               *SystemCommandFormatString;
   CHAR8               *SystemCommand;
   EFI_GUID            *EfiGuid;
   UINT16              DataOffset;
@@ -1595,6 +1681,7 @@ Returns:
   UINT32              RealHdrLen;
   CHAR8               *ToolInputFileName;
   CHAR8               *ToolOutputFileName;
+  CHAR8               *UIFileName;
 
   ParsedLength = 0;
   ToolInputFileName = NULL;
@@ -1623,9 +1710,11 @@ Returns:
     SectionHeaderLen = GetSectionHeaderLength((EFI_COMMON_SECTION_HEADER *)Ptr);
 
     SectionName = SectionNameToStr (Type);
-    printf ("------------------------------------------------------------\n");
-    printf ("  Type:  %s\n  Size:  0x%08X\n", SectionName, (unsigned) SectionLength);
-    free (SectionName);
+    if (SectionName != NULL) {
+      printf ("------------------------------------------------------------\n");
+      printf ("  Type:  %s\n  Size:  0x%08X\n", SectionName, (unsigned) SectionLength);
+      free (SectionName);
+    }
 
     switch (Type) {
     case EFI_SECTION_RAW:
@@ -1645,17 +1734,20 @@ Returns:
           SectionLength - SectionHeaderLen
           );
 
-        SystemCommandFormatString = "%s sha1 -out %s %s";
         SystemCommand = malloc (
-          strlen (SystemCommandFormatString) +
+          strlen (OPENSSL_COMMAND_FORMAT_STRING) +
           strlen (OpenSslPath) +
           strlen (ToolInputFileName) +
           strlen (ToolOutputFileName) +
           1
           );
+        if (SystemCommand == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         sprintf (
           SystemCommand,
-          SystemCommandFormatString,
+          OPENSSL_COMMAND_FORMAT_STRING,
           OpenSslPath,
           ToolOutputFileName,
           ToolInputFileName
@@ -1678,12 +1770,18 @@ Returns:
             nFileLen = ftell(fp);
             fseek(fp,0,SEEK_SET);
             StrLine = malloc(nFileLen);
+            if (StrLine == NULL) {
+              fclose(fp);
+              free (SystemCommand);
+              Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+              return EFI_OUT_OF_RESOURCES;
+            }
             fgets(StrLine, nFileLen, fp);
             NewStr = strrchr (StrLine, '=');
             printf ("  SHA1: %s\n", NewStr + 1);
             free (StrLine);
+            fclose(fp);
           }
-          fclose(fp);
         }
         remove(ToolInputFileName);
         remove(ToolOutputFileName);
@@ -1692,7 +1790,14 @@ Returns:
       break;
 
     case EFI_SECTION_USER_INTERFACE:
-      printf ("  String: %ls\n", (CHAR16 *) &((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString);
+      UIFileName = (CHAR8 *) malloc (UnicodeStrLen (((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString) + 1);
+      if (UIFileName == NULL) {
+        Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+        return EFI_OUT_OF_RESOURCES;
+      }
+      Unicode2AsciiString (((EFI_USER_INTERFACE_SECTION *) Ptr)->FileNameString, UIFileName);
+      printf ("  String: %s\n", UIFileName);
+      free (UIFileName);
       break;
 
     case EFI_SECTION_FIRMWARE_VOLUME_IMAGE:
@@ -1768,8 +1873,14 @@ Returns:
         }
 
         ScratchBuffer       = malloc (ScratchSize);
+        if (ScratchBuffer == NULL) {
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         UncompressedBuffer  = malloc (UncompressedLength);
-        if ((ScratchBuffer == NULL) || (UncompressedBuffer == NULL)) {
+        if (UncompressedBuffer == NULL) {
+          free (ScratchBuffer);
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
           return EFI_OUT_OF_RESOURCES;
         }
         Status = DecompressFunction (
@@ -1845,20 +1956,40 @@ Returns:
         close(fd2);
        #endif
 
+        if ((ToolInputFile == NULL) || (ToolOutputFile == NULL)) {
+          if (ToolInputFile != NULL) {
+            free (ToolInputFile);
+          }
+          if (ToolOutputFile != NULL) {
+            free (ToolOutputFile);
+          }
+          free (ExtractionTool);
+
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
+
         //
         // Construction 'system' command string
         //
-        SystemCommandFormatString = "%s -d -o %s %s";
         SystemCommand = malloc (
-          strlen (SystemCommandFormatString) +
+          strlen (EXTRACT_COMMAND_FORMAT_STRING) +
           strlen (ExtractionTool) +
           strlen (ToolInputFile) +
           strlen (ToolOutputFile) +
           1
           );
+        if (SystemCommand == NULL) {
+          free (ToolInputFile);
+          free (ToolOutputFile);
+          free (ExtractionTool);
+
+          Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+          return EFI_OUT_OF_RESOURCES;
+        }
         sprintf (
           SystemCommand,
-          SystemCommandFormatString,
+          EXTRACT_COMMAND_FORMAT_STRING,
           ExtractionTool,
           ToolOutputFile,
           ToolInputFile
@@ -1884,6 +2015,7 @@ Returns:
             );
         remove (ToolOutputFile);
         free (ToolOutputFile);
+        free (SystemCommand);
         if (EFI_ERROR (Status)) {
           Error (NULL, 0, 0004, "unable to read decoded GUIDED section", NULL);
           return EFI_SECTION_ERROR;
@@ -2126,6 +2258,7 @@ Returns:
 {
   FILE              *Fptr;
   CHAR8             Line[MAX_LINE_LEN];
+  CHAR8             FormatString[MAX_LINE_LEN];
   GUID_TO_BASENAME  *GPtr;
 
   if ((Fptr = fopen (LongFilePath (FileName), "r")) == NULL) {
@@ -2133,17 +2266,28 @@ Returns:
     return EFI_DEVICE_ERROR;
   }
 
+  //
+  // Generate the format string for fscanf
+  //
+  sprintf (
+    FormatString,
+    "%%%us %%%us",
+    (unsigned) sizeof (GPtr->Guid) - 1,
+    (unsigned) sizeof (GPtr->BaseName) - 1
+    );
+
   while (fgets (Line, sizeof (Line), Fptr) != NULL) {
     //
     // Allocate space for another guid/basename element
     //
     GPtr = malloc (sizeof (GUID_TO_BASENAME));
     if (GPtr == NULL) {
+      fclose (Fptr);
       return EFI_OUT_OF_RESOURCES;
     }
 
     memset ((char *) GPtr, 0, sizeof (GUID_TO_BASENAME));
-    if (sscanf (Line, "%s %s", GPtr->Guid, GPtr->BaseName) == 2) {
+    if (sscanf (Line, FormatString, GPtr->Guid, GPtr->BaseName) == 2) {
       GPtr->Next        = mGuidBaseNameList;
       mGuidBaseNameList = GPtr;
     } else {
@@ -2249,8 +2393,8 @@ Returns:
 
   //
   // Copyright declaration
-  // 
-  fprintf (stdout, "Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.\n\n");
+  //
+  fprintf (stdout, "Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.\n\n");
   fprintf (stdout, "  Display Tiano Firmware Volume FFS image information\n\n");
 
   //

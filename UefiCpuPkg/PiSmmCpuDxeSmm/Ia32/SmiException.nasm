@@ -1,12 +1,6 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -19,11 +13,12 @@
 ;-------------------------------------------------------------------------------
 
 extern  ASM_PFX(FeaturePcdGet (PcdCpuSmmProfileEnable))
-extern  ASM_PFX(gSmiMtrrs)
 extern  ASM_PFX(SmiPFHandler)
+extern  ASM_PFX(mSetupDebugTrap)
 
 global  ASM_PFX(gcSmiIdtr)
 global  ASM_PFX(gcSmiGdtr)
+global  ASM_PFX(gTaskGateDescriptor)
 global  ASM_PFX(gcPsd)
 
     SECTION .data
@@ -88,7 +83,7 @@ TssSeg:
             DB      0x80                ; LimitHigh
             DB      0                   ; BaseHigh
 ExceptionTssSeg:
-            DW      TSS_DESC_SIZE       ; LimitLow
+            DW      EXCEPTION_TSS_DESC_SIZE       ; LimitLow
             DW      0                   ; BaseLow
             DB      0                   ; BaseMid
             DB      0x89
@@ -222,6 +217,8 @@ ExceptionTssDescriptor:
             DW      0                   ; Reserved
             DW      0                   ; T
             DW      0                   ; I/O Map Base
+            DD      0                   ; SSP
+EXCEPTION_TSS_DESC_SIZE equ $ - ExceptionTssDescriptor
 
 ASM_PFX(gcPsd):
             DB      'PSDSIG  '
@@ -242,7 +239,7 @@ ASM_PFX(gcPsd):
             DD      0
             times   24 DB 0
             DD      0
-            DD      ASM_PFX(gSmiMtrrs)
+            DD      0
 PSD_SIZE  equ $ - ASM_PFX(gcPsd)
 
 ASM_PFX(gcSmiGdtr):
@@ -250,21 +247,10 @@ ASM_PFX(gcSmiGdtr):
     DD      NullSeg
 
 ASM_PFX(gcSmiIdtr):
-    DW      IDT_SIZE - 1
-    DD      _SmiIDT
+    DW      0
+    DD      0
 
-_SmiIDT:
-%rep 32
-    DW      0                           ; Offset 0:15
-    DW      CODE_SEL                    ; Segment selector
-    DB      0                           ; Unused
-    DB      0x8e                         ; Interrupt Gate, Present
-    DW      0                           ; Offset 16:31
-%endrep
-
-IDT_SIZE equ $ - _SmiIDT
-
-TaskGateDescriptor:
+ASM_PFX(gTaskGateDescriptor):
     DW      0                           ; Reserved
     DW      EXCEPTION_TSS_SEL           ; TSS Segment selector
     DB      0                           ; Reserved
@@ -393,7 +379,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     sub     esp, 512
     mov     edi, esp
-    db      0xf, 0xae, 0x7 ;fxsave [edi]
+    fxsave  [edi]
 
 ; UEFI calling convention for IA32 requires that Direction flag in EFLAGs is clear
     cld
@@ -421,7 +407,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     mov     esi, esp
-    db      0xf, 0xae, 0xe ; fxrstor [esi]
+    fxrstor [esi]
     add     esp, 512
 
 ;; UINT32  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
@@ -593,7 +579,7 @@ PFHandlerEntry:
     clts
     sub     esp, 512
     mov     edi, esp
-    db      0xf, 0xae, 0x7 ;fxsave [edi]
+    fxsave  [edi]
 
 ; UEFI calling convention for IA32 requires that Direction flag in EFLAGs is clear
     cld
@@ -623,7 +609,7 @@ PFHandlerEntry:
 
 ;; FX_SAVE_STATE_IA32 FxSaveState;
     mov     esi, esp
-    db      0xf, 0xae, 0xe ; fxrstor [esi]
+    fxrstor [esi]
     add     esp, 512
 
 ;; UINT32  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
@@ -684,7 +670,7 @@ o16 mov     [ecx + IA32_TSS._SS], ax
     mov     esp, ebp
 
 ; Set single step DB# if SMM profile is enabled and page fault exception happens
-    cmp     byte [dword ASM_PFX(FeaturePcdGet (PcdCpuSmmProfileEnable))], 0
+    cmp     byte [dword ASM_PFX(mSetupDebugTrap)], 0
     jz      @Done2
 
 ; Create return context for iretd in stub function
@@ -717,19 +703,3 @@ ASM_PFX(PageFaultStubFunction):
     clts
     iretd
 
-global ASM_PFX(InitializeIDTSmmStackGuard)
-ASM_PFX(InitializeIDTSmmStackGuard):
-    push    ebx
-;
-; If SMM Stack Guard feature is enabled, the Page Fault Exception entry in IDT
-; is a Task Gate Descriptor so that when a Page Fault Exception occurrs,
-; the processors can use a known good stack in case stack is ran out.
-;
-    lea     ebx, [_SmiIDT + 14 * 8]
-    lea     edx, [TaskGateDescriptor]
-    mov     eax, [edx]
-    mov     [ebx], eax
-    mov     eax, [edx + 4]
-    mov     [ebx + 4], eax
-    pop     ebx
-    ret

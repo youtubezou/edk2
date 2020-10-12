@@ -3,20 +3,17 @@
   This library class defines a set of interfaces to customize Ui module
 
 Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 #include <Uefi.h>
 #include <Protocol/HiiConfigAccess.h>
 #include <Library/BaseLib.h>
 #include <Library/MemoryAllocationLib.h>
+#include "FrontPage.h"
 #include "FrontPageCustomizedUiSupport.h"
+
+extern FRONT_PAGE_CALLBACK_DATA  gFrontPagePrivate;
 
 /**
   Customize menus in the page.
@@ -129,4 +126,14 @@ UiCustomizeFrontPageBanner (
   IN OUT EFI_STRING     *BannerStr
   )
 {
+  if ((LineIndex == 5) && LeftOrRight) {
+    // Update STR_CUSTOMIZE_BANNER_LINE5_LEFT
+    if (PcdGetBool(PcdTestKeyUsed)) {
+      if (BannerStr != NULL) {
+        FreePool(*BannerStr);
+      }
+      *BannerStr = HiiGetString(gFrontPagePrivate.HiiHandle, STRING_TOKEN(STR_TEST_KEY_USED), NULL);
+    }
+  }
+  return;
 }

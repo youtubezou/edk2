@@ -1,22 +1,52 @@
 /** @file
   SMM CPU misc functions for x64 arch specific.
-  
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "PiSmmCpuDxeSmm.h"
 
+EFI_PHYSICAL_ADDRESS                mGdtBuffer;
+UINTN                               mGdtBufferSize;
+
+extern BOOLEAN mCetSupported;
+extern UINTN mSmmShadowStackSize;
+
+X86_ASSEMBLY_PATCH_LABEL mPatchCetPl0Ssp;
+X86_ASSEMBLY_PATCH_LABEL mPatchCetInterruptSsp;
+X86_ASSEMBLY_PATCH_LABEL mPatchCetInterruptSspTable;
+UINT32 mCetPl0Ssp;
+UINT32 mCetInterruptSsp;
+UINT32 mCetInterruptSspTable;
+
+UINTN  mSmmInterruptSspTables;
+
+/**
+  Initialize IDT for SMM Stack Guard.
+
+**/
+VOID
+EFIAPI
+InitializeIDTSmmStackGuard (
+  VOID
+  )
+{
+  IA32_IDT_GATE_DESCRIPTOR  *IdtGate;
+
+  //
+  // If SMM Stack Guard feature is enabled, set the IST field of
+  // the interrupt gate for Page Fault Exception to be 1
+  //
+  IdtGate = (IA32_IDT_GATE_DESCRIPTOR *)gcSmiIdtr.Base;
+  IdtGate += EXCEPT_IA32_PAGE_FAULT;
+  IdtGate->Bits.Reserved_0 = 1;
+}
+
 /**
   Initialize Gdt for all processors.
-  
+
   @param[in]   Cr3          CR3 value.
   @param[out]  GdtStepSize  The step size for GDT table.
 
@@ -41,8 +71,10 @@ InitGdt (
   // on each SMI entry.
   //
   GdtTssTableSize = (gcSmiGdtr.Limit + 1 + TSS_SIZE + 7) & ~7; // 8 bytes aligned
-  GdtTssTables = (UINT8*)AllocatePages (EFI_SIZE_TO_PAGES (GdtTssTableSize * gSmmCpuPrivate->SmmCoreEntryContext.NumberOfCpus));
+  mGdtBufferSize = GdtTssTableSize * gSmmCpuPrivate->SmmCoreEntryContext.NumberOfCpus;
+  GdtTssTables = (UINT8*)AllocateCodePages (EFI_SIZE_TO_PAGES (mGdtBufferSize));
   ASSERT (GdtTssTables != NULL);
+  mGdtBuffer = (UINTN)GdtTssTables;
   GdtTableStepSize = GdtTssTableSize;
 
   for (Index = 0; Index < gSmmCpuPrivate->SmmCoreEntryContext.NumberOfCpus; Index++) {
@@ -68,3 +100,106 @@ InitGdt (
   *GdtStepSize = GdtTableStepSize;
   return GdtTssTables;
 }
+
+/**
+  Get Protected mode code segment from current GDT table.
+
+  @return  Protected mode code segment value.
+**/
+UINT16
+GetProtectedModeCS (
+  VOID
+  )
+{
+  IA32_DESCRIPTOR          GdtrDesc;
+  IA32_SEGMENT_DESCRIPTOR  *GdtEntry;
+  UINTN                    GdtEntryCount;
+  UINT16                   Index;
+
+  AsmReadGdtr (&GdtrDesc);
+  GdtEntryCount = (GdtrDesc.Limit + 1) / sizeof (IA32_SEGMENT_DESCRIPTOR);
+  GdtEntry = (IA32_SEGMENT_DESCRIPTOR *) GdtrDesc.Base;
+  for (Index = 0; Index < GdtEntryCount; Index++) {
+    if (GdtEntry->Bits.L == 0) {
+      if (GdtEntry->Bits.Type > 8 && GdtEntry->Bits.DB == 1) {
+        break;
+      }
+    }
+    GdtEntry++;
+  }
+  ASSERT (Index != GdtEntryCount);
+  return Index * 8;
+}
+
+/**
+  Transfer AP to safe hlt-loop after it finished restore CPU features on S3 patch.
+
+  @param[in] ApHltLoopCode          The address of the safe hlt-loop function.
+  @param[in] TopOfStack             A pointer to the new stack to use for the ApHltLoopCode.
+  @param[in] NumberToFinishAddress  Address of Semaphore of APs finish count.
+
+**/
+VOID
+TransferApToSafeState (
+  IN UINTN  ApHltLoopCode,
+  IN UINTN  TopOfStack,
+  IN UINTN  NumberToFinishAddress
+  )
+{
+  AsmDisablePaging64 (
+    GetProtectedModeCS (),
+    (UINT32)ApHltLoopCode,
+    (UINT32)NumberToFinishAddress,
+    0,
+    (UINT32)TopOfStack
+    );
+  //
+  // It should never reach here
+  //
+  ASSERT (FALSE);
+}
+
+/**
+  Initialize the shadow stack related data structure.
+
+  @param CpuIndex     The index of CPU.
+  @param ShadowStack  The bottom of the shadow stack for this CPU.
+**/
+VOID
+InitShadowStack (
+  IN UINTN  CpuIndex,
+  IN VOID   *ShadowStack
+  )
+{
+  UINTN       SmmShadowStackSize;
+  UINT64      *InterruptSspTable;
+
+  if ((PcdGet32 (PcdControlFlowEnforcementPropertyMask) != 0) && mCetSupported) {
+    SmmShadowStackSize = EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (PcdGet32 (PcdCpuSmmShadowStackSize)));
+    if (FeaturePcdGet (PcdCpuSmmStackGuard)) {
+      SmmShadowStackSize += EFI_PAGES_TO_SIZE (2);
+    }
+    mCetPl0Ssp = (UINT32)((UINTN)ShadowStack + SmmShadowStackSize - sizeof(UINT64));
+    PatchInstructionX86 (mPatchCetPl0Ssp, mCetPl0Ssp, 4);
+    DEBUG ((DEBUG_INFO, "mCetPl0Ssp - 0x%x\n", mCetPl0Ssp));
+    DEBUG ((DEBUG_INFO, "ShadowStack - 0x%x\n", ShadowStack));
+    DEBUG ((DEBUG_INFO, "  SmmShadowStackSize - 0x%x\n", SmmShadowStackSize));
+
+    if (FeaturePcdGet (PcdCpuSmmStackGuard)) {
+      if (mSmmInterruptSspTables == 0) {
+        mSmmInterruptSspTables = (UINTN)AllocateZeroPool(sizeof(UINT64) * 8 * gSmmCpuPrivate->SmmCoreEntryContext.NumberOfCpus);
+        ASSERT (mSmmInterruptSspTables != 0);
+        DEBUG ((DEBUG_INFO, "mSmmInterruptSspTables - 0x%x\n", mSmmInterruptSspTables));
+      }
+      mCetInterruptSsp = (UINT32)((UINTN)ShadowStack + EFI_PAGES_TO_SIZE(1) - sizeof(UINT64));
+      mCetInterruptSspTable = (UINT32)(UINTN)(mSmmInterruptSspTables + sizeof(UINT64) * 8 * CpuIndex);
+      InterruptSspTable = (UINT64 *)(UINTN)mCetInterruptSspTable;
+      InterruptSspTable[1] = mCetInterruptSsp;
+      PatchInstructionX86 (mPatchCetInterruptSsp, mCetInterruptSsp, 4);
+      PatchInstructionX86 (mPatchCetInterruptSspTable, mCetInterruptSspTable, 4);
+      DEBUG ((DEBUG_INFO, "mCetInterruptSsp - 0x%x\n", mCetInterruptSsp));
+      DEBUG ((DEBUG_INFO, "mCetInterruptSspTable - 0x%x\n", mCetInterruptSspTable));
+    }
+  }
+}
+

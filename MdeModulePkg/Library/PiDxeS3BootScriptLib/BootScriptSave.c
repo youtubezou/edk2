@@ -1,16 +1,9 @@
 /** @file
   Save the S3 data to S3 boot script.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions
-  of the BSD License which accompanies this distribution.  The
-  full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 #include "InternalBootScriptLib.h"
@@ -131,6 +124,7 @@ VOID                             *mRegistrationSmmReadyToLock = NULL;
 BOOLEAN                          mS3BootScriptTableAllocated = FALSE;
 BOOLEAN                          mS3BootScriptTableSmmAllocated = FALSE;
 EFI_SMM_SYSTEM_TABLE2            *mBootScriptSmst = NULL;
+BOOLEAN                          mAcpiS3Enable = TRUE;
 
 /**
   This is an internal function to add a terminate node the entry, recalculate the table
@@ -443,6 +437,12 @@ S3BootScriptLibInitialize (
   BOOLEAN                        InSmm;
   EFI_PHYSICAL_ADDRESS           Buffer;
 
+  if (!PcdGetBool (PcdAcpiS3Enable)) {
+    mAcpiS3Enable = FALSE;
+    DEBUG ((DEBUG_INFO, "%a: Skip S3BootScript because ACPI S3 disabled.\n", gEfiCallerBaseName));
+    return RETURN_SUCCESS;
+  }
+
   S3TablePtr = (SCRIPT_TABLE_PRIVATE_DATA*)(UINTN)PcdGet64(PcdS3BootScriptTablePrivateDataPtr);
   //
   // The Boot script private data is not be initialized. create it
@@ -569,6 +569,10 @@ S3BootScriptLibDeinitialize (
 {
   EFI_STATUS                Status;
 
+  if (!mAcpiS3Enable) {
+    return RETURN_SUCCESS;
+  }
+
   DEBUG ((EFI_D_INFO, "%a() in %a module\n", __FUNCTION__, gEfiCallerBaseName));
 
   if (mEventDxeSmmReadyToLock != NULL) {
@@ -691,7 +695,7 @@ S3BootScriptGetBootTimeEntryAddAddress (
    // Here we do not count the reserved memory for runtime script table.
    PageNumber = (UINT16) (mS3BootScriptTablePtr->TableMemoryPageNumber - PcdGet16(PcdS3BootScriptRuntimeTableReservePageNumber));
    TableLength =  mS3BootScriptTablePtr->TableLength;
-   if ((UINTN) EFI_PAGES_TO_SIZE ((UINTN) PageNumber) < (UINTN) (TableLength + EntryLength + sizeof (EFI_BOOT_SCRIPT_TERMINATE))) {
+   if (EFI_PAGES_TO_SIZE ((UINTN) PageNumber) < (TableLength + EntryLength + sizeof (EFI_BOOT_SCRIPT_TERMINATE))) {
      //
      // The buffer is too small to hold the table, Reallocate the buffer
      //
@@ -752,7 +756,7 @@ S3BootScriptGetRuntimeEntryAddAddress (
    //
    // Check if the memory range reserved for S3 Boot Script table is large enough to hold the node.
    //
-   if ((UINTN) (mS3BootScriptTablePtr->TableLength + EntryLength + sizeof (EFI_BOOT_SCRIPT_TERMINATE)) <= (UINTN) EFI_PAGES_TO_SIZE ((UINTN) (mS3BootScriptTablePtr->TableMemoryPageNumber))) {
+   if ((mS3BootScriptTablePtr->TableLength + EntryLength + sizeof (EFI_BOOT_SCRIPT_TERMINATE)) <= EFI_PAGES_TO_SIZE ((UINTN) (mS3BootScriptTablePtr->TableMemoryPageNumber))) {
      NewEntryPtr = mS3BootScriptTablePtr->TableBase + mS3BootScriptTablePtr->TableLength;
      mS3BootScriptTablePtr->TableLength = mS3BootScriptTablePtr->TableLength + EntryLength;
      //
@@ -816,6 +820,10 @@ S3BootScriptGetEntryAddAddress (
   )
 {
   UINT8*                         NewEntryPtr;
+
+  if (!mAcpiS3Enable) {
+    return NULL;
+  }
 
   if (mS3BootScriptTablePtr->SmmLocked) {
     //
@@ -998,6 +1006,14 @@ S3BootScriptSaveIoWrite (
   EFI_BOOT_SCRIPT_IO_WRITE  ScriptIoWrite;
 
   WidthInByte = (UINT8) (0x01 << (Width & 0x03));
+
+  //
+  // Truncation check
+  //
+  if ((Count > MAX_UINT8) ||
+      (WidthInByte * Count > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_IO_WRITE))) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_IO_WRITE) + (WidthInByte * Count));
 
   Script = S3BootScriptGetEntryAddAddress (Length);
@@ -1094,6 +1110,14 @@ S3BootScriptSaveMemWrite (
   EFI_BOOT_SCRIPT_MEM_WRITE  ScriptMemWrite;
 
   WidthInByte = (UINT8) (0x01 << (Width & 0x03));
+
+  //
+  // Truncation check
+  //
+  if ((Count > MAX_UINT8) ||
+      (WidthInByte * Count > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_MEM_WRITE))) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_MEM_WRITE) + (WidthInByte * Count));
 
   Script = S3BootScriptGetEntryAddAddress (Length);
@@ -1198,6 +1222,14 @@ S3BootScriptSavePciCfgWrite (
   }
 
   WidthInByte = (UINT8) (0x01 << (Width & 0x03));
+
+  //
+  // Truncation check
+  //
+  if ((Count > MAX_UINT8) ||
+      (WidthInByte * Count > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE))) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_PCI_CONFIG_WRITE) + (WidthInByte * Count));
 
   Script = S3BootScriptGetEntryAddAddress (Length);
@@ -1316,6 +1348,14 @@ S3BootScriptSavePciCfg2Write (
   }
 
   WidthInByte = (UINT8) (0x01 << (Width & 0x03));
+
+  //
+  // Truncation check
+  //
+  if ((Count > MAX_UINT8) ||
+      (WidthInByte * Count > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_PCI_CONFIG2_WRITE))) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_PCI_CONFIG2_WRITE) + (WidthInByte * Count));
 
   Script = S3BootScriptGetEntryAddAddress (Length);
@@ -1541,6 +1581,12 @@ S3BootScriptSaveSmbusExecute (
     return Status;
   }
 
+  //
+  // Truncation check
+  //
+  if (BufferLength > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_SMBUS_EXECUTE)) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   DataSize = (UINT8)(sizeof (EFI_BOOT_SCRIPT_SMBUS_EXECUTE) + BufferLength);
 
   Script = S3BootScriptGetEntryAddAddress (DataSize);
@@ -1672,7 +1718,7 @@ S3BootScriptSaveMemPoll (
   IN  VOID                              *BitMask,
   IN  VOID                              *BitValue,
   IN  UINTN                             Duration,
-  IN  UINTN                             LoopTimes
+  IN  UINT64                            LoopTimes
   )
 {
   UINT8                 Length;
@@ -1728,6 +1774,12 @@ S3BootScriptSaveInformation (
   UINT8                 *Script;
   EFI_BOOT_SCRIPT_INFORMATION  ScriptInformation;
 
+  //
+  // Truncation check
+  //
+  if (InformationLength > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_INFORMATION)) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_INFORMATION) + InformationLength);
 
   Script = S3BootScriptGetEntryAddAddress (Length);
@@ -2025,7 +2077,7 @@ S3BootScriptCalculateInsertAddress (
    // calculate the Position offset
    //
    if (Position != NULL) {
-     PositionOffset = (UINTN) ((UINT8 *)Position - S3TableBase);
+     PositionOffset = (UINTN)Position - (UINTN)S3TableBase;
 
      //
      // If the BeforeOrAfter is FALSE, that means to insert the node right after the node.
@@ -2187,6 +2239,12 @@ S3BootScriptLabelInternal (
   UINT8                 *Script;
   EFI_BOOT_SCRIPT_INFORMATION  ScriptInformation;
 
+  //
+  // Truncation check
+  //
+  if (InformationLength > MAX_UINT8 - sizeof (EFI_BOOT_SCRIPT_INFORMATION)) {
+    return RETURN_OUT_OF_RESOURCES;
+  }
   Length = (UINT8)(sizeof (EFI_BOOT_SCRIPT_INFORMATION) + InformationLength);
 
   Script = S3BootScriptGetEntryAddAddress (Length);

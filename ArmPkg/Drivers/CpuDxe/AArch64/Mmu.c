@@ -3,14 +3,9 @@
 Copyright (c) 2009, Hewlett-Packard Company. All rights reserved.<BR>
 Portions copyright (c) 2010, Apple Inc. All rights reserved.<BR>
 Portions copyright (c) 2011-2013, ARM Ltd. All rights reserved.<BR>
+Copyright (c) 2017, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 --*/
@@ -18,7 +13,68 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/MemoryAllocationLib.h>
 #include "CpuDxe.h"
 
-#define TT_ATTR_INDX_INVALID    ((UINT32)~0)
+#define INVALID_ENTRY   ((UINT32)~0)
+
+#define MIN_T0SZ        16
+#define BITS_PER_LEVEL  9
+
+STATIC
+VOID
+GetRootTranslationTableInfo (
+  IN  UINTN     T0SZ,
+  OUT UINTN     *RootTableLevel,
+  OUT UINTN     *RootTableEntryCount
+  )
+{
+  *RootTableLevel       = (T0SZ - MIN_T0SZ) / BITS_PER_LEVEL;
+  *RootTableEntryCount  = TT_ENTRY_COUNT >> (T0SZ - MIN_T0SZ) % BITS_PER_LEVEL;
+}
+
+STATIC
+UINT64
+PageAttributeToGcdAttribute (
+  IN UINT64 PageAttributes
+  )
+{
+  UINT64  GcdAttributes;
+
+  switch (PageAttributes & TT_ATTR_INDX_MASK) {
+  case TT_ATTR_INDX_DEVICE_MEMORY:
+    GcdAttributes = EFI_MEMORY_UC;
+    break;
+  case TT_ATTR_INDX_MEMORY_NON_CACHEABLE:
+    GcdAttributes = EFI_MEMORY_WC;
+    break;
+  case TT_ATTR_INDX_MEMORY_WRITE_THROUGH:
+    GcdAttributes = EFI_MEMORY_WT;
+    break;
+  case TT_ATTR_INDX_MEMORY_WRITE_BACK:
+    GcdAttributes = EFI_MEMORY_WB;
+    break;
+  default:
+    DEBUG ((DEBUG_ERROR,
+      "PageAttributeToGcdAttribute: PageAttributes:0x%lX not supported.\n",
+      PageAttributes));
+    ASSERT (0);
+    // The Global Coherency Domain (GCD) value is defined as a bit set.
+    // Returning 0 means no attribute has been set.
+    GcdAttributes = 0;
+  }
+
+  // Determine protection attributes
+  if (((PageAttributes & TT_AP_MASK) == TT_AP_NO_RO) ||
+      ((PageAttributes & TT_AP_MASK) == TT_AP_RO_RO)) {
+    // Read only cases map to write-protect
+    GcdAttributes |= EFI_MEMORY_RO;
+  }
+
+  // Process eXecute Never attribute
+  if ((PageAttributes & (TT_PXN_MASK | TT_UXN_MASK)) != 0) {
+    GcdAttributes |= EFI_MEMORY_XP;
+  }
+
+  return GcdAttributes;
+}
 
 STATIC
 UINT64
@@ -42,7 +98,7 @@ GetFirstPageAttribute (
   {
     return FirstEntry & TT_ATTR_INDX_MASK;
   } else {
-    return TT_ATTR_INDX_INVALID;
+    return INVALID_ENTRY;
   }
 }
 
@@ -83,8 +139,8 @@ GetNextEntryAttribute (
     // If Entry is a Table Descriptor type entry then go through the sub-level table
     if ((EntryType == TT_TYPE_BLOCK_ENTRY) ||
         ((TableLevel == 3) && (EntryType == TT_TYPE_BLOCK_ENTRY_LEVEL3))) {
-      if ((*PrevEntryAttribute == TT_ATTR_INDX_INVALID) || (EntryAttribute != *PrevEntryAttribute)) {
-        if (*PrevEntryAttribute != TT_ATTR_INDX_INVALID) {
+      if ((*PrevEntryAttribute == INVALID_ENTRY) || (EntryAttribute != *PrevEntryAttribute)) {
+        if (*PrevEntryAttribute != INVALID_ENTRY) {
           // Update GCD with the last region
           SetGcdMemorySpaceAttributes (MemorySpaceMap, NumberOfDescriptors,
               *StartGcdRegion,
@@ -108,7 +164,7 @@ GetNextEntryAttribute (
                              (BaseAddress + (Index * TT_ADDRESS_AT_LEVEL(TableLevel))),
                              PrevEntryAttribute, StartGcdRegion);
     } else {
-      if (*PrevEntryAttribute != TT_ATTR_INDX_INVALID) {
+      if (*PrevEntryAttribute != INVALID_ENTRY) {
         // Update GCD with the last region
         SetGcdMemorySpaceAttributes (MemorySpaceMap, NumberOfDescriptors,
             *StartGcdRegion,
@@ -117,7 +173,7 @@ GetNextEntryAttribute (
 
         // Start of the new region
         *StartGcdRegion = BaseAddress + (Index * TT_ADDRESS_AT_LEVEL(TableLevel));
-        *PrevEntryAttribute = TT_ATTR_INDX_INVALID;
+        *PrevEntryAttribute = INVALID_ENTRY;
       }
     }
   }
@@ -182,7 +238,7 @@ SyncCacheConfig (
                                                &PageAttribute, &BaseAddressGcdRegion);
 
   // Update GCD with the last region if valid
-  if (PageAttribute != TT_ATTR_INDX_INVALID) {
+  if (PageAttribute != INVALID_ENTRY) {
     SetGcdMemorySpaceAttributes (MemorySpaceMap, NumberOfDescriptors,
         BaseAddressGcdRegion,
         EndAddressGcdRegion - BaseAddressGcdRegion,
@@ -203,28 +259,30 @@ EfiAttributeToArmAttribute (
 
   switch (EfiAttributes & EFI_MEMORY_CACHETYPE_MASK) {
   case EFI_MEMORY_UC:
-    ArmAttributes = TT_ATTR_INDX_DEVICE_MEMORY;
+    if (ArmReadCurrentEL () == AARCH64_EL2) {
+      ArmAttributes = TT_ATTR_INDX_DEVICE_MEMORY | TT_XN_MASK;
+    } else {
+      ArmAttributes = TT_ATTR_INDX_DEVICE_MEMORY | TT_UXN_MASK | TT_PXN_MASK;
+    }
     break;
   case EFI_MEMORY_WC:
     ArmAttributes = TT_ATTR_INDX_MEMORY_NON_CACHEABLE;
     break;
   case EFI_MEMORY_WT:
-    ArmAttributes = TT_ATTR_INDX_MEMORY_WRITE_THROUGH;
+    ArmAttributes = TT_ATTR_INDX_MEMORY_WRITE_THROUGH | TT_SH_INNER_SHAREABLE;
     break;
   case EFI_MEMORY_WB:
-    ArmAttributes = TT_ATTR_INDX_MEMORY_WRITE_BACK;
+    ArmAttributes = TT_ATTR_INDX_MEMORY_WRITE_BACK | TT_SH_INNER_SHAREABLE;
     break;
   default:
-    DEBUG ((EFI_D_ERROR, "EfiAttributeToArmAttribute: 0x%lX attributes is not supported.\n", EfiAttributes));
-    ASSERT (0);
-    ArmAttributes = TT_ATTR_INDX_DEVICE_MEMORY;
+    ArmAttributes = TT_ATTR_INDX_MASK;
   }
 
   // Set the access flag to match the block attributes
   ArmAttributes |= TT_AF;
 
   // Determine protection attributes
-  if (EfiAttributes & EFI_MEMORY_WP) {
+  if (EfiAttributes & EFI_MEMORY_RO) {
     ArmAttributes |= TT_AP_RO_RO;
   }
 
@@ -284,7 +342,7 @@ GetMemoryRegionRec (
     BlockEntry++;
   } else if (EntryType == BlockEntryType) {
     // We have found the BlockEntry attached to the address. We save its start address (the start
-    // address might be before the 'BaseAdress') and attributes
+    // address might be before the 'BaseAddress') and attributes
     *BaseAddress      = *BaseAddress & ~(TT_ADDRESS_AT_LEVEL(TableLevel) - 1);
     *RegionLength     = 0;
     *RegionAttributes = *BlockEntry & TT_ATTRIBUTES_MASK;

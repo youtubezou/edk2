@@ -1,12 +1,6 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2015 - 2019, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -52,16 +46,13 @@ BITS 16
     mov        si,  BufferStartLocation
     mov        ebx, [si]
 
-    mov        di,  ModeOffsetLocation
-    mov        eax, [di]
-    mov        di,  CodeSegmentLocation
-    mov        edx, [di]
-    mov        di,  ax
-    sub        di,  02h
-    mov        [di],dx                         ; Patch long mode CS
-    sub        di,  04h
-    add        eax, ebx
-    mov        [di],eax                        ; Patch address
+    mov        si,  DataSegmentLocation
+    mov        edx, [si]
+
+    ;
+    ; Get start address of 32-bit code in low memory (<1MB)
+    ;
+    mov        edi, ModeTransitionMemoryLocation
 
     mov        si, GdtrLocation
 o32 lgdt       [cs:si]
@@ -69,57 +60,103 @@ o32 lgdt       [cs:si]
     mov        si, IdtrLocation
 o32 lidt       [cs:si]
 
-    mov        si, EnableExecuteDisableLocation
-    cmp        byte [si], 0
-    jz         SkipEnableExecuteDisableBit
+    ;
+    ; Switch to protected mode
+    ;
+    mov        eax, cr0                    ; Get control register 0
+    or         eax, 000000003h             ; Set PE bit (bit #0) & MP
+    mov        cr0, eax
+
+    ; Switch to 32-bit code (>1MB)
+o32 jmp far    [cs:di]
+
+;
+; Following code must be copied to memory with type of EfiBootServicesCode.
+; This is required if NX is enabled for EfiBootServicesCode of memory.
+;
+BITS 32
+Flat32Start:                                   ; protected mode entry point
+    mov        ds, dx
+    mov        es, dx
+    mov        fs, dx
+    mov        gs, dx
+    mov        ss, dx
 
     ;
     ; Enable execute disable bit
     ;
+    mov        esi, EnableExecuteDisableLocation
+    cmp        byte [ebx + esi], 0
+    jz         SkipEnableExecuteDisableBit
+
     mov        ecx, 0c0000080h             ; EFER MSR number
     rdmsr                                  ; Read EFER
     bts        eax, 11                     ; Enable Execute Disable Bit
     wrmsr                                  ; Write EFER
 
 SkipEnableExecuteDisableBit:
-
-    mov        di,  DataSegmentLocation
-    mov        edi, [di]                   ; Save long mode DS in edi
-
-    mov        si, Cr3Location             ; Save CR3 in ecx
-    mov        ecx, [si]
-
-    xor        ax,  ax
-    mov        ds,  ax                     ; Clear data segment
-
-    mov        eax, cr0                    ; Get control register 0
-    or         eax, 000000003h             ; Set PE bit (bit #0) & MP
-    mov        cr0, eax
-
+    ;
+    ; Enable PAE
+    ;
     mov        eax, cr4
     bts        eax, 5
+
+    mov        esi, Enable5LevelPagingLocation
+    cmp        byte [ebx + esi], 0
+    jz         SkipEnable5LevelPaging
+
+    ;
+    ; Enable 5 Level Paging
+    ;
+    bts        eax, 12                     ; Set LA57=1.
+
+SkipEnable5LevelPaging:
+
     mov        cr4, eax
 
+    ;
+    ; Load page table
+    ;
+    mov        esi, Cr3Location             ; Save CR3 in ecx
+    mov        ecx, [ebx + esi]
     mov        cr3, ecx                    ; Load CR3
 
+    ;
+    ; Enable long mode
+    ;
     mov        ecx, 0c0000080h             ; EFER MSR number
     rdmsr                                  ; Read EFER
     bts        eax, 8                      ; Set LME=1
     wrmsr                                  ; Write EFER
 
+    ;
+    ; Enable paging
+    ;
     mov        eax, cr0                    ; Read CR0
     bts        eax, 31                     ; Set PG=1
     mov        cr0, eax                    ; Write CR0
 
-    jmp        0:strict dword 0  ; far jump to long mode
+    ;
+    ; Far jump to 64-bit code
+    ;
+    mov        edi, ModeHighMemoryLocation
+    add        edi, ebx
+    jmp far    [edi]
+
 BITS 64
 LongModeStart:
-    mov        eax, edi
-    mov        ds,  ax
-    mov        es,  ax
-    mov        ss,  ax
-
     mov        esi, ebx
+    lea        edi, [esi + InitFlagLocation]
+    cmp        qword [edi], 1       ; ApInitConfig
+    jnz        GetApicId
+
+    ; Increment the number of APs executing here as early as possible
+    ; This is decremented in C code when AP is finished executing
+    mov        edi, esi
+    add        edi, NumApsExecutingLocation
+    lock inc   dword [edi]
+
+    ; AP init
     mov        edi, esi
     add        edi, LockLocation
     mov        rax, NotVacantFlag
@@ -129,26 +166,154 @@ TestLock:
     cmp        rax, NotVacantFlag
     jz         TestLock
 
-    mov        edi, esi
-    add        edi, NumApsExecutingLocation
-    inc        dword [edi]
-    mov        ebx, [edi]
+    lea        ecx, [esi + ApIndexLocation]
+    inc        dword [ecx]
+    mov        ebx, [ecx]
 
-ProgramStack:
+Releaselock:
+    mov        rax, VacantFlag
+    xchg       qword [edi], rax
+    ; program stack
     mov        edi, esi
     add        edi, StackSizeLocation
-    mov        rax, qword [edi]
+    mov        eax, dword [edi]
+    mov        ecx, ebx
+    inc        ecx
+    mul        ecx                               ; EAX = StackSize * (CpuNumber + 1)
     mov        edi, esi
     add        edi, StackStartAddressLocation
     add        rax, qword [edi]
     mov        rsp, rax
-    mov        qword [edi], rax
 
-Releaselock:
-    mov        rax, VacantFlag
+    lea        edi, [esi + SevEsIsEnabledLocation]
+    cmp        byte [edi], 1        ; SevEsIsEnabled
+    jne        CProcedureInvoke
+
+    ;
+    ; program GHCB
+    ;   Each page after the GHCB is a per-CPU page, so the calculation programs
+    ;   a GHCB to be every 8KB.
+    ;
+    mov        eax, SIZE_4KB
+    shl        eax, 1                            ; EAX = SIZE_4K * 2
+    mov        ecx, ebx
+    mul        ecx                               ; EAX = SIZE_4K * 2 * CpuNumber
     mov        edi, esi
-    add        edi, LockLocation
-    xchg       qword [edi], rax
+    add        edi, GhcbBaseLocation
+    add        rax, qword [edi]
+    mov        rdx, rax
+    shr        rdx, 32
+    mov        rcx, 0xc0010130
+    wrmsr
+    jmp        CProcedureInvoke
+
+GetApicId:
+    lea        edi, [esi + SevEsIsEnabledLocation]
+    cmp        byte [edi], 1        ; SevEsIsEnabled
+    jne        DoCpuid
+
+    ;
+    ; Since we don't have a stack yet, we can't take a #VC
+    ; exception. Use the GHCB protocol to perform the CPUID
+    ; calls.
+    ;
+    mov        rcx, 0xc0010130
+    rdmsr
+    shl        rdx, 32
+    or         rax, rdx
+    mov        rdi, rax             ; RDI now holds the original GHCB GPA
+
+    mov        rdx, 0               ; CPUID function 0
+    mov        rax, 0               ; RAX register requested
+    or         rax, 4
+    wrmsr
+    rep vmmcall
+    rdmsr
+    cmp        edx, 0bh
+    jb         NoX2ApicSevEs        ; CPUID level below CPUID_EXTENDED_TOPOLOGY
+
+    mov        rdx, 0bh             ; CPUID function 0x0b
+    mov        rax, 040000000h      ; RBX register requested
+    or         rax, 4
+    wrmsr
+    rep vmmcall
+    rdmsr
+    test       edx, 0ffffh
+    jz         NoX2ApicSevEs        ; CPUID.0BH:EBX[15:0] is zero
+
+    mov        rdx, 0bh             ; CPUID function 0x0b
+    mov        rax, 0c0000000h      ; RDX register requested
+    or         rax, 4
+    wrmsr
+    rep vmmcall
+    rdmsr
+
+    ; Processor is x2APIC capable; 32-bit x2APIC ID is now in EDX
+    jmp        RestoreGhcb
+
+NoX2ApicSevEs:
+    ; Processor is not x2APIC capable, so get 8-bit APIC ID
+    mov        rdx, 1               ; CPUID function 1
+    mov        rax, 040000000h      ; RBX register requested
+    or         rax, 4
+    wrmsr
+    rep vmmcall
+    rdmsr
+    shr        edx, 24
+
+RestoreGhcb:
+    mov        rbx, rdx             ; Save x2APIC/APIC ID
+
+    mov        rdx, rdi             ; RDI holds the saved GHCB GPA
+    shr        rdx, 32
+    mov        eax, edi
+    wrmsr
+
+    mov        rdx, rbx
+
+    ; x2APIC ID or APIC ID is in EDX
+    jmp        GetProcessorNumber
+
+DoCpuid:
+    mov        eax, 0
+    cpuid
+    cmp        eax, 0bh
+    jb         NoX2Apic             ; CPUID level below CPUID_EXTENDED_TOPOLOGY
+
+    mov        eax, 0bh
+    xor        ecx, ecx
+    cpuid
+    test       ebx, 0ffffh
+    jz         NoX2Apic             ; CPUID.0BH:EBX[15:0] is zero
+
+    ; Processor is x2APIC capable; 32-bit x2APIC ID is already in EDX
+    jmp        GetProcessorNumber
+
+NoX2Apic:
+    ; Processor is not x2APIC capable, so get 8-bit APIC ID
+    mov        eax, 1
+    cpuid
+    shr        ebx, 24
+    mov        edx, ebx
+
+GetProcessorNumber:
+    ;
+    ; Get processor number for this AP
+    ; Note that BSP may become an AP due to SwitchBsp()
+    ;
+    xor         ebx, ebx
+    lea         eax, [esi + CpuInfoLocation]
+    mov         edi, [eax]
+
+GetNextProcNumber:
+    cmp         dword [edi], edx                      ; APIC ID match?
+    jz          ProgramStack
+    add         edi, 20
+    inc         ebx
+    jmp         GetNextProcNumber
+
+ProgramStack:
+    mov         rsp, qword [edi + 12]
 
 CProcedureInvoke:
     push       rbp               ; Push BIST data at top of AP stack
@@ -156,12 +321,12 @@ CProcedureInvoke:
     push       rbp
     mov        rbp, rsp
 
-    mov        rax, ASM_PFX(InitializeFloatingPointUnits)
+    mov        rax, qword [esi + InitializeFloatingPointUnitsAddress]
     sub        rsp, 20h
     call       rax               ; Call assembly function to initialize FPU per UEFI spec
     add        rsp, 20h
 
-    mov        edx, ebx          ; edx is NumApsExecuting
+    mov        edx, ebx          ; edx is ApIndex
     mov        ecx, esi
     add        ecx, LockLocation ; rcx is address of exchange info data buffer
 
@@ -177,27 +342,245 @@ CProcedureInvoke:
 RendezvousFunnelProcEnd:
 
 ;-------------------------------------------------------------------------------------
-;  AsmRelocateApLoop (MwaitSupport, ApTargetCState, PmCodeSegment);
+;SwitchToRealProc procedure follows.
+;ALSO THIS PROCEDURE IS EXECUTED BY APs TRANSITIONING TO 16 BIT MODE. HENCE THIS PROC
+;IS IN MACHINE CODE.
+;  SwitchToRealProc (UINTN BufferStart, UINT16 Code16, UINT16 Code32, UINTN StackStart)
+;  rcx - Buffer Start
+;  rdx - Code16 Selector Offset
+;  r8  - Code32 Selector Offset
+;  r9  - Stack Start
+;-------------------------------------------------------------------------------------
+global ASM_PFX(SwitchToRealProc)
+ASM_PFX(SwitchToRealProc):
+SwitchToRealProcStart:
+BITS 64
+    cli
+
+    ;
+    ; Get RDX reset value before changing stacks since the
+    ; new stack won't be able to accomodate a #VC exception.
+    ;
+    push       rax
+    push       rbx
+    push       rcx
+    push       rdx
+
+    mov        rax, 1
+    cpuid
+    mov        rsi, rax                    ; Save off the reset value for RDX
+
+    pop        rdx
+    pop        rcx
+    pop        rbx
+    pop        rax
+
+    ;
+    ; Establish stack below 1MB
+    ;
+    mov        rsp, r9
+
+    ;
+    ; Push ultimate Reset Vector onto the stack
+    ;
+    mov        rax, rcx
+    shr        rax, 4
+    push       word 0x0002                 ; RFLAGS
+    push       ax                          ; CS
+    push       word 0x0000                 ; RIP
+    push       word 0x0000                 ; For alignment, will be discarded
+
+    ;
+    ; Get address of "16-bit operand size" label
+    ;
+    lea        rbx, [PM16Mode]
+
+    ;
+    ; Push addresses used to change to compatibility mode
+    ;
+    lea        rax, [CompatMode]
+    push       r8
+    push       rax
+
+    ;
+    ; Clear R8 - R15, for reset, before going into 32-bit mode
+    ;
+    xor        r8, r8
+    xor        r9, r9
+    xor        r10, r10
+    xor        r11, r11
+    xor        r12, r12
+    xor        r13, r13
+    xor        r14, r14
+    xor        r15, r15
+
+    ;
+    ; Far return into 32-bit mode
+    ;
+o64 retf
+
+BITS 32
+CompatMode:
+    ;
+    ; Set up stack to prepare for exiting protected mode
+    ;
+    push       edx                         ; Code16 CS
+    push       ebx                         ; PM16Mode label address
+
+    ;
+    ; Disable paging
+    ;
+    mov        eax, cr0                    ; Read CR0
+    btr        eax, 31                     ; Set PG=0
+    mov        cr0, eax                    ; Write CR0
+
+    ;
+    ; Disable long mode
+    ;
+    mov        ecx, 0c0000080h             ; EFER MSR number
+    rdmsr                                  ; Read EFER
+    btr        eax, 8                      ; Set LME=0
+    wrmsr                                  ; Write EFER
+
+    ;
+    ; Disable PAE
+    ;
+    mov        eax, cr4                    ; Read CR4
+    btr        eax, 5                      ; Set PAE=0
+    mov        cr4, eax                    ; Write CR4
+
+    mov        edx, esi                    ; Restore RDX reset value
+
+    ;
+    ; Switch to 16-bit operand size
+    ;
+    retf
+
+BITS 16
+    ;
+    ; At entry to this label
+    ;   - RDX will have its reset value
+    ;   - On the top of the stack
+    ;     - Alignment data (two bytes) to be discarded
+    ;     - IP for Real Mode (two bytes)
+    ;     - CS for Real Mode (two bytes)
+    ;
+    ; This label is also used with AsmRelocateApLoop. During MP finalization,
+    ; the code from PM16Mode to SwitchToRealProcEnd is copied to the start of
+    ; the WakeupBuffer, allowing a parked AP to be booted by an OS.
+    ;
+PM16Mode:
+    mov        eax, cr0                    ; Read CR0
+    btr        eax, 0                      ; Set PE=0
+    mov        cr0, eax                    ; Write CR0
+
+    pop        ax                          ; Discard alignment data
+
+    ;
+    ; Clear registers (except RDX and RSP) before going into 16-bit mode
+    ;
+    xor        eax, eax
+    xor        ebx, ebx
+    xor        ecx, ecx
+    xor        esi, esi
+    xor        edi, edi
+    xor        ebp, ebp
+
+    iret
+
+SwitchToRealProcEnd:
+
+;-------------------------------------------------------------------------------------
+;  AsmRelocateApLoop (MwaitSupport, ApTargetCState, PmCodeSegment, TopOfApStack, CountTofinish, Pm16CodeSegment, SevEsAPJumpTable, WakeupBuffer);
 ;-------------------------------------------------------------------------------------
 global ASM_PFX(AsmRelocateApLoop)
 ASM_PFX(AsmRelocateApLoop):
 AsmRelocateApLoopStart:
+BITS 64
+    cmp        qword [rsp + 56], 0  ; SevEsAPJumpTable
+    je         NoSevEs
+
+    ;
+    ; Perform some SEV-ES related setup before leaving 64-bit mode
+    ;
     push       rcx
     push       rdx
 
-    lea        rsi, [PmEntry]    ; rsi <- The start address of transition code
+    ;
+    ; Get the RDX reset value using CPUID
+    ;
+    mov        rax, 1
+    cpuid
+    mov        rsi, rax          ; Save off the reset value for RDX
+
+    ;
+    ; Prepare the GHCB for the AP_HLT_LOOP VMGEXIT call
+    ;   - Must be done while in 64-bit long mode so that writes to
+    ;     the GHCB memory will be unencrypted.
+    ;   - No NAE events can be generated once this is set otherwise
+    ;     the AP_RESET_HOLD SW_EXITCODE will be overwritten.
+    ;
+    mov        rcx, 0xc0010130
+    rdmsr                        ; Retrieve current GHCB address
+    shl        rdx, 32
+    or         rdx, rax
+
+    mov        rdi, rdx
+    xor        rax, rax
+    mov        rcx, 0x800
+    shr        rcx, 3
+    rep stosq                    ; Clear the GHCB
+
+    mov        rax, 0x80000004   ; VMGEXIT AP_RESET_HOLD
+    mov        [rdx + 0x390], rax
+
+    pop        rdx
+    pop        rcx
+
+NoSevEs:
+    cli                          ; Disable interrupt before switching to 32-bit mode
+    mov        rax, [rsp + 40]   ; CountTofinish
+    lock dec   dword [rax]       ; (*CountTofinish)--
+
+    mov        r10, [rsp + 48]   ; Pm16CodeSegment
+    mov        rax, [rsp + 56]   ; SevEsAPJumpTable
+    mov        rbx, [rsp + 64]   ; WakeupBuffer
+    mov        rsp, r9           ; TopOfApStack
+
+    push       rax               ; Save SevEsAPJumpTable
+    push       rbx               ; Save WakeupBuffer
+    push       r10               ; Save Pm16CodeSegment
+    push       rcx               ; Save MwaitSupport
+    push       rdx               ; Save ApTargetCState
+
+    lea        rax, [PmEntry]    ; rax <- The start address of transition code
 
     push       r8
-    push       rsi
-    DB         0x48
-    retf
+    push       rax
+
+    ;
+    ; Clear R8 - R15, for reset, before going into 32-bit mode
+    ;
+    xor        r8, r8
+    xor        r9, r9
+    xor        r10, r10
+    xor        r11, r11
+    xor        r12, r12
+    xor        r13, r13
+    xor        r14, r14
+    xor        r15, r15
+
+    ;
+    ; Far return into 32-bit mode
+    ;
+o64 retf
+
 BITS 32
 PmEntry:
     mov        eax, cr0
     btr        eax, 31           ; Clear CR0.PG
     mov        cr0, eax          ; Disable paging and caches
 
-    mov        ebx, edx          ; Save EntryPoint to rbx, for rdmsr will overwrite rdx
     mov        ecx, 0xc0000080
     rdmsr
     and        ah, ~ 1           ; Clear LME
@@ -210,23 +593,65 @@ PmEntry:
     add        esp, 4
     pop        ecx,
     add        esp, 4
+
+MwaitCheck:
     cmp        cl, 1              ; Check mwait-monitor support
     jnz        HltLoop
     mov        ebx, edx           ; Save C-State to ebx
 MwaitLoop:
+    cli
     mov        eax, esp           ; Set Monitor Address
     xor        ecx, ecx           ; ecx = 0
     xor        edx, edx           ; edx = 0
     monitor
-    shl        ebx, 4
     mov        eax, ebx           ; Mwait Cx, Target C-State per eax[7:4]
+    shl        eax, 4
     mwait
     jmp        MwaitLoop
+
 HltLoop:
+    pop        edx                ; PM16CodeSegment
+    add        esp, 4
+    pop        ebx                ; WakeupBuffer
+    add        esp, 4
+    pop        eax                ; SevEsAPJumpTable
+    add        esp, 4
+    cmp        eax, 0             ; Check for SEV-ES
+    je         DoHlt
+
+    cli
+    ;
+    ; SEV-ES is enabled, use VMGEXIT (GHCB information already
+    ; set by caller)
+    ;
+BITS 64
+    rep        vmmcall
+BITS 32
+
+    ;
+    ; Back from VMGEXIT AP_HLT_LOOP
+    ;   Push the FLAGS/CS/IP values to use
+    ;
+    push       word 0x0002        ; EFLAGS
+    xor        ecx, ecx
+    mov        cx, [eax + 2]      ; CS
+    push       cx
+    mov        cx, [eax]          ; IP
+    push       cx
+    push       word 0x0000        ; For alignment, will be discarded
+
+    push       edx
+    push       ebx
+
+    mov        edx, esi           ; Restore RDX reset value
+
+    retf
+
+DoHlt:
     cli
     hlt
-    jmp        HltLoop
-    ret
+    jmp        DoHlt
+
 BITS 64
 AsmRelocateApLoopEnd:
 
@@ -235,13 +660,19 @@ AsmRelocateApLoopEnd:
 ;-------------------------------------------------------------------------------------
 global ASM_PFX(AsmGetAddressMap)
 ASM_PFX(AsmGetAddressMap):
-    mov        rax, ASM_PFX(RendezvousFunnelProc)
+    lea        rax, [ASM_PFX(RendezvousFunnelProc)]
     mov        qword [rcx], rax
     mov        qword [rcx +  8h], LongModeStart - RendezvousFunnelProcStart
     mov        qword [rcx + 10h], RendezvousFunnelProcEnd - RendezvousFunnelProcStart
-    mov        rax, ASM_PFX(AsmRelocateApLoop)
+    lea        rax, [ASM_PFX(AsmRelocateApLoop)]
     mov        qword [rcx + 18h], rax
     mov        qword [rcx + 20h], AsmRelocateApLoopEnd - AsmRelocateApLoopStart
+    mov        qword [rcx + 28h], Flat32Start - RendezvousFunnelProcStart
+    mov        qword [rcx + 30h], SwitchToRealProcEnd - SwitchToRealProcStart          ; SwitchToRealSize
+    mov        qword [rcx + 38h], SwitchToRealProcStart - RendezvousFunnelProcStart    ; SwitchToRealOffset
+    mov        qword [rcx + 40h], SwitchToRealProcStart - Flat32Start                  ; SwitchToRealNoNxOffset
+    mov        qword [rcx + 48h], PM16Mode - RendezvousFunnelProcStart                 ; SwitchToRealPM16ModeOffset
+    mov        qword [rcx + 50h], SwitchToRealProcEnd - PM16Mode                       ; SwitchToRealPM16ModeSize
     ret
 
 ;-------------------------------------------------------------------------------------

@@ -1,12 +1,6 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2012 - 2014, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -23,6 +17,8 @@
 ;
 ; CommonExceptionHandler()
 ;
+
+%define VC_EXCEPTION 29
 
 extern ASM_PFX(mErrorCodeFlag)    ; Error code flags for exceptions
 extern ASM_PFX(mDoFarReturnFlag)  ; Do far return flag
@@ -189,17 +185,19 @@ HasErrorCode:
     push    rax
     push    rax
     sidt    [rsp]
-    xchg    rax, [rsp + 2]
-    xchg    rax, [rsp]
-    xchg    rax, [rsp + 8]
+    mov     bx, word [rsp]
+    mov     rax, qword [rsp + 2]
+    mov     qword [rsp], rax
+    mov     word [rsp + 8], bx
 
     xor     rax, rax
     push    rax
     push    rax
     sgdt    [rsp]
-    xchg    rax, [rsp + 2]
-    xchg    rax, [rsp]
-    xchg    rax, [rsp + 8]
+    mov     bx, word [rsp]
+    mov     rax, qword [rsp + 2]
+    mov     qword [rsp], rax
+    mov     word [rsp + 8], bx
 
 ;; UINT64  Ldtr, Tr;
     xor     rax, rax
@@ -228,6 +226,9 @@ HasErrorCode:
     push    rax
 
 ;; UINT64  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
+    cmp     qword [rbp + 8], VC_EXCEPTION
+    je      VcDebugRegs          ; For SEV-ES (#VC) Debug registers ignored
+
     mov     rax, dr7
     push    rax
     mov     rax, dr6
@@ -240,7 +241,19 @@ HasErrorCode:
     push    rax
     mov     rax, dr0
     push    rax
+    jmp     DrFinish
 
+VcDebugRegs:
+;; UINT64  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7 are skipped for #VC to avoid exception recursion
+    xor     rax, rax
+    push    rax
+    push    rax
+    push    rax
+    push    rax
+    push    rax
+    push    rax
+
+DrFinish:
 ;; FX_SAVE_STATE_X64 FxSaveState;
     sub rsp, 512
     mov rdi, rsp

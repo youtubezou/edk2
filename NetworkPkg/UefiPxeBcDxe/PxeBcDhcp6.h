@@ -1,15 +1,9 @@
 /** @file
   Functions declaration related with DHCPv6 for UefiPxeBc Driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,7 +12,7 @@
 
 #define PXEBC_DHCP6_OPTION_MAX_NUM        16
 #define PXEBC_DHCP6_OPTION_MAX_SIZE       312
-#define PXEBC_DHCP6_PACKET_MAX_SIZE       1472
+#define PXEBC_DHCP6_PACKET_MAX_SIZE       (sizeof (EFI_PXE_BASE_CODE_PACKET))
 #define PXEBC_IP6_POLICY_MAX              0xff
 #define PXEBC_IP6_ROUTE_TABLE_TIMEOUT     10
 
@@ -101,10 +95,12 @@ typedef struct {
   UINT8                   Precedence;
 } PXEBC_DHCP6_OPTION_NODE;
 
+#define PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE  (OFFSET_OF (EFI_DHCP6_PACKET, Dhcp6) + PXEBC_DHCP6_PACKET_MAX_SIZE)
+
 typedef union {
   EFI_DHCP6_PACKET        Offer;
   EFI_DHCP6_PACKET        Ack;
-  UINT8                   Buffer[PXEBC_DHCP6_PACKET_MAX_SIZE];
+  UINT8                   Buffer[PXEBC_CACHED_DHCP6_PACKET_MAX_SIZE];
 } PXEBC_DHCP6_PACKET;
 
 typedef struct {
@@ -114,16 +110,6 @@ typedef struct {
 } PXEBC_DHCP6_PACKET_CACHE;
 
 
-/**
-  Free all the nodes in the boot file list.
-
-  @param[in]  Head            The pointer to the head of the list.
-
-**/
-VOID
-PxeBcFreeBootFileOption (
-  IN LIST_ENTRY               *Head
-  );
 
 
 /**
@@ -137,7 +123,7 @@ PxeBcFreeBootFileOption (
 
   @retval EFI_ABORTED     User canceled the operation.
   @retval EFI_SUCCESS     Selected the boot menu successfully.
-  @retval EFI_NOT_READY   Read the input key from the keybroad has not finish.
+  @retval EFI_NOT_READY   Read the input key from the keyboard has not finish.
 
 **/
 EFI_STATUS
@@ -188,7 +174,7 @@ PxeBcParseDhcp6Packet (
   @param[in]  Private             The pointer to the PxeBc private data.
   @param[in]  Address             The pointer to the ready address.
 
-  @retval     EFI_SUCCESS         Registered the address succesfully.
+  @retval     EFI_SUCCESS         Registered the address successfully.
   @retval     Others              Failed to register the address.
 
 **/
@@ -240,8 +226,8 @@ PxeBcDhcp6Discover (
 
   @param[in]  Private             The pointer to PXEBC_PRIVATE_DATA.
 
-  @retval     EFI_SUCCESS         Switch the IP policy succesfully.
-  @retval     Others              Unexpect error happened.
+  @retval     EFI_SUCCESS         Switch the IP policy successfully.
+  @retval     Others              Unexpected error happened.
 
 **/
 EFI_STATUS
@@ -251,7 +237,7 @@ PxeBcSetIp6Policy (
 
 /**
   This function will register the station IP address and flush IP instance to start using the new IP address.
-  
+
   @param[in]  Private             The pointer to PXEBC_PRIVATE_DATA.
 
   @retval     EFI_SUCCESS         The new IP address has been configured successfully.

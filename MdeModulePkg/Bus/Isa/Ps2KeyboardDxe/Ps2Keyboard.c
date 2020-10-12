@@ -4,13 +4,7 @@
   conforming to EFI driver model
 
 Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -83,7 +77,7 @@ KbdControllerDriverStop (
   @param ListHead  Pointer to list head
 
   @retval EFI_INVALID_PARAMETER  ListHead is NULL
-  @retval EFI_SUCCESS            Sucess to free NotifyList
+  @retval EFI_SUCCESS            Success to free NotifyList
 **/
 EFI_STATUS
 KbdFreeNotifyList (
@@ -351,6 +345,19 @@ KbdControllerDriverStart (
     goto ErrorExit;
   }
 
+  Status = gBS->CreateEvent (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_CALLBACK,
+                  KeyNotifyProcessHandler,
+                  ConsoleIn,
+                  &ConsoleIn->KeyNotifyProcessEvent
+                  );
+  if (EFI_ERROR (Status)) {
+    Status      = EFI_OUT_OF_RESOURCES;
+    StatusCode  = EFI_PERIPHERAL_KEYBOARD | EFI_P_EC_CONTROLLER_ERROR;
+    goto ErrorExit;
+  }
+
   REPORT_STATUS_CODE_WITH_DEVICE_PATH (
     EFI_PROGRESS_CODE,
     EFI_PERIPHERAL_KEYBOARD | EFI_P_PC_PRESENCE_DETECT,
@@ -429,6 +436,9 @@ ErrorExit:
   }
   if ((ConsoleIn != NULL) && (ConsoleIn->ConInEx.WaitForKeyEx != NULL)) {
     gBS->CloseEvent (ConsoleIn->ConInEx.WaitForKeyEx);
+  }
+  if ((ConsoleIn != NULL) && (ConsoleIn->KeyNotifyProcessEvent != NULL)) {
+    gBS->CloseEvent (ConsoleIn->KeyNotifyProcessEvent);
   }
   KbdFreeNotifyList (&ConsoleIn->NotifyList);
   if ((ConsoleIn != NULL) && (ConsoleIn->ControllerNameTable != NULL)) {
@@ -570,6 +580,10 @@ KbdControllerDriverStop (
     gBS->CloseEvent (ConsoleIn->ConInEx.WaitForKeyEx);
     ConsoleIn->ConInEx.WaitForKeyEx = NULL;
   }
+  if (ConsoleIn->KeyNotifyProcessEvent != NULL) {
+    gBS->CloseEvent (ConsoleIn->KeyNotifyProcessEvent);
+    ConsoleIn->KeyNotifyProcessEvent = NULL;
+  }
   KbdFreeNotifyList (&ConsoleIn->NotifyList);
   FreeUnicodeStringTable (ConsoleIn->ControllerNameTable);
   gBS->FreePool (ConsoleIn);
@@ -583,7 +597,7 @@ KbdControllerDriverStop (
   @param ListHead  Pointer to list head
 
   @retval EFI_INVALID_PARAMETER  ListHead is NULL
-  @retval EFI_SUCCESS            Sucess to free NotifyList
+  @retval EFI_SUCCESS            Success to free NotifyList
 **/
 EFI_STATUS
 KbdFreeNotifyList (

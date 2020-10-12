@@ -1,15 +1,9 @@
 /** @file
   Functions declaration related with DHCPv4 for UefiPxeBc Driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,7 +12,7 @@
 
 #define PXEBC_DHCP4_OPTION_MAX_NUM         16
 #define PXEBC_DHCP4_OPTION_MAX_SIZE        312
-#define PXEBC_DHCP4_PACKET_MAX_SIZE        1472
+#define PXEBC_DHCP4_PACKET_MAX_SIZE        (sizeof (EFI_PXE_BASE_CODE_PACKET))
 #define PXEBC_DHCP4_S_PORT                 67
 #define PXEBC_DHCP4_C_PORT                 68
 #define PXEBC_BS_DOWNLOAD_PORT             69
@@ -66,7 +60,7 @@
 
 //
 // Dhcp4 and Dhcp6 share this definition, and corresponding
-// relatioinship is as follows:
+// relationship is as follows:
 //
 //   Dhcp4Discover <> Dhcp6Solicit
 //   Dhcp4Offer    <> Dhcp6Advertise
@@ -108,7 +102,7 @@ typedef enum {
 
 #define IS_VALID_BOOT_SERVERS(x) \
   ((((x)[0]) & BIT (PXEBC_VENDOR_TAG_BOOT_SERVERS)) \
-   == BIT (PXEBC_VENDOR_TAG_BOOT_SERVERS))  
+   == BIT (PXEBC_VENDOR_TAG_BOOT_SERVERS))
 
 #define IS_VALID_BOOT_PROMPT(x) \
   ((((x)[0]) & BIT (PXEBC_VENDOR_TAG_MENU_PROMPT)) \
@@ -263,10 +257,12 @@ typedef struct {
   UINT8                 CredTypeLen;
 } PXEBC_VENDOR_OPTION;
 
+#define PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE  (OFFSET_OF (EFI_DHCP4_PACKET, Dhcp4) + PXEBC_DHCP4_PACKET_MAX_SIZE)
+
 typedef union {
   EFI_DHCP4_PACKET        Offer;
   EFI_DHCP4_PACKET        Ack;
-  UINT8                   Buffer[PXEBC_DHCP4_PACKET_MAX_SIZE];
+  UINT8                   Buffer[PXEBC_CACHED_DHCP4_PACKET_MAX_SIZE];
 } PXEBC_DHCP4_PACKET;
 
 typedef struct {
@@ -344,7 +340,7 @@ PxeBcDhcp4Discover (
 
 **/
 EFI_STATUS
-PxeBcSetIp4Policy (   
+PxeBcSetIp4Policy (
   IN PXEBC_PRIVATE_DATA            *Private
   );
 

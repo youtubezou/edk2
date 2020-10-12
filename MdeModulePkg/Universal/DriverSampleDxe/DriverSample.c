@@ -2,14 +2,8 @@
 This is an example of how a driver might export data to the HII protocol to be
 later utilized by the Setup Protocol
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,6 +14,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 CHAR16     VariableName[] = L"MyIfrNVData";
 CHAR16     MyEfiVar[] = L"MyEfiVar";
+CHAR16     MyEfiBitVar[] = L"MyEfiBitVar";
+CHAR16     MyEfiUnionVar[] = L"MyEfiUnionVar";
+
 EFI_HANDLE                      DriverHandle[2] = {NULL, NULL};
 DRIVER_SAMPLE_PRIVATE_DATA      *mPrivateData = NULL;
 EFI_EVENT                       mEvent;
@@ -111,22 +108,6 @@ SetArrayData (
 }
 
 /**
-  Add empty function for event process function.
-
-  @param Event    The Event need to be process
-  @param Context  The context of the event.
-
-**/
-VOID
-EFIAPI
-DriverSampleInternalEmptyFunction (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
-  )
-{
-}
-
-/**
   Notification function for keystrokes.
 
   @param[in] KeyData    The key that was pressed.
@@ -140,12 +121,12 @@ NotificationFunction(
   )
 {
   gBS->SignalEvent (mEvent);
-  
+
   return EFI_SUCCESS;
 }
 
 /**
-  Function to start monitoring for CTRL-C using SimpleTextInputEx. 
+  Function to start monitoring for CTRL-C using SimpleTextInputEx.
 
   @retval EFI_SUCCESS           The feature is enabled.
   @retval EFI_OUT_OF_RESOURCES  There is not enough mnemory available.
@@ -162,7 +143,7 @@ InternalStartMonitor(
   EFI_HANDLE                        *Handles;
   UINTN                             HandleCount;
   UINTN                             HandleIndex;
-  EFI_HANDLE                        NotifyHandle;
+  VOID                              *NotifyHandle;
 
   Status = gBS->LocateHandleBuffer (
               ByProtocol,
@@ -188,7 +169,7 @@ InternalStartMonitor(
     if (EFI_ERROR (Status)) {
       break;
     }
-    
+
     KeyData.KeyState.KeyShiftState  = EFI_SHIFT_STATE_VALID|EFI_RIGHT_CONTROL_PRESSED;
     Status = SimpleEx->RegisterKeyNotify(
       SimpleEx,
@@ -204,7 +185,7 @@ InternalStartMonitor(
 }
 
 /**
-  Function to stop monitoring for CTRL-C using SimpleTextInputEx.  
+  Function to stop monitoring for CTRL-C using SimpleTextInputEx.
 
   @retval EFI_SUCCESS           The feature is enabled.
   @retval EFI_OUT_OF_RESOURCES  There is not enough mnemory available.
@@ -218,10 +199,10 @@ InternalStopMonitor(
   EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *SimpleEx;
   EFI_STATUS                        Status;
   EFI_HANDLE                        *Handles;
-  EFI_KEY_DATA                      KeyData;  
+  EFI_KEY_DATA                      KeyData;
   UINTN                             HandleCount;
   UINTN                             HandleIndex;
-  EFI_HANDLE                        NotifyHandle;
+  VOID                              *NotifyHandle;
 
   Status = gBS->LocateHandleBuffer (
                 ByProtocol,
@@ -259,233 +240,6 @@ InternalStopMonitor(
     }
   }
   return EFI_SUCCESS;
-}
-
-
-/**
-  Encode the password using a simple algorithm.
-
-  @param Password The string to be encoded.
-  @param MaxSize  The size of the string.
-
-**/
-VOID
-EncodePassword (
-  IN  CHAR16                      *Password,
-  IN  UINTN                       MaxSize
-  )
-{
-  UINTN   Index;
-  UINTN   Loop;
-  CHAR16  *Buffer;
-  CHAR16  *Key;
-
-  Key     = L"MAR10648567";
-  Buffer  = AllocateZeroPool (MaxSize);
-  ASSERT (Buffer != NULL);
-
-  for (Index = 0; Key[Index] != 0; Index++) {
-    for (Loop = 0; Loop < (UINT8) (MaxSize / 2); Loop++) {
-      Buffer[Loop] = (CHAR16) (Password[Loop] ^ Key[Index]);
-    }
-  }
-
-  CopyMem (Password, Buffer, MaxSize);
-
-  FreePool (Buffer);
-  return ;
-}
-
-/**
-  Validate the user's password.
-
-  @param PrivateData This driver's private context data.
-  @param StringId    The user's input.
-
-  @retval EFI_SUCCESS   The user's input matches the password.
-  @retval EFI_NOT_READY The user's input does not match the password.
-**/
-EFI_STATUS
-ValidatePassword (
-  IN       DRIVER_SAMPLE_PRIVATE_DATA      *PrivateData,
-  IN       EFI_STRING_ID                   StringId
-  )
-{
-  EFI_STATUS                      Status;
-  UINTN                           Index;
-  UINTN                           BufferSize;
-  UINTN                           PasswordMaxSize;
-  CHAR16                          *Password;
-  CHAR16                          *EncodedPassword;
-  BOOLEAN                         OldPassword;
-
-  //
-  // Get encoded password first
-  //
-  BufferSize = sizeof (DRIVER_SAMPLE_CONFIGURATION);
-  Status = gRT->GetVariable (
-                  VariableName,
-                  &gDriverSampleFormSetGuid,
-                  NULL,
-                  &BufferSize,
-                  &PrivateData->Configuration
-                  );
-  if (EFI_ERROR (Status)) {
-    //
-    // Old password not exist, prompt for new password
-    //
-    return EFI_SUCCESS;
-  }
-
-  OldPassword = FALSE;
-  PasswordMaxSize = sizeof (PrivateData->Configuration.WhatIsThePassword2);
-  //
-  // Check whether we have any old password set
-  //
-  for (Index = 0; Index < PasswordMaxSize / sizeof (UINT16); Index++) {
-    if (PrivateData->Configuration.WhatIsThePassword2[Index] != 0) {
-      OldPassword = TRUE;
-      break;
-    }
-  }
-  if (!OldPassword) {
-    //
-    // Old password not exist, return EFI_SUCCESS to prompt for new password
-    //
-    return EFI_SUCCESS;
-  }
-
-  //
-  // Get user input password
-  //
-  Password = HiiGetString (PrivateData->HiiHandle[0], StringId, NULL);
-  if (Password == NULL) {
-    return EFI_NOT_READY;
-  }
-  if (StrSize (Password) > PasswordMaxSize) {
-    FreePool (Password);
-    return EFI_NOT_READY;
-  }
-
-  //
-  // Validate old password
-  //
-  EncodedPassword = AllocateZeroPool (PasswordMaxSize);
-  ASSERT (EncodedPassword != NULL);
-  StrnCpyS (EncodedPassword, PasswordMaxSize / sizeof (CHAR16), Password, StrLen (Password));
-  EncodePassword (EncodedPassword, StrLen (EncodedPassword) * sizeof (CHAR16));
-  if (CompareMem (EncodedPassword, PrivateData->Configuration.WhatIsThePassword2, PasswordMaxSize) != 0) {
-    //
-    // Old password mismatch, return EFI_NOT_READY to prompt for error message
-    //
-    Status = EFI_NOT_READY;
-  } else {
-    Status = EFI_SUCCESS;
-  }
-
-  FreePool (Password);
-  FreePool (EncodedPassword);
-
-  return Status;
-}
-
-/**
-  Encode the password using a simple algorithm.
-
-  @param PrivateData This driver's private context data.
-  @param StringId    The password from User.
-
-  @retval  EFI_SUCESS The operation is successful.
-  @return  Other value if gRT->SetVariable () fails.
-
-**/
-EFI_STATUS
-SetPassword (
-  IN DRIVER_SAMPLE_PRIVATE_DATA      *PrivateData,
-  IN EFI_STRING_ID                   StringId
-  )
-{
-  EFI_STATUS                      Status;
-  CHAR16                          *Password;
-  CHAR16                          *TempPassword;
-  UINTN                           PasswordSize;
-  DRIVER_SAMPLE_CONFIGURATION     *Configuration;
-  UINTN                           BufferSize;
-
-  //
-  // Get Buffer Storage data from EFI variable
-  //
-  BufferSize = sizeof (DRIVER_SAMPLE_CONFIGURATION);
-  Status = gRT->GetVariable (
-                  VariableName,
-                  &gDriverSampleFormSetGuid,
-                  NULL,
-                  &BufferSize,
-                  &PrivateData->Configuration
-                  );
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  //
-  // Get user input password
-  //
-  Password = PrivateData->Configuration.WhatIsThePassword2;
-  PasswordSize = sizeof (PrivateData->Configuration.WhatIsThePassword2);
-  ZeroMem (Password, PasswordSize);
-
-  TempPassword = HiiGetString (PrivateData->HiiHandle[0], StringId, NULL);
-  if (TempPassword == NULL) {
-    return EFI_NOT_READY;
-  }
-  if (StrSize (TempPassword) > PasswordSize) {
-    FreePool (TempPassword);
-    return EFI_NOT_READY;
-  }
-  StrnCpyS (Password, PasswordSize / sizeof (CHAR16), TempPassword, StrLen (TempPassword));
-  FreePool (TempPassword);
-
-  //
-  // Retrieve uncommitted data from Browser
-  //
-  Configuration = AllocateZeroPool (sizeof (DRIVER_SAMPLE_CONFIGURATION));
-  ASSERT (Configuration != NULL);
-  if (HiiGetBrowserData (&gDriverSampleFormSetGuid, VariableName, sizeof (DRIVER_SAMPLE_CONFIGURATION), (UINT8 *) Configuration)) {
-    //
-    // Update password's clear text in the screen
-    //
-    CopyMem (Configuration->PasswordClearText, Password, StrSize (Password));
-
-    //
-    // Update uncommitted data of Browser
-    //
-    HiiSetBrowserData (
-       &gDriverSampleFormSetGuid,
-       VariableName,
-       sizeof (DRIVER_SAMPLE_CONFIGURATION),
-       (UINT8 *) Configuration,
-       NULL
-       );
-  }
-
-  //
-  // Free Configuration Buffer
-  //
-  FreePool (Configuration);
-
-
-  //
-  // Set password
-  //
-  EncodePassword (Password, StrLen (Password) * 2);
-  Status = gRT->SetVariable(
-                  VariableName,
-                  &gDriverSampleFormSetGuid,
-                  EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
-                  sizeof (DRIVER_SAMPLE_CONFIGURATION),
-                  &PrivateData->Configuration
-                  );
-  return Status;
 }
 
 /**
@@ -584,7 +338,7 @@ GetValueOfNumber (
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
-  
+
   Length = *Len;
   ZeroMem (TemStr, sizeof (TemStr));
   for (Index = 0; Index < Length; Index ++) {
@@ -609,7 +363,7 @@ Exit:
 }
 
 /**
-  Create altcfg string. 
+  Create altcfg string.
 
   @param  Result               The request result string.
   @param  ConfigHdr            The request head info. <ConfigHdr> format.
@@ -619,7 +373,7 @@ Exit:
 
   @retval  The string with altcfg info append at the end.
 **/
-EFI_STRING 
+EFI_STRING
 CreateAltCfgString (
   IN     EFI_STRING     Result,
   IN     EFI_STRING     ConfigHdr,
@@ -644,60 +398,60 @@ CreateAltCfgString (
   TmpStr = StringPtr;
   if (Result != NULL) {
     StrCpyS (StringPtr, NewLen / sizeof (CHAR16), Result);
-    StringPtr += StrLen (Result);  
+    StringPtr += StrLen (Result);
     FreePool (Result);
   }
-  
+
   UnicodeSPrint (
-  StringPtr, 
-  (1 + StrLen (ConfigHdr) + 8 + 4 + 1) * sizeof (CHAR16), 
-  L"&%s&ALTCFG=%04x", 
-  ConfigHdr, 
+  StringPtr,
+  (1 + StrLen (ConfigHdr) + 8 + 4 + 1) * sizeof (CHAR16),
+  L"&%s&ALTCFG=%04x",
+  ConfigHdr,
   EFI_HII_DEFAULT_CLASS_STANDARD
   );
   StringPtr += StrLen (StringPtr);
 
   UnicodeSPrint (
-    StringPtr, 
+    StringPtr,
     (8 + 4 + 7 + 4 + 7 + 4 + 1) * sizeof (CHAR16),
-    L"&OFFSET=%04x&WIDTH=%04x&VALUE=%04x", 
-    Offset, 
+    L"&OFFSET=%04x&WIDTH=%04x&VALUE=%04x",
+    Offset,
     Width,
     DEFAULT_CLASS_STANDARD_VALUE
     );
-  StringPtr += StrLen (StringPtr);  
+  StringPtr += StrLen (StringPtr);
 
   UnicodeSPrint (
-  StringPtr, 
-  (1 + StrLen (ConfigHdr) + 8 + 4 + 1) * sizeof (CHAR16), 
-  L"&%s&ALTCFG=%04x", 
-  ConfigHdr, 
+  StringPtr,
+  (1 + StrLen (ConfigHdr) + 8 + 4 + 1) * sizeof (CHAR16),
+  L"&%s&ALTCFG=%04x",
+  ConfigHdr,
   EFI_HII_DEFAULT_CLASS_MANUFACTURING
   );
   StringPtr += StrLen (StringPtr);
 
   UnicodeSPrint (
-    StringPtr, 
+    StringPtr,
     (8 + 4 + 7 + 4 + 7 + 4 + 1) * sizeof (CHAR16),
-    L"&OFFSET=%04x&WIDTH=%04x&VALUE=%04x", 
-    Offset, 
+    L"&OFFSET=%04x&WIDTH=%04x&VALUE=%04x",
+    Offset,
     Width,
     DEFAULT_CLASS_MANUFACTURING_VALUE
     );
-  StringPtr += StrLen (StringPtr); 
+  StringPtr += StrLen (StringPtr);
 
   return TmpStr;
 }
 
 /**
-  Check whether need to add the altcfg string. if need to add, add the altcfg 
+  Check whether need to add the altcfg string. if need to add, add the altcfg
   string.
 
   @param  RequestResult              The request result string.
   @param  ConfigRequestHdr           The request head info. <ConfigHdr> format.
 
 **/
-VOID 
+VOID
 AppendAltCfgString (
   IN OUT EFI_STRING                       *RequestResult,
   IN     EFI_STRING                       ConfigRequestHdr
@@ -907,6 +661,13 @@ ExtractConfig (
     if (HiiIsConfigHdrMatch(Request, &gDriverSampleFormSetGuid, MyEfiVar)) {
       return EFI_UNSUPPORTED;
     }
+    if (HiiIsConfigHdrMatch(Request, &gDriverSampleFormSetGuid, MyEfiBitVar)) {
+      return EFI_UNSUPPORTED;
+    }
+    if (HiiIsConfigHdrMatch(Request, &gDriverSampleFormSetGuid, MyEfiUnionVar)) {
+      return EFI_UNSUPPORTED;
+    }
+
     //
     // Set Request to the unified request string.
     //
@@ -968,12 +729,14 @@ ExtractConfig (
 
       BackupChar = Value[ValueStrLen];
       *Value++   = L'=';
-      Value += UnicodeValueToString (
-                 Value, 
-                 PREFIX_ZERO | RADIX_HEX, 
-                 PrivateData->Configuration.NameValueVar0, 
-                 sizeof (PrivateData->Configuration.NameValueVar0) * 2
-                 );
+      UnicodeValueToStringS (
+        Value,
+        BufferSize - ((UINTN)Value - (UINTN)*Results),
+        PREFIX_ZERO | RADIX_HEX,
+        PrivateData->Configuration.NameValueVar0,
+        sizeof (PrivateData->Configuration.NameValueVar0) * 2
+        );
+      Value += StrnLenS (Value, (BufferSize - ((UINTN)Value - (UINTN)*Results)) / sizeof (CHAR16));
       *Value = BackupChar;
     }
 
@@ -987,12 +750,14 @@ ExtractConfig (
 
       BackupChar = Value[ValueStrLen];
       *Value++   = L'=';
-      Value += UnicodeValueToString (
-                Value, 
-                PREFIX_ZERO | RADIX_HEX, 
-                PrivateData->Configuration.NameValueVar1, 
-                sizeof (PrivateData->Configuration.NameValueVar1) * 2
-                );
+      UnicodeValueToStringS (
+        Value,
+        BufferSize - ((UINTN)Value - (UINTN)*Results),
+        PREFIX_ZERO | RADIX_HEX,
+        PrivateData->Configuration.NameValueVar1,
+        sizeof (PrivateData->Configuration.NameValueVar1) * 2
+        );
+      Value += StrnLenS (Value, (BufferSize - ((UINTN)Value - (UINTN)*Results)) / sizeof (CHAR16));
       *Value = BackupChar;
     }
 
@@ -1010,10 +775,17 @@ ExtractConfig (
       //
       StrPointer = (CHAR16 *) PrivateData->Configuration.NameValueVar2;
       for (; *StrPointer != L'\0'; StrPointer++) {
-        Value += UnicodeValueToString (Value, PREFIX_ZERO | RADIX_HEX, *StrPointer, 4);
+        UnicodeValueToStringS (
+          Value,
+          BufferSize - ((UINTN)Value - (UINTN)*Results),
+          PREFIX_ZERO | RADIX_HEX,
+          *StrPointer,
+          4
+          );
+        Value += StrnLenS (Value, (BufferSize - ((UINTN)Value - (UINTN)*Results)) / sizeof (CHAR16));
       }
     }
-    
+
     Status = EFI_SUCCESS;
   } else {
     //
@@ -1115,6 +887,12 @@ RouteConfig (
   // through hii database, not support in this path.
   //
   if (HiiIsConfigHdrMatch(Configuration, &gDriverSampleFormSetGuid, MyEfiVar)) {
+    return EFI_UNSUPPORTED;
+  }
+  if (HiiIsConfigHdrMatch(Configuration, &gDriverSampleFormSetGuid, MyEfiBitVar)) {
+    return EFI_UNSUPPORTED;
+  }
+  if (HiiIsConfigHdrMatch(Configuration, &gDriverSampleFormSetGuid, MyEfiUnionVar)) {
     return EFI_UNSUPPORTED;
   }
 
@@ -1332,6 +1110,9 @@ DriverCallback (
   CHAR16                          *TmpStr;
   UINTN                           Index;
   UINT64                          BufferValue;
+  EFI_HII_POPUP_SELECTION         UserSelection;
+
+  UserSelection = 0xFF;
 
   if (((Value == NULL) && (Action != EFI_BROWSER_ACTION_FORM_OPEN) && (Action != EFI_BROWSER_ACTION_FORM_CLOSE))||
     (ActionRequest == NULL)) {
@@ -1422,7 +1203,7 @@ DriverCallback (
       }
     }
     break;
-    
+
   case EFI_BROWSER_ACTION_RETRIEVE:
     {
       switch (QuestionId ) {
@@ -1468,7 +1249,7 @@ DriverCallback (
           EFI_IFR_FLAG_CALLBACK,            // Question flag
           0                                 // Action String ID
         );
-      
+
         HiiUpdateForm (
           PrivateData->HiiHandle[0],        // HII handle
           &gDriverSampleFormSetGuid,        // Formset GUID
@@ -1526,6 +1307,10 @@ DriverCallback (
         }
       break;
 
+      case 0x6666:
+        Value->u8 = 12;
+        break;
+
       default:
         Status = EFI_UNSUPPORTED;
       break;
@@ -1540,8 +1325,12 @@ DriverCallback (
         Value->u8 = DEFAULT_CLASS_MANUFACTURING_VALUE;
       break;
 
+     case 0x6666:
+        Value->u8 = 13;
+        break;
+
       default:
-        Status = EFI_UNSUPPORTED;      
+        Status = EFI_UNSUPPORTED;
       break;
       }
     }
@@ -1728,40 +1517,6 @@ DriverCallback (
       HiiFreeOpCodeHandle (EndOpCodeHandle);
       break;
 
-    case 0x2000:
-      //
-      // Only used to update the state.
-      //
-      if ((Type == EFI_IFR_TYPE_STRING) && (Value->string == 0) && 
-        (PrivateData->PasswordState == BROWSER_STATE_SET_PASSWORD)) {
-        PrivateData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
-        return EFI_INVALID_PARAMETER;
-      }
-
-      //
-      // When try to set a new password, user will be chanlleged with old password.
-      // The Callback is responsible for validating old password input by user,
-      // If Callback return EFI_SUCCESS, it indicates validation pass.
-      //
-      switch (PrivateData->PasswordState) {
-      case BROWSER_STATE_VALIDATE_PASSWORD:
-        Status = ValidatePassword (PrivateData, Value->string);
-        if (Status == EFI_SUCCESS) {
-          PrivateData->PasswordState = BROWSER_STATE_SET_PASSWORD;
-        }
-        break;
-
-      case BROWSER_STATE_SET_PASSWORD:
-        Status = SetPassword (PrivateData, Value->string);
-        PrivateData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
-        break;
-
-      default:
-        break;
-      }
-
-      break;
-
     default:
       break;
     }
@@ -1776,14 +1531,14 @@ DriverCallback (
         //
         *ActionRequest = EFI_BROWSER_ACTION_REQUEST_EXIT;
         break;
-      
+
       case 0x1238:
         //
         // User press "Save now", request Browser to save the uncommitted data.
         //
         *ActionRequest = EFI_BROWSER_ACTION_REQUEST_SUBMIT;
         break;
-      
+
       case 0x1241:
       case 0x1246:
         //
@@ -1791,21 +1546,21 @@ DriverCallback (
         //
         *ActionRequest = EFI_BROWSER_ACTION_REQUEST_FORM_SUBMIT_EXIT;
         break;
-      
+
       case 0x1242:
         //
         // User press "Discard current form now", request Browser to discard the uncommitted data.
         //
         *ActionRequest = EFI_BROWSER_ACTION_REQUEST_FORM_DISCARD;
         break;
-      
+
       case 0x1243:
         //
         // User press "Submit current form now", request Browser to save the uncommitted data.
         //
         *ActionRequest = EFI_BROWSER_ACTION_REQUEST_FORM_APPLY;
         break;
-      
+
       case 0x1244:
       case 0x1245:
         //
@@ -1845,7 +1600,7 @@ DriverCallback (
         //
         // 2. If system support this keyword, just try to change value.
         //
-        
+
         //
         // Change value from '0' to '1' or from '1' to '0'
         //
@@ -1882,6 +1637,22 @@ DriverCallback (
 
           Status = EFI_SUCCESS;
           break;
+        }
+        break;
+
+      case 0x1330:
+        Status = mPrivateData->HiiPopup->CreatePopup (
+          mPrivateData->HiiPopup,
+          EfiHiiPopupStyleInfo,
+          EfiHiiPopupTypeYesNo,
+          mPrivateData->HiiHandle[0],
+          STRING_TOKEN (STR_POPUP_STRING),
+          &UserSelection
+          );
+        if (!EFI_ERROR (Status)) {
+          if (UserSelection == EfiHiiPopupSelectionYes) {
+            *ActionRequest = EFI_BROWSER_ACTION_REQUEST_EXIT;
+          }
         }
         break;
 
@@ -1944,6 +1715,7 @@ DriverSampleInit (
   EFI_FORM_BROWSER2_PROTOCOL      *FormBrowser2;
   EFI_HII_CONFIG_ROUTING_PROTOCOL *HiiConfigRouting;
   EFI_CONFIG_KEYWORD_HANDLER_PROTOCOL *HiiKeywordHandler;
+  EFI_HII_POPUP_PROTOCOL              *PopupHandler;
   CHAR16                          *NewString;
   UINTN                           BufferSize;
   DRIVER_SAMPLE_CONFIGURATION     *Configuration;
@@ -1951,6 +1723,8 @@ DriverSampleInit (
   EFI_STRING                      ConfigRequestHdr;
   EFI_STRING                      NameRequestHdr;
   MY_EFI_VARSTORE_DATA            *VarStoreConfig;
+  MY_EFI_BITS_VARSTORE_DATA       *BitsVarStoreConfig;
+  MY_EFI_UNION_DATA               *UnionConfig;
   EFI_INPUT_KEY                   HotKey;
   EDKII_FORM_BROWSER_EXTENSION_PROTOCOL *FormBrowserEx;
 
@@ -1983,7 +1757,6 @@ DriverSampleInit (
   mPrivateData->ConfigAccess.ExtractConfig = ExtractConfig;
   mPrivateData->ConfigAccess.RouteConfig = RouteConfig;
   mPrivateData->ConfigAccess.Callback = DriverCallback;
-  mPrivateData->PasswordState = BROWSER_STATE_VALIDATE_PASSWORD;
 
   //
   // Locate Hii Database protocol
@@ -2029,6 +1802,15 @@ DriverSampleInit (
     return Status;
   }
   mPrivateData->HiiKeywordHandler = HiiKeywordHandler;
+
+  //
+  // Locate HiiPopup protocol
+  //
+  Status = gBS->LocateProtocol (&gEfiHiiPopupProtocolGuid, NULL, (VOID **) &PopupHandler);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  mPrivateData->HiiPopup = PopupHandler;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &DriverHandle[0],
@@ -2231,10 +2013,104 @@ DriverSampleInit (
   }
   FreePool (ConfigRequestHdr);
 
+  //
+  // Initialize Bits efi varstore configuration data
+  //
+  BitsVarStoreConfig = &mPrivateData->BitsVarStoreConfig;
+  ZeroMem (BitsVarStoreConfig, sizeof (MY_EFI_BITS_VARSTORE_DATA));
+
+  ConfigRequestHdr = HiiConstructConfigHdr (&gDriverSampleFormSetGuid, MyEfiBitVar, DriverHandle[0]);
+  ASSERT (ConfigRequestHdr != NULL);
+
+  BufferSize = sizeof (MY_EFI_BITS_VARSTORE_DATA);
+  Status = gRT->GetVariable (MyEfiBitVar, &gDriverSampleFormSetGuid, NULL, &BufferSize, BitsVarStoreConfig);
+  if (EFI_ERROR (Status)) {
+    //
+    // Store zero data to EFI variable Storage.
+    //
+    Status = gRT->SetVariable(
+                    MyEfiBitVar,
+                    &gDriverSampleFormSetGuid,
+                    EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                    sizeof (MY_EFI_BITS_VARSTORE_DATA),
+                    BitsVarStoreConfig
+                    );
+    if (EFI_ERROR (Status)) {
+      DriverSampleUnload (ImageHandle);
+      return Status;
+    }
+    //
+    // EFI variable for NV config doesn't exit, we should build this variable
+    // based on default values stored in IFR
+    //
+    ActionFlag = HiiSetToDefaults (ConfigRequestHdr, EFI_HII_DEFAULT_CLASS_STANDARD);
+    if (!ActionFlag) {
+      DriverSampleUnload (ImageHandle);
+      return EFI_INVALID_PARAMETER;
+    }
+  } else {
+    //
+    // EFI variable does exist and Validate Current Setting
+    //
+    ActionFlag = HiiValidateSettings (ConfigRequestHdr);
+    if (!ActionFlag) {
+      DriverSampleUnload (ImageHandle);
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+  FreePool (ConfigRequestHdr);
+
+   //
+  // Initialize Union efi varstore configuration data
+  //
+  UnionConfig = &mPrivateData->UnionConfig;
+  ZeroMem (UnionConfig, sizeof (MY_EFI_UNION_DATA));
+
+  ConfigRequestHdr = HiiConstructConfigHdr (&gDriverSampleFormSetGuid, MyEfiUnionVar, DriverHandle[0]);
+  ASSERT (ConfigRequestHdr != NULL);
+
+  BufferSize = sizeof (MY_EFI_UNION_DATA);
+  Status = gRT->GetVariable (MyEfiUnionVar, &gDriverSampleFormSetGuid, NULL, &BufferSize, UnionConfig);
+  if (EFI_ERROR (Status)) {
+    //
+    // Store zero data to EFI variable Storage.
+    //
+    Status = gRT->SetVariable(
+                    MyEfiUnionVar,
+                    &gDriverSampleFormSetGuid,
+                    EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS,
+                    sizeof (MY_EFI_UNION_DATA),
+                    UnionConfig
+                    );
+    if (EFI_ERROR (Status)) {
+      DriverSampleUnload (ImageHandle);
+      return Status;
+    }
+    //
+    // EFI variable for NV config doesn't exit, we should build this variable
+    // based on default values stored in IFR
+    //
+    ActionFlag = HiiSetToDefaults (ConfigRequestHdr, EFI_HII_DEFAULT_CLASS_STANDARD);
+    if (!ActionFlag) {
+      DriverSampleUnload (ImageHandle);
+      return EFI_INVALID_PARAMETER;
+    }
+  } else {
+    //
+    // EFI variable does exist and Validate Current Setting
+    //
+    ActionFlag = HiiValidateSettings (ConfigRequestHdr);
+    if (!ActionFlag) {
+      DriverSampleUnload (ImageHandle);
+      return EFI_INVALID_PARAMETER;
+    }
+  }
+  FreePool (ConfigRequestHdr);
+
   Status = gBS->CreateEventEx (
-        EVT_NOTIFY_SIGNAL, 
+        EVT_NOTIFY_SIGNAL,
         TPL_NOTIFY,
-        DriverSampleInternalEmptyFunction,
+        EfiEventEmptyFunction,
         NULL,
         &gEfiIfrRefreshIdOpGuid,
         &mEvent
@@ -2243,7 +2119,7 @@ DriverSampleInit (
 
   //
   // Example of how to use BrowserEx protocol to register HotKey.
-  // 
+  //
   Status = gBS->LocateProtocol (&gEdkiiFormBrowserExProtocolGuid, NULL, (VOID **) &FormBrowserEx);
   if (!EFI_ERROR (Status)) {
     //
@@ -2254,7 +2130,7 @@ DriverSampleInit (
     FormBrowserEx->RegisterHotKey (&HotKey, 0, 0, NULL);
     HotKey.ScanCode    = SCAN_F10;
     FormBrowserEx->RegisterHotKey (&HotKey, 0, 0, NULL);
-    
+
     //
     // Register the default HotKey F9 and F10 again.
     //

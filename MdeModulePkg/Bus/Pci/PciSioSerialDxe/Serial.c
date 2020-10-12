@@ -1,14 +1,8 @@
 /** @file
   Serial driver for PCI or SIO UARTS.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -94,7 +88,7 @@ SERIAL_DEV  gSerialDevTemplate = {
   Check the device path node whether it's the Flow Control node or not.
 
   @param[in] FlowControl    The device path node to be checked.
-  
+
   @retval TRUE              It's the Flow Control node.
   @retval FALSE             It's not.
 
@@ -114,9 +108,9 @@ IsUartFlowControlDevicePathNode (
 /**
   The user Entry Point for module PciSioSerial. The user code starts with this function.
 
-  @param[in] ImageHandle    The firmware allocated handle for the EFI image.  
+  @param[in] ImageHandle    The firmware allocated handle for the EFI image.
   @param[in] SystemTable    A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS       The entry point is executed successfully.
   @retval other             Some error occurs when executing this entry point.
 
@@ -396,7 +390,7 @@ SerialControllerDriverSupported (
   if (EFI_ERROR (Status)) {
     Status = IsPciSerialController (Controller);
   }
-  return Status;  
+  return Status;
 }
 
 /**
@@ -473,7 +467,7 @@ CreateSerialDevice (
   // For PCI serial device, use the information from PCD
   //
   if (PciSerialParameter != NULL) {
-    BarIndex = (PciSerialParameter->BarIndex == PCI_BAR_ALL) ? 0 : PciSerialParameter->BarIndex;
+    BarIndex = (PciSerialParameter->BarIndex == MAX_UINT8) ? 0 : PciSerialParameter->BarIndex;
     Offset = PciSerialParameter->Offset;
     if (PciSerialParameter->RegisterStride != 0) {
       SerialDevice->RegisterStride = PciSerialParameter->RegisterStride;
@@ -671,7 +665,7 @@ CreateSerialDevice (
 
   if (EFI_ERROR (Status)) {
     gBS->UninstallMultipleProtocolInterfaces (
-           &SerialDevice->Handle,
+           SerialDevice->Handle,
            &gEfiDevicePathProtocolGuid, SerialDevice->DevicePath,
            &gEfiSerialIoProtocolGuid, &SerialDevice->SerialIo,
            NULL
@@ -863,65 +857,73 @@ SerialControllerDriverStart (
   ControllerNumber = 0;
   ContainsControllerNode = FALSE;
   SerialDevices = GetChildSerialDevices (Controller, IoProtocolGuid, &SerialDeviceCount);
-  //
-  // If the SerialIo instance specified by RemainingDevicePath is already created,
-  // update the attributes/control.
-  //
-  if ((SerialDeviceCount != 0) && (RemainingDevicePath != NULL)) {
-    Uart = (UART_DEVICE_PATH *) SkipControllerDevicePathNode (RemainingDevicePath, &ContainsControllerNode, &ControllerNumber);
-    for (Index = 0; Index < SerialDeviceCount; Index++) {
-      ASSERT ((SerialDevices != NULL) && (SerialDevices[Index] != NULL));
-      if ((!SerialDevices[Index]->ContainsControllerNode && !ContainsControllerNode) ||
-          (SerialDevices[Index]->ContainsControllerNode && ContainsControllerNode && SerialDevices[Index]->Instance == ControllerNumber)
-          ) {
-        SerialIo = &SerialDevices[Index]->SerialIo;
-        Status = EFI_INVALID_PARAMETER;
-        //
-        // Pass NULL ActualBaudRate to VerifyUartParameters to disallow baudrate degrade.
-        // DriverBindingStart() shouldn't create a handle with different UART device path.
-        //
-        if (VerifyUartParameters (SerialDevices[Index]->ClockRate, Uart->BaudRate, Uart->DataBits,
-                                  (EFI_PARITY_TYPE) Uart->Parity, (EFI_STOP_BITS_TYPE) Uart->StopBits, NULL, NULL)) {
-          Status = SerialIo->SetAttributes (
-                               SerialIo,
-                               Uart->BaudRate,
-                               SerialIo->Mode->ReceiveFifoDepth,
-                               SerialIo->Mode->Timeout,
-                               (EFI_PARITY_TYPE) Uart->Parity,
-                               Uart->DataBits,
-                               (EFI_STOP_BITS_TYPE) Uart->StopBits
-                               );
-        }
-        FlowControl = (UART_FLOW_CONTROL_DEVICE_PATH *) NextDevicePathNode (Uart);
-        if (!EFI_ERROR (Status) && IsUartFlowControlDevicePathNode (FlowControl)) {
-          Status = SerialIo->GetControl (SerialIo, &Control);
-          if (!EFI_ERROR (Status)) {
-            if (ReadUnaligned32 (&FlowControl->FlowControlMap) == UART_FLOW_CONTROL_HARDWARE) {
-              Control |= EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
-            } else {
-              Control &= ~EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
-            }
-            //
-            // Clear the bits that are not allowed to pass to SetControl
-            //
-            Control &= (EFI_SERIAL_REQUEST_TO_SEND | EFI_SERIAL_DATA_TERMINAL_READY |
-                        EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE | EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE |
-                        EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE);
-            Status = SerialIo->SetControl (SerialIo, Control);
+
+  if (SerialDeviceCount != 0) {
+    if (RemainingDevicePath == NULL) {
+      //
+      // If the SerialIo instance is already created, NULL as RemainingDevicePath is treated
+      // as to create the same SerialIo instance.
+      //
+      return EFI_SUCCESS;
+    } else {
+      //
+      // Update the attributes/control of the SerialIo instance specified by RemainingDevicePath.
+      //
+      Uart = (UART_DEVICE_PATH *) SkipControllerDevicePathNode (RemainingDevicePath, &ContainsControllerNode, &ControllerNumber);
+      for (Index = 0; Index < SerialDeviceCount; Index++) {
+        ASSERT ((SerialDevices != NULL) && (SerialDevices[Index] != NULL));
+        if ((!SerialDevices[Index]->ContainsControllerNode && !ContainsControllerNode) ||
+            (SerialDevices[Index]->ContainsControllerNode && ContainsControllerNode && SerialDevices[Index]->Instance == ControllerNumber)
+            ) {
+          SerialIo = &SerialDevices[Index]->SerialIo;
+          Status = EFI_INVALID_PARAMETER;
+          //
+          // Pass NULL ActualBaudRate to VerifyUartParameters to disallow baudrate degrade.
+          // DriverBindingStart() shouldn't create a handle with different UART device path.
+          //
+          if (VerifyUartParameters (SerialDevices[Index]->ClockRate, Uart->BaudRate, Uart->DataBits,
+                                    (EFI_PARITY_TYPE) Uart->Parity, (EFI_STOP_BITS_TYPE) Uart->StopBits, NULL, NULL)) {
+            Status = SerialIo->SetAttributes (
+                                 SerialIo,
+                                 Uart->BaudRate,
+                                 SerialIo->Mode->ReceiveFifoDepth,
+                                 SerialIo->Mode->Timeout,
+                                 (EFI_PARITY_TYPE) Uart->Parity,
+                                 Uart->DataBits,
+                                 (EFI_STOP_BITS_TYPE) Uart->StopBits
+                                 );
           }
+          FlowControl = (UART_FLOW_CONTROL_DEVICE_PATH *) NextDevicePathNode (Uart);
+          if (!EFI_ERROR (Status) && IsUartFlowControlDevicePathNode (FlowControl)) {
+            Status = SerialIo->GetControl (SerialIo, &Control);
+            if (!EFI_ERROR (Status)) {
+              if (ReadUnaligned32 (&FlowControl->FlowControlMap) == UART_FLOW_CONTROL_HARDWARE) {
+                Control |= EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
+              } else {
+                Control &= ~EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
+              }
+              //
+              // Clear the bits that are not allowed to pass to SetControl
+              //
+              Control &= (EFI_SERIAL_REQUEST_TO_SEND | EFI_SERIAL_DATA_TERMINAL_READY |
+                          EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE | EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE |
+                          EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE);
+              Status = SerialIo->SetControl (SerialIo, Control);
+            }
+          }
+          break;
         }
-        break;
       }
-    }
-    if (Index != SerialDeviceCount) {
-      //
-      // Directly return if the SerialIo instance specified by RemainingDevicePath is found and updated.
-      // Otherwise continue to create the instance specified by RemainingDevicePath.
-      //
-      if (SerialDevices != NULL) {
-        FreePool (SerialDevices);
+      if (Index != SerialDeviceCount) {
+        //
+        // Directly return if the SerialIo instance specified by RemainingDevicePath is found and updated.
+        // Otherwise continue to create the instance specified by RemainingDevicePath.
+        //
+        if (SerialDevices != NULL) {
+          FreePool (SerialDevices);
+        }
+        return Status;
       }
-      return Status;
     }
   }
 

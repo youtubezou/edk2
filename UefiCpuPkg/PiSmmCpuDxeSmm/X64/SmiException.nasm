@@ -1,12 +1,6 @@
 ;------------------------------------------------------------------------------ ;
-; Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -19,7 +13,6 @@
 ;-------------------------------------------------------------------------------
 
 extern  ASM_PFX(SmiPFHandler)
-extern  ASM_PFX(gSmiMtrrs)
 
 global  ASM_PFX(gcSmiIdtr)
 global  ASM_PFX(gcSmiGdtr)
@@ -130,7 +123,7 @@ ASM_PFX(gcPsd):
             DD      GDT_SIZE
             DD      0
             times   24 DB 0
-            DQ      ASM_PFX(gSmiMtrrs)
+            DQ      0
 PSD_SIZE  equ $ -   ASM_PFX(gcPsd)
 
 ;
@@ -145,25 +138,8 @@ ASM_PFX(gcSmiGdtr):
     DQ        NullSeg
 
 ASM_PFX(gcSmiIdtr):
-    DW      IDT_SIZE - 1
-    DQ        _SmiIDT
-
-;
-; Here is the IDT. There are 32 (not 255) entries in it since only processor
-; generated exceptions will be handled.
-;
-_SmiIDT:
-%rep 32
-    DW      0                           ;   0:15
-    DW      CODE_SEL                    ; Segment selector
-    DB      0                           ; Unused
-    DB      0x8e                         ; Interrupt Gate, Present
-    DW      0                           ;   16:31
-    DQ      0                           ;   32:63
-%endrep
-_SmiIDTEnd:
-
-IDT_SIZE equ  _SmiIDTEnd -   _SmiIDT
+    DW      0
+    DQ      0
 
     DEFAULT REL
     SECTION .text
@@ -297,7 +273,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 
     sub rsp, 512
     mov rdi, rsp
-    db 0xf, 0xae, 00000111y ;fxsave [rdi]
+    fxsave [rdi]
 
 ; UEFI calling convention for x64 requires that Direction flag in EFLAGs is clear
     cld
@@ -307,7 +283,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 
 ;; call into exception handler
     mov     rcx, [rbp + 8]
-    mov     rax, ASM_PFX(SmiPFHandler)
+    lea     rax, [ASM_PFX(SmiPFHandler)]
 
 ;; Prepare parameter and call
     mov     rdx, rsp
@@ -327,7 +303,7 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
 ;; FX_SAVE_STATE_X64 FxSaveState;
 
     mov rsi, rsp
-    db 0xf, 0xae, 00001110y ; fxrstor [rsi]
+    fxrstor [rsi]
     add rsp, 512
 
 ;; UINT64  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;
@@ -399,14 +375,4 @@ ASM_PFX(PageFaultIdtHandlerSmmProfile):
     pop     rbp
     add     rsp, 16           ; skip INT# & ErrCode
     iretq
-
-global ASM_PFX(InitializeIDTSmmStackGuard)
-ASM_PFX(InitializeIDTSmmStackGuard):
-;
-; If SMM Stack Guard feature is enabled, set the IST field of
-; the interrupt gate for Page Fault Exception to be 1
-;
-    lea     rax, [_SmiIDT + 14 * 16]
-    mov     byte [rax + 4], 1
-    ret
 

@@ -1,14 +1,8 @@
 /** @file
   CPU DXE Module to produce CPU ARCH Protocol and CPU MP Protocol.
 
-  Copyright (c) 2008 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2008 - 2019, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -19,6 +13,7 @@
 
 #include <Protocol/Cpu.h>
 #include <Protocol/MpService.h>
+#include <Register/Intel/Msr.h>
 
 #include <Ppi/SecPlatformInformation.h>
 #include <Ppi/SecPlatformInformation2.h>
@@ -39,17 +34,16 @@
 #include <Library/HobLib.h>
 #include <Library/ReportStatusCodeLib.h>
 #include <Library/MpInitLib.h>
+#include <Library/TimerLib.h>
 
 #include <Guid/IdleLoopEvent.h>
 #include <Guid/VectorHandoffTable.h>
 
-#define EFI_MEMORY_CACHETYPE_MASK     (EFI_MEMORY_UC  | \
-                                       EFI_MEMORY_WC  | \
-                                       EFI_MEMORY_WT  | \
-                                       EFI_MEMORY_WB  | \
-                                       EFI_MEMORY_UCE   \
-                                       )
+#define HEAP_GUARD_NONSTOP_MODE       \
+        ((PcdGet8 (PcdHeapGuardPropertyMask) & (BIT6|BIT4|BIT1|BIT0)) > BIT6)
 
+#define NULL_DETECTION_NONSTOP_MODE   \
+        ((PcdGet8 (PcdNullPointerDetectionPropertyMask) & (BIT6|BIT0)) > BIT6)
 
 /**
   Flush CPU data cache. If the instruction cache is fully coherent
@@ -202,7 +196,7 @@ CpuGetTimerValue (
   );
 
 /**
-  Set memory cacheability attributes for given range of memeory.
+  Set memory cacheability attributes for given range of memory.
 
   @param  This                   Protocol instance structure
   @param  BaseAddress            Specifies the start address of the
@@ -258,6 +252,49 @@ EFIAPI
 SetDataSelectors (
   UINT16 Selector
   );
+
+/**
+  Update GCD memory space attributes according to current page table setup.
+**/
+VOID
+RefreshGcdMemoryAttributesFromPaging (
+  VOID
+  );
+
+/**
+  Special handler for #DB exception, which will restore the page attributes
+  (not-present). It should work with #PF handler which will set pages to
+  'present'.
+
+  @param ExceptionType  Exception type.
+  @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
+
+**/
+VOID
+EFIAPI
+DebugExceptionHandler (
+  IN EFI_EXCEPTION_TYPE   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
+  );
+
+/**
+  Special handler for #PF exception, which will set the pages which caused
+  #PF to be 'present'. The attribute of those pages should be restored in
+  the subsequent #DB handler.
+
+  @param ExceptionType  Exception type.
+  @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
+
+**/
+VOID
+EFIAPI
+PageFaultExceptionHandler (
+  IN EFI_EXCEPTION_TYPE   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
+  );
+
+extern BOOLEAN mIsAllocatingPageTable;
+extern UINTN   mNumberOfProcessors;
 
 #endif
 

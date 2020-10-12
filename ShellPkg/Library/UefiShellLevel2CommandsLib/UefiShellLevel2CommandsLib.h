@@ -9,14 +9,8 @@
   * functions are non-interactive only
 
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -25,6 +19,7 @@
 
 #include <Uefi.h>
 
+#include <Guid/GlobalVariable.h>
 #include <Guid/ShellLibHiiGuid.h>
 
 #include <Protocol/Shell.h>
@@ -48,7 +43,7 @@
 #include <Library/FileHandleLib.h>
 
 extern CONST  CHAR16                            mFileName[];
-extern        EFI_HANDLE                        gShellLevel2HiiHandle;
+extern        EFI_HII_HANDLE                    gShellLevel2HiiHandle;
 
 /**
   Function for 'attrib' command.
@@ -279,16 +274,17 @@ VerifyIntermediateDirectories (
   );
 
 /**
-  CaseInsensitive length limited string comparison.
+  String comparison without regard to case for a limited number of characters.
 
-  @param[in] Source   Pointer to first string.
-  @param[in] Target   Pointer to second string.
-  @param[in] Count    Number of characters to compare.
+  @param[in] Source   The first item to compare.
+  @param[in] Target   The second item to compare.
+  @param[in] Count    How many characters to compare.
 
-  @retval 0   The strings are the same.
-  @return     non-zero if the strings are different.
+  @retval 0    Source and Target are identical strings without regard to case.
+  @retval !=0  Source is not identical to Target.
+
 **/
-CONST CHAR16*
+INTN
 StrniCmp(
   IN CONST CHAR16 *Source,
   IN CONST CHAR16 *Target,
@@ -299,8 +295,8 @@ StrniCmp(
   Cleans off all the quotes in the string.
 
   @param[in]     OriginalString   pointer to the string to be cleaned.
-  @param[out]   CleanString      The new string with all quotes removed. 
-                                                  Memory allocated in the function and free 
+  @param[out]   CleanString      The new string with all quotes removed.
+                                                  Memory allocated in the function and free
                                                   by caller.
 
   @retval EFI_SUCCESS   The operation was successful.
@@ -355,7 +351,7 @@ CopySingleFile(
   @retval SHELL_SUCCESS       The operation was successful.
   @retval SHELL_ACCESS_DENIED A file was read only.
   @retval SHELL_ABORTED       The abort message was received.
-  @retval SHELL_DEVICE_ERROR  A device error occured reading this Node.
+  @retval SHELL_DEVICE_ERROR  A device error occurred reading this Node.
 **/
 SHELL_STATUS
 CascadeDelete(

@@ -2,15 +2,9 @@
 
   String definitions for UEFI Shell network 2 commands
   Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  (C) Copyright 2017 Hewlett Packard Enterprise Development LP<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions
-  of the BSD License which accompanies this distribution.  The full
-  text of the license may be found at<BR>
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   Module Name:
 
@@ -32,15 +26,16 @@
 #string STR_PING6_INVALID_BUFFER_SIZE      #language en-US  "%Ping6: Invalid buffer size, %s\r\n"
 #string STR_PING6_INVALID_SOURCE           #language en-US  "%Ping6: Require source interface option\r\n"
 #string STR_PING6_IP6_CONFIG               #language en-US  "%Ping6: The process of Ip6 Configure %r\r\n"
+#string STR_PING6_IP6_RECEIVE              #language en-US  "%Ping6: Place the receive token %r\r\n"
 #string STR_PING6_IP6CFG_GETDATA           #language en-US  "%Ping6: Get data of the interface information %r\r\n"
 #string STR_PING6_SEND_REQUEST             #language en-US  "Echo request sequence %d fails.\r\n"
 #string STR_PING6_CONFIGD_NIC_NF           #language en-US  "%Ping6: No configured interfaces were found.\r\n"
 #string STR_PING6_NOSOURCE_INDOMAIN        #language en-US  "No sources in %s's multicast domain.\r\n"
 #string STR_PING6_START                    #language en-US  "Ping %s %d data bytes\r\n"
 #string STR_PING6_TIMEOUT                  #language en-US  "Echo request sequence %d timeout.\r\n"
-#string STR_PING6_REPLY_INFO               #language en-US  "%d bytes from %s : icmp_seq=%d ttl=%d time%c%dms\r\n"
+#string STR_PING6_REPLY_INFO               #language en-US  "%d bytes from %s : icmp_seq=%d ttl=%d time%d~%dms\r\n"
 #string STR_PING6_STAT                     #language en-US  "\n%d packets transmitted, %d received, %d%% packet loss, time %dms\r\n"
-#string STR_PING6_RTT                      #language en-US  "\nRtt(round trip time) min=%dms max=%dms avg=%dms\r\n"
+#string STR_PING6_RTT                      #language en-US  "\nRtt(round trip time) min=%d~%dms max=%d~%dms avg=%d~%dms\r\n"
 
 #string STR_IFCONFIG6_ERR_IP6CFG_GETDATA       #language en-US    "Get data of the interface information %hr\r\n"
 #string STR_IFCONFIG6_INFO_BREAK               #language en-US    "-----------------------------------------------------------------"
@@ -77,13 +72,22 @@
 #string STR_IFCONFIG6_ERR_LACK_OPTION          #language en-US    "Lack options.\r\n"
                                                                   "Hint: Please type 'IfConfig6 -?' for help info.\r\n"
 #string STR_IFCONFIG6_ERR_MAN_HOST             #language en-US    "Manual address configuration failed. Please retry.\r\n"
+
+#string STR_IFCONFIG6_ERR_MAN_GW               #language en-US    "Gateway address configuration failed. Please check the argument.\r\n"
+
+#string STR_IFCONFIG6_ERR_INVALID_IP_CONFIG    #language en-US    "The IP address is not configurable when the policy is Ip6ConfigPolicyAutomatic.\r\n"
+
+#string STR_IFCONFIG6_ERR_INVALID_GW_CONFIG    #language en-US    "The gateway address is not configurable when the policy is Ip6ConfigPolicyAutomatic.\r\n"
+
+#string STR_IFCONFIG6_ERR_INVALID_DNS_CONFIG   #language en-US    "The DNS server address is not configurable when the policy is Ip6ConfigPolicyAutomatic.\r\n"
+
 #string STR_IFCONFIG6_ERR_DUPLICATE_COMMAND    #language en-US    "Duplicate commands. Bad command %H%s%N is skipped.\r\n"
                                                                   "Hint: Please type 'IfConfig6 -?' for help info.\r\n"
 #string STR_IFCONFIG6_ERR_CONFLICT_COMMAND     #language en-US    "Conflict commands. Bad command %H%s%N is skipped.\r\n"
                                                                   "Hint: Please type 'IfConfig6 -?' for help info.\r\n"
 #string STR_IFCONFIG6_ERR_UNKNOWN_COMMAND      #language en-US    "Unknown commands. Bad command %H%s%N is skipped.\r\n"
                                                                   "Hint: Please type 'IfConfig6 -?' for help info.\r\n"
-#string STR_IFCONFIG6_ERR_ADDRESS_FAILED       #language en-US    "It failed to set .\r\n"
+#string STR_IFCONFIG6_ERR_ADDRESS_FAILED       #language en-US    "Failed to configure IPv6 address: "
 
 
 #string STR_GET_HELP_PING6                     #language en-US ""
@@ -99,6 +103,8 @@
 "  -n count    Send request count, (default=10, min=1, max=10000).\r\n"
 "  -s SourceIp Source IPv6 address.\r\n"
 "  TargetIp    Target IPv6 address.\r\n"
+"NOTES:\r\n"
+"  1. When TargetIp is a link local address, SourceIp needs to be specified.\r\n"
 ".SH EXAMPLES\r\n"
 " \r\n"
 "Examples:\r\n"

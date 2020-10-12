@@ -1,28 +1,17 @@
 /** @file
   EFI PEI Core dispatch services
-  
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-(C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+(C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "PeiMain.h"
 
-///
-/// temporary memory is filled with this initial value during SEC phase
-///
-#define INIT_CAR_VALUE 0x5AA55AA5
-
 /**
 
-  Discover all Peims and optional Apriori file in one FV. There is at most one
+  Discover all PEIMs and optional Apriori file in one FV. There is at most one
   Apriori file in one FV.
 
 
@@ -46,48 +35,91 @@ DiscoverPeimsAndOrderWithApriori (
   UINTN                               PeimCount;
   EFI_GUID                            *Guid;
   EFI_PEI_FILE_HANDLE                 *TempFileHandles;
-  EFI_GUID                            *FileGuid;
+  EFI_GUID                            *TempFileGuid;
   EFI_PEI_FIRMWARE_VOLUME_PPI         *FvPpi;
   EFI_FV_FILE_INFO                    FileInfo;
-  
+
   FvPpi = CoreFileHandle->FvPpi;
-  
+
   //
   // Walk the FV and find all the PEIMs and the Apriori file.
   //
   AprioriFileHandle = NULL;
-  Private->CurrentFvFileHandles[0] = NULL;
+  Private->CurrentFvFileHandles = NULL;
   Guid = NULL;
-  FileHandle = NULL;
-  TempFileHandles = Private->FileHandles;
-  FileGuid        = Private->FileGuid;
 
   //
-  // If the current Fv has been scanned, directly get its cachable record.
+  // If the current FV has been scanned, directly get its cached records.
   //
-  if (Private->Fv[Private->CurrentPeimFvCount].ScanFv) {
-    CopyMem (Private->CurrentFvFileHandles, Private->Fv[Private->CurrentPeimFvCount].FvFileHandles, sizeof (EFI_PEI_FILE_HANDLE) * PcdGet32 (PcdPeiCoreMaxPeimPerFv));
+  if (CoreFileHandle->ScanFv) {
+    Private->CurrentFvFileHandles = CoreFileHandle->FvFileHandles;
+    return;
+  }
+
+  TempFileHandles = Private->TempFileHandles;
+  TempFileGuid    = Private->TempFileGuid;
+
+  //
+  // Go ahead to scan this FV, get PeimCount and cache FileHandles within it to TempFileHandles.
+  //
+  PeimCount = 0;
+  FileHandle = NULL;
+  do {
+    Status = FvPpi->FindFileByType (FvPpi, PEI_CORE_INTERNAL_FFS_FILE_DISPATCH_TYPE, CoreFileHandle->FvHandle, &FileHandle);
+    if (!EFI_ERROR (Status)) {
+      if (PeimCount >= Private->TempPeimCount) {
+        //
+        // Run out of room, grow the buffer.
+        //
+        TempFileHandles = AllocatePool (
+                            sizeof (EFI_PEI_FILE_HANDLE) * (Private->TempPeimCount + TEMP_FILE_GROWTH_STEP));
+        ASSERT (TempFileHandles != NULL);
+        CopyMem (
+          TempFileHandles,
+          Private->TempFileHandles,
+          sizeof (EFI_PEI_FILE_HANDLE) * Private->TempPeimCount
+          );
+        Private->TempFileHandles = TempFileHandles;
+        TempFileGuid = AllocatePool (
+                         sizeof (EFI_GUID) * (Private->TempPeimCount + TEMP_FILE_GROWTH_STEP));
+        ASSERT (TempFileGuid != NULL);
+        CopyMem (
+          TempFileGuid,
+          Private->TempFileGuid,
+          sizeof (EFI_GUID) * Private->TempPeimCount
+          );
+        Private->TempFileGuid = TempFileGuid;
+        Private->TempPeimCount = Private->TempPeimCount + TEMP_FILE_GROWTH_STEP;
+      }
+
+      TempFileHandles[PeimCount++] = FileHandle;
+    }
+  } while (!EFI_ERROR (Status));
+
+  DEBUG ((
+    DEBUG_INFO,
+    "%a(): Found 0x%x PEI FFS files in the %dth FV\n",
+    __FUNCTION__,
+    PeimCount,
+    Private->CurrentPeimFvCount
+    ));
+
+  if (PeimCount == 0) {
+    //
+    // No PEIM FFS file is found, set ScanFv flag and return.
+    //
+    CoreFileHandle->ScanFv = TRUE;
     return;
   }
 
   //
-  // Go ahead to scan this Fv, and cache FileHandles within it.
+  // Record PeimCount, allocate buffer for PeimState and FvFileHandles.
   //
-  Status = EFI_NOT_FOUND;
-  for (PeimCount = 0; PeimCount <= PcdGet32 (PcdPeiCoreMaxPeimPerFv); PeimCount++) {
-    Status = FvPpi->FindFileByType (FvPpi, PEI_CORE_INTERNAL_FFS_FILE_DISPATCH_TYPE, CoreFileHandle->FvHandle, &FileHandle);
-    if (Status != EFI_SUCCESS || PeimCount == PcdGet32 (PcdPeiCoreMaxPeimPerFv)) {
-      break;
-    }
-
-    Private->CurrentFvFileHandles[PeimCount] = FileHandle;
-  }
-
-  //
-  // Check whether the count of files exceeds the max support files in a FV image
-  // If more files are required in a FV image, PcdPeiCoreMaxPeimPerFv can be set to a larger value in DSC file.
-  //
-  ASSERT ((Status != EFI_SUCCESS) || (PeimCount < PcdGet32 (PcdPeiCoreMaxPeimPerFv)));
+  CoreFileHandle->PeimCount = PeimCount;
+  CoreFileHandle->PeimState = AllocateZeroPool (sizeof (UINT8) * PeimCount);
+  ASSERT (CoreFileHandle->PeimState != NULL);
+  CoreFileHandle->FvFileHandles = AllocateZeroPool (sizeof (EFI_PEI_FILE_HANDLE) * PeimCount);
+  ASSERT (CoreFileHandle->FvFileHandles != NULL);
 
   //
   // Get Apriori File handle
@@ -101,7 +133,7 @@ DiscoverPeimsAndOrderWithApriori (
     Status = FvPpi->FindSectionByType (FvPpi, EFI_SECTION_RAW, AprioriFileHandle, (VOID **) &Apriori);
     if (!EFI_ERROR (Status)) {
       //
-      // Calculate the number of PEIMs in the A Priori list
+      // Calculate the number of PEIMs in the Apriori file
       //
       Status = FvPpi->GetFileInfo (FvPpi, AprioriFileHandle, &FileInfo);
       ASSERT_EFI_ERROR (Status);
@@ -115,87 +147,71 @@ DiscoverPeimsAndOrderWithApriori (
 
       for (Index = 0; Index < PeimCount; Index++) {
         //
-        // Make an array of file name guids that matches the FileHandle array so we can convert
+        // Make an array of file name GUIDs that matches the FileHandle array so we can convert
         // quickly from file name to file handle
         //
-        Status = FvPpi->GetFileInfo (FvPpi, Private->CurrentFvFileHandles[Index], &FileInfo);
-        CopyMem (&FileGuid[Index], &FileInfo.FileName, sizeof(EFI_GUID));
+        Status = FvPpi->GetFileInfo (FvPpi, TempFileHandles[Index], &FileInfo);
+        ASSERT_EFI_ERROR (Status);
+        CopyMem (&TempFileGuid[Index], &FileInfo.FileName, sizeof(EFI_GUID));
       }
 
       //
-      // Walk through FileGuid array to find out who is invalid PEIM guid in Apriori file.
-      // Add available PEIMs in Apriori file into TempFileHandles array at first.
+      // Walk through TempFileGuid array to find out who is invalid PEIM GUID in Apriori file.
+      // Add available PEIMs in Apriori file into FvFileHandles array.
       //
-      Index2 = 0;
-      for (Index = 0; Index2 < Private->AprioriCount; Index++) {
-        while (Index2 < Private->AprioriCount) {
-          Guid = ScanGuid (FileGuid, PeimCount * sizeof (EFI_GUID), &Apriori[Index2++]);
-          if (Guid != NULL) {
-            break;
-          }
-        }
-        if (Guid == NULL) {
-          break;
-        }
-        PeimIndex = ((UINTN)Guid - (UINTN)&FileGuid[0])/sizeof (EFI_GUID);
-        TempFileHandles[Index] = Private->CurrentFvFileHandles[PeimIndex];
+      Index = 0;
+      for (Index2 = 0; Index2 < Private->AprioriCount; Index2++) {
+        Guid = ScanGuid (TempFileGuid, PeimCount * sizeof (EFI_GUID), &Apriori[Index2]);
+        if (Guid != NULL) {
+          PeimIndex = ((UINTN)Guid - (UINTN)&TempFileGuid[0])/sizeof (EFI_GUID);
+          CoreFileHandle->FvFileHandles[Index++] = TempFileHandles[PeimIndex];
 
-        //
-        // Since we have copied the file handle we can remove it from this list.
-        //
-        Private->CurrentFvFileHandles[PeimIndex] = NULL;
+          //
+          // Since we have copied the file handle we can remove it from this list.
+          //
+          TempFileHandles[PeimIndex] = NULL;
+        }
       }
 
       //
-      // Update valid Aprioricount
+      // Update valid AprioriCount
       //
       Private->AprioriCount = Index;
 
       //
       // Add in any PEIMs not in the Apriori file
       //
-      for (;Index < PeimCount; Index++) {
-        for (Index2 = 0; Index2 < PeimCount; Index2++) {
-          if (Private->CurrentFvFileHandles[Index2] != NULL) {
-            TempFileHandles[Index] = Private->CurrentFvFileHandles[Index2];
-            Private->CurrentFvFileHandles[Index2] = NULL;
-            break;
-          }
+      for (Index2 = 0; Index2 < PeimCount; Index2++) {
+        if (TempFileHandles[Index2] != NULL) {
+          CoreFileHandle->FvFileHandles[Index++] = TempFileHandles[Index2];
+          TempFileHandles[Index2] = NULL;
         }
       }
-      //
-      //Index the end of array contains re-range Pei moudle.
-      //
-      TempFileHandles[Index] = NULL;
-
-      //
-      // Private->CurrentFvFileHandles is currently in PEIM in the FV order.
-      // We need to update it to start with files in the A Priori list and
-      // then the remaining files in PEIM order.
-      //
-      CopyMem (Private->CurrentFvFileHandles, TempFileHandles, sizeof (EFI_PEI_FILE_HANDLE) * PcdGet32 (PcdPeiCoreMaxPeimPerFv));
+      ASSERT (Index == PeimCount);
     }
+  } else {
+    CopyMem (CoreFileHandle->FvFileHandles, TempFileHandles, sizeof (EFI_PEI_FILE_HANDLE) * PeimCount);
   }
-  //
-  // Cache the current Fv File Handle. So that we don't have to scan the Fv again.
-  // Instead, we can retrieve the file handles within this Fv from cachable data.
-  //
-  Private->Fv[Private->CurrentPeimFvCount].ScanFv = TRUE;
-  CopyMem (Private->Fv[Private->CurrentPeimFvCount].FvFileHandles, Private->CurrentFvFileHandles, sizeof (EFI_PEI_FILE_HANDLE) * PcdGet32 (PcdPeiCoreMaxPeimPerFv));
 
+  //
+  // The current FV File Handles have been cached. So that we don't have to scan the FV again.
+  // Instead, we can retrieve the file handles within this FV from cached records.
+  //
+  CoreFileHandle->ScanFv = TRUE;
+  Private->CurrentFvFileHandles = CoreFileHandle->FvFileHandles;
 }
 
 //
 // This is the minimum memory required by DxeCore initialization. When LMFA feature enabled,
-// This part of memory still need reserved on the very top of memory so that the DXE Core could  
+// This part of memory still need reserved on the very top of memory so that the DXE Core could
 // use these memory for data initialization. This macro should be sync with the same marco
 // defined in DXE Core.
 //
 #define MINIMUM_INITIAL_MEMORY_SIZE 0x10000
 /**
-  This function is to test if the memory range described in resource HOB is available or not. 
-  
-  This function should only be invoked when Loading Module at Fixed Address(LMFA) feature is enabled. Some platform may allocate the 
+  This function is to test if the memory range described in resource HOB is available or not.
+
+  This function should only be invoked when Loading Module at Fixed Address(LMFA) feature is enabled. Some platform may allocate the
   memory before PeiLoadFixAddressHook in invoked. so this function is to test if the memory range described by the input resource HOB is
   available or not.
 
@@ -208,41 +224,41 @@ PeiLoadFixAddressIsMemoryRangeAvailable (
   IN EFI_HOB_RESOURCE_DESCRIPTOR        *ResourceHob
   )
 {
-	EFI_HOB_MEMORY_ALLOCATION          *MemoryHob;
-	BOOLEAN                             IsAvailable;
-	EFI_PEI_HOB_POINTERS                Hob;
-	
+  EFI_HOB_MEMORY_ALLOCATION          *MemoryHob;
+  BOOLEAN                             IsAvailable;
+  EFI_PEI_HOB_POINTERS                Hob;
+
   IsAvailable = TRUE;
-	if (PrivateData == NULL || ResourceHob == NULL) {
-	  return FALSE;
-	}
-	//
+  if (PrivateData == NULL || ResourceHob == NULL) {
+    return FALSE;
+  }
+  //
   // test if the memory range describe in the HOB is already allocated.
   //
   for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
-    //                                                              
-    // See if this is a memory allocation HOB                     
     //
-    if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_MEMORY_ALLOCATION) { 
+    // See if this is a memory allocation HOB
+    //
+    if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_MEMORY_ALLOCATION) {
       MemoryHob = Hob.MemoryAllocation;
-      if(MemoryHob->AllocDescriptor.MemoryBaseAddress == ResourceHob->PhysicalStart && 
+      if(MemoryHob->AllocDescriptor.MemoryBaseAddress == ResourceHob->PhysicalStart &&
          MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength == ResourceHob->PhysicalStart + ResourceHob->ResourceLength) {
          IsAvailable = FALSE;
-         break;  
+         break;
        }
      }
   }
-  
+
   return IsAvailable;
-       
+
 }
 /**
   Hook function for Loading Module at Fixed Address feature
-  
+
   This function should only be invoked when Loading Module at Fixed Address(LMFA) feature is enabled. When feature is
-  configured as Load Modules at Fix Absolute Address, this function is to validate the top address assigned by user. When 
-  feature is configured as Load Modules at Fixed Offset, the functino is to find the top address which is TOLM-TSEG in general.  
-  And also the function will re-install PEI memory. 
+  configured as Load Modules at Fix Absolute Address, this function is to validate the top address assigned by user. When
+  feature is configured as Load Modules at Fixed Offset, the function is to find the top address which is TOLM-TSEG in general.
+  And also the function will re-install PEI memory.
 
   @param PrivateData         Pointer to the private data passed in from caller
 
@@ -256,7 +272,7 @@ PeiLoadFixAddressHook(
   UINT64                             PeiMemorySize;
   UINT64                             TotalReservedMemorySize;
   UINT64                             MemoryRangeEnd;
-  EFI_PHYSICAL_ADDRESS               HighAddress; 
+  EFI_PHYSICAL_ADDRESS               HighAddress;
   EFI_HOB_RESOURCE_DESCRIPTOR        *ResourceHob;
   EFI_HOB_RESOURCE_DESCRIPTOR        *NextResourceHob;
   EFI_HOB_RESOURCE_DESCRIPTOR        *CurrentResourceHob;
@@ -278,89 +294,89 @@ PeiLoadFixAddressHook(
   //
   // The top reserved memory include 3 parts: the topest range is for DXE core initialization with the size  MINIMUM_INITIAL_MEMORY_SIZE
   // then RuntimeCodePage range and Boot time code range.
-  //  
+  //
   TotalReservedMemorySize = MINIMUM_INITIAL_MEMORY_SIZE + EFI_PAGES_TO_SIZE(PcdGet32(PcdLoadFixAddressRuntimeCodePageNumber));
-  TotalReservedMemorySize+= EFI_PAGES_TO_SIZE(PcdGet32(PcdLoadFixAddressBootTimeCodePageNumber)) ;  
+  TotalReservedMemorySize+= EFI_PAGES_TO_SIZE(PcdGet32(PcdLoadFixAddressBootTimeCodePageNumber)) ;
   //
   // PEI memory range lies below the top reserved memory
-  // 
+  //
   TotalReservedMemorySize += PeiMemorySize;
-  
+
   DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: PcdLoadFixAddressRuntimeCodePageNumber= 0x%x.\n", PcdGet32(PcdLoadFixAddressRuntimeCodePageNumber)));
   DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: PcdLoadFixAddressBootTimeCodePageNumber= 0x%x.\n", PcdGet32(PcdLoadFixAddressBootTimeCodePageNumber)));
-  DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: PcdLoadFixAddressPeiCodePageNumber= 0x%x.\n", PcdGet32(PcdLoadFixAddressPeiCodePageNumber)));   
+  DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: PcdLoadFixAddressPeiCodePageNumber= 0x%x.\n", PcdGet32(PcdLoadFixAddressPeiCodePageNumber)));
   DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: Total Reserved Memory Size = 0x%lx.\n", TotalReservedMemorySize));
   //
-  // Loop through the system memory typed hob to merge the adjacent memory range 
+  // Loop through the system memory typed HOB to merge the adjacent memory range
   //
   for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
-    //                                                              
-    // See if this is a resource descriptor HOB                     
+    //
+    // See if this is a resource descriptor HOB
     //
     if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
-      
-      ResourceHob = Hob.ResourceDescriptor;  
+
+      ResourceHob = Hob.ResourceDescriptor;
       //
-      // If range described in this hob is not system memory or heigher than MAX_ADDRESS, ignored.
+      // If range described in this HOB is not system memory or higher than MAX_ADDRESS, ignored.
       //
       if (ResourceHob->ResourceType != EFI_RESOURCE_SYSTEM_MEMORY ||
           ResourceHob->PhysicalStart + ResourceHob->ResourceLength > MAX_ADDRESS)   {
         continue;
-      }   
-      
-      for (NextHob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(NextHob); NextHob.Raw = GET_NEXT_HOB(NextHob)) {       
+      }
+
+      for (NextHob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(NextHob); NextHob.Raw = GET_NEXT_HOB(NextHob)) {
         if (NextHob.Raw == Hob.Raw){
           continue;
-        }  
+        }
         //
         // See if this is a resource descriptor HOB
         //
         if (GET_HOB_TYPE (NextHob) == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
-      
+
           NextResourceHob = NextHob.ResourceDescriptor;
           //
           // test if range described in this NextResourceHob is system memory and have the same attribute.
           // Note: Here is a assumption that system memory should always be healthy even without test.
-          //    
+          //
           if (NextResourceHob->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY &&
              (((NextResourceHob->ResourceAttribute^ResourceHob->ResourceAttribute)&(~EFI_RESOURCE_ATTRIBUTE_TESTED)) == 0)){
-              
+
               //
               // See if the memory range described in ResourceHob and NextResourceHob is adjacent
               //
-              if ((ResourceHob->PhysicalStart <= NextResourceHob->PhysicalStart && 
-                    ResourceHob->PhysicalStart + ResourceHob->ResourceLength >= NextResourceHob->PhysicalStart)|| 
+              if ((ResourceHob->PhysicalStart <= NextResourceHob->PhysicalStart &&
+                    ResourceHob->PhysicalStart + ResourceHob->ResourceLength >= NextResourceHob->PhysicalStart)||
                   (ResourceHob->PhysicalStart >= NextResourceHob->PhysicalStart&&
                      ResourceHob->PhysicalStart <= NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength)) {
-             
+
                 MemoryRangeEnd = ((ResourceHob->PhysicalStart + ResourceHob->ResourceLength)>(NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength)) ?
                                      (ResourceHob->PhysicalStart + ResourceHob->ResourceLength):(NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength);
-          
-                ResourceHob->PhysicalStart = (ResourceHob->PhysicalStart < NextResourceHob->PhysicalStart) ? 
+
+                ResourceHob->PhysicalStart = (ResourceHob->PhysicalStart < NextResourceHob->PhysicalStart) ?
                                                     ResourceHob->PhysicalStart : NextResourceHob->PhysicalStart;
-                
-               
+
+
                 ResourceHob->ResourceLength = (MemoryRangeEnd - ResourceHob->PhysicalStart);
-                
+
                 ResourceHob->ResourceAttribute = ResourceHob->ResourceAttribute & (~EFI_RESOURCE_ATTRIBUTE_TESTED);
                 //
                 // Delete the NextResourceHob by marking it as unused.
                 //
                 GET_HOB_TYPE (NextHob) = EFI_HOB_TYPE_UNUSED;
-                
+
               }
            }
-        } 
+        }
       }
-    } 
+    }
   }
   //
   // Some platform is already allocated pages before the HOB re-org. Here to build dedicated resource HOB to describe
   //  the allocated memory range
   //
   for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
-    //                                                              
-    // See if this is a memory allocation HOB                     
+    //
+    // See if this is a memory allocation HOB
     //
     if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_MEMORY_ALLOCATION) {
       MemoryHob = Hob.MemoryAllocation;
@@ -369,35 +385,35 @@ PeiLoadFixAddressHook(
         // See if this is a resource descriptor HOB
         //
         if (GET_HOB_TYPE (NextHob) == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
-        	NextResourceHob = NextHob.ResourceDescriptor;
+          NextResourceHob = NextHob.ResourceDescriptor;
           //
-          // If range described in this hob is not system memory or heigher than MAX_ADDRESS, ignored.
+          // If range described in this HOB is not system memory or higher than MAX_ADDRESS, ignored.
           //
           if (NextResourceHob->ResourceType != EFI_RESOURCE_SYSTEM_MEMORY || NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength > MAX_ADDRESS) {
             continue;
           }
           //
-          // If the range describe in memory allocation HOB  belongs to the memroy range described by the resource hob
-          //          
-          if (MemoryHob->AllocDescriptor.MemoryBaseAddress >= NextResourceHob->PhysicalStart && 
+          // If the range describe in memory allocation HOB belongs to the memory range described by the resource HOB
+          //
+          if (MemoryHob->AllocDescriptor.MemoryBaseAddress >= NextResourceHob->PhysicalStart &&
               MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength <= NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength) {
              //
-             // Build seperate resource hob for this allocated range
-             //                     
+             // Build separate resource HOB for this allocated range
+             //
              if (MemoryHob->AllocDescriptor.MemoryBaseAddress > NextResourceHob->PhysicalStart) {
                BuildResourceDescriptorHob (
-                 EFI_RESOURCE_SYSTEM_MEMORY,                       
+                 EFI_RESOURCE_SYSTEM_MEMORY,
                  NextResourceHob->ResourceAttribute,
-                 NextResourceHob->PhysicalStart,                             
-                 (MemoryHob->AllocDescriptor.MemoryBaseAddress - NextResourceHob->PhysicalStart)      
+                 NextResourceHob->PhysicalStart,
+                 (MemoryHob->AllocDescriptor.MemoryBaseAddress - NextResourceHob->PhysicalStart)
                );
              }
              if (MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength < NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength) {
                BuildResourceDescriptorHob (
-                 EFI_RESOURCE_SYSTEM_MEMORY,                       
+                 EFI_RESOURCE_SYSTEM_MEMORY,
                  NextResourceHob->ResourceAttribute,
-                 MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength,                            
-                 (NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength -(MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength))    
+                 MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength,
+                 (NextResourceHob->PhysicalStart + NextResourceHob->ResourceLength -(MemoryHob->AllocDescriptor.MemoryBaseAddress + MemoryHob->AllocDescriptor.MemoryLength))
                );
              }
              NextResourceHob->PhysicalStart = MemoryHob->AllocDescriptor.MemoryBaseAddress;
@@ -411,7 +427,7 @@ PeiLoadFixAddressHook(
 
   //
   // Try to find and validate the TOP address.
-  //  
+  //
   if ((INT64)PcdGet64(PcdLoadModuleAtFixAddressEnable) > 0 ) {
     //
     // The LMFA feature is enabled as load module at fixed absolute address.
@@ -422,11 +438,11 @@ PeiLoadFixAddressHook(
     // validate the Address. Loop the resource descriptor HOB to make sure the address is in valid memory range
     //
     if ((TopLoadingAddress & EFI_PAGE_MASK) != 0) {
-      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:Top Address 0x%lx is invalid since top address should be page align. \n", TopLoadingAddress)); 
-      ASSERT (FALSE);    
+      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:Top Address 0x%lx is invalid since top address should be page align. \n", TopLoadingAddress));
+      ASSERT (FALSE);
     }
     //
-    // Search for a memory region that is below MAX_ADDRESS and in which TopLoadingAddress lies 
+    // Search for a memory region that is below MAX_ADDRESS and in which TopLoadingAddress lies
     //
     for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
       //
@@ -436,62 +452,62 @@ PeiLoadFixAddressHook(
 
         ResourceHob = Hob.ResourceDescriptor;
         //
-        // See if this resource descrior HOB describes tested system memory below MAX_ADDRESS
-        //    
+        // See if this resource descriptor HOB describes tested system memory below MAX_ADDRESS
+        //
         if (ResourceHob->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY &&
             ResourceHob->PhysicalStart + ResourceHob->ResourceLength <= MAX_ADDRESS) {
             //
             // See if Top address specified by user is valid.
             //
-            if (ResourceHob->PhysicalStart + TotalReservedMemorySize < TopLoadingAddress && 
-                (ResourceHob->PhysicalStart + ResourceHob->ResourceLength - MINIMUM_INITIAL_MEMORY_SIZE) >= TopLoadingAddress && 
+            if (ResourceHob->PhysicalStart + TotalReservedMemorySize < TopLoadingAddress &&
+                (ResourceHob->PhysicalStart + ResourceHob->ResourceLength - MINIMUM_INITIAL_MEMORY_SIZE) >= TopLoadingAddress &&
                 PeiLoadFixAddressIsMemoryRangeAvailable(PrivateData, ResourceHob)) {
-              CurrentResourceHob = ResourceHob; 
+              CurrentResourceHob = ResourceHob;
               CurrentHob = Hob;
               break;
            }
         }
-      }  
-    }  
+      }
+    }
     if (CurrentResourceHob != NULL) {
       DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO:Top Address 0x%lx is valid \n",  TopLoadingAddress));
-      TopLoadingAddress += MINIMUM_INITIAL_MEMORY_SIZE; 
+      TopLoadingAddress += MINIMUM_INITIAL_MEMORY_SIZE;
     } else {
-      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:Top Address 0x%lx is invalid \n",  TopLoadingAddress)); 
-      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:The recommended Top Address for the platform is: \n")); 
+      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:Top Address 0x%lx is invalid \n",  TopLoadingAddress));
+      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:The recommended Top Address for the platform is: \n"));
       //
-      // Print the recomended Top address range.
-      // 
+      // Print the recommended Top address range.
+      //
       for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
         //
         // See if this is a resource descriptor HOB
         //
         if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
-        
+
           ResourceHob = Hob.ResourceDescriptor;
           //
-          // See if this resource descrior HOB describes tested system memory below MAX_ADDRESS
-          //    
+          // See if this resource descriptor HOB describes tested system memory below MAX_ADDRESS
+          //
           if (ResourceHob->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY &&
               ResourceHob->PhysicalStart + ResourceHob->ResourceLength <= MAX_ADDRESS) {
               //
               // See if Top address specified by user is valid.
               //
               if (ResourceHob->ResourceLength > TotalReservedMemorySize && PeiLoadFixAddressIsMemoryRangeAvailable(PrivateData, ResourceHob)) {
-                 DEBUG ((EFI_D_INFO, "(0x%lx, 0x%lx)\n",  
-                          (ResourceHob->PhysicalStart + TotalReservedMemorySize -MINIMUM_INITIAL_MEMORY_SIZE), 
-                          (ResourceHob->PhysicalStart + ResourceHob->ResourceLength -MINIMUM_INITIAL_MEMORY_SIZE) 
-                        )); 
+                 DEBUG ((EFI_D_INFO, "(0x%lx, 0x%lx)\n",
+                          (ResourceHob->PhysicalStart + TotalReservedMemorySize -MINIMUM_INITIAL_MEMORY_SIZE),
+                          (ResourceHob->PhysicalStart + ResourceHob->ResourceLength -MINIMUM_INITIAL_MEMORY_SIZE)
+                        ));
               }
           }
         }
-      }  
+      }
       //
-      // Assert here 
+      // Assert here
       //
-      ASSERT (FALSE);   
-      return;   
-    }     
+      ASSERT (FALSE);
+      return;
+    }
   } else {
     //
     // The LMFA feature is enabled as load module at fixed offset relative to TOLM
@@ -502,15 +518,15 @@ PeiLoadFixAddressHook(
     //
     for (Hob.Raw = PrivateData->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
       //
-      // See if this is a resource descriptor HOB 
+      // See if this is a resource descriptor HOB
       //
       if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_RESOURCE_DESCRIPTOR) {
-        
-        ResourceHob = Hob.ResourceDescriptor;                                                                                                                                                                                                                               
+
+        ResourceHob = Hob.ResourceDescriptor;
         //
-        // See if this resource descrior HOB describes tested system memory below MAX_ADDRESS
+        // See if this resource descriptor HOB describes tested system memory below MAX_ADDRESS
         //
-        if (ResourceHob->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY && 
+        if (ResourceHob->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY &&
             ResourceHob->PhysicalStart + ResourceHob->ResourceLength <= MAX_ADDRESS &&
             ResourceHob->ResourceLength > TotalReservedMemorySize && PeiLoadFixAddressIsMemoryRangeAvailable(PrivateData, ResourceHob)) {
           //
@@ -522,26 +538,26 @@ PeiLoadFixAddressHook(
              HighAddress = CurrentResourceHob->PhysicalStart;
           }
         }
-      }  
+      }
     }
     if (CurrentResourceHob == NULL) {
-      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:The System Memory is too small\n")); 
+      DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED ERROR:The System Memory is too small\n"));
       //
-      // Assert here 
+      // Assert here
       //
       ASSERT (FALSE);
-      return;  
+      return;
     } else {
-      TopLoadingAddress = CurrentResourceHob->PhysicalStart + CurrentResourceHob->ResourceLength ; 
-    }         
+      TopLoadingAddress = CurrentResourceHob->PhysicalStart + CurrentResourceHob->ResourceLength ;
+    }
   }
-  
+
   if (CurrentResourceHob != NULL) {
     //
-    // rebuild resource HOB for PEI memmory and reserved memory
+    // rebuild resource HOB for PEI memory and reserved memory
     //
     BuildResourceDescriptorHob (
-      EFI_RESOURCE_SYSTEM_MEMORY,                       
+      EFI_RESOURCE_SYSTEM_MEMORY,
       (
       EFI_RESOURCE_ATTRIBUTE_PRESENT |
       EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
@@ -551,15 +567,15 @@ PeiLoadFixAddressHook(
       EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
       EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
       ),
-      (TopLoadingAddress - TotalReservedMemorySize),                             
-      TotalReservedMemorySize     
+      (TopLoadingAddress - TotalReservedMemorySize),
+      TotalReservedMemorySize
     );
     //
     // rebuild resource for the remain memory if necessary
     //
     if (CurrentResourceHob->PhysicalStart < TopLoadingAddress - TotalReservedMemorySize) {
       BuildResourceDescriptorHob (
-        EFI_RESOURCE_SYSTEM_MEMORY,                       
+        EFI_RESOURCE_SYSTEM_MEMORY,
         (
          EFI_RESOURCE_ATTRIBUTE_PRESENT |
          EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
@@ -568,13 +584,13 @@ PeiLoadFixAddressHook(
          EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
          EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
          ),
-         CurrentResourceHob->PhysicalStart,                             
-         (TopLoadingAddress - TotalReservedMemorySize - CurrentResourceHob->PhysicalStart)      
+         CurrentResourceHob->PhysicalStart,
+         (TopLoadingAddress - TotalReservedMemorySize - CurrentResourceHob->PhysicalStart)
        );
     }
     if (CurrentResourceHob->PhysicalStart + CurrentResourceHob->ResourceLength  > TopLoadingAddress ) {
       BuildResourceDescriptorHob (
-        EFI_RESOURCE_SYSTEM_MEMORY,                     
+        EFI_RESOURCE_SYSTEM_MEMORY,
         (
          EFI_RESOURCE_ATTRIBUTE_PRESENT |
          EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
@@ -583,21 +599,21 @@ PeiLoadFixAddressHook(
          EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
          EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
          ),
-         TopLoadingAddress,                            
-         (CurrentResourceHob->PhysicalStart + CurrentResourceHob->ResourceLength  - TopLoadingAddress)     
+         TopLoadingAddress,
+         (CurrentResourceHob->PhysicalStart + CurrentResourceHob->ResourceLength  - TopLoadingAddress)
        );
     }
     //
-    // Delete CurrentHob by marking it as unused since the the memory range described by is rebuilt.
+    // Delete CurrentHob by marking it as unused since the memory range described by is rebuilt.
     //
-    GET_HOB_TYPE (CurrentHob) = EFI_HOB_TYPE_UNUSED;         
+    GET_HOB_TYPE (CurrentHob) = EFI_HOB_TYPE_UNUSED;
   }
 
   //
   // Cache the top address for Loading Module at Fixed Address feature
   //
   PrivateData->LoadModuleAtFixAddressTopAddress = TopLoadingAddress - MINIMUM_INITIAL_MEMORY_SIZE;
-  DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: Top address = 0x%lx\n",  PrivateData->LoadModuleAtFixAddressTopAddress)); 
+  DEBUG ((EFI_D_INFO, "LOADING MODULE FIXED INFO: Top address = 0x%lx\n",  PrivateData->LoadModuleAtFixAddressTopAddress));
   //
   // reinstall the PEI memory relative to TopLoadingAddress
   //
@@ -675,22 +691,35 @@ PeiCheckAndSwitchStack (
     // usage in temporary memory for debugging.
     //
     DEBUG_CODE_BEGIN ();
-      UINT32  *StackPointer;
+      UINT32                *StackPointer;
+      EFI_PEI_HOB_POINTERS  Hob;
 
       for (StackPointer = (UINT32*)SecCoreData->StackBase;
            (StackPointer < (UINT32*)((UINTN)SecCoreData->StackBase + SecCoreData->StackSize)) \
-           && (*StackPointer == INIT_CAR_VALUE);
-           StackPointer ++);
+           && (*StackPointer == PcdGet32 (PcdInitValueInTempStack));
+           StackPointer ++) {
+      }
 
-      DEBUG ((EFI_D_INFO, "Temp Stack : BaseAddress=0x%p Length=0x%X\n", SecCoreData->StackBase, (UINT32)SecCoreData->StackSize));
-      DEBUG ((EFI_D_INFO, "Temp Heap  : BaseAddress=0x%p Length=0x%X\n", Private->HobList.Raw, (UINT32)((UINTN) Private->HobList.HandoffInformationTable->EfiFreeMemoryTop - (UINTN) Private->HobList.Raw)));
-      DEBUG ((EFI_D_INFO, "Total temporary memory:    %d bytes.\n", (UINT32)SecCoreData->TemporaryRamSize));
-      DEBUG ((EFI_D_INFO, "  temporary memory stack ever used: %d bytes.\n",
+      DEBUG ((DEBUG_INFO, "Temp Stack : BaseAddress=0x%p Length=0x%X\n", SecCoreData->StackBase, (UINT32)SecCoreData->StackSize));
+      DEBUG ((DEBUG_INFO, "Temp Heap  : BaseAddress=0x%p Length=0x%X\n", SecCoreData->PeiTemporaryRamBase, (UINT32)SecCoreData->PeiTemporaryRamSize));
+      DEBUG ((DEBUG_INFO, "Total temporary memory:    %d bytes.\n", (UINT32)SecCoreData->TemporaryRamSize));
+      DEBUG ((DEBUG_INFO, "  temporary memory stack ever used:       %d bytes.\n",
              (UINT32)(SecCoreData->StackSize - ((UINTN) StackPointer - (UINTN)SecCoreData->StackBase))
             ));
-      DEBUG ((EFI_D_INFO, "  temporary memory heap used:       %d bytes.\n",
+      DEBUG ((DEBUG_INFO, "  temporary memory heap used for HobList: %d bytes.\n",
              (UINT32)((UINTN)Private->HobList.HandoffInformationTable->EfiFreeMemoryBottom - (UINTN)Private->HobList.Raw)
             ));
+      DEBUG ((DEBUG_INFO, "  temporary memory heap occupied by memory pages: %d bytes.\n",
+             (UINT32)(UINTN)(Private->HobList.HandoffInformationTable->EfiMemoryTop - Private->HobList.HandoffInformationTable->EfiFreeMemoryTop)
+            ));
+      for (Hob.Raw = Private->HobList.Raw; !END_OF_HOB_LIST(Hob); Hob.Raw = GET_NEXT_HOB(Hob)) {
+        if (GET_HOB_TYPE (Hob) == EFI_HOB_TYPE_MEMORY_ALLOCATION) {
+          DEBUG ((DEBUG_INFO, "Memory Allocation 0x%08x 0x%0lx - 0x%0lx\n", \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryType,               \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryBaseAddress,        \
+            Hob.MemoryAllocation->AllocDescriptor.MemoryBaseAddress + Hob.MemoryAllocation->AllocDescriptor.MemoryLength - 1));
+        }
+      }
     DEBUG_CODE_END ();
 
     if (PcdGet64(PcdLoadModuleAtFixAddressEnable) != 0 && (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME)) {
@@ -721,8 +750,8 @@ PeiCheckAndSwitchStack (
     ASSERT (NewStackSize >= SecCoreData->StackSize);
 
     //
-    // Calculate stack offset and heap offset between temporary memory and new permement 
-    // memory seperately.
+    // Calculate stack offset and heap offset between temporary memory and new permanent
+    // memory separately.
     //
     TopOfOldStack = (UINTN)SecCoreData->StackBase + SecCoreData->StackSize;
     TopOfNewStack = Private->PhysicalMemoryBegin + NewStackSize;
@@ -788,9 +817,9 @@ PeiCheckAndSwitchStack (
       }
 
       //
-      // Temporary Ram Support PPI is provided by platform, it will copy 
+      // Temporary Ram Support PPI is provided by platform, it will copy
       // temporary memory to permanent memory and do stack switching.
-      // After invoking Temporary Ram Support PPI, the following code's 
+      // After invoking Temporary Ram Support PPI, the following code's
       // stack is in permanent memory.
       //
       TemporaryRamSupportPpi->TemporaryRamMigration (
@@ -801,15 +830,27 @@ PeiCheckAndSwitchStack (
                                 );
 
       //
+      // Migrate memory pages allocated in pre-memory phase.
+      // It could not be called before calling TemporaryRamSupportPpi->TemporaryRamMigration()
+      // as the migrated memory pages may be overridden by TemporaryRamSupportPpi->TemporaryRamMigration().
+      //
+      MigrateMemoryPages (Private, TRUE);
+
+      //
       // Entry PEI Phase 2
       //
       PeiCore (SecCoreData, NULL, Private);
     } else {
       //
+      // Migrate memory pages allocated in pre-memory phase.
+      //
+      MigrateMemoryPages (Private, FALSE);
+
+      //
       // Migrate the PEI Services Table pointer from temporary RAM to permanent RAM.
       //
       MigratePeiServicesTablePointer ();
-                
+
       //
       // Heap Offset
       //
@@ -837,7 +878,7 @@ PeiCheckAndSwitchStack (
       //
       HeapTemporaryRamSize = (UINTN) (Private->HobList.HandoffInformationTable->EfiFreeMemoryBottom - Private->HobList.HandoffInformationTable->EfiMemoryBottom);
       ASSERT (BaseOfNewHeap + HeapTemporaryRamSize <= Private->FreePhysicalMemoryTop);
-      CopyMem ((UINT8 *) (UINTN) BaseOfNewHeap, (UINT8 *) PeiTemporaryRamBase, HeapTemporaryRamSize);
+      CopyMem ((UINT8 *) (UINTN) BaseOfNewHeap, PeiTemporaryRamBase, HeapTemporaryRamSize);
 
       //
       // Migrate Stack
@@ -846,7 +887,6 @@ PeiCheckAndSwitchStack (
 
       //
       // Copy Hole Range Data
-      // Convert PPI from Hole. 
       //
       if (HoleMemSize != 0) {
         //
@@ -913,6 +953,437 @@ PeiCheckAndSwitchStack (
 }
 
 /**
+  Migrate a PEIM from temporary RAM to permanent memory.
+
+  @param PeimFileHandle       Pointer to the FFS file header of the image.
+  @param MigratedFileHandle   Pointer to the FFS file header of the migrated image.
+
+  @retval EFI_SUCCESS         Sucessfully migrated the PEIM to permanent memory.
+
+**/
+EFI_STATUS
+EFIAPI
+MigratePeim (
+  IN  EFI_PEI_FILE_HANDLE     FileHandle,
+  IN  EFI_PEI_FILE_HANDLE     MigratedFileHandle
+  )
+{
+  EFI_STATUS                Status;
+  EFI_FFS_FILE_HEADER       *FileHeader;
+  VOID                      *Pe32Data;
+  VOID                      *ImageAddress;
+  CHAR8                     *AsciiString;
+  UINTN                     Index;
+
+  Status = EFI_SUCCESS;
+
+  FileHeader = (EFI_FFS_FILE_HEADER *) FileHandle;
+  ASSERT (!IS_FFS_FILE2 (FileHeader));
+
+  ImageAddress = NULL;
+  PeiGetPe32Data (MigratedFileHandle, &ImageAddress);
+  if (ImageAddress != NULL) {
+    DEBUG_CODE_BEGIN ();
+    AsciiString = PeCoffLoaderGetPdbPointer (ImageAddress);
+    for (Index = 0; AsciiString[Index] != 0; Index++) {
+      if (AsciiString[Index] == '\\' || AsciiString[Index] == '/') {
+        AsciiString = AsciiString + Index + 1;
+        Index = 0;
+      } else if (AsciiString[Index] == '.') {
+        AsciiString[Index] = 0;
+      }
+    }
+    DEBUG ((DEBUG_INFO, "%a", AsciiString));
+    DEBUG_CODE_END ();
+
+    Pe32Data = (VOID *) ((UINTN) ImageAddress - (UINTN) MigratedFileHandle + (UINTN) FileHandle);
+    Status = LoadAndRelocatePeCoffImageInPlace (Pe32Data, ImageAddress);
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  return Status;
+}
+
+/**
+  Migrate Status Code Callback function pointers inside an FV from temporary memory to permanent memory.
+
+  @param OrgFvHandle      Address of FV handle in temporary memory.
+  @param FvHandle         Address of FV handle in permanent memory.
+  @param FvSize           Size of the FV.
+
+**/
+VOID
+ConvertStatusCodeCallbacks (
+  IN  UINTN                   OrgFvHandle,
+  IN  UINTN                   FvHandle,
+  IN  UINTN                   FvSize
+  )
+{
+  EFI_PEI_HOB_POINTERS    Hob;
+  UINTN                   *NumberOfEntries;
+  UINTN                   *CallbackEntry;
+  UINTN                   Index;
+
+  Hob.Raw  = GetFirstGuidHob (&gStatusCodeCallbackGuid);
+  while (Hob.Raw != NULL) {
+    NumberOfEntries = GET_GUID_HOB_DATA (Hob);
+    CallbackEntry   = NumberOfEntries + 1;
+    for (Index = 0; Index < *NumberOfEntries; Index++) {
+      if (((VOID *) CallbackEntry[Index]) != NULL) {
+        if ((CallbackEntry[Index] >= OrgFvHandle) && (CallbackEntry[Index] < (OrgFvHandle + FvSize))) {
+          DEBUG ((
+            DEBUG_INFO,
+            "Migrating CallbackEntry[%Lu] from 0x%0*Lx to ",
+            (UINT64)Index,
+            (sizeof CallbackEntry[Index]) * 2,
+            (UINT64)CallbackEntry[Index]
+            ));
+          if (OrgFvHandle > FvHandle) {
+            CallbackEntry[Index] = CallbackEntry[Index] - (OrgFvHandle - FvHandle);
+          } else {
+            CallbackEntry[Index] = CallbackEntry[Index] + (FvHandle - OrgFvHandle);
+          }
+          DEBUG ((
+            DEBUG_INFO,
+            "0x%0*Lx\n",
+            (sizeof CallbackEntry[Index]) * 2,
+            (UINT64)CallbackEntry[Index]
+            ));
+        }
+      }
+    }
+    Hob.Raw = GET_NEXT_HOB (Hob);
+    Hob.Raw = GetNextGuidHob (&gStatusCodeCallbackGuid, Hob.Raw);
+  }
+}
+
+/**
+  Migrates SEC modules in the given firmware volume.
+
+  Migrating SECURITY_CORE files requires special treatment since they are not tracked for PEI dispatch.
+
+  This functioun should be called after the FV has been copied to its post-memory location and the PEI Core FV list has
+  been updated.
+
+  @param Private          Pointer to the PeiCore's private data structure.
+  @param FvIndex          The firmware volume index to migrate.
+  @param OrgFvHandle      The handle to the firmware volume in temporary memory.
+
+  @retval   EFI_SUCCESS           SEC modules were migrated successfully
+  @retval   EFI_INVALID_PARAMETER The Private pointer is NULL or FvCount is invalid.
+  @retval   EFI_NOT_FOUND         Can't find valid FFS header.
+
+**/
+EFI_STATUS
+EFIAPI
+MigrateSecModulesInFv (
+  IN PEI_CORE_INSTANCE    *Private,
+  IN  UINTN               FvIndex,
+  IN  UINTN               OrgFvHandle
+  )
+{
+  EFI_STATUS                  Status;
+  EFI_STATUS                  FindFileStatus;
+  EFI_PEI_FILE_HANDLE         MigratedFileHandle;
+  EFI_PEI_FILE_HANDLE         FileHandle;
+  UINT32                      SectionAuthenticationStatus;
+  UINT32                      FileSize;
+  VOID                        *OrgPe32SectionData;
+  VOID                        *Pe32SectionData;
+  EFI_FFS_FILE_HEADER         *FfsFileHeader;
+  EFI_COMMON_SECTION_HEADER   *Section;
+  BOOLEAN                     IsFfs3Fv;
+  UINTN                       SectionInstance;
+
+  if (Private == NULL || FvIndex >= Private->FvCount) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  do {
+    FindFileStatus =  PeiFfsFindNextFile (
+                        GetPeiServicesTablePointer (),
+                        EFI_FV_FILETYPE_SECURITY_CORE,
+                        Private->Fv[FvIndex].FvHandle,
+                        &MigratedFileHandle
+                        );
+    if (!EFI_ERROR (FindFileStatus ) && MigratedFileHandle != NULL) {
+      FileHandle = (EFI_PEI_FILE_HANDLE) ((UINTN) MigratedFileHandle - (UINTN) Private->Fv[FvIndex].FvHandle + OrgFvHandle);
+      FfsFileHeader = (EFI_FFS_FILE_HEADER *) MigratedFileHandle;
+
+      DEBUG ((DEBUG_VERBOSE, "    Migrating SEC_CORE MigratedFileHandle at 0x%x.\n", (UINTN) MigratedFileHandle));
+      DEBUG ((DEBUG_VERBOSE, "                       FileHandle at 0x%x.\n", (UINTN) FileHandle));
+
+      IsFfs3Fv = CompareGuid (&Private->Fv[FvIndex].FvHeader->FileSystemGuid, &gEfiFirmwareFileSystem3Guid);
+      if (IS_FFS_FILE2 (FfsFileHeader)) {
+        ASSERT (FFS_FILE2_SIZE (FfsFileHeader) > 0x00FFFFFF);
+        if (!IsFfs3Fv) {
+          DEBUG ((DEBUG_ERROR, "It is a FFS3 formatted file: %g in a non-FFS3 formatted FV.\n", &FfsFileHeader->Name));
+          return EFI_NOT_FOUND;
+        }
+        Section = (EFI_COMMON_SECTION_HEADER *) ((UINT8 *) FfsFileHeader + sizeof (EFI_FFS_FILE_HEADER2));
+        FileSize = FFS_FILE2_SIZE (FfsFileHeader) - sizeof (EFI_FFS_FILE_HEADER2);
+      } else {
+        Section = (EFI_COMMON_SECTION_HEADER *) ((UINT8 *) FfsFileHeader + sizeof (EFI_FFS_FILE_HEADER));
+        FileSize = FFS_FILE_SIZE (FfsFileHeader) - sizeof (EFI_FFS_FILE_HEADER);
+      }
+
+      SectionInstance = 1;
+      SectionAuthenticationStatus = 0;
+      Status = ProcessSection (
+                GetPeiServicesTablePointer (),
+                EFI_SECTION_PE32,
+                &SectionInstance,
+                Section,
+                FileSize,
+                &Pe32SectionData,
+                &SectionAuthenticationStatus,
+                IsFfs3Fv
+                );
+
+      if (!EFI_ERROR (Status)) {
+        OrgPe32SectionData = (VOID *) ((UINTN) Pe32SectionData - (UINTN) MigratedFileHandle + (UINTN) FileHandle);
+        DEBUG ((DEBUG_VERBOSE, "      PE32 section in migrated file at 0x%x.\n", (UINTN) Pe32SectionData));
+        DEBUG ((DEBUG_VERBOSE, "      PE32 section in original file at 0x%x.\n", (UINTN) OrgPe32SectionData));
+        Status = LoadAndRelocatePeCoffImageInPlace (OrgPe32SectionData, Pe32SectionData);
+        ASSERT_EFI_ERROR (Status);
+      }
+    }
+  } while (!EFI_ERROR (FindFileStatus));
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Migrates PEIMs in the given firmware volume.
+
+  @param Private          Pointer to the PeiCore's private data structure.
+  @param FvIndex          The firmware volume index to migrate.
+  @param OrgFvHandle      The handle to the firmware volume in temporary memory.
+  @param FvHandle         The handle to the firmware volume in permanent memory.
+
+  @retval   EFI_SUCCESS           The PEIMs in the FV were migrated successfully
+  @retval   EFI_INVALID_PARAMETER The Private pointer is NULL or FvCount is invalid.
+
+**/
+EFI_STATUS
+EFIAPI
+MigratePeimsInFv (
+  IN PEI_CORE_INSTANCE    *Private,
+  IN  UINTN               FvIndex,
+  IN  UINTN               OrgFvHandle,
+  IN  UINTN               FvHandle
+  )
+{
+  EFI_STATUS              Status;
+  volatile UINTN          FileIndex;
+  EFI_PEI_FILE_HANDLE     MigratedFileHandle;
+  EFI_PEI_FILE_HANDLE     FileHandle;
+
+  if (Private == NULL || FvIndex >= Private->FvCount) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (Private->Fv[FvIndex].ScanFv) {
+    for (FileIndex = 0; FileIndex < Private->Fv[FvIndex].PeimCount; FileIndex++) {
+      if (Private->Fv[FvIndex].FvFileHandles[FileIndex] != NULL) {
+        FileHandle = Private->Fv[FvIndex].FvFileHandles[FileIndex];
+
+        MigratedFileHandle = (EFI_PEI_FILE_HANDLE) ((UINTN) FileHandle - OrgFvHandle + FvHandle);
+
+        DEBUG ((DEBUG_VERBOSE, "    Migrating FileHandle %2d ", FileIndex));
+        Status = MigratePeim (FileHandle, MigratedFileHandle);
+        DEBUG ((DEBUG_VERBOSE, "\n"));
+        ASSERT_EFI_ERROR (Status);
+
+        if (!EFI_ERROR (Status)) {
+          Private->Fv[FvIndex].FvFileHandles[FileIndex] = MigratedFileHandle;
+          if (FvIndex == Private->CurrentPeimFvCount) {
+            Private->CurrentFvFileHandles[FileIndex] = MigratedFileHandle;
+          }
+        }
+      }
+    }
+  }
+
+  return EFI_SUCCESS;
+}
+
+/**
+  Migrate FVs out of temporary RAM before the cache is flushed.
+
+  @param Private         PeiCore's private data structure
+  @param SecCoreData     Points to a data structure containing information about the PEI core's operating
+                         environment, such as the size and location of temporary RAM, the stack location and
+                         the BFV location.
+
+  @retval EFI_SUCCESS           Succesfully migrated installed FVs from temporary RAM to permanent memory.
+  @retval EFI_OUT_OF_RESOURCES  Insufficient memory exists to allocate needed pages.
+
+**/
+EFI_STATUS
+EFIAPI
+EvacuateTempRam (
+  IN PEI_CORE_INSTANCE            *Private,
+  IN CONST EFI_SEC_PEI_HAND_OFF   *SecCoreData
+  )
+{
+  EFI_STATUS                    Status;
+  volatile UINTN                FvIndex;
+  volatile UINTN                FvChildIndex;
+  UINTN                         ChildFvOffset;
+  EFI_FIRMWARE_VOLUME_HEADER    *FvHeader;
+  EFI_FIRMWARE_VOLUME_HEADER    *ChildFvHeader;
+  EFI_FIRMWARE_VOLUME_HEADER    *MigratedFvHeader;
+  EFI_FIRMWARE_VOLUME_HEADER    *RawDataFvHeader;
+  EFI_FIRMWARE_VOLUME_HEADER    *MigratedChildFvHeader;
+
+  PEI_CORE_FV_HANDLE            PeiCoreFvHandle;
+  EFI_PEI_CORE_FV_LOCATION_PPI  *PeiCoreFvLocationPpi;
+  EDKII_MIGRATED_FV_INFO        MigratedFvInfo;
+
+  ASSERT (Private->PeiMemoryInstalled);
+
+  DEBUG ((DEBUG_VERBOSE, "Beginning evacuation of content in temporary RAM.\n"));
+
+  //
+  // Migrate PPI Pointers of PEI_CORE from temporary memory to newly loaded PEI_CORE in permanent memory.
+  //
+  Status = PeiLocatePpi ((CONST EFI_PEI_SERVICES **) &Private->Ps, &gEfiPeiCoreFvLocationPpiGuid, 0, NULL, (VOID **) &PeiCoreFvLocationPpi);
+  if (!EFI_ERROR (Status) && (PeiCoreFvLocationPpi->PeiCoreFvLocation != NULL)) {
+    PeiCoreFvHandle.FvHandle = (EFI_PEI_FV_HANDLE) PeiCoreFvLocationPpi->PeiCoreFvLocation;
+  } else {
+    PeiCoreFvHandle.FvHandle = (EFI_PEI_FV_HANDLE) SecCoreData->BootFirmwareVolumeBase;
+  }
+  for (FvIndex = 0; FvIndex < Private->FvCount; FvIndex++) {
+    if (Private->Fv[FvIndex].FvHandle == PeiCoreFvHandle.FvHandle) {
+      PeiCoreFvHandle = Private->Fv[FvIndex];
+      break;
+    }
+  }
+  Status = EFI_SUCCESS;
+
+  ConvertPeiCorePpiPointers (Private, PeiCoreFvHandle);
+
+  for (FvIndex = 0; FvIndex < Private->FvCount; FvIndex++) {
+    FvHeader = Private->Fv[FvIndex].FvHeader;
+    ASSERT (FvHeader != NULL);
+    ASSERT (FvIndex < Private->FvCount);
+
+    DEBUG ((DEBUG_VERBOSE, "FV[%02d] at 0x%x.\n", FvIndex, (UINTN) FvHeader));
+    if (
+      !(
+        ((EFI_PHYSICAL_ADDRESS)(UINTN) FvHeader >= Private->PhysicalMemoryBegin) &&
+        (((EFI_PHYSICAL_ADDRESS)(UINTN) FvHeader + (FvHeader->FvLength - 1)) < Private->FreePhysicalMemoryTop)
+        )
+      ) {
+      //
+      // Allocate page to save the rebased PEIMs, the PEIMs will get dispatched later.
+      //
+      Status =  PeiServicesAllocatePages (
+                  EfiBootServicesCode,
+                  EFI_SIZE_TO_PAGES ((UINTN) FvHeader->FvLength),
+                  (EFI_PHYSICAL_ADDRESS *) &MigratedFvHeader
+                  );
+      ASSERT_EFI_ERROR (Status);
+
+      //
+      // Allocate pool to save the raw PEIMs, which is used to keep consistent context across
+      // multiple boot and PCR0 will keep the same no matter if the address of allocated page is changed.
+      //
+      Status =  PeiServicesAllocatePages (
+                  EfiBootServicesCode,
+                  EFI_SIZE_TO_PAGES ((UINTN) FvHeader->FvLength),
+                  (EFI_PHYSICAL_ADDRESS *) &RawDataFvHeader
+                  );
+      ASSERT_EFI_ERROR (Status);
+
+      DEBUG ((
+        DEBUG_VERBOSE,
+        "  Migrating FV[%d] from 0x%08X to 0x%08X\n",
+        FvIndex,
+        (UINTN) FvHeader,
+        (UINTN) MigratedFvHeader
+        ));
+
+      //
+      // Copy the context to the rebased pages and raw pages, and create hob to save the
+      // information. The MigratedFvInfo HOB will never be produced when
+      // PcdMigrateTemporaryRamFirmwareVolumes is FALSE, because the PCD control the
+      // feature.
+      //
+      CopyMem (MigratedFvHeader, FvHeader, (UINTN) FvHeader->FvLength);
+      CopyMem (RawDataFvHeader, MigratedFvHeader, (UINTN) FvHeader->FvLength);
+      MigratedFvInfo.FvOrgBase  = (UINT32) (UINTN) FvHeader;
+      MigratedFvInfo.FvNewBase  = (UINT32) (UINTN) MigratedFvHeader;
+      MigratedFvInfo.FvDataBase = (UINT32) (UINTN) RawDataFvHeader;
+      MigratedFvInfo.FvLength   = (UINT32) (UINTN) FvHeader->FvLength;
+      BuildGuidDataHob (&gEdkiiMigratedFvInfoGuid, &MigratedFvInfo, sizeof (MigratedFvInfo));
+
+      //
+      // Migrate any children for this FV now
+      //
+      for (FvChildIndex = FvIndex; FvChildIndex < Private->FvCount; FvChildIndex++) {
+        ChildFvHeader = Private->Fv[FvChildIndex].FvHeader;
+        if (
+          ((UINTN) ChildFvHeader > (UINTN) FvHeader) &&
+          (((UINTN) ChildFvHeader + ChildFvHeader->FvLength) < ((UINTN) FvHeader) + FvHeader->FvLength)
+          ) {
+          DEBUG ((DEBUG_VERBOSE, "    Child FV[%02d] is being migrated.\n", FvChildIndex));
+          ChildFvOffset = (UINTN) ChildFvHeader - (UINTN) FvHeader;
+          DEBUG ((DEBUG_VERBOSE, "    Child FV offset = 0x%x.\n", ChildFvOffset));
+          MigratedChildFvHeader = (EFI_FIRMWARE_VOLUME_HEADER *) ((UINTN) MigratedFvHeader + ChildFvOffset);
+          Private->Fv[FvChildIndex].FvHeader = MigratedChildFvHeader;
+          Private->Fv[FvChildIndex].FvHandle = (EFI_PEI_FV_HANDLE) MigratedChildFvHeader;
+          DEBUG ((DEBUG_VERBOSE, "    Child migrated FV header at 0x%x.\n", (UINTN) MigratedChildFvHeader));
+
+          Status =  MigratePeimsInFv (Private, FvChildIndex, (UINTN) ChildFvHeader, (UINTN) MigratedChildFvHeader);
+          ASSERT_EFI_ERROR (Status);
+
+          ConvertPpiPointersFv (
+            Private,
+            (UINTN) ChildFvHeader,
+            (UINTN) MigratedChildFvHeader,
+            (UINTN) ChildFvHeader->FvLength - 1
+            );
+
+          ConvertStatusCodeCallbacks (
+            (UINTN) ChildFvHeader,
+            (UINTN) MigratedChildFvHeader,
+            (UINTN) ChildFvHeader->FvLength - 1
+            );
+
+          ConvertFvHob (Private, (UINTN) ChildFvHeader, (UINTN) MigratedChildFvHeader);
+        }
+      }
+      Private->Fv[FvIndex].FvHeader = MigratedFvHeader;
+      Private->Fv[FvIndex].FvHandle = (EFI_PEI_FV_HANDLE) MigratedFvHeader;
+
+      Status = MigratePeimsInFv (Private, FvIndex, (UINTN) FvHeader, (UINTN) MigratedFvHeader);
+      ASSERT_EFI_ERROR (Status);
+
+      ConvertPpiPointersFv (
+        Private,
+        (UINTN) FvHeader,
+        (UINTN) MigratedFvHeader,
+        (UINTN) FvHeader->FvLength - 1
+        );
+
+      ConvertStatusCodeCallbacks (
+        (UINTN) FvHeader,
+        (UINTN) MigratedFvHeader,
+        (UINTN) FvHeader->FvLength - 1
+        );
+
+      ConvertFvHob (Private, (UINTN) FvHeader, (UINTN) MigratedFvHeader);
+    }
+  }
+
+  RemoveFvHobsInTemporaryMemory (Private);
+
+  return Status;
+}
+
+/**
   Conduct PEIM dispatch.
 
   @param SecCoreData     Points to a data structure containing information about the PEI core's operating
@@ -942,24 +1413,28 @@ PeiDispatcher (
   EFI_PEI_FILE_HANDLE                 SaveCurrentFileHandle;
   EFI_FV_FILE_INFO                    FvFileInfo;
   PEI_CORE_FV_HANDLE                  *CoreFvHandle;
-  
+
   PeiServices = (CONST EFI_PEI_SERVICES **) &Private->Ps;
   PeimEntryPoint = NULL;
   PeimFileHandle = NULL;
   EntryPoint     = 0;
 
-  if ((Private->PeiMemoryInstalled) && (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME || PcdGetBool (PcdShadowPeimOnS3Boot))) {
+  if ((Private->PeiMemoryInstalled) &&
+      (PcdGetBool (PcdMigrateTemporaryRamFirmwareVolumes) ||
+       (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME) ||
+       PcdGetBool (PcdShadowPeimOnS3Boot))
+    ) {
     //
     // Once real memory is available, shadow the RegisterForShadow modules. And meanwhile
-    // update the modules' status from PEIM_STATE_REGISITER_FOR_SHADOW to PEIM_STATE_DONE.
+    // update the modules' status from PEIM_STATE_REGISTER_FOR_SHADOW to PEIM_STATE_DONE.
     //
     SaveCurrentPeimCount  = Private->CurrentPeimCount;
     SaveCurrentFvCount    = Private->CurrentPeimFvCount;
     SaveCurrentFileHandle =  Private->CurrentFileHandle;
 
-    for (Index1 = 0; Index1 <= SaveCurrentFvCount; Index1++) {
-      for (Index2 = 0; (Index2 < PcdGet32 (PcdPeiCoreMaxPeimPerFv)) && (Private->Fv[Index1].FvFileHandles[Index2] != NULL); Index2++) {
-        if (Private->Fv[Index1].PeimState[Index2] == PEIM_STATE_REGISITER_FOR_SHADOW) {
+    for (Index1 = 0; Index1 < Private->FvCount; Index1++) {
+      for (Index2 = 0; Index2 < Private->Fv[Index1].PeimCount; Index2++) {
+        if (Private->Fv[Index1].PeimState[Index2] == PEIM_STATE_REGISTER_FOR_SHADOW) {
           PeimFileHandle = Private->Fv[Index1].FvFileHandles[Index2];
           Private->CurrentFileHandle   = PeimFileHandle;
           Private->CurrentPeimFvCount  = Index1;
@@ -967,13 +1442,13 @@ PeiDispatcher (
           Status = PeiLoadImage (
                     (CONST EFI_PEI_SERVICES **) &Private->Ps,
                     PeimFileHandle,
-                    PEIM_STATE_REGISITER_FOR_SHADOW,
+                    PEIM_STATE_REGISTER_FOR_SHADOW,
                     &EntryPoint,
                     &AuthenticationState
                     );
           if (Status == EFI_SUCCESS) {
             //
-            // PEIM_STATE_REGISITER_FOR_SHADOW move to PEIM_STATE_DONE
+            // PEIM_STATE_REGISTER_FOR_SHADOW move to PEIM_STATE_DONE
             //
             Private->Fv[Index1].PeimState[Index2]++;
             //
@@ -981,16 +1456,16 @@ PeiDispatcher (
             //
             PeimEntryPoint = (EFI_PEIM_ENTRY_POINT2)(UINTN)EntryPoint;
 
-            PERF_START (PeimFileHandle, "PEIM", NULL, 0);
+            PERF_START_IMAGE_BEGIN (PeimFileHandle);
             PeimEntryPoint(PeimFileHandle, (const EFI_PEI_SERVICES **) &Private->Ps);
-            PERF_END (PeimFileHandle, "PEIM", NULL, 0);
+            PERF_START_IMAGE_END (PeimFileHandle);
           }
 
           //
           // Process the Notify list and dispatch any notifies for
           // newly installed PPIs.
           //
-          ProcessNotifyList (Private);
+          ProcessDispatchNotifyList (Private);
         }
       }
     }
@@ -1002,14 +1477,14 @@ PeiDispatcher (
   //
   // This is the main dispatch loop.  It will search known FVs for PEIMs and
   // attempt to dispatch them.  If any PEIM gets dispatched through a single
-  // pass of the dispatcher, it will start over from the Bfv again to see
+  // pass of the dispatcher, it will start over from the BFV again to see
   // if any new PEIMs dependencies got satisfied.  With a well ordered
   // FV where PEIMs are found in the order their dependencies are also
-  // satisfied, this dipatcher should run only once.
+  // satisfied, this dispatcher should run only once.
   //
   do {
     //
-    // In case that reenter PeiCore happens, the last pass record is still available.   
+    // In case that reenter PeiCore happens, the last pass record is still available.
     //
     if (!Private->PeimDispatcherReenter) {
       Private->PeimNeedingDispatch      = FALSE;
@@ -1017,18 +1492,18 @@ PeiDispatcher (
     } else {
       Private->PeimDispatcherReenter    = FALSE;
     }
-    
+
     for (FvCount = Private->CurrentPeimFvCount; FvCount < Private->FvCount; FvCount++) {
       CoreFvHandle = FindNextCoreFvHandle (Private, FvCount);
       ASSERT (CoreFvHandle != NULL);
-      
+
       //
       // If the FV has corresponding EFI_PEI_FIRMWARE_VOLUME_PPI instance, then dispatch it.
       //
       if (CoreFvHandle->FvPpi == NULL) {
         continue;
       }
-      
+
       Private->CurrentPeimFvCount = FvCount;
 
       if (Private->CurrentPeimCount == 0) {
@@ -1041,10 +1516,10 @@ PeiDispatcher (
       }
 
       //
-      // Start to dispatch all modules within the current Fv.
+      // Start to dispatch all modules within the current FV.
       //
       for (PeimCount = Private->CurrentPeimCount;
-           (PeimCount < PcdGet32 (PcdPeiCoreMaxPeimPerFv)) && (Private->CurrentFvFileHandles[PeimCount] != NULL);
+           PeimCount < Private->Fv[FvCount].PeimCount;
            PeimCount++) {
         Private->CurrentPeimCount  = PeimCount;
         PeimFileHandle = Private->CurrentFileHandle = Private->CurrentFvFileHandles[PeimCount];
@@ -1057,7 +1532,7 @@ PeiDispatcher (
             ASSERT_EFI_ERROR (Status);
             if (FvFileInfo.FileType == EFI_FV_FILETYPE_FIRMWARE_VOLUME_IMAGE) {
               //
-              // For Fv type file, Produce new FvInfo PPI and FV hob
+              // For FV type file, Produce new FvInfo PPI and FV HOB
               //
               Status = ProcessFvFile (Private, &Private->Fv[FvCount], PeimFileHandle);
               if (Status == EFI_SUCCESS) {
@@ -1090,7 +1565,7 @@ PeiDispatcher (
                 // The PEIM has its dependencies satisfied, and its entry point
                 // has been found, so invoke it.
                 //
-                PERF_START (PeimFileHandle, "PEIM", NULL, 0);
+                PERF_START_IMAGE_BEGIN (PeimFileHandle);
 
                 REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
                   EFI_PROGRESS_CODE,
@@ -1111,6 +1586,13 @@ PeiDispatcher (
                   PeimEntryPoint = (EFI_PEIM_ENTRY_POINT2)(UINTN)EntryPoint;
                   PeimEntryPoint (PeimFileHandle, (const EFI_PEI_SERVICES **) PeiServices);
                   Private->PeimDispatchOnThisPass = TRUE;
+                } else {
+                  //
+                  // The related GuidedSectionExtraction PPI for the
+                  // signed PEIM image section may be installed in the rest
+                  // of this do-while loop, so need to make another pass.
+                  //
+                  Private->PeimNeedingDispatch = TRUE;
                 }
 
                 REPORT_STATUS_CODE_WITH_EXTENDED_DATA (
@@ -1119,7 +1601,7 @@ PeiDispatcher (
                   (VOID *)(&PeimFileHandle),
                   sizeof (PeimFileHandle)
                   );
-                PERF_END (PeimFileHandle, "PEIM", NULL, 0);
+                PERF_START_IMAGE_END (PeimFileHandle);
 
               }
             }
@@ -1130,30 +1612,34 @@ PeiDispatcher (
             // Process the Notify list and dispatch any notifies for
             // newly installed PPIs.
             //
-            ProcessNotifyList (Private);
+            ProcessDispatchNotifyList (Private);
 
             //
-            // Recheck SwitchStackSignal after ProcessNotifyList()
+            // Recheck SwitchStackSignal after ProcessDispatchNotifyList()
             // in case PeiInstallPeiMemory() is done in a callback with
             // EFI_PEI_PPI_DESCRIPTOR_NOTIFY_DISPATCH.
             //
             PeiCheckAndSwitchStack (SecCoreData, Private);
 
-            if ((Private->PeiMemoryInstalled) && (Private->Fv[FvCount].PeimState[PeimCount] == PEIM_STATE_REGISITER_FOR_SHADOW) &&   \
-                (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME || PcdGetBool (PcdShadowPeimOnS3Boot))) {
+            if ((Private->PeiMemoryInstalled) && (Private->Fv[FvCount].PeimState[PeimCount] == PEIM_STATE_REGISTER_FOR_SHADOW) &&   \
+                (PcdGetBool (PcdMigrateTemporaryRamFirmwareVolumes) ||
+                 (Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME) ||
+                 PcdGetBool (PcdShadowPeimOnS3Boot))
+              ) {
               //
               // If memory is available we shadow images by default for performance reasons.
               // We call the entry point a 2nd time so the module knows it's shadowed.
               //
               //PERF_START (PeiServices, L"PEIM", PeimFileHandle, 0);
-              if ((Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME) && !PcdGetBool (PcdShadowPeimOnBoot)) {
+              if ((Private->HobList.HandoffInformationTable->BootMode != BOOT_ON_S3_RESUME) && !PcdGetBool (PcdShadowPeimOnBoot) &&
+                  !PcdGetBool (PcdMigrateTemporaryRamFirmwareVolumes)) {
                 //
                 // Load PEIM into Memory for Register for shadow PEIM.
                 //
                 Status = PeiLoadImage (
                            PeiServices,
                            PeimFileHandle,
-                           PEIM_STATE_REGISITER_FOR_SHADOW,
+                           PEIM_STATE_REGISTER_FOR_SHADOW,
                            &EntryPoint,
                            &AuthenticationState
                            );
@@ -1166,7 +1652,7 @@ PeiDispatcher (
               //PERF_END (PeiServices, L"PEIM", PeimFileHandle, 0);
 
               //
-              // PEIM_STATE_REGISITER_FOR_SHADOW move to PEIM_STATE_DONE
+              // PEIM_STATE_REGISTER_FOR_SHADOW move to PEIM_STATE_DONE
               //
               Private->Fv[FvCount].PeimState[PeimCount]++;
 
@@ -1174,28 +1660,24 @@ PeiDispatcher (
               // Process the Notify list and dispatch any notifies for
               // newly installed PPIs.
               //
-              ProcessNotifyList (Private);
+              ProcessDispatchNotifyList (Private);
             }
           }
         }
       }
 
       //
-      // We set to NULL here to optimize the 2nd entry to this routine after
-      //  memory is found. This reprevents rescanning of the FV. We set to
-      //  NULL here so we start at the begining of the next FV
+      // Before walking through the next FV, we should set them to NULL/0 to
+      // start at the beginning of the next FV.
       //
       Private->CurrentFileHandle = NULL;
       Private->CurrentPeimCount = 0;
-      //
-      // Before walking through the next FV,Private->CurrentFvFileHandles[]should set to NULL
-      //
-      SetMem (Private->CurrentFvFileHandles, sizeof (EFI_PEI_FILE_HANDLE) * PcdGet32 (PcdPeiCoreMaxPeimPerFv), 0);
+      Private->CurrentFvFileHandles = NULL;
     }
 
     //
-    // Before making another pass, we should set Private->CurrentPeimFvCount =0 to go
-    // through all the FV.
+    // Before making another pass, we should set it to 0 to
+    // go through all the FVs.
     //
     Private->CurrentPeimFvCount = 0;
 
@@ -1216,7 +1698,7 @@ PeiDispatcher (
 
   @param PrivateData     PeiCore's private data structure
   @param OldCoreData     Old data from SecCore
-                         NULL if being run in non-permament memory mode.
+                         NULL if being run in non-permanent memory mode.
   @param SecCoreData     Points to a data structure containing information about the PEI core's operating
                          environment, such as the size and location of temporary RAM, the stack location and
                          the BFV location.
@@ -1271,10 +1753,10 @@ DepexSatisfied (
   } else {
     DEBUG ((DEBUG_DISPATCH, "Evaluate PEI DEPEX for FFS(%g)\n", &FileInfo.FileName));
   }
-  
+
   if (PeimCount < Private->AprioriCount) {
     //
-    // If its in the A priori file then we set Depex to TRUE
+    // If it's in the Apriori file then we set DEPEX to TRUE
     //
     DEBUG ((DEBUG_DISPATCH, "  RESULT = TRUE (Apriori)\n"));
     return TRUE;
@@ -1304,8 +1786,8 @@ DepexSatisfied (
 }
 
 /**
-  This routine enable a PEIM to register itself to shadow when PEI Foundation
-  discovery permanent memory.
+  This routine enables a PEIM to register itself for shadow when the PEI Foundation
+  discovers permanent memory.
 
   @param FileHandle             File handle of a PEIM.
 
@@ -1330,14 +1812,14 @@ PeiRegisterForShadow (
     return EFI_NOT_FOUND;
   }
 
-  if (Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] >= PEIM_STATE_REGISITER_FOR_SHADOW) {
+  if (Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] >= PEIM_STATE_REGISTER_FOR_SHADOW) {
     //
     // If the PEIM has already entered the PEIM_STATE_REGISTER_FOR_SHADOW or PEIM_STATE_DONE then it's already been started
     //
     return EFI_ALREADY_STARTED;
   }
 
-  Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] = PEIM_STATE_REGISITER_FOR_SHADOW;
+  Private->Fv[Private->CurrentPeimFvCount].PeimState[Private->CurrentPeimCount] = PEIM_STATE_REGISTER_FOR_SHADOW;
 
   return EFI_SUCCESS;
 }
