@@ -2,18 +2,11 @@
 *
 *  Copyright (c) 2011-2014, ARM Limited. All rights reserved.
 *
-*  This program and the accompanying materials
-*  are licensed and made available under the terms and conditions of the BSD License
-*  which accompanies this distribution.  The full text of the license may be found at
-*  http://opensource.org/licenses/bsd-license.php
-*
-*  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#ifndef _FDT_LOAD_LIB_H_
-#define _FDT_LOAD_LIB_H_
+#pragma once
 
 /**
   Load and Install FDT from Semihosting
@@ -27,7 +20,7 @@
 **/
 EFI_STATUS
 InstallFdtFromSemihosting (
-  IN  CONST CHAR16*   FileName
+  IN  CONST CHAR16  *FileName
   );
 
 /**
@@ -42,7 +35,5 @@ InstallFdtFromSemihosting (
 **/
 EFI_STATUS
 InstallFdtFromFv (
-  IN  CONST EFI_GUID *FileName
+  IN  CONST EFI_GUID  *FileName
   );
-
-#endif

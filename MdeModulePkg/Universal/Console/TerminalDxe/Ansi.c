@@ -1,17 +1,11 @@
 /** @file
   Implementation of translation upon PC ANSI.
 
-Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2025, Loongson Technology Corporation Limited. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include "Terminal.h"
 
@@ -24,10 +18,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 AnsiRawDataToUnicode (
-  IN  TERMINAL_DEV    *TerminalDevice
+  IN  TERMINAL_DEV  *TerminalDevice
   )
 {
-  UINT8 RawData;
+  UINT8  RawData;
 
   //
   // pop the raw data out from the raw fifo,
@@ -35,42 +29,44 @@ AnsiRawDataToUnicode (
   // the unicode into unicode fifo, until the raw fifo is empty.
   //
   while (!IsRawFiFoEmpty (TerminalDevice) && !IsUnicodeFiFoFull (TerminalDevice)) {
-
     RawFiFoRemoveOneKey (TerminalDevice, &RawData);
 
-    UnicodeFiFoInsertOneKey (TerminalDevice, (UINT16) RawData);
+    UnicodeFiFoInsertOneKey (TerminalDevice, (UINT16)RawData);
   }
 }
 
 /**
-  Check if input string is valid Ascii string, valid EFI control characters
-  or valid text graphics.
+  Check if input string is valid Ascii string, valid EFI control characters,
+  wide/narrow character or valid text graphics.
 
   @param  TerminalDevice          The terminal device.
-  @param  WString                 The input string.          
- 
+  @param  WString                 The input string.
+
   @retval EFI_UNSUPPORTED         If not all input characters are valid.
   @retval EFI_SUCCESS             If all input characters are valid.
 
 **/
 EFI_STATUS
 AnsiTestString (
-  IN  TERMINAL_DEV    *TerminalDevice,
-  IN  CHAR16          *WString
+  IN  TERMINAL_DEV  *TerminalDevice,
+  IN  CHAR16        *WString
   )
 {
-  CHAR8 GraphicChar;
+  CHAR8  GraphicChar;
 
   //
-  // support three kind of character:
-  // valid ascii, valid efi control char, valid text graphics.
+  // support four kind of character:
+  // valid ascii, valid efi control char, wide/narrow char, valid text graphics.
   //
-  for (; *WString != CHAR_NULL; WString++) {
+  for ( ; *WString != CHAR_NULL; WString++) {
+    if ((*WString == WIDE_CHAR) || (*WString == NARROW_CHAR)) {
+      continue;
+    }
 
     if ( !(TerminalIsValidAscii (*WString) ||
-        TerminalIsValidEfiCntlChar (*WString) ||
-        TerminalIsValidTextGraphics (*WString, &GraphicChar, NULL) )) {
-
+           TerminalIsValidEfiCntlChar (*WString) ||
+           TerminalIsValidTextGraphics (*WString, &GraphicChar, NULL)))
+    {
       return EFI_UNSUPPORTED;
     }
   }

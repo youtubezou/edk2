@@ -3,30 +3,23 @@
   the low-level services for SIO devices that enable them to be used in the UEFI
   driver model.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This protocol is from PI Version 1.2.1.
 
 **/
 
-#ifndef __EFI_SUPER_IO_CONTROL_PROTOCOL_H__
-#define __EFI_SUPER_IO_CONTROL_PROTOCOL_H__
+#pragma once
 
 #define EFI_SIO_CONTROL_PROTOCOL_GUID \
   { \
     0xb91978df, 0x9fc1, 0x427d, { 0xbb, 0x5, 0x4c, 0x82, 0x84, 0x55, 0xca, 0x27 } \
   }
 
-typedef struct _EFI_SIO_CONTROL_PROTOCOL EFI_SIO_CONTROL_PROTOCOL;
-typedef struct _EFI_SIO_CONTROL_PROTOCOL *PEFI_SIO_CONTROL_PROTOCOL;
+typedef struct _EFI_SIO_CONTROL_PROTOCOL  EFI_SIO_CONTROL_PROTOCOL;
+typedef struct _EFI_SIO_CONTROL_PROTOCOL  *PEFI_SIO_CONTROL_PROTOCOL;
 
 /**
   Enable an ISA-style device.
@@ -38,7 +31,7 @@ typedef struct _EFI_SIO_CONTROL_PROTOCOL *PEFI_SIO_CONTROL_PROTOCOL;
 
   @retval EFI_SUCCESS          The device is enabled successfully.
   @retval EFI_OUT_OF_RESOURCES The device could not be enabled because there
-                               were insufficient resources either for the device 
+                               were insufficient resources either for the device
                                itself or for the records needed to track the device.
   @retval EFI_ALREADY_STARTED  The device is already enabled.
   @retval EFI_UNSUPPORTED      The device cannot be enabled.
@@ -61,7 +54,7 @@ EFI_STATUS
 
   @retval EFI_SUCCESS          The device is disabled successfully.
   @retval EFI_OUT_OF_RESOURCES The device could not be disabled because there
-                               were insufficient resources either for the device 
+                               were insufficient resources either for the device
                                itself or for the records needed to track the device.
   @retval EFI_ALREADY_STARTED  The device is already disabled.
   @retval EFI_UNSUPPORTED      The device cannot be disabled.
@@ -76,17 +69,15 @@ struct _EFI_SIO_CONTROL_PROTOCOL {
   ///
   /// The version of this protocol.
   ///
-  UINT32                  Version;
+  UINT32                     Version;
   ///
   /// Enable a device.
   ///
-  EFI_SIO_CONTROL_ENABLE  EnableDevice;
+  EFI_SIO_CONTROL_ENABLE     EnableDevice;
   ///
   /// Disable a device.
   ///
-  EFI_SIO_CONTROL_DISABLE DisableDevice;
+  EFI_SIO_CONTROL_DISABLE    DisableDevice;
 };
 
-extern EFI_GUID gEfiSioControlProtocolGuid;
-
-#endif // __EFI_SUPER_IO_CONTROL_PROTOCOL_H__
+extern EFI_GUID  gEfiSioControlProtocolGuid;

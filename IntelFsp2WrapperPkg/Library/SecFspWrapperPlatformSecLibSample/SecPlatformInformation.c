@@ -2,13 +2,7 @@
   Sample to provide SecPlatformInformation function.
 
   Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -34,9 +28,9 @@
 EFI_STATUS
 EFIAPI
 SecPlatformInformation (
-  IN CONST EFI_PEI_SERVICES                     **PeiServices,
-  IN OUT   UINT64                               *StructureSize,
-     OUT   EFI_SEC_PLATFORM_INFORMATION_RECORD  *PlatformInformationRecord
+  IN CONST EFI_PEI_SERVICES                  **PeiServices,
+  IN OUT   UINT64                            *StructureSize,
+  OUT   EFI_SEC_PLATFORM_INFORMATION_RECORD  *PlatformInformationRecord
   )
 {
   UINT32      *Bist;
@@ -53,7 +47,7 @@ SecPlatformInformation (
                              &gTopOfTemporaryRamPpiGuid,
                              0,
                              NULL,
-                             (VOID **) &TopOfTemporaryRamPpi
+                             (VOID **)&TopOfTemporaryRamPpi
                              );
   if (EFI_ERROR (Status)) {
     return EFI_NOT_FOUND;
@@ -65,18 +59,18 @@ SecPlatformInformation (
   // This routine copies the BIST information to the buffer pointed by
   // PlatformInformationRecord for output.
   //
-  TopOfTemporaryRam = (UINT32)(UINTN)TopOfTemporaryRamPpi - sizeof (UINT32);
-  TopOfTemporaryRam -= sizeof(UINT32) * 2;
-  Count             = *((UINT32 *)(UINTN) (TopOfTemporaryRam - sizeof (UINT32)));
-  Size              = Count * sizeof (IA32_HANDOFF_STATUS);
+  TopOfTemporaryRam  = (UINT32)(UINTN)TopOfTemporaryRamPpi - sizeof (UINT32);
+  TopOfTemporaryRam -= sizeof (UINT32) * 2;
+  Count              = *((UINT32 *)(UINTN)(TopOfTemporaryRam - sizeof (UINT32)));
+  Size               = Count * sizeof (IA32_HANDOFF_STATUS);
 
-  if ((*StructureSize) < (UINT64) Size) {
+  if ((*StructureSize) < (UINT64)Size) {
     *StructureSize = Size;
     return EFI_BUFFER_TOO_SMALL;
   }
 
-  *StructureSize  = Size;
-  Bist            = (UINT32 *) (TopOfTemporaryRam - sizeof (UINT32) - Size);
+  *StructureSize = Size;
+  Bist           = (UINT32 *)(TopOfTemporaryRam - sizeof (UINT32) - Size);
 
   CopyMem (PlatformInformationRecord, Bist, Size);
 

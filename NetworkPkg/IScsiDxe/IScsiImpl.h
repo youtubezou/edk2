@@ -1,19 +1,12 @@
 /** @file
   The shared head file for iSCSI driver.
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _ISCSI_IMPL_H_
-#define _ISCSI_IMPL_H_
+#pragma once
 
 #include <Uefi.h>
 
@@ -28,29 +21,34 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/Ip6.h>
 #include <Protocol/Dhcp4.h>
 #include <Protocol/Dhcp6.h>
+#include <Protocol/Dns4.h>
+#include <Protocol/Dns6.h>
 #include <Protocol/Tcp4.h>
 #include <Protocol/Tcp6.h>
+#include <Protocol/Ip4Config2.h>
+#include <Protocol/Ip6Config.h>
 
 #include <Protocol/AuthenticationInfo.h>
 #include <Protocol/IScsiInitiatorName.h>
 #include <Protocol/ScsiPassThruExt.h>
 #include <Protocol/AdapterInformation.h>
+#include <Protocol/NetworkInterfaceIdentifier.h>
 
-#include <Library/HiiLib.h>
-#include <Library/UefiHiiServicesLib.h>
-#include <Library/DevicePathLib.h>
-#include <Library/DebugLib.h>
+#include <Library/BaseCryptLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
+#include <Library/DebugLib.h>
+#include <Library/DevicePathLib.h>
+#include <Library/HiiLib.h>
 #include <Library/MemoryAllocationLib.h>
-#include <Library/PrintLib.h>
-#include <Library/UefiBootServicesTableLib.h>
-#include <Library/UefiRuntimeServicesTableLib.h>
-#include <Library/UefiLib.h>
-#include <Library/DpcLib.h>
 #include <Library/NetLib.h>
+#include <Library/PrintLib.h>
+#include <Library/SafeIntLib.h>
 #include <Library/TcpIoLib.h>
-#include <Library/BaseCryptLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiHiiServicesLib.h>
+#include <Library/UefiLib.h>
+#include <Library/UefiRuntimeServicesTableLib.h>
 
 #include <Guid/MdeModuleHii.h>
 #include <Guid/EventGroup.h>
@@ -62,109 +60,111 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include "IScsiCHAP.h"
 #include "IScsiDhcp.h"
 #include "IScsiDhcp6.h"
+
 #include "IScsiIbft.h"
 #include "IScsiMisc.h"
+#include "IScsiDns.h"
 #include "IScsiConfig.h"
 
-#define ISCSI_AUTH_INITIAL        0
+#define ISCSI_AUTH_INITIAL  0
 
-#define ISCSI_SESSION_SIGNATURE   SIGNATURE_32 ('I', 'S', 'S', 'N')
+#define ISCSI_SESSION_SIGNATURE  SIGNATURE_32 ('I', 'S', 'S', 'N')
 ///
 /// 10 seconds
 ///
-#define ISCSI_GET_MAPPING_TIMEOUT 100000000U
+#define ISCSI_GET_MAPPING_TIMEOUT  100000000U
 ///
 /// 3 seconds
 ///
 #define ISCSI_WAIT_IPSEC_TIMEOUT  30000000U
 
 struct _ISCSI_SESSION {
-  UINT32                      Signature;
+  UINT32                         Signature;
 
-  ISCSI_DRIVER_DATA           *Private;
-  ISCSI_ATTEMPT_CONFIG_NVDATA *ConfigData;
+  ISCSI_DRIVER_DATA              *Private;
+  ISCSI_ATTEMPT_CONFIG_NVDATA    *ConfigData;
 
-  UINT8                       AuthType;
+  UINT8                          AuthType;
   union {
-    ISCSI_CHAP_AUTH_DATA      CHAP;
+    ISCSI_CHAP_AUTH_DATA    CHAP;
   } AuthData;
 
-  UINT8                       State;
+  UINT8                          State;
 
-  UINT8                       Isid[6];
-  UINT16                      Tsih;
+  UINT8                          Isid[6];
+  UINT16                         Tsih;
 
-  UINT32                      CmdSN;
-  UINT32                      ExpCmdSN;
-  UINT32                      MaxCmdSN;
+  UINT32                         CmdSN;
+  UINT32                         ExpCmdSN;
+  UINT32                         MaxCmdSN;
 
-  UINT32                      InitiatorTaskTag;
-  UINT16                      NextCid;
+  UINT32                         InitiatorTaskTag;
+  UINT16                         NextCid;
 
-  LIST_ENTRY                  Conns;
-  UINT32                      NumConns;
+  LIST_ENTRY                     Conns;
+  UINT32                         NumConns;
 
-  LIST_ENTRY                  TcbList;
+  LIST_ENTRY                     TcbList;
 
   //
   // Session-wide parameters
   //
-  UINT16                      TargetPortalGroupTag;
-  UINT32                      MaxConnections;
-  BOOLEAN                     InitialR2T;
-  BOOLEAN                     ImmediateData;
-  UINT32                      MaxBurstLength;
-  UINT32                      FirstBurstLength;
-  UINT32                      DefaultTime2Wait;
-  UINT32                      DefaultTime2Retain;
-  UINT16                      MaxOutstandingR2T;
-  BOOLEAN                     DataPDUInOrder;
-  BOOLEAN                     DataSequenceInOrder;
-  UINT8                       ErrorRecoveryLevel;
+  UINT16                         TargetPortalGroupTag;
+  UINT32                         MaxConnections;
+  BOOLEAN                        InitialR2T;
+  BOOLEAN                        ImmediateData;
+  UINT32                         MaxBurstLength;
+  UINT32                         FirstBurstLength;
+  UINT32                         DefaultTime2Wait;
+  UINT32                         DefaultTime2Retain;
+  UINT16                         MaxOutstandingR2T;
+  BOOLEAN                        DataPDUInOrder;
+  BOOLEAN                        DataSequenceInOrder;
+  UINT8                          ErrorRecoveryLevel;
 };
 
 #define ISCSI_CONNECTION_SIGNATURE  SIGNATURE_32 ('I', 'S', 'C', 'N')
 
 struct _ISCSI_CONNECTION {
-  UINT32            Signature;
-  LIST_ENTRY        Link;
+  UINT32               Signature;
+  LIST_ENTRY           Link;
 
-  EFI_EVENT         TimeoutEvent;
+  EFI_EVENT            TimeoutEvent;
 
-  ISCSI_SESSION     *Session;
+  ISCSI_SESSION        *Session;
 
-  UINT8             State;
-  UINT8             CurrentStage;
-  UINT8             NextStage;
+  UINT8                State;
+  UINT8                CurrentStage;
+  UINT8                NextStage;
 
-  UINT8             AuthStep;
+  UINT8                AuthStep;
 
-  BOOLEAN           PartialReqSent;
-  BOOLEAN           PartialRspRcvd;
+  BOOLEAN              PartialReqSent;
+  BOOLEAN              PartialRspRcvd;
 
-  BOOLEAN           TransitInitiated;
-  BOOLEAN           ParamNegotiated;
+  BOOLEAN              TransitInitiated;
+  BOOLEAN              ParamNegotiated;
 
-  UINT16            Cid;
-  UINT32            ExpStatSN;
+  UINT16               Cid;
+  UINT32               ExpStatSN;
 
   //
   // Queues...
   //
-  NET_BUF_QUEUE     RspQue;
+  NET_BUF_QUEUE        RspQue;
 
-  BOOLEAN           Ipv6Flag;
-  TCP_IO            TcpIo;
+  BOOLEAN              Ipv6Flag;
+  TCP_IO               TcpIo;
 
   //
   // Connection-only parameters.
   //
-  UINT32            MaxRecvDataSegmentLength;
-  ISCSI_DIGEST_TYPE HeaderDigest;
-  ISCSI_DIGEST_TYPE DataDigest;
+  UINT32               MaxRecvDataSegmentLength;
+  ISCSI_DIGEST_TYPE    HeaderDigest;
+  ISCSI_DIGEST_TYPE    DataDigest;
 };
 
-#define ISCSI_DRIVER_DATA_SIGNATURE SIGNATURE_32 ('I', 'S', 'D', 'A')
+#define ISCSI_DRIVER_DATA_SIGNATURE  SIGNATURE_32 ('I', 'S', 'D', 'A')
 
 #define ISCSI_DRIVER_DATA_FROM_EXT_SCSI_PASS_THRU(PassThru) \
   CR ( \
@@ -183,19 +183,17 @@ struct _ISCSI_CONNECTION {
   )
 
 struct _ISCSI_DRIVER_DATA {
-  UINT32                          Signature;
-  EFI_HANDLE                      Image;
-  EFI_HANDLE                      Controller;
-  ISCSI_PRIVATE_PROTOCOL          IScsiIdentifier;
+  UINT32                             Signature;
+  EFI_HANDLE                         Image;
+  EFI_HANDLE                         Controller;
+  ISCSI_PRIVATE_PROTOCOL             IScsiIdentifier;
 
-  EFI_EVENT                       ExitBootServiceEvent;
+  EFI_EVENT                          ExitBootServiceEvent;
 
-  EFI_EXT_SCSI_PASS_THRU_PROTOCOL IScsiExtScsiPassThru;
-  EFI_EXT_SCSI_PASS_THRU_MODE     ExtScsiPassThruMode;
-  EFI_HANDLE                      ExtScsiPassThruHandle;
-  EFI_DEVICE_PATH_PROTOCOL        *DevicePath;
-  EFI_HANDLE                      ChildHandle;  
-  ISCSI_SESSION                   *Session;
+  EFI_EXT_SCSI_PASS_THRU_PROTOCOL    IScsiExtScsiPassThru;
+  EFI_EXT_SCSI_PASS_THRU_MODE        ExtScsiPassThruMode;
+  EFI_HANDLE                         ExtScsiPassThruHandle;
+  EFI_DEVICE_PATH_PROTOCOL           *DevicePath;
+  EFI_HANDLE                         ChildHandle;
+  ISCSI_SESSION                      *Session;
 };
-
-#endif

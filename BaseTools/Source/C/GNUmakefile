@@ -1,77 +1,49 @@
 ## @file
 #  GNU/Linux makefile for C tools build.
 #
-#  Copyright (c) 2007 - 2012, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2025, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
-ifndef ARCH
-  #
-  # If ARCH is not defined, then we use 'uname -m' to attempt
-  # try to figure out the appropriate ARCH.
-  #
-  uname_m = $(shell uname -m)
-  $(info Attempting to detect ARCH from 'uname -m': $(uname_m))
-  ifneq (,$(strip $(filter $(uname_m), x86_64 amd64)))
-    ARCH=X64
-  endif
-  ifeq ($(patsubst i%86,IA32,$(uname_m)),IA32)
-    ARCH=IA32
-  endif
-  ifneq (,$(findstring aarch64,$(uname_m)))
-    ARCH=AARCH64
-  endif
-  ifneq (,$(findstring arm,$(uname_m)))
-    ARCH=ARM
-  endif
-  ifndef ARCH
-    $(info Could not detected ARCH from uname results)
-    $(error ARCH is not defined!)
-  endif
-  $(info Detected ARCH of $(ARCH) using uname.)
+ifeq (Windows, $(findstring Windows,$(OS)))
+  SHELL := cmd.exe
+  MAKEROOT := $(shell echo %CD%)
+else
+  MAKEROOT := .
 endif
-
-export ARCH
-
-MAKEROOT = .
 
 include Makefiles/header.makefile
 
-all: makerootdir subdirs $(MAKEROOT)/libs
-	@echo Finished building BaseTools C Tools with ARCH=$(ARCH)
+export PYTHON_COMMAND
+export HOST_ARCH
+
+all: makerootdir subdirs
+	@echo Finished building BaseTools C Tools with HOST_ARCH=$(HOST_ARCH)
 
 LIBRARIES = Common
-# NON_BUILDABLE_APPLICATIONS = GenBootSector BootSectImage
 APPLICATIONS = \
-  GnuGenBootSector \
-  BootSectImage \
-  EfiLdrImage \
+  BrotliCompress \
+  VfrCompile \
   EfiRom \
   GenFfs \
   GenFv \
   GenFw \
-  GenPage \
   GenSec \
   GenCrc32 \
-  GenVtf \
   LzmaCompress \
-  Split \
   TianoCompress \
   VolInfo \
-  VfrCompile
+  DevicePath
 
 SUBDIRS := $(LIBRARIES) $(APPLICATIONS)
 
+$(LIBRARIES): $(MAKEROOT)/libs
+$(APPLICATIONS): $(LIBRARIES) $(MAKEROOT)/bin
+
 .PHONY: outputdirs
 makerootdir:
-	-mkdir -p $(MAKEROOT)
+	-$(MD) $(MAKEROOT)
 
 .PHONY: subdirs $(SUBDIRS)
 subdirs: $(SUBDIRS)
@@ -87,7 +59,7 @@ clean:  $(patsubst %,%-clean,$(sort $(SUBDIRS)))
 clean: localClean
 
 localClean:
-	rm -f $(MAKEROOT)/bin/*
-	-rmdir $(MAKEROOT)/libs $(MAKEROOT)/bin
+	$(RM) $(MAKEROOT)/bin/*
+	-$(RD) $(MAKEROOT)/libs $(MAKEROOT)/bin
 
 include Makefiles/footer.makefile

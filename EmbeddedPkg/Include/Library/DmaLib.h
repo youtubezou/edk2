@@ -27,18 +27,11 @@
 
   Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __DMA_LIB_H__
-#define __DMA_LIB_H__
+#pragma once
 
 typedef enum {
   ///
@@ -56,9 +49,6 @@ typedef enum {
   MapOperationBusMasterCommonBuffer,
   MapOperationMaximum
 } DMA_MAP_OPERATION;
-
-
-
 
 /**
   Provides the DMA controller-specific addresses needed to access system memory.
@@ -83,15 +73,12 @@ typedef enum {
 EFI_STATUS
 EFIAPI
 DmaMap (
-  IN     DMA_MAP_OPERATION              Operation,
-  IN     VOID                           *HostAddress,
-  IN OUT UINTN                          *NumberOfBytes,
-  OUT    PHYSICAL_ADDRESS               *DeviceAddress,
-  OUT    VOID                           **Mapping
+  IN     DMA_MAP_OPERATION  Operation,
+  IN     VOID               *HostAddress,
+  IN OUT UINTN              *NumberOfBytes,
+  OUT    PHYSICAL_ADDRESS   *DeviceAddress,
+  OUT    VOID               **Mapping
   );
-
-
-
 
 /**
   Completes the DmaMapBusMasterRead, DmaMapBusMasterWrite, or DmaMapBusMasterCommonBuffer
@@ -106,9 +93,8 @@ DmaMap (
 EFI_STATUS
 EFIAPI
 DmaUnmap (
-  IN  VOID                         *Mapping
+  IN  VOID  *Mapping
   );
-
 
 /**
   Allocates pages that are suitable for an DmaMap() of type MapOperationBusMasterCommonBuffer.
@@ -130,11 +116,10 @@ DmaUnmap (
 EFI_STATUS
 EFIAPI
 DmaAllocateBuffer (
-  IN  EFI_MEMORY_TYPE              MemoryType,
-  IN  UINTN                        Pages,
-  OUT VOID                         **HostAddress
+  IN  EFI_MEMORY_TYPE  MemoryType,
+  IN  UINTN            Pages,
+  OUT VOID             **HostAddress
   );
-
 
 /**
   Frees memory that was allocated with DmaAllocateBuffer().
@@ -150,10 +135,34 @@ DmaAllocateBuffer (
 EFI_STATUS
 EFIAPI
 DmaFreeBuffer (
-  IN  UINTN                        Pages,
-  IN  VOID                         *HostAddress
+  IN  UINTN  Pages,
+  IN  VOID   *HostAddress
   );
 
+/**
+  Allocates pages that are suitable for an DmaMap() of type
+  MapOperationBusMasterCommonBuffer mapping, at the requested alignment.
 
-#endif
+  @param  MemoryType            The type of memory to allocate, EfiBootServicesData or
+                                EfiRuntimeServicesData.
+  @param  Pages                 The number of pages to allocate.
+  @param  Alignment             Alignment in bytes of the base of the returned
+                                buffer (must be a power of 2)
+  @param  HostAddress           A pointer to store the base system memory address of the
+                                allocated range.
 
+  @retval EFI_SUCCESS           The requested memory pages were allocated.
+  @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
+                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
+  @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
+  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
+
+**/
+EFI_STATUS
+EFIAPI
+DmaAllocateAlignedBuffer (
+  IN  EFI_MEMORY_TYPE  MemoryType,
+  IN  UINTN            Pages,
+  IN  UINTN            Alignment,
+  OUT VOID             **HostAddress
+  );

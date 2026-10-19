@@ -1,35 +1,25 @@
 /** @file
-  CPU exception handler library implemenation for SMM modules.
+  CPU exception handler library implementation for SMM modules.
 
-  Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2013 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiSmm.h>
 #include "CpuExceptionCommon.h"
 
-CONST UINTN   mDoFarReturnFlag   = 1; 
+CONST UINTN  mDoFarReturnFlag = 1;
 
-//
-// Spin lock for CPU information display
-//
-SPIN_LOCK        mDisplayMessageSpinLock;
+RESERVED_VECTORS_DATA      mReservedVectorsData[X86_CPU_INTERRUPT_NUM];
+EFI_CPU_INTERRUPT_HANDLER  mExternalInterruptHandlerTable[X86_CPU_INTERRUPT_NUM];
+EXCEPTION_HANDLER_DATA     mExceptionHandlerData = {
+  X86_CPU_INTERRUPT_NUM,
+  0,                     // To be fixed
+  mReservedVectorsData,
+  mExternalInterruptHandlerTable
+};
 
-//
-// Image align size for DXE/SMM
-//
-CONST UINTN      mImageAlignSize = SIZE_4KB;
-
-RESERVED_VECTORS_DATA       mReservedVectorsData[CPU_EXCEPTION_NUM];
-EFI_CPU_INTERRUPT_HANDLER   mExternalInterruptHandlerTable[CPU_EXCEPTION_NUM];
-EXCEPTION_HANDLER_DATA      mExceptionHandlerData;
 /**
   Common exception handler.
 
@@ -39,8 +29,8 @@ EXCEPTION_HANDLER_DATA      mExceptionHandlerData;
 VOID
 EFIAPI
 CommonExceptionHandler (
-  IN EFI_EXCEPTION_TYPE          ExceptionType, 
-  IN EFI_SYSTEM_CONTEXT          SystemContext
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  IN EFI_SYSTEM_CONTEXT  SystemContext
   )
 {
   CommonExceptionHandlerWorker (ExceptionType, SystemContext, &mExceptionHandlerData);
@@ -48,15 +38,15 @@ CommonExceptionHandler (
 
 /**
   Initializes all CPU exceptions entries and provides the default exception handlers.
-  
+
   Caller should try to get an array of interrupt and/or exception vectors that are in use and need to
   persist by EFI_VECTOR_HANDOFF_INFO defined in PI 1.3 specification.
-  If caller cannot get reserved vector list or it does not exists, set VectorInfo to NULL. 
+  If caller cannot get reserved vector list or it does not exists, set VectorInfo to NULL.
   If VectorInfo is not NULL, the exception vectors will be initialized per vector attribute accordingly.
 
   @param[in]  VectorInfo    Pointer to reserved vector list.
-  
-  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized 
+
+  @retval EFI_SUCCESS           CPU Exception Entries have been successfully initialized
                                 with default exception handlers.
   @retval EFI_INVALID_PARAMETER VectorInfo includes the invalid content if VectorInfo is not NULL.
   @retval EFI_UNSUPPORTED       This function is not supported.
@@ -65,49 +55,22 @@ CommonExceptionHandler (
 EFI_STATUS
 EFIAPI
 InitializeCpuExceptionHandlers (
-  IN EFI_VECTOR_HANDOFF_INFO       *VectorInfo OPTIONAL
+  IN EFI_VECTOR_HANDOFF_INFO  *VectorInfo OPTIONAL
   )
 {
-  mExceptionHandlerData.ReservedVectors          = mReservedVectorsData;
-  mExceptionHandlerData.ExternalInterruptHandler = mExternalInterruptHandlerTable;
   InitializeSpinLock (&mExceptionHandlerData.DisplayMessageSpinLock);
   return InitializeCpuExceptionHandlersWorker (VectorInfo, &mExceptionHandlerData);
 }
 
 /**
-  Initializes all CPU interrupt/exceptions entries and provides the default interrupt/exception handlers.
-  
-  Caller should try to get an array of interrupt and/or exception vectors that are in use and need to
-  persist by EFI_VECTOR_HANDOFF_INFO defined in PI 1.3 specification.
-  If caller cannot get reserved vector list or it does not exists, set VectorInfo to NULL. 
-  If VectorInfo is not NULL, the exception vectors will be initialized per vector attribute accordingly.
-
-  @param[in]  VectorInfo    Pointer to reserved vector list.
-  
-  @retval EFI_SUCCESS           All CPU interrupt/exception entries have been successfully initialized 
-                                with default interrupt/exception handlers.
-  @retval EFI_INVALID_PARAMETER VectorInfo includes the invalid content if VectorInfo is not NULL.
-  @retval EFI_UNSUPPORTED       This function is not supported.
-
-**/
-EFI_STATUS
-EFIAPI
-InitializeCpuInterruptHandlers (
-  IN EFI_VECTOR_HANDOFF_INFO       *VectorInfo OPTIONAL
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
   Registers a function to be called from the processor interrupt handler.
 
-  This function registers and enables the handler specified by InterruptHandler for a processor 
-  interrupt or exception type specified by InterruptType. If InterruptHandler is NULL, then the 
-  handler for the processor interrupt or exception type specified by InterruptType is uninstalled. 
+  This function registers and enables the handler specified by InterruptHandler for a processor
+  interrupt or exception type specified by InterruptType. If InterruptHandler is NULL, then the
+  handler for the processor interrupt or exception type specified by InterruptType is uninstalled.
   The installed handler is called once for each processor interrupt or exception.
-  NOTE: This function should be invoked after InitializeCpuExceptionHandlers() or
-  InitializeCpuInterruptHandlers() invoked, otherwise EFI_UNSUPPORTED returned.
+  NOTE: This function should be invoked after InitializeCpuExceptionHandlers() is invoked,
+  otherwise EFI_UNSUPPORTED returned.
 
   @param[in]  InterruptType     Defines which interrupt or exception to hook.
   @param[in]  InterruptHandler  A pointer to a function of type EFI_CPU_INTERRUPT_HANDLER that is called
@@ -125,9 +88,33 @@ InitializeCpuInterruptHandlers (
 EFI_STATUS
 EFIAPI
 RegisterCpuInterruptHandler (
-  IN EFI_EXCEPTION_TYPE            InterruptType,
-  IN EFI_CPU_INTERRUPT_HANDLER     InterruptHandler
+  IN EFI_EXCEPTION_TYPE         InterruptType,
+  IN EFI_CPU_INTERRUPT_HANDLER  InterruptHandler
   )
 {
   return RegisterCpuInterruptHandlerWorker (InterruptType, InterruptHandler, &mExceptionHandlerData);
+}
+
+/**
+  Setup separate stacks for certain exception handlers.
+  If the input Buffer and BufferSize are both NULL, use global variable if possible.
+
+  @param[in]       Buffer        Point to buffer used to separate exception stack.
+  @param[in, out]  BufferSize    On input, it indicates the byte size of Buffer.
+                                 If the size is not enough, the return status will
+                                 be EFI_BUFFER_TOO_SMALL, and output BufferSize
+                                 will be the size it needs.
+
+  @retval EFI_SUCCESS             The stacks are assigned successfully.
+  @retval EFI_UNSUPPORTED         This function is not supported.
+  @retval EFI_BUFFER_TOO_SMALL    This BufferSize is too small.
+**/
+EFI_STATUS
+EFIAPI
+InitializeSeparateExceptionStacks (
+  IN     VOID   *Buffer,
+  IN OUT UINTN  *BufferSize
+  )
+{
+  return EFI_UNSUPPORTED;
 }

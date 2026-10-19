@@ -2,13 +2,7 @@
   UEFI Component Name and Name2 protocol for Isa serial driver.
 
 Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,14 +20,13 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gPciSioSerialComponen
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gPciSioSerialComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) SerialComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) SerialComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gPciSioSerialComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)SerialComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)SerialComponentNameGetControllerName,
   "en"
 };
 
-
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSerialDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSerialDriverNameTable[] = {
   {
     "eng;en",
     L"PCI SIO Serial Driver"
@@ -171,11 +164,11 @@ SerialComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 SerialComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   EFI_STATUS                Status;
@@ -188,18 +181,18 @@ SerialComponentNameGetControllerName (
   // Make sure this driver is currently managing ControllerHandle
   //
   IoProtocolGuid = &gEfiSioProtocolGuid;
-  Status = EfiTestManagedDevice (
-             ControllerHandle,
-             gSerialControllerDriver.DriverBindingHandle,
-             IoProtocolGuid
-             );
+  Status         = EfiTestManagedDevice (
+                     ControllerHandle,
+                     gSerialControllerDriver.DriverBindingHandle,
+                     IoProtocolGuid
+                     );
   if (EFI_ERROR (Status)) {
     IoProtocolGuid = &gEfiPciIoProtocolGuid;
-    Status = EfiTestManagedDevice (
-               ControllerHandle,
-               gSerialControllerDriver.DriverBindingHandle,
-               IoProtocolGuid
-               );
+    Status         = EfiTestManagedDevice (
+                       ControllerHandle,
+                       gSerialControllerDriver.DriverBindingHandle,
+                       IoProtocolGuid
+                       );
   }
 
   if (EFI_ERROR (Status)) {
@@ -223,7 +216,7 @@ SerialComponentNameGetControllerName (
     Status = gBS->OpenProtocol (
                     ChildHandle,
                     &gEfiSerialIoProtocolGuid,
-                    (VOID **) &SerialIo,
+                    (VOID **)&SerialIo,
                     gSerialControllerDriver.DriverBindingHandle,
                     ChildHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -235,7 +228,7 @@ SerialComponentNameGetControllerName (
     //
     // Get the Serial Controller's Device structure
     //
-    SerialDevice = SERIAL_DEV_FROM_THIS (SerialIo);
+    SerialDevice        = SERIAL_DEV_FROM_THIS (SerialIo);
     ControllerNameTable = SerialDevice->ControllerNameTable;
   }
 
@@ -256,11 +249,12 @@ SerialComponentNameGetControllerName (
 **/
 VOID
 AddName (
-  IN  SERIAL_DEV                               *SerialDevice,
-  IN  UINT32                                   Instance
+  IN  SERIAL_DEV  *SerialDevice,
+  IN  UINT32      Instance
   )
 {
-  CHAR16                                       SerialPortName[SERIAL_PORT_NAME_LEN];
+  CHAR16  SerialPortName[SERIAL_PORT_NAME_LEN];
+
   UnicodeSPrint (
     SerialPortName,
     sizeof (SerialPortName),
@@ -281,5 +275,4 @@ AddName (
     SerialPortName,
     FALSE
     );
-
 }

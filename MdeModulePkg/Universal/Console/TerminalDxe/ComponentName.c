@@ -2,13 +2,7 @@
   UEFI Component Name(2) protocol implementation for Terminal driver.
 
 Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,17 +20,16 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gTerminalComponentNam
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gTerminalComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) TerminalComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) TerminalComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gTerminalComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)TerminalComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)TerminalComponentNameGetControllerName,
   "en"
 };
 
-
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mTerminalDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mTerminalDriverNameTable[] = {
   {
     "eng;en",
-   (CHAR16 *) L"Serial Terminal Driver"
+    (CHAR16 *)L"Serial Terminal Driver"
   },
   {
     NULL,
@@ -171,11 +164,11 @@ TerminalComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 TerminalComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   EFI_STATUS                       Status;
@@ -216,7 +209,7 @@ TerminalComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   ChildHandle,
                   &gEfiSimpleTextOutProtocolGuid,
-                  (VOID **) &SimpleTextOutput,
+                  (VOID **)&SimpleTextOutput,
                   gTerminalDriverBinding.DriverBindingHandle,
                   ChildHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL

@@ -1,18 +1,11 @@
 /*++ @file
   PEIM to build GUIDed HOBs for platform specific flash map
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include "PiPei.h"
 
@@ -30,9 +23,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 PeimInitializeFlashMap (
-  IN       EFI_PEI_FILE_HANDLE       FileHandle,
-  IN CONST EFI_PEI_SERVICES          **PeiServices
+  IN       EFI_PEI_FILE_HANDLE  FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   )
+
 /*++
 
 Routine Description:
@@ -54,17 +48,17 @@ Returns:
   EFI_PHYSICAL_ADDRESS    FdFixUp;
   UINT64                  FdSize;
 
-  DEBUG ((EFI_D_ERROR, "EmulatorPkg Flash Map PEIM Loaded\n"));
+  DEBUG ((DEBUG_ERROR, "EmulatorPkg Flash Map PEIM Loaded\n"));
 
   //
   // Get the Fwh Information PPI
   //
   Status = PeiServicesLocatePpi (
-            &gEmuThunkPpiGuid, // GUID
-            0,                 // INSTANCE
-            &PpiDescriptor,     // EFI_PEI_PPI_DESCRIPTOR
-            (VOID **)&Thunk       // PPI
-            );
+             &gEmuThunkPpiGuid, // GUID
+             0,                 // INSTANCE
+             &PpiDescriptor,    // EFI_PEI_PPI_DESCRIPTOR
+             (VOID **)&Thunk    // PPI
+             );
   ASSERT_EFI_ERROR (Status);
 
   //
@@ -75,9 +69,9 @@ Returns:
     return Status;
   }
 
-  PcdSet64 (PcdFlashNvStorageVariableBase64, PcdGet64 (PcdEmuFlashNvStorageVariableBase) + FdFixUp);
-  PcdSet64 (PcdFlashNvStorageFtwWorkingBase64, PcdGet64 (PcdEmuFlashNvStorageFtwWorkingBase) + FdFixUp);
-  PcdSet64 (PcdFlashNvStorageFtwSpareBase64, PcdGet64 (PcdEmuFlashNvStorageFtwSpareBase) + FdFixUp);
+  PcdSet64S (PcdFlashNvStorageVariableBase64, PcdGet64 (PcdEmuFlashNvStorageVariableBase) + FdFixUp);
+  PcdSet64S (PcdFlashNvStorageFtwWorkingBase64, PcdGet64 (PcdEmuFlashNvStorageFtwWorkingBase) + FdFixUp);
+  PcdSet64S (PcdFlashNvStorageFtwSpareBase64, PcdGet64 (PcdEmuFlashNvStorageFtwSpareBase) + FdFixUp);
 
   return EFI_SUCCESS;
 }

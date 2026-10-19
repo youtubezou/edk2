@@ -1,14 +1,8 @@
 /** @file
   PE/Coff Extra Action library instances.
 
-  Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -16,7 +10,7 @@
 
 /**
   Check if the hardware breakpoint in Drx is enabled by checking the Lx and Gx bit in Dr7.
-  
+
   It assumes that DebugAgent will set both Lx and Gx bit when setting up the hardware breakpoint.
 
 
@@ -33,14 +27,14 @@ IsDrxEnabled (
   IN  UINTN  Dr7
   )
 {
-  return (BOOLEAN) (((Dr7 >> (RegisterIndex * 2)) & (BIT0 | BIT1)) == (BIT0 | BIT1));
+  return (BOOLEAN)(((Dr7 >> (RegisterIndex * 2)) & (BIT0 | BIT1)) == (BIT0 | BIT1));
 }
 
 /**
   Common routine to report the PE/COFF image loading/relocating or unloading event.
 
   If ImageContext is NULL, then ASSERT().
-  
+
   @param  ImageContext  Pointer to the image context structure that describes the
                         PE/COFF image.
   @param  Signature     IMAGE_LOAD_SIGNATURE or IMAGE_UNLOAD_SIGNATURE.
@@ -52,25 +46,25 @@ PeCoffLoaderExtraActionCommon (
   IN     UINTN                         Signature
   )
 {
-  BOOLEAN                    InterruptState;
-  UINTN                      Dr0;
-  UINTN                      Dr1;
-  UINTN                      Dr2;
-  UINTN                      Dr3;
-  UINTN                      Dr7;
-  UINTN                      Cr4;
-  UINTN                      NewDr7;
-  UINT8                      LoadImageMethod;
-  UINT8                      DebugAgentStatus;
-  IA32_DESCRIPTOR            IdtDescriptor;
-  IA32_IDT_GATE_DESCRIPTOR   OriginalIdtEntry;
-  BOOLEAN                    IdtEntryHooked;
-  UINT32                     RegEdx;
+  BOOLEAN                   InterruptState;
+  UINTN                     Dr0;
+  UINTN                     Dr1;
+  UINTN                     Dr2;
+  UINTN                     Dr3;
+  UINTN                     Dr7;
+  UINTN                     Cr4;
+  UINTN                     NewDr7;
+  UINT8                     LoadImageMethod;
+  UINT8                     DebugAgentStatus;
+  IA32_DESCRIPTOR           IdtDescriptor;
+  IA32_IDT_GATE_DESCRIPTOR  OriginalIdtEntry;
+  BOOLEAN                   IdtEntryHooked;
+  UINT32                    RegEdx;
 
   ASSERT (ImageContext != NULL);
 
   if (ImageContext->PdbPointer != NULL) {
-    DEBUG((EFI_D_ERROR, "    PDB = %a\n", ImageContext->PdbPointer));
+    DEBUG ((DEBUG_ERROR, "    PDB = %a\n", ImageContext->PdbPointer));
   }
 
   //
@@ -83,13 +77,14 @@ PeCoffLoaderExtraActionCommon (
   if (LoadImageMethod == DEBUG_LOAD_IMAGE_METHOD_IO_HW_BREAKPOINT) {
     //
     // If the CPU does not support Debug Extensions(CPUID:01 EDX:BIT2)
-    // then force use of DEBUG_LOAD_IMAGE_METHOD_SOFT_INT3 
+    // then force use of DEBUG_LOAD_IMAGE_METHOD_SOFT_INT3
     //
     AsmCpuid (1, NULL, NULL, NULL, &RegEdx);
     if ((RegEdx & BIT2) == 0) {
       LoadImageMethod = DEBUG_LOAD_IMAGE_METHOD_SOFT_INT3;
     }
   }
+
   AsmReadIdtr (&IdtDescriptor);
   if (LoadImageMethod == DEBUG_LOAD_IMAGE_METHOD_SOFT_INT3) {
     if (!CheckDebugAgentHandler (&IdtDescriptor, SOFT_INT_VECTOR_NUM)) {
@@ -107,7 +102,7 @@ PeCoffLoaderExtraActionCommon (
       IdtEntryHooked = TRUE;
     }
   }
-  
+
   //
   // Save Debug Register State
   //
@@ -128,8 +123,8 @@ PeCoffLoaderExtraActionCommon (
   //
   AsmWriteDr7 (BIT10);
   AsmWriteDr0 (Signature);
-  AsmWriteDr1 ((UINTN) ImageContext->PdbPointer);
-  AsmWriteDr2 ((UINTN) ImageContext);
+  AsmWriteDr1 ((UINTN)ImageContext->PdbPointer);
+  AsmWriteDr2 ((UINTN)ImageContext);
   AsmWriteDr3 (IO_PORT_BREAKPOINT_ADDRESS);
 
   if (LoadImageMethod == DEBUG_LOAD_IMAGE_METHOD_IO_HW_BREAKPOINT) {
@@ -142,7 +137,6 @@ PeCoffLoaderExtraActionCommon (
     do {
       DebugAgentStatus = IoRead8 (IO_PORT_BREAKPOINT_ADDRESS);
     } while (DebugAgentStatus == DEBUG_AGENT_IMAGE_WAIT);
-
   } else if (LoadImageMethod == DEBUG_LOAD_IMAGE_METHOD_SOFT_INT3) {
     //
     // Generate a software break point.
@@ -152,30 +146,35 @@ PeCoffLoaderExtraActionCommon (
 
   //
   // Restore Debug Register State only when Host didn't change it inside exception handler.
-  // E.g.: User halts the target and sets the HW breakpoint while target is 
+  // E.g.: User halts the target and sets the HW breakpoint while target is
   //       in the above exception handler
   //
   NewDr7 = AsmReadDr7 () | BIT10; // H/w sets bit 10, some simulators don't
-  if (!IsDrxEnabled (0, NewDr7) && (AsmReadDr0 () == 0 || AsmReadDr0 () == Signature)) {
+  if (!IsDrxEnabled (0, NewDr7) && ((AsmReadDr0 () == 0) || (AsmReadDr0 () == Signature))) {
     //
     // If user changed Dr3 (by setting HW bp in the above exception handler,
     // we will not set Dr0 to 0 in GO/STEP handler because the break cause is not IMAGE_LOAD/_UNLOAD.
     //
     AsmWriteDr0 (Dr0);
   }
-  if (!IsDrxEnabled (1, NewDr7) && (AsmReadDr1 () == (UINTN) ImageContext->PdbPointer)) {
+
+  if (!IsDrxEnabled (1, NewDr7) && (AsmReadDr1 () == (UINTN)ImageContext->PdbPointer)) {
     AsmWriteDr1 (Dr1);
   }
-  if (!IsDrxEnabled (2, NewDr7) && (AsmReadDr2 () == (UINTN) ImageContext)) {
+
+  if (!IsDrxEnabled (2, NewDr7) && (AsmReadDr2 () == (UINTN)ImageContext)) {
     AsmWriteDr2 (Dr2);
   }
+
   if (!IsDrxEnabled (3, NewDr7) && (AsmReadDr3 () == IO_PORT_BREAKPOINT_ADDRESS)) {
     AsmWriteDr3 (Dr3);
   }
+
   if (LoadImageMethod == DEBUG_LOAD_IMAGE_METHOD_IO_HW_BREAKPOINT) {
     if (AsmReadCr4 () == (Cr4 | BIT3)) {
       AsmWriteCr4 (Cr4);
     }
+
     if (NewDr7 == 0x20000480) {
       AsmWriteDr7 (Dr7);
     }
@@ -184,12 +183,14 @@ PeCoffLoaderExtraActionCommon (
       AsmWriteDr7 (Dr7);
     }
   }
+
   //
   // Restore original IDT entry for INT1 if it was hooked.
   //
   if (IdtEntryHooked) {
     RestoreIdtEntry1 (&IdtDescriptor, &OriginalIdtEntry);
   }
+
   //
   // Restore the interrupt state
   //

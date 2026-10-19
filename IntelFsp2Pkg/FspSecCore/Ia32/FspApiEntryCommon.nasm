@@ -1,17 +1,13 @@
 ;; @file
 ;  Provide FSP API entry points.
 ;
-; Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2016 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;;
 
     SECTION .text
+
+STACK_SAVED_EAX_OFFSET       EQU   4 * 7 ; size of a general purpose register * eax index
 
 ;
 ; Following functions will be provided in C
@@ -58,7 +54,7 @@ FspApiCommon1:
   add    esp, 8
   cmp    eax, 0
   jz     FspApiCommon2
-  mov    dword  [esp + (4 * 7)], eax
+  mov    dword  [esp + STACK_SAVED_EAX_OFFSET], eax
   popad
 exit:
   ret
@@ -66,6 +62,12 @@ exit:
 FspApiCommon2:
   popad
   cmp    eax, 3   ; FspMemoryInit API
+  jz     FspApiCommon3
+
+  cmp    eax, 6   ; FspMultiPhaseSiInitApiIndex API
+  jz     FspApiCommon3
+
+  cmp    eax, 8   ; FspMultiPhaseMemInitApiIndex API
   jz     FspApiCommon3
 
   call   ASM_PFX(AsmGetFspInfoHeader)

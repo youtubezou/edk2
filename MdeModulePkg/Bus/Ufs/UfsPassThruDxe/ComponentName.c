@@ -1,13 +1,7 @@
 /** @file
 
-  Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 #include "UfsPassThru.h"
@@ -24,26 +18,25 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gUfsPassThruComponent
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gUfsPassThruComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) UfsPassThruComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) UfsPassThruComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gUfsPassThruComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)UfsPassThruComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)UfsPassThruComponentNameGetControllerName,
   "en"
 };
 
-
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUfsPassThruDriverNameTable[] = {
-  { 
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUfsPassThruDriverNameTable[] = {
+  {
     "eng;en",
     L"Universal Flash Storage (UFS) Pass Thru Driver"
   },
-  { 
+  {
     NULL,
     NULL
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUfsPassThruControllerNameTable[] = {
-  { 
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUfsPassThruControllerNameTable[] = {
+  {
     "eng;en",
     L"Universal Flash Storage (UFS) Host Controller"
   },
@@ -180,16 +173,16 @@ UfsPassThruComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 UfsPassThruComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS                    Status;
+  EFI_STATUS  Status;
 
-  if (Language == NULL || ControllerName == NULL) {
+  if ((Language == NULL) || (ControllerName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 

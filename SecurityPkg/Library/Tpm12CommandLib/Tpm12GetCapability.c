@@ -1,14 +1,8 @@
 /** @file
   Implement TPM1.2 Get Capabilities related commands.
 
-Copyright (c) 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,22 +16,22 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #pragma pack(1)
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR  Hdr;
-  UINT32               Capability;
-  UINT32               CapabilityFlagSize;
-  UINT32               CapabilityFlag;
+  TPM_RQU_COMMAND_HDR    Hdr;
+  UINT32                 Capability;
+  UINT32                 CapabilityFlagSize;
+  UINT32                 CapabilityFlag;
 } TPM_CMD_GET_CAPABILITY;
 
 typedef struct {
-  TPM_RSP_COMMAND_HDR  Hdr;
-  UINT32               ResponseSize;
-  TPM_PERMANENT_FLAGS  Flags;
+  TPM_RSP_COMMAND_HDR    Hdr;
+  UINT32                 ResponseSize;
+  TPM_PERMANENT_FLAGS    Flags;
 } TPM_RSP_GET_CAPABILITY_PERMANENT_FLAGS;
 
 typedef struct {
-  TPM_RSP_COMMAND_HDR  Hdr;
-  UINT32               ResponseSize;
-  TPM_STCLEAR_FLAGS    Flags;
+  TPM_RSP_COMMAND_HDR    Hdr;
+  UINT32                 ResponseSize;
+  TPM_STCLEAR_FLAGS      Flags;
 } TPM_RSP_GET_CAPABILITY_STCLEAR_FLAGS;
 
 #pragma pack()
@@ -73,14 +67,19 @@ Tpm12GetCapabilityFlagPermanent (
   Command.Capability         = SwapBytes32 (TPM_CAP_FLAG);
   Command.CapabilityFlagSize = SwapBytes32 (sizeof (TPM_CAP_FLAG_PERMANENT));
   Command.CapabilityFlag     = SwapBytes32 (TPM_CAP_FLAG_PERMANENT);
-  Length = sizeof (Response);
-  Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
+  Length                     = sizeof (Response);
+  Status                     = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
+  if (SwapBytes32 (Response.Hdr.returnCode) != TPM_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "Tpm12GetCapabilityFlagPermanent: Response Code error! 0x%08x\r\n", SwapBytes32 (Response.Hdr.returnCode)));
+    return EFI_DEVICE_ERROR;
+  }
+
   ZeroMem (TpmPermanentFlags, sizeof (*TpmPermanentFlags));
-  CopyMem (TpmPermanentFlags, &Response.Flags, MIN (sizeof (*TpmPermanentFlags), Response.ResponseSize));
+  CopyMem (TpmPermanentFlags, &Response.Flags, MIN (sizeof (*TpmPermanentFlags), SwapBytes32 (Response.ResponseSize)));
 
   return Status;
 }
@@ -114,14 +113,19 @@ Tpm12GetCapabilityFlagVolatile (
   Command.Capability         = SwapBytes32 (TPM_CAP_FLAG);
   Command.CapabilityFlagSize = SwapBytes32 (sizeof (TPM_CAP_FLAG_VOLATILE));
   Command.CapabilityFlag     = SwapBytes32 (TPM_CAP_FLAG_VOLATILE);
-  Length = sizeof (Response);
-  Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
+  Length                     = sizeof (Response);
+  Status                     = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
+  if (SwapBytes32 (Response.Hdr.returnCode) != TPM_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "Tpm12GetCapabilityFlagVolatile: Response Code error! 0x%08x\r\n", SwapBytes32 (Response.Hdr.returnCode)));
+    return EFI_DEVICE_ERROR;
+  }
+
   ZeroMem (VolatileFlags, sizeof (*VolatileFlags));
-  CopyMem (VolatileFlags, &Response.Flags, MIN (sizeof (*VolatileFlags), Response.ResponseSize));
+  CopyMem (VolatileFlags, &Response.Flags, MIN (sizeof (*VolatileFlags), SwapBytes32 (Response.ResponseSize)));
 
   return Status;
 }

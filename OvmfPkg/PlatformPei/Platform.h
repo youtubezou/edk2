@@ -2,103 +2,116 @@
   Platform PEI module include file.
 
   Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _PLATFORM_PEI_H_INCLUDED_
-#define _PLATFORM_PEI_H_INCLUDED_
+#pragma once
 
 #include <IndustryStandard/E820.h>
-
-VOID
-AddIoMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS        MemoryBase,
-  UINT64                      MemorySize
-  );
-
-VOID
-AddIoMemoryRangeHob (
-  EFI_PHYSICAL_ADDRESS        MemoryBase,
-  EFI_PHYSICAL_ADDRESS        MemoryLimit
-  );
-
-VOID
-AddMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS        MemoryBase,
-  UINT64                      MemorySize
-  );
-
-VOID
-AddMemoryRangeHob (
-  EFI_PHYSICAL_ADDRESS        MemoryBase,
-  EFI_PHYSICAL_ADDRESS        MemoryLimit
-  );
-
-VOID
-AddReservedMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS        MemoryBase,
-  UINT64                      MemorySize,
-  BOOLEAN                     Cacheable
-  );
+#include <Library/PlatformInitLib.h>
+#include <IndustryStandard/IntelTdx.h>
 
 VOID
 AddressWidthInitialization (
-  VOID
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+Q35TsegMbytesInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+Q35SmramAtDefaultSmbaseInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
 
 EFI_STATUS
 PublishPeiMemory (
-  VOID
-  );
-
-UINT32
-GetSystemMemorySizeBelow4gb (
-  VOID
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
 
 VOID
 InitializeRamRegions (
-  VOID
+  IN EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+MemMapInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+MiscInitialization (
+  IN EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+BootModeInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+VOID
+MaxCpuCountInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
 
 EFI_STATUS
 PeiFvInitialization (
-  VOID
+  IN EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
+
+EFI_STATUS
+MemTypeInfoInitialization (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
 
 VOID
 InstallFeatureControlCallback (
-  VOID
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
-
-EFI_STATUS
-InitializeXen (
-  VOID
-  );
-
-BOOLEAN
-XenDetect (
-  VOID
-  );
-
-extern BOOLEAN mXen;
 
 VOID
-XenPublishRamRegions (
+InstallClearCacheCallback (
   VOID
   );
 
-extern EFI_BOOT_MODE mBootMode;
+VOID
+RelocateSmBase (
+  VOID
+  );
 
-extern BOOLEAN mS3Supported;
+VOID
+AmdSevInitialize (
+  IN EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
+  );
 
-extern UINT8 mPhysMemAddressWidth;
+/**
+  This Function checks if TDX is available, if present then it sets
+  the dynamic PCDs for Tdx guest. It also builds Guid hob which contains
+  the Host Bridge DevId.
+  **/
+VOID
+IntelTdxInitialize (
+  VOID
+  );
 
-#endif // _PLATFORM_PEI_H_INCLUDED_
+/**
+ * @brief Builds PlatformInfo Hob
+ */
+EFI_HOB_PLATFORM_INFO *
+BuildPlatformInfoHob (
+  VOID
+  );
+
+VOID
+SevInitializeRam (
+  VOID
+  );
+
+VOID
+CompleteInitialization (
+  IN EFI_HOB_PLATFORM_INFO   *PlatformInfoHob,
+  IN CONST EFI_PEI_SERVICES  **PeiServices
+  );

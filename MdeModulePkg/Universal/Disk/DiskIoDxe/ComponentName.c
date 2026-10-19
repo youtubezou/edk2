@@ -2,13 +2,7 @@
   UEFI Component Name(2) protocol implementation for DiskIo driver.
 
 Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,9 +20,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gDiskIoComponentName 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gDiskIoComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) DiskIoComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) DiskIoComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gDiskIoComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)DiskIoComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)DiskIoComponentNameGetControllerName,
   "en"
 };
 
@@ -36,7 +30,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gDiskIoComponentName2
 // Driver name table for DiskIo module.
 // It is shared by the implementation of ComponentName & ComponentName2 Protocol.
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mDiskIoDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mDiskIoDriverNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"Generic Disk I/O Driver"
@@ -46,8 +40,6 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mDiskIoDriverNameTable[] 
     NULL
   }
 };
-
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -104,8 +96,6 @@ DiskIoComponentNameGetDriverName (
            (BOOLEAN)(This == &gDiskIoComponentName)
            );
 }
-
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -178,11 +168,11 @@ DiskIoComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 DiskIoComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   return EFI_UNSUPPORTED;

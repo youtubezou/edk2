@@ -3,19 +3,11 @@
 
   Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR
-  IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FRAMEBUFFER_BLT_LIB__
-#define __FRAMEBUFFER_BLT_LIB__
+#pragma once
 
 #include <Protocol/GraphicsOutput.h>
 
@@ -80,7 +72,7 @@ RETURN_STATUS
 EFIAPI
 FrameBufferBlt (
   IN     FRAME_BUFFER_CONFIGURE             *Configure,
-  IN OUT EFI_GRAPHICS_OUTPUT_BLT_PIXEL      *BltBuffer, OPTIONAL
+  IN OUT EFI_GRAPHICS_OUTPUT_BLT_PIXEL      *BltBuffer  OPTIONAL,
   IN     EFI_GRAPHICS_OUTPUT_BLT_OPERATION  BltOperation,
   IN     UINTN                              SourceX,
   IN     UINTN                              SourceY,
@@ -90,5 +82,3 @@ FrameBufferBlt (
   IN     UINTN                              Height,
   IN     UINTN                              Delta
   );
-
-#endif

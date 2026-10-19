@@ -2,13 +2,7 @@
   Sample to provide FSP wrapper platform sec related function.
 
   Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -35,9 +29,9 @@
 EFI_STATUS
 EFIAPI
 SecPlatformInformation (
-  IN CONST EFI_PEI_SERVICES                     **PeiServices,
-  IN OUT   UINT64                               *StructureSize,
-     OUT   EFI_SEC_PLATFORM_INFORMATION_RECORD  *PlatformInformationRecord
+  IN CONST EFI_PEI_SERVICES                  **PeiServices,
+  IN OUT   UINT64                            *StructureSize,
+  OUT   EFI_SEC_PLATFORM_INFORMATION_RECORD  *PlatformInformationRecord
   );
 
 /**
@@ -101,30 +95,30 @@ EFI_PEI_PPI_DESCRIPTOR  mPeiSecPlatformPpi[] = {
 EFI_PEI_PPI_DESCRIPTOR *
 EFIAPI
 SecPlatformMain (
-  IN OUT   EFI_SEC_PEI_HAND_OFF        *SecCoreData
+  IN OUT   EFI_SEC_PEI_HAND_OFF  *SecCoreData
   )
 {
-  EFI_PEI_PPI_DESCRIPTOR      *PpiList;
+  EFI_PEI_PPI_DESCRIPTOR  *PpiList;
 
-  DEBUG((DEBUG_INFO, "SecPlatformMain\n"));
+  DEBUG ((DEBUG_INFO, "SecPlatformMain\n"));
 
-  DEBUG((DEBUG_INFO, "BootFirmwareVolumeBase - 0x%x\n", SecCoreData->BootFirmwareVolumeBase));
-  DEBUG((DEBUG_INFO, "BootFirmwareVolumeSize - 0x%x\n", SecCoreData->BootFirmwareVolumeSize));
-  DEBUG((DEBUG_INFO, "TemporaryRamBase       - 0x%x\n", SecCoreData->TemporaryRamBase));
-  DEBUG((DEBUG_INFO, "TemporaryRamSize       - 0x%x\n", SecCoreData->TemporaryRamSize));
-  DEBUG((DEBUG_INFO, "PeiTemporaryRamBase    - 0x%x\n", SecCoreData->PeiTemporaryRamBase));
-  DEBUG((DEBUG_INFO, "PeiTemporaryRamSize    - 0x%x\n", SecCoreData->PeiTemporaryRamSize));
-  DEBUG((DEBUG_INFO, "StackBase              - 0x%x\n", SecCoreData->StackBase));
-  DEBUG((DEBUG_INFO, "StackSize              - 0x%x\n", SecCoreData->StackSize));
+  DEBUG ((DEBUG_INFO, "BootFirmwareVolumeBase - 0x%x\n", SecCoreData->BootFirmwareVolumeBase));
+  DEBUG ((DEBUG_INFO, "BootFirmwareVolumeSize - 0x%x\n", SecCoreData->BootFirmwareVolumeSize));
+  DEBUG ((DEBUG_INFO, "TemporaryRamBase       - 0x%x\n", SecCoreData->TemporaryRamBase));
+  DEBUG ((DEBUG_INFO, "TemporaryRamSize       - 0x%x\n", SecCoreData->TemporaryRamSize));
+  DEBUG ((DEBUG_INFO, "PeiTemporaryRamBase    - 0x%x\n", SecCoreData->PeiTemporaryRamBase));
+  DEBUG ((DEBUG_INFO, "PeiTemporaryRamSize    - 0x%x\n", SecCoreData->PeiTemporaryRamSize));
+  DEBUG ((DEBUG_INFO, "StackBase              - 0x%x\n", SecCoreData->StackBase));
+  DEBUG ((DEBUG_INFO, "StackSize              - 0x%x\n", SecCoreData->StackSize));
 
-  InitializeApicTimer (0, (UINT32) -1, TRUE, 5);
+  InitializeApicTimer (0, (UINT32)-1, TRUE, 5);
 
   //
   // Use middle of Heap as temp buffer, it will be copied by caller.
   // Do not use Stack, because it will cause wrong calculation on stack by PeiCore
   //
   PpiList = (VOID *)((UINTN)SecCoreData->PeiTemporaryRamBase + (UINTN)SecCoreData->PeiTemporaryRamSize/2);
-  CopyMem (PpiList, mPeiSecPlatformPpi, sizeof(mPeiSecPlatformPpi));
+  CopyMem (PpiList, mPeiSecPlatformPpi, sizeof (mPeiSecPlatformPpi));
 
   //
   // Patch TopOfTemporaryRamPpi

@@ -1,20 +1,13 @@
 /** @file
-  Declaration of HTTP boot driver's EFI_COMPONENT_NAME_PROTOCOL and 
+  Declaration of HTTP boot driver's EFI_COMPONENT_NAME_PROTOCOL and
   EFI_COMPONENT_NAME2_PROTOCOL function.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                          
-    
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_UEFI_HTTP_BOOT_COM_NAME_H__
-#define __EFI_UEFI_HTTP_BOOT_COM_NAME_H__
+#pragma once
 
 /**
   Retrieves a Unicode string that is the user-readable name of the EFI Driver.
@@ -95,5 +88,3 @@ HttpBootDxeComponentNameGetControllerName (
   IN  CHAR8                         *Language,
   OUT CHAR16                        **ControllerName
   );
-
-#endif

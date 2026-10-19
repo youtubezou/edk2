@@ -1,14 +1,8 @@
 /*++ @file
 
-Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2022, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2010 - 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -16,7 +10,7 @@ Module Name:
 
 Abstract:
 
-  This file produces the graphics abstration of UGA. It is called by
+  This file produces the graphics abstration of GOP. It is called by
   EmuGopDriver.c file which deals with the EFI 1.1 driver model.
   This file just does graphics.
 
@@ -24,17 +18,15 @@ Abstract:
 
 #include "Gop.h"
 
+EFI_EVENT  mGopScreenExitBootServicesEvent;
 
-EFI_EVENT               mGopScreenExitBootServicesEvent;
-
-GOP_MODE_DATA mGopModeData[] = {
-    { 800,  600, 0, 0 },
-    { 640,  480, 0, 0 },
-    { 720,  400, 0, 0 },
-    {1024,  768, 0, 0 },
-    {1280, 1024, 0, 0 }
-    };
-
+GOP_MODE_DATA  mGopModeData[] = {
+  { 800,  600,  0, 0 },
+  { 640,  480,  0, 0 },
+  { 720,  400,  0, 0 },
+  { 1024, 768,  0, 0 },
+  { 1280, 1024, 0, 0 }
+};
 
 /**
   Returns information for an available graphics mode that the graphics device
@@ -65,7 +57,7 @@ EmuGopQuerytMode (
 
   Private = GOP_PRIVATE_DATA_FROM_THIS (This);
 
-  if (Info == NULL || SizeOfInfo == NULL || (UINTN) ModeNumber >= This->Mode->MaxMode) {
+  if ((Info == NULL) || (SizeOfInfo == NULL) || ((UINTN)ModeNumber >= This->Mode->MaxMode)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -76,16 +68,14 @@ EmuGopQuerytMode (
 
   *SizeOfInfo = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
 
-  (*Info)->Version = 0;
+  (*Info)->Version              = 0;
   (*Info)->HorizontalResolution = Private->ModeData[ModeNumber].HorizontalResolution;
   (*Info)->VerticalResolution   = Private->ModeData[ModeNumber].VerticalResolution;
-  (*Info)->PixelFormat = PixelBltOnly;
-  (*Info)->PixelsPerScanLine = (*Info)->HorizontalResolution;
+  (*Info)->PixelFormat          = PixelBltOnly;
+  (*Info)->PixelsPerScanLine    = (*Info)->HorizontalResolution;
 
   return EFI_SUCCESS;
 }
-
-
 
 /**
   Set the video device into the specified mode and clears the visible portions of
@@ -106,10 +96,10 @@ EmuGopSetMode (
   IN  UINT32                        ModeNumber
   )
 {
-  EFI_STATUS                      Status;
-  GOP_PRIVATE_DATA                *Private;
-  GOP_MODE_DATA                   *ModeData;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL   Fill;
+  EFI_STATUS                     Status;
+  GOP_PRIVATE_DATA               *Private;
+  GOP_MODE_DATA                  *ModeData;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  Fill;
 
   Private = GOP_PRIVATE_DATA_FROM_THIS (This);
 
@@ -118,19 +108,15 @@ EmuGopSetMode (
   }
 
   ModeData = &Private->ModeData[ModeNumber];
-  This->Mode->Mode = ModeNumber;
-  Private->GraphicsOutput.Mode->Info->HorizontalResolution = ModeData->HorizontalResolution;
-  Private->GraphicsOutput.Mode->Info->VerticalResolution = ModeData->VerticalResolution;
-  Private->GraphicsOutput.Mode->Info->PixelsPerScanLine = ModeData->HorizontalResolution;
 
   if (Private->HardwareNeedsStarting) {
     Status = EmuGopStartWindow (
-              Private,
-              ModeData->HorizontalResolution,
-              ModeData->VerticalResolution,
-              ModeData->ColorDepth,
-              ModeData->RefreshRate
-              );
+               Private,
+               ModeData->HorizontalResolution,
+               ModeData->VerticalResolution,
+               ModeData->ColorDepth,
+               ModeData->RefreshRate
+               );
     if (EFI_ERROR (Status)) {
       return EFI_DEVICE_ERROR;
     }
@@ -138,17 +124,20 @@ EmuGopSetMode (
     Private->HardwareNeedsStarting = FALSE;
   }
 
+  This->Mode->Mode                                         = ModeNumber;
+  Private->GraphicsOutput.Mode->Info->HorizontalResolution = ModeData->HorizontalResolution;
+  Private->GraphicsOutput.Mode->Info->VerticalResolution   = ModeData->VerticalResolution;
+  Private->GraphicsOutput.Mode->Info->PixelsPerScanLine    = ModeData->HorizontalResolution;
 
-  Status = Private->EmuGraphicsWindow->Size(
-                            Private->EmuGraphicsWindow,
-                            ModeData->HorizontalResolution,
-                            ModeData->VerticalResolution
-                            );
+  Status = Private->EmuGraphicsWindow->Size (
+                                         Private->EmuGraphicsWindow,
+                                         ModeData->HorizontalResolution,
+                                         ModeData->VerticalResolution
+                                         );
 
-
-  Fill.Red                      = 0x7f;
-  Fill.Green                    = 0x7F;
-  Fill.Blue                     = 0x7f;
+  Fill.Red   = 0;
+  Fill.Green = 0;
+  Fill.Blue  = 0;
   This->Blt (
           This,
           &Fill,
@@ -163,8 +152,6 @@ EmuGopSetMode (
           );
   return EFI_SUCCESS;
 }
-
-
 
 /**
   Blt a rectangle of pixels on the graphics screen. Blt stands for BLock Transfer.
@@ -183,28 +170,28 @@ EmuGopSetMode (
 
   @retval EFI_SUCCESS           The Blt operation completed.
   @retval EFI_INVALID_PARAMETER BltOperation is not valid.
-  @retval EFI_DEVICE_ERROR      A hardware error occured writting to the video buffer.
+  @retval EFI_DEVICE_ERROR      A hardware error occurred writting to the video buffer.
 
 **/
 EFI_STATUS
 EFIAPI
 EmuGopBlt (
-  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL            *This,
-  IN  EFI_GRAPHICS_OUTPUT_BLT_PIXEL           *BltBuffer,   OPTIONAL
-  IN  EFI_GRAPHICS_OUTPUT_BLT_OPERATION       BltOperation,
-  IN  UINTN                                   SourceX,
-  IN  UINTN                                   SourceY,
-  IN  UINTN                                   DestinationX,
-  IN  UINTN                                   DestinationY,
-  IN  UINTN                                   Width,
-  IN  UINTN                                   Height,
-  IN  UINTN                                   Delta         OPTIONAL
+  IN  EFI_GRAPHICS_OUTPUT_PROTOCOL       *This,
+  IN  EFI_GRAPHICS_OUTPUT_BLT_PIXEL      *BltBuffer    OPTIONAL,
+  IN  EFI_GRAPHICS_OUTPUT_BLT_OPERATION  BltOperation,
+  IN  UINTN                              SourceX,
+  IN  UINTN                              SourceY,
+  IN  UINTN                              DestinationX,
+  IN  UINTN                              DestinationY,
+  IN  UINTN                              Width,
+  IN  UINTN                              Height,
+  IN  UINTN                              Delta         OPTIONAL
   )
 {
-  GOP_PRIVATE_DATA  *Private;
-  EFI_TPL           OriginalTPL;
-  EFI_STATUS        Status;
-  EMU_GRAPHICS_WINDOWS__BLT_ARGS      GopBltArgs;
+  GOP_PRIVATE_DATA                *Private;
+  EFI_TPL                         OriginalTPL;
+  EFI_STATUS                      Status;
+  EMU_GRAPHICS_WINDOWS__BLT_ARGS  GopBltArgs;
 
   Private = GOP_PRIVATE_DATA_FROM_THIS (This);
 
@@ -212,16 +199,17 @@ EmuGopBlt (
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Width == 0 || Height == 0) {
+  if ((Width == 0) || (Height == 0)) {
     return EFI_INVALID_PARAMETER;
   }
+
   //
   // If Delta is zero, then the entire BltBuffer is being used, so Delta
   // is the number of bytes in each row of BltBuffer.  Since BltBuffer is Width pixels size,
   // the number of bytes in each row can be computed.
   //
   if (Delta == 0) {
-    Delta = Width * sizeof (EFI_UGA_PIXEL);
+    Delta = Width * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL);
   }
 
   //
@@ -232,8 +220,8 @@ EmuGopBlt (
   OriginalTPL = gBS->RaiseTPL (TPL_NOTIFY);
 
   //
-  // Pack UGA Draw protocol parameters to EMU_GRAPHICS_WINDOWS__BLT_ARGS structure to adapt to
-  // GopBlt() API of Unix UGA IO protocol.
+  // Pack GOP protocol parameters to EMU_GRAPHICS_WINDOWS__BLT_ARGS structure to adapt to
+  // GopBlt() API of GOP protocol.
   //
   GopBltArgs.DestinationX = DestinationX;
   GopBltArgs.DestinationY = DestinationY;
@@ -242,18 +230,17 @@ EmuGopBlt (
   GopBltArgs.SourceX      = SourceX;
   GopBltArgs.SourceY      = SourceY;
   GopBltArgs.Delta        = Delta;
-  Status = Private->EmuGraphicsWindow->Blt (
-                            Private->EmuGraphicsWindow,
-                            (EFI_UGA_PIXEL *)BltBuffer,
-                            (EFI_UGA_BLT_OPERATION)BltOperation,
-                            &GopBltArgs
-                            );
+  Status                  = Private->EmuGraphicsWindow->Blt (
+                                                          Private->EmuGraphicsWindow,
+                                                          BltBuffer,
+                                                          BltOperation,
+                                                          &GopBltArgs
+                                                          );
 
   gBS->RestoreTPL (OriginalTPL);
 
   return Status;
 }
-
 
 //
 // Construction and Destruction functions
@@ -276,17 +263,16 @@ EmuGopSupported (
   return EFI_SUCCESS;
 }
 
-
 EFI_STATUS
 EmuGopStartWindow (
-  IN  GOP_PRIVATE_DATA    *Private,
-  IN  UINT32              HorizontalResolution,
-  IN  UINT32              VerticalResolution,
-  IN  UINT32              ColorDepth,
-  IN  UINT32              RefreshRate
+  IN  GOP_PRIVATE_DATA  *Private,
+  IN  UINT32            HorizontalResolution,
+  IN  UINT32            VerticalResolution,
+  IN  UINT32            ColorDepth,
+  IN  UINT32            RefreshRate
   )
 {
-  EFI_STATUS          Status;
+  EFI_STATUS  Status;
 
   //
   // Register to be notified on exit boot services so we can destroy the window.
@@ -304,27 +290,28 @@ EmuGopStartWindow (
     Private->EmuGraphicsWindow = Private->EmuIoThunk->Interface;
 
     // Register callback to support RegisterKeyNotify()
-    Status  = Private->EmuGraphicsWindow->RegisterKeyNotify (
-                                            Private->EmuGraphicsWindow,
-                                            GopPrivateMakeCallbackFunction,
-                                            GopPrivateBreakCallbackFunction,
-                                            Private
-                                            );
+    Status = Private->EmuGraphicsWindow->RegisterKeyNotify (
+                                           Private->EmuGraphicsWindow,
+                                           GopPrivateMakeCallbackFunction,
+                                           GopPrivateBreakCallbackFunction,
+                                           Private
+                                           );
     ASSERT_EFI_ERROR (Status);
   }
+
   return Status;
 }
 
 EFI_STATUS
 EmuGopConstructor (
-  GOP_PRIVATE_DATA    *Private
+  GOP_PRIVATE_DATA  *Private
   )
 {
   Private->ModeData = mGopModeData;
 
-  Private->GraphicsOutput.QueryMode      = EmuGopQuerytMode;
-  Private->GraphicsOutput.SetMode        = EmuGopSetMode;
-  Private->GraphicsOutput.Blt            = EmuGopBlt;
+  Private->GraphicsOutput.QueryMode = EmuGopQuerytMode;
+  Private->GraphicsOutput.SetMode   = EmuGopSetMode;
+  Private->GraphicsOutput.Blt       = EmuGopBlt;
 
   //
   // Allocate buffer for Graphics Output Protocol mode information
@@ -333,26 +320,27 @@ EmuGopConstructor (
   if (Private->GraphicsOutput.Mode == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   Private->GraphicsOutput.Mode->Info = AllocatePool (sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
   if (Private->GraphicsOutput.Mode->Info == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Private->GraphicsOutput.Mode->MaxMode = sizeof(mGopModeData) / sizeof(GOP_MODE_DATA);
+  Private->GraphicsOutput.Mode->MaxMode = sizeof (mGopModeData) / sizeof (GOP_MODE_DATA);
   //
   // Till now, we have no idea about the window size.
   //
-  Private->GraphicsOutput.Mode->Mode = GRAPHICS_OUTPUT_INVALIDE_MODE_NUMBER;
-  Private->GraphicsOutput.Mode->Info->Version = 0;
+  Private->GraphicsOutput.Mode->Mode                       = GRAPHICS_OUTPUT_INVALIDE_MODE_NUMBER;
+  Private->GraphicsOutput.Mode->Info->Version              = 0;
   Private->GraphicsOutput.Mode->Info->HorizontalResolution = 0;
-  Private->GraphicsOutput.Mode->Info->VerticalResolution = 0;
-  Private->GraphicsOutput.Mode->Info->PixelFormat = PixelBltOnly;
-  Private->GraphicsOutput.Mode->SizeOfInfo = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
-  Private->GraphicsOutput.Mode->FrameBufferBase = (EFI_PHYSICAL_ADDRESS) (UINTN) NULL;
-  Private->GraphicsOutput.Mode->FrameBufferSize = 0;
+  Private->GraphicsOutput.Mode->Info->VerticalResolution   = 0;
+  Private->GraphicsOutput.Mode->Info->PixelFormat          = PixelBltOnly;
+  Private->GraphicsOutput.Mode->SizeOfInfo                 = sizeof (EFI_GRAPHICS_OUTPUT_MODE_INFORMATION);
+  Private->GraphicsOutput.Mode->FrameBufferBase            = (EFI_PHYSICAL_ADDRESS)(UINTN)NULL;
+  Private->GraphicsOutput.Mode->FrameBufferSize            = 0;
 
-  Private->HardwareNeedsStarting  = TRUE;
-  Private->EmuGraphicsWindow                  = NULL;
+  Private->HardwareNeedsStarting = TRUE;
+  Private->EmuGraphicsWindow     = NULL;
 
   EmuGopInitializeSimpleTextInForWindow (Private);
 
@@ -361,11 +349,9 @@ EmuGopConstructor (
   return EFI_SUCCESS;
 }
 
-
-
 EFI_STATUS
 EmuGopDestructor (
-  GOP_PRIVATE_DATA     *Private
+  GOP_PRIVATE_DATA  *Private
   )
 {
   if (!Private->HardwareNeedsStarting) {
@@ -380,12 +366,12 @@ EmuGopDestructor (
     if (Private->GraphicsOutput.Mode->Info != NULL) {
       FreePool (Private->GraphicsOutput.Mode->Info);
     }
+
     FreePool (Private->GraphicsOutput.Mode);
   }
 
   return EFI_SUCCESS;
 }
-
 
 VOID
 EFIAPI
@@ -393,11 +379,12 @@ ShutdownGopEvent (
   IN EFI_EVENT  Event,
   IN VOID       *Context
   )
+
 /*++
 
 Routine Description:
 
-  This is the UGA screen's callback notification function for exit-boot-services.
+  This is the screen's callback notification function for exit-boot-services.
   All we do here is call EmuGopDestructor().
 
 Arguments:
@@ -413,4 +400,3 @@ Returns:
 {
   EmuGopDestructor (Context);
 }
-

@@ -4,13 +4,7 @@
 Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2016, Linaro Ltd. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -24,7 +18,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-#define MAX_IO_PORT_ADDRESS   0xFFFF
+#define MAX_IO_PORT_ADDRESS  0xFFFF
 
 //
 // Handle for the CPU I/O 2 Protocol
@@ -34,7 +28,7 @@ STATIC EFI_HANDLE  mHandle = NULL;
 //
 // Lookup table for increment values based on transfer widths
 //
-STATIC CONST UINT8 mInStride[] = {
+STATIC CONST UINT8  mInStride[] = {
   1, // EfiCpuIoWidthUint8
   2, // EfiCpuIoWidthUint16
   4, // EfiCpuIoWidthUint32
@@ -52,7 +46,7 @@ STATIC CONST UINT8 mInStride[] = {
 //
 // Lookup table for increment values based on transfer widths
 //
-STATIC CONST UINT8 mOutStride[] = {
+STATIC CONST UINT8  mOutStride[] = {
   1, // EfiCpuIoWidthUint8
   2, // EfiCpuIoWidthUint16
   4, // EfiCpuIoWidthUint32
@@ -123,14 +117,14 @@ CpuIoCheckParameter (
   // For FIFO type, the target address won't increase during the access,
   // so treat Count as 1
   //
-  if (Width >= EfiCpuIoWidthFifoUint8 && Width <= EfiCpuIoWidthFifoUint64) {
+  if ((Width >= EfiCpuIoWidthFifoUint8) && (Width <= EfiCpuIoWidthFifoUint64)) {
     Count = 1;
   }
 
   //
   // Check to see if Width is in the valid range for I/O Port operations
   //
-  Width = (EFI_CPU_IO_PROTOCOL_WIDTH) (Width & 0x03);
+  Width = (EFI_CPU_IO_PROTOCOL_WIDTH)(Width & 0x03);
   if (!MmioOperation && (Width == EfiCpuIoWidthUint64)) {
     return EFI_INVALID_PARAMETER;
   }
@@ -152,7 +146,7 @@ CpuIoCheckParameter (
   //
   // Since MAX_ADDRESS can be the maximum integer value supported by the CPU and Count
   // can also be the maximum integer value supported by the CPU, this range
-  // check must be adjusted to avoid all oveflow conditions.
+  // check must be adjusted to avoid all overflow conditions.
   //
   // The following form of the range check is equivalent but assumes that
   // MAX_ADDRESS and MAX_IO_PORT_ADDRESS are of the form (2^n - 1).
@@ -167,6 +161,7 @@ CpuIoCheckParameter (
     if (MaxCount < (Count - 1)) {
       return EFI_UNSUPPORTED;
     }
+
     if (Address > LShiftU64 (MaxCount - Count + 1, Width)) {
       return EFI_UNSUPPORTED;
     }
@@ -246,9 +241,9 @@ CpuMemoryServiceRead (
   //
   // Select loop based on the width of the transfer
   //
-  InStride = mInStride[Width];
-  OutStride = mOutStride[Width];
-  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH) (Width & 0x03);
+  InStride       = mInStride[Width];
+  OutStride      = mOutStride[Width];
+  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH)(Width & 0x03);
   for (Uint8Buffer = Buffer; Count > 0; Address += InStride, Uint8Buffer += OutStride, Count--) {
     if (OperationWidth == EfiCpuIoWidthUint8) {
       *Uint8Buffer = MmioRead8 ((UINTN)Address);
@@ -260,6 +255,7 @@ CpuMemoryServiceRead (
       *((UINT64 *)Uint8Buffer) = MmioRead64 ((UINTN)Address);
     }
   }
+
   return EFI_SUCCESS;
 }
 
@@ -327,9 +323,9 @@ CpuMemoryServiceWrite (
   //
   // Select loop based on the width of the transfer
   //
-  InStride = mInStride[Width];
-  OutStride = mOutStride[Width];
-  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH) (Width & 0x03);
+  InStride       = mInStride[Width];
+  OutStride      = mOutStride[Width];
+  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH)(Width & 0x03);
   for (Uint8Buffer = Buffer; Count > 0; Address += InStride, Uint8Buffer += OutStride, Count--) {
     if (OperationWidth == EfiCpuIoWidthUint8) {
       MmioWrite8 ((UINTN)Address, *Uint8Buffer);
@@ -341,6 +337,7 @@ CpuMemoryServiceWrite (
       MmioWrite64 ((UINTN)Address, *((UINT64 *)Uint8Buffer));
     }
   }
+
   return EFI_SUCCESS;
 }
 
@@ -410,9 +407,9 @@ CpuIoServiceRead (
   //
   // Select loop based on the width of the transfer
   //
-  InStride = mInStride[Width];
-  OutStride = mOutStride[Width];
-  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH) (Width & 0x03);
+  InStride       = mInStride[Width];
+  OutStride      = mOutStride[Width];
+  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH)(Width & 0x03);
 
   for (Uint8Buffer = Buffer; Count > 0; Address += InStride, Uint8Buffer += OutStride, Count--) {
     if (OperationWidth == EfiCpuIoWidthUint8) {
@@ -496,9 +493,9 @@ CpuIoServiceWrite (
   //
   // Select loop based on the width of the transfer
   //
-  InStride = mInStride[Width];
-  OutStride = mOutStride[Width];
-  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH) (Width & 0x03);
+  InStride       = mInStride[Width];
+  OutStride      = mOutStride[Width];
+  OperationWidth = (EFI_CPU_IO_PROTOCOL_WIDTH)(Width & 0x03);
 
   for (Uint8Buffer = (UINT8 *)Buffer; Count > 0; Address += InStride, Uint8Buffer += OutStride, Count--) {
     if (OperationWidth == EfiCpuIoWidthUint8) {
@@ -516,7 +513,7 @@ CpuIoServiceWrite (
 //
 // CPU I/O 2 Protocol instance
 //
-STATIC EFI_CPU_IO2_PROTOCOL mCpuIo2 = {
+STATIC EFI_CPU_IO2_PROTOCOL  mCpuIo2 = {
   {
     CpuMemoryServiceRead,
     CpuMemoryServiceWrite
@@ -526,7 +523,6 @@ STATIC EFI_CPU_IO2_PROTOCOL mCpuIo2 = {
     CpuIoServiceWrite
   }
 };
-
 
 /**
   The user Entry Point for module CpuIo2Dxe. The user code starts with this function.
@@ -545,12 +541,13 @@ ArmPciCpuIo2Initialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiCpuIo2ProtocolGuid);
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &mHandle,
-                  &gEfiCpuIo2ProtocolGuid, &mCpuIo2,
+                  &gEfiCpuIo2ProtocolGuid,
+                  &mCpuIo2,
                   NULL
                   );
   ASSERT_EFI_ERROR (Status);

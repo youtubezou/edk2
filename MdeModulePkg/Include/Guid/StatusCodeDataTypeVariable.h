@@ -1,20 +1,13 @@
 /** @file
-  This file defines the GUID and data structure used to pass variable setting 
+  This file defines the GUID and data structure used to pass variable setting
   failure information to the Status Code Protocol.
 
-Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _STATUS_CODE_DATA_TYPE_VARIABLE_H_
-#define _STATUS_CODE_DATA_TYPE_VARIABLE_H_
+#pragma once
 
 ///
 /// The Global ID used to identify a structure of type EDKII_SET_VARIABLE_STATUS.
@@ -26,15 +19,13 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
   }
 
 typedef struct {
-  EFI_GUID   Guid;
-  UINTN      NameSize;
-  UINTN      DataSize;
-  EFI_STATUS SetStatus;
-  UINT32     Attributes;
+  EFI_GUID      Guid;
+  UINTN         NameSize;
+  UINTN         DataSize;
+  EFI_STATUS    SetStatus;
+  UINT32        Attributes;
   // CHAR16  Name[];
   // UINT8   Data[];
 } EDKII_SET_VARIABLE_STATUS;
 
-extern EFI_GUID gEdkiiStatusCodeDataTypeVariableGuid;
-
-#endif // _STATUS_CODE_DATA_TYPE_VARIABLE_H_
+extern EFI_GUID  gEdkiiStatusCodeDataTypeVariableGuid;

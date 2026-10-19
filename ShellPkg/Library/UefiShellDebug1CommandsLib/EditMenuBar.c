@@ -1,14 +1,8 @@
 /** @file
   implements menubar interface functions.
 
-  Copyright (c) 2005 - 2011, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -16,9 +10,9 @@
 #include "UefiShellDebug1CommandsLib.h"
 #include "EditStatusBar.h"
 
-EDITOR_MENU_ITEM   *MenuItems;
-MENU_ITEM_FUNCTION *ControlBasedMenuFunctions;
-UINTN                 NumItems;
+EDITOR_MENU_ITEM    *MenuItems;
+MENU_ITEM_FUNCTION  *ControlBasedMenuFunctions;
+UINTN               NumItems;
 
 /**
   Cleanup function for a menu bar.  frees all allocated memory.
@@ -28,7 +22,7 @@ MenuBarCleanup (
   VOID
   )
 {
-  SHELL_FREE_NON_NULL(MenuItems);
+  SHELL_FREE_NON_NULL (MenuItems);
 }
 
 /**
@@ -46,13 +40,15 @@ MenuBarInit (
 {
   CONST EDITOR_MENU_ITEM  *ItemsWalker;
 
-  for (NumItems = 0, ItemsWalker = Items ; ItemsWalker != NULL && ItemsWalker->Function != NULL ; ItemsWalker++,NumItems++);
-  
-  MenuItems = AllocateZeroPool((NumItems+1) * sizeof(EDITOR_MENU_ITEM));
+  for (NumItems = 0, ItemsWalker = Items; ItemsWalker != NULL && ItemsWalker->Function != NULL; ItemsWalker++, NumItems++) {
+  }
+
+  MenuItems = AllocateZeroPool ((NumItems+1) * sizeof (EDITOR_MENU_ITEM));
   if (MenuItems == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-  CopyMem(MenuItems, Items, (NumItems+1) * sizeof(EDITOR_MENU_ITEM));
+
+  CopyMem (MenuItems, Items, (NumItems+1) * sizeof (EDITOR_MENU_ITEM));
   return EFI_SUCCESS;
 }
 
@@ -69,8 +65,9 @@ ControlHotKeyInit (
   )
 {
   ControlBasedMenuFunctions = Items;
-  return EFI_SUCCESS; 
+  return EFI_SUCCESS;
 }
+
 /**
   Refresh function for the menu bar.
 
@@ -81,16 +78,16 @@ ControlHotKeyInit (
 **/
 EFI_STATUS
 MenuBarRefresh (
-  IN CONST UINTN LastRow,
-  IN CONST UINTN LastCol
+  IN CONST UINTN  LastRow,
+  IN CONST UINTN  LastCol
   )
 {
   EDITOR_MENU_ITEM  *Item;
-  UINTN                 Col;
-  UINTN                 Row;
-  UINTN                 Width;
-  CHAR16                *NameString;
-  CHAR16                *FunctionKeyString;
+  UINTN             Col;
+  UINTN             Row;
+  UINTN             Width;
+  CHAR16            *NameString;
+  CHAR16            *FunctionKeyString;
 
   //
   // variable initialization
@@ -103,25 +100,28 @@ MenuBarRefresh (
   //
   EditorClearLine (LastRow - 2, LastCol, LastRow);
   EditorClearLine (LastRow - 1, LastCol, LastRow);
-  EditorClearLine (LastRow    , LastCol, LastRow);
-
+  EditorClearLine (LastRow, LastCol, LastRow);
 
   //
   // print out the menu items
   //
   for (Item = MenuItems; Item != NULL && Item->Function != NULL; Item++) {
+    NameString = HiiGetString (gShellDebug1HiiHandle, Item->NameToken, NULL);
+    if (NameString == NULL) {
+      return EFI_INVALID_PARAMETER;
+    }
 
-
-    NameString = HiiGetString(gShellDebug1HiiHandle, Item->NameToken, NULL);
-
-
-    Width             = MAX ((StrLen (NameString) + 6), 20);
+    Width = MAX ((StrLen (NameString) + 6), 20);
     if (((Col + Width) > LastCol)) {
       Row++;
       Col = 1;
     }
 
-    FunctionKeyString = HiiGetString(gShellDebug1HiiHandle, Item->FunctionKeyToken, NULL);
+    FunctionKeyString = HiiGetString (gShellDebug1HiiHandle, Item->FunctionKeyToken, NULL);
+    if (FunctionKeyString == NULL) {
+      FreePool (NameString);
+      return EFI_INVALID_PARAMETER;
+    }
 
     ShellPrintEx ((INT32)(Col) - 1, (INT32)(Row) - 1, L"%E%s%N  %H%s%N  ", FunctionKeyString, NameString);
 
@@ -138,18 +138,18 @@ MenuBarRefresh (
 
   @param[in] Key                The pressed key.
 
-  @retval EFI_NOT_FOUND         The key was not a valid function key 
+  @retval EFI_NOT_FOUND         The key was not a valid function key
                                 (an error was sent to the status bar).
   @return The return value from the called dispatch function.
 **/
 EFI_STATUS
 MenuBarDispatchFunctionKey (
-  IN CONST EFI_INPUT_KEY   *Key
+  IN CONST EFI_INPUT_KEY  *Key
   )
 {
-  UINTN                 Index;
+  UINTN  Index;
 
-  Index     = Key->ScanCode - SCAN_F1;
+  Index = Key->ScanCode - SCAN_F1;
 
   //
   // check whether in range
@@ -165,26 +165,53 @@ MenuBarDispatchFunctionKey (
 /**
   Function to dispatch the correct function based on a control-based key (ctrl+o...)
 
-  @param[in] Key                The pressed key.
+  @param[in] KeyData                The pressed key.
 
-  @retval EFI_NOT_FOUND         The key was not a valid control-based key 
+  @retval EFI_NOT_FOUND         The key was not a valid control-based key
                                 (an error was sent to the status bar).
   @return EFI_SUCCESS.
 **/
 EFI_STATUS
 MenuBarDispatchControlHotKey (
-  IN CONST EFI_INPUT_KEY   *Key
+  IN CONST EFI_KEY_DATA  *KeyData
   )
 {
-  
-  if ((SCAN_CONTROL_Z < Key->UnicodeChar)
-    ||(NULL == ControlBasedMenuFunctions[Key->UnicodeChar]))
+  UINT16  ControlIndex;
+
+  //
+  // Set to invalid value first.
+  //
+  ControlIndex = MAX_UINT16;
+
+  if (((KeyData->KeyState.KeyShiftState & EFI_SHIFT_STATE_VALID) == 0) ||
+      (KeyData->KeyState.KeyShiftState == EFI_SHIFT_STATE_VALID))
   {
-      return EFI_NOT_FOUND;
+    //
+    // For consoles that don't support/report shift state,
+    // Ctrl+A is translated to 1 (UnicodeChar).
+    //
+    ControlIndex = KeyData->Key.UnicodeChar;
+  } else if (((KeyData->KeyState.KeyShiftState & EFI_SHIFT_STATE_VALID) != 0) &&
+             ((KeyData->KeyState.KeyShiftState & (EFI_RIGHT_CONTROL_PRESSED | EFI_LEFT_CONTROL_PRESSED)) != 0) &&
+             ((KeyData->KeyState.KeyShiftState & ~(EFI_SHIFT_STATE_VALID | EFI_RIGHT_CONTROL_PRESSED | EFI_LEFT_CONTROL_PRESSED)) == 0))
+  {
+    //
+    // For consoles that supports/reports shift state,
+    // make sure only CONTROL is pressed.
+    //
+    if ((KeyData->Key.UnicodeChar >= L'A') && (KeyData->Key.UnicodeChar <= L'Z')) {
+      ControlIndex = KeyData->Key.UnicodeChar - L'A' + 1;
+    } else if ((KeyData->Key.UnicodeChar >= L'a') && (KeyData->Key.UnicodeChar <= L'z')) {
+      ControlIndex = KeyData->Key.UnicodeChar - L'a' + 1;
+    }
   }
 
-  ControlBasedMenuFunctions[Key->UnicodeChar]();
+  if (  (SCAN_CONTROL_Z < ControlIndex)
+     || (NULL == ControlBasedMenuFunctions[ControlIndex]))
+  {
+    return EFI_NOT_FOUND;
+  }
+
+  ControlBasedMenuFunctions[ControlIndex]();
   return EFI_SUCCESS;
 }
-
-

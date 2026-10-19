@@ -1,22 +1,16 @@
 /** @file
   UEFI Miscellaneous boot Services InstallConfigurationTable service
 
-Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeMain.h"
 
-#define CONFIG_TABLE_SIZE_INCREASED 0x10
+#define CONFIG_TABLE_SIZE_INCREASED  0x10
 
-UINTN mSystemTableAllocateSize = 0;
+UINTN  mSystemTableAllocateSize = 0;
 
 /**
   Boot Service called to add, modify, or remove a system configuration table from
@@ -36,12 +30,13 @@ UINTN mSystemTableAllocateSize = 0;
 EFI_STATUS
 EFIAPI
 CoreInstallConfigurationTable (
-  IN EFI_GUID *Guid,
-  IN VOID     *Table
+  IN EFI_GUID  *Guid,
+  IN VOID      *Table
   )
 {
-  UINTN                   Index;
-  EFI_CONFIGURATION_TABLE *EfiConfigurationTable;
+  UINTN                    Index;
+  EFI_CONFIGURATION_TABLE  *EfiConfigurationTable;
+  EFI_CONFIGURATION_TABLE  *OldTable;
 
   //
   // If Guid is NULL, then this operation cannot be performed
@@ -68,7 +63,7 @@ CoreInstallConfigurationTable (
     if (Table != NULL) {
       //
       // If Table is not NULL, then this is a modify operation.
-      // Modify the table enty and return.
+      // Modify the table entry and return.
       //
       gDxeCoreST->ConfigurationTable[Index].VendorTable = Table;
 
@@ -93,9 +88,7 @@ CoreInstallConfigurationTable (
       &(gDxeCoreST->ConfigurationTable[Index + 1]),
       (gDxeCoreST->NumberOfTableEntries - Index) * sizeof (EFI_CONFIGURATION_TABLE)
       );
-
   } else {
-
     //
     // No matching GUIDs were found, so this is an add operation.
     //
@@ -115,7 +108,7 @@ CoreInstallConfigurationTable (
       // Allocate a table with one additional entry.
       //
       mSystemTableAllocateSize += (CONFIG_TABLE_SIZE_INCREASED * sizeof (EFI_CONFIGURATION_TABLE));
-      EfiConfigurationTable = AllocateRuntimePool (mSystemTableAllocateSize);
+      EfiConfigurationTable     = AllocateRuntimePool (mSystemTableAllocateSize);
       if (EfiConfigurationTable == NULL) {
         //
         // If a new table could not be allocated, then return an error.
@@ -134,22 +127,37 @@ CoreInstallConfigurationTable (
           );
 
         //
-        // Free Old Table
+        // Record the old table pointer.
         //
-        CoreFreePool (gDxeCoreST->ConfigurationTable);
-      }
+        OldTable = gDxeCoreST->ConfigurationTable;
 
-      //
-      // Update System Table
-      //
-      gDxeCoreST->ConfigurationTable = EfiConfigurationTable;
+        //
+        // As the CoreInstallConfigurationTable() may be re-entered by CoreFreePool()
+        // in its calling stack, updating System table to the new table pointer must
+        // be done before calling CoreFreePool() to free the old table.
+        // It can make sure the gDxeCoreST->ConfigurationTable point to the new table
+        // and avoid the errors of use-after-free to the old table by the reenter of
+        // CoreInstallConfigurationTable() in CoreFreePool()'s calling stack.
+        //
+        gDxeCoreST->ConfigurationTable = EfiConfigurationTable;
+
+        //
+        // Free the old table after updating System Table to the new table pointer.
+        //
+        CoreFreePool (OldTable);
+      } else {
+        //
+        // Update System Table
+        //
+        gDxeCoreST->ConfigurationTable = EfiConfigurationTable;
+      }
     }
 
     //
     // Fill in the new entry
     //
     CopyGuid ((VOID *)&EfiConfigurationTable[Index].VendorGuid, Guid);
-    EfiConfigurationTable[Index].VendorTable  = Table;
+    EfiConfigurationTable[Index].VendorTable = Table;
 
     //
     // This is an add operation, so increment the number of table entries

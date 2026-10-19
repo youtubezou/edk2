@@ -1,25 +1,19 @@
 /** @file
   Provides interface to EFI_FILE_HANDLE functionality.
 
-  Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _FILE_HANDLE_LIBRARY_HEADER_
-#define _FILE_HANDLE_LIBRARY_HEADER_
+#pragma once
 
 #include <Protocol/SimpleFileSystem.h>
+#include <Guid/FileInfo.h>
 
 /// The tag for use in identifying UNICODE files.
 /// If the file is UNICODE, the first 16 bits of the file will equal this value.
-extern CONST UINT16 gUnicodeFileTag;
+extern CONST UINT16  gUnicodeFileTag;
 
 /**
   This function retrieves information about the file for the handle
@@ -34,10 +28,10 @@ extern CONST UINT16 gUnicodeFileTag;
   @retval NULL                  Information could not be retrieved.
   @retval !NULL                 The information about the file.
 **/
-EFI_FILE_INFO*
+EFI_FILE_INFO *
 EFIAPI
 FileHandleGetInfo (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   );
 
 /**
@@ -62,8 +56,8 @@ FileHandleGetInfo (
 EFI_STATUS
 EFIAPI
 FileHandleSetInfo (
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN CONST EFI_FILE_INFO        *FileInfo
+  IN EFI_FILE_HANDLE      FileHandle,
+  IN CONST EFI_FILE_INFO  *FileInfo
   );
 
 /**
@@ -97,10 +91,10 @@ FileHandleSetInfo (
 **/
 EFI_STATUS
 EFIAPI
-FileHandleRead(
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN OUT UINTN                  *BufferSize,
-  OUT VOID                      *Buffer
+FileHandleRead (
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN OUT UINTN        *BufferSize,
+  OUT VOID            *Buffer
   );
 
 /**
@@ -129,10 +123,10 @@ FileHandleRead(
 **/
 EFI_STATUS
 EFIAPI
-FileHandleWrite(
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer
+FileHandleWrite (
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN OUT UINTN        *BufferSize,
+  IN VOID             *Buffer
   );
 
 /**
@@ -149,7 +143,7 @@ FileHandleWrite(
 EFI_STATUS
 EFIAPI
 FileHandleClose (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   );
 
 /**
@@ -169,7 +163,7 @@ FileHandleClose (
 EFI_STATUS
 EFIAPI
 FileHandleDelete (
-  IN EFI_FILE_HANDLE    FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   );
 
 /**
@@ -194,8 +188,8 @@ FileHandleDelete (
 EFI_STATUS
 EFIAPI
 FileHandleSetPosition (
-  IN EFI_FILE_HANDLE    FileHandle,
-  IN UINT64             Position
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN UINT64           Position
   );
 
 /**
@@ -216,9 +210,10 @@ FileHandleSetPosition (
 EFI_STATUS
 EFIAPI
 FileHandleGetPosition (
-  IN EFI_FILE_HANDLE            FileHandle,
-  OUT UINT64                    *Position
+  IN EFI_FILE_HANDLE  FileHandle,
+  OUT UINT64          *Position
   );
+
 /**
   Flushes data on a file.
 
@@ -236,7 +231,7 @@ FileHandleGetPosition (
 EFI_STATUS
 EFIAPI
 FileHandleFlush (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   );
 
 /**
@@ -248,14 +243,14 @@ FileHandleFlush (
   @param[in] DirHandle          Handle to open file.
 
   @retval EFI_SUCCESS           DirHandle is a directory.
-  @retval EFI_INVALID_PARAMETER DirHandle is NULL. 
-                                The file information returns from FileHandleGetInfo is NULL. 
+  @retval EFI_INVALID_PARAMETER DirHandle is NULL.
+                                The file information returns from FileHandleGetInfo is NULL.
   @retval EFI_NOT_FOUND         DirHandle is not a directory.
 **/
 EFI_STATUS
 EFIAPI
 FileHandleIsDirectory (
-  IN EFI_FILE_HANDLE            DirHandle
+  IN EFI_FILE_HANDLE  DirHandle
   );
 
 /** Retrieve first entry from a directory.
@@ -283,8 +278,8 @@ FileHandleIsDirectory (
 EFI_STATUS
 EFIAPI
 FileHandleFindFirstFile (
-  IN EFI_FILE_HANDLE            DirHandle,
-  OUT EFI_FILE_INFO             **Buffer
+  IN EFI_FILE_HANDLE  DirHandle,
+  OUT EFI_FILE_INFO   **Buffer
   );
 
 /** Retrieve next entries from a directory.
@@ -307,10 +302,10 @@ FileHandleFindFirstFile (
 **/
 EFI_STATUS
 EFIAPI
-FileHandleFindNextFile(
-  IN EFI_FILE_HANDLE             DirHandle,
-  OUT EFI_FILE_INFO              *Buffer,
-  OUT BOOLEAN                    *NoFile
+FileHandleFindNextFile (
+  IN EFI_FILE_HANDLE  DirHandle,
+  OUT EFI_FILE_INFO   *Buffer,
+  OUT BOOLEAN         *NoFile
   );
 
 /**
@@ -330,8 +325,8 @@ FileHandleFindNextFile(
 EFI_STATUS
 EFIAPI
 FileHandleGetSize (
-  IN EFI_FILE_HANDLE            FileHandle,
-  OUT UINT64                    *Size
+  IN EFI_FILE_HANDLE  FileHandle,
+  OUT UINT64          *Size
   );
 
 /**
@@ -350,14 +345,14 @@ FileHandleGetSize (
 EFI_STATUS
 EFIAPI
 FileHandleSetSize (
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN UINT64                     Size
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN UINT64           Size
   );
 
 /**
   Function to get a full filename given a EFI_FILE_HANDLE somewhere lower on the
-  directory 'stack'. If the file is a directory, then append the '\' char at the 
-  end of name string. If it's not a directory, then the last '\' should not be 
+  directory 'stack'. If the file is a directory, then append the '\' char at the
+  end of name string. If it's not a directory, then the last '\' should not be
   added.
 
   @param[in] Handle             Handle to the Directory or File to create path to.
@@ -372,8 +367,8 @@ FileHandleSetSize (
 EFI_STATUS
 EFIAPI
 FileHandleGetFileName (
-  IN CONST EFI_FILE_HANDLE      Handle,
-  OUT CHAR16                    **FullFileName
+  IN CONST EFI_FILE_HANDLE  Handle,
+  OUT CHAR16                **FullFileName
   );
 
 /**
@@ -406,12 +401,12 @@ FileHandleGetFileName (
 **/
 EFI_STATUS
 EFIAPI
-FileHandleReadLine(
-  IN EFI_FILE_HANDLE            Handle,
-  IN OUT CHAR16                 *Buffer,
-  IN OUT UINTN                  *Size,
-  IN BOOLEAN                    Truncate,
-  IN OUT BOOLEAN                *Ascii
+FileHandleReadLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN OUT CHAR16       *Buffer,
+  IN OUT UINTN        *Size,
+  IN BOOLEAN          Truncate,
+  IN OUT BOOLEAN      *Ascii
   );
 
 /**
@@ -429,20 +424,20 @@ FileHandleReadLine(
 
   @sa FileHandleReadLine
 **/
-CHAR16*
+CHAR16 *
 EFIAPI
-FileHandleReturnLine(
-  IN EFI_FILE_HANDLE            Handle,
-  IN OUT BOOLEAN                *Ascii
+FileHandleReturnLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN OUT BOOLEAN      *Ascii
   );
 
 /**
   Function to write a line of text to a file.
-  
-  If the file is a Unicode file (with UNICODE file tag) then write the unicode 
+
+  If the file is a Unicode file (with UNICODE file tag) then write the unicode
   text.
   If the file is an ASCII file then write the ASCII text.
-  If the size of file is zero (without file tag at the beginning) then write 
+  If the size of file is zero (without file tag at the beginning) then write
   ASCII text as default.
 
   @param[in]     Handle         FileHandle to write to.
@@ -452,16 +447,16 @@ FileHandleReturnLine(
   @retval  EFI_SUCCESS            The data was written.
                                   Buffer is NULL.
   @retval  EFI_INVALID_PARAMETER  Handle is NULL.
-  @retval  EFI_OUT_OF_RESOURCES   Unable to allocate temporary space for ASCII 
+  @retval  EFI_OUT_OF_RESOURCES   Unable to allocate temporary space for ASCII
                                   string due to out of resources.
 
   @sa FileHandleWrite
 **/
 EFI_STATUS
 EFIAPI
-FileHandleWriteLine(
-  IN EFI_FILE_HANDLE Handle,
-  IN CHAR16          *Buffer
+FileHandleWriteLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN CHAR16           *Buffer
   );
 
 /**
@@ -478,7 +473,7 @@ FileHandleWriteLine(
 **/
 EFI_STATUS
 EFIAPI
-FileHandlePrintLine(
+FileHandlePrintLine (
   IN EFI_FILE_HANDLE  Handle,
   IN CONST CHAR16     *Format,
   ...
@@ -498,9 +493,6 @@ FileHandlePrintLine(
 **/
 BOOLEAN
 EFIAPI
-FileHandleEof(
-  IN EFI_FILE_HANDLE Handle
+FileHandleEof (
+  IN EFI_FILE_HANDLE  Handle
   );
-
-#endif //_FILE_HANDLE_LIBRARY_HEADER_
-

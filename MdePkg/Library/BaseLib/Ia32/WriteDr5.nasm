@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
-; Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2006 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -38,8 +32,8 @@ ASM_PFX(AsmWriteDr5):
     ; this register will cause a #UD exception.
     ;
     ; MS assembler doesn't support this instruction since no one would use it
-    ; under normal circustances. Here opcode is used.
+    ; under normal circumstances.
     ;
-    DB      0xf, 0x23, 0xe8
+    mov     dr5, eax
     ret
 

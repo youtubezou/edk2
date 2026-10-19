@@ -1,13 +1,7 @@
 /** @file
 
-  Copyright (c) 2014 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2019, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -28,17 +22,22 @@
 
 CONST CHAR8  *mHexTable = "0123456789ABCDEF";
 
+//
+// VA_LIST can not initialize to NULL for all compiler, so we use this to
+// indicate a null VA_LIST
+//
+VA_LIST  mVaListNull;
+
 /**
   Get stack frame pointer of function call.
 
   @return StackFramePointer  stack frame pointer of function call.
 **/
-UINT32 *
+UINTN *
 EFIAPI
 GetStackFramePointer (
   VOID
   );
-
 
 /**
   Prints a debug message to the debug output device if the specified error level is enabled.
@@ -63,8 +62,39 @@ DebugPrint (
   ...
   )
 {
-  CHAR8    Buffer[MAX_DEBUG_MESSAGE_LENGTH];
   VA_LIST  Marker;
+
+  VA_START (Marker, Format);
+  DebugVPrint (ErrorLevel, Format, Marker);
+  VA_END (Marker);
+}
+
+/**
+  Prints a debug message to the debug output device if the specified
+  error level is enabled base on Null-terminated format string and a
+  VA_LIST argument list or a BASE_LIST argument list.
+
+  If any bit in ErrorLevel is also set in DebugPrintErrorLevelLib function
+  GetDebugPrintErrorLevel (), then print the message specified by Format and
+  the associated variable argument list to the debug output device.
+
+  If Format is NULL, then ASSERT().
+
+  @param  ErrorLevel      The error level of the debug message.
+  @param  Format          Format string for the debug message to print.
+  @param  VaListMarker    VA_LIST marker for the variable argument list.
+  @param  BaseListMarker  BASE_LIST marker for the variable argument list.
+
+**/
+VOID
+DebugPrintMarker (
+  IN  UINTN        ErrorLevel,
+  IN  CONST CHAR8  *Format,
+  IN  VA_LIST      VaListMarker,
+  IN  BASE_LIST    BaseListMarker
+  )
+{
+  CHAR8  Buffer[MAX_DEBUG_MESSAGE_LENGTH];
 
   //
   // If Format is NULL, then ASSERT().
@@ -88,9 +118,11 @@ DebugPrint (
   //
   // Convert the DEBUG() message to an ASCII String
   //
-  VA_START (Marker, Format);
-  AsciiVSPrint (Buffer, sizeof (Buffer), Format, Marker);
-  VA_END (Marker);
+  if (BaseListMarker == NULL) {
+    AsciiVSPrint (Buffer, sizeof (Buffer), Format, VaListMarker);
+  } else {
+    AsciiBSPrint (Buffer, sizeof (Buffer), Format, BaseListMarker);
+  }
 
   //
   // Send the print string to a Serial Port
@@ -99,7 +131,61 @@ DebugPrint (
 }
 
 /**
-  Convert an UINT32 value into HEX string sepcified by Buffer.
+  Prints a debug message to the debug output device if the specified
+  error level is enabled.
+
+  If any bit in ErrorLevel is also set in DebugPrintErrorLevelLib function
+  GetDebugPrintErrorLevel (), then print the message specified by Format and
+  the associated variable argument list to the debug output device.
+
+  If Format is NULL, then ASSERT().
+
+  @param  ErrorLevel    The error level of the debug message.
+  @param  Format        Format string for the debug message to print.
+  @param  VaListMarker  VA_LIST marker for the variable argument list.
+
+**/
+VOID
+EFIAPI
+DebugVPrint (
+  IN  UINTN        ErrorLevel,
+  IN  CONST CHAR8  *Format,
+  IN  VA_LIST      VaListMarker
+  )
+{
+  DebugPrintMarker (ErrorLevel, Format, VaListMarker, NULL);
+}
+
+/**
+  Prints a debug message to the debug output device if the specified
+  error level is enabled.
+  This function use BASE_LIST which would provide a more compatible
+  service than VA_LIST.
+
+  If any bit in ErrorLevel is also set in DebugPrintErrorLevelLib function
+  GetDebugPrintErrorLevel (), then print the message specified by Format and
+  the associated variable argument list to the debug output device.
+
+  If Format is NULL, then ASSERT().
+
+  @param  ErrorLevel      The error level of the debug message.
+  @param  Format          Format string for the debug message to print.
+  @param  BaseListMarker  BASE_LIST marker for the variable argument list.
+
+**/
+VOID
+EFIAPI
+DebugBPrint (
+  IN  UINTN        ErrorLevel,
+  IN  CONST CHAR8  *Format,
+  IN  BASE_LIST    BaseListMarker
+  )
+{
+  DebugPrintMarker (ErrorLevel, Format, mVaListNull, BaseListMarker);
+}
+
+/**
+  Convert an UINT32 value into HEX string specified by Buffer.
 
   @param  Value   The HEX value to convert to string
   @param  Buffer  The pointer to the target buffer to be filled with HEX string
@@ -107,14 +193,15 @@ DebugPrint (
 **/
 VOID
 FillHex (
-  UINT32   Value,
-  CHAR8   *Buffer
+  UINTN  Value,
+  CHAR8  *Buffer
   )
 {
   INTN  Idx;
-  for (Idx = 7; Idx >= 0; Idx--) {
+
+  for (Idx = (sizeof (UINTN) * 2) - 1; Idx >= 0; Idx--) {
     Buffer[Idx] = mHexTable[Value & 0x0F];
-    Value >>= 4;
+    Value     >>= 4;
   }
 }
 
@@ -124,8 +211,8 @@ FillHex (
 
   Print a message of the form "ASSERT <FileName>(<LineNumber>): <Description>\n"
   to the debug output device.  If DEBUG_PROPERTY_ASSERT_BREAKPOINT_ENABLED bit of
-  PcdDebugProperyMask is set then CpuBreakpoint() is called. Otherwise, if
-  DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED bit of PcdDebugProperyMask is set then
+  PcdDebugPropertyMask is set then CpuBreakpoint() is called. Otherwise, if
+  DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED bit of PcdDebugPropertyMask is set then
   CpuDeadLoop() is called.  If neither of these bits are set, then this function
   returns immediately after the message is printed to the debug output device.
   DebugAssert() must actively prevent recursion.  If DebugAssert() is called while
@@ -140,27 +227,37 @@ DebugAssertInternal (
   VOID
   )
 {
-  CHAR8     Buffer[MAX_DEBUG_MESSAGE_LENGTH];
-  UINT32   *Frame;
+  CHAR8  Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  UINTN  *Frame;
 
-  Frame = (UINT32 *)GetStackFramePointer ();
+  Frame = (UINTN *)GetStackFramePointer ();
 
   //
   // Generate the ASSERT() message in Ascii format
   //
-  AsciiStrnCpyS (
-    Buffer,
-    sizeof(Buffer) / sizeof(CHAR8),
-    "-> EBP:0x00000000  EIP:0x00000000\n",
-    sizeof(Buffer) / sizeof(CHAR8) - 1
-    );
+  if (sizeof (UINTN) == sizeof (UINT32)) {
+    AsciiStrnCpyS (
+      Buffer,
+      sizeof (Buffer) / sizeof (CHAR8),
+      "-> EBP:0x00000000  EIP:0x00000000\n",
+      sizeof (Buffer) / sizeof (CHAR8) - 1
+      );
+  } else {
+    AsciiStrnCpyS (
+      Buffer,
+      sizeof (Buffer) / sizeof (CHAR8),
+      "-> RBP:0x0000000000000000  RIP:0x0000000000000000\n",
+      sizeof (Buffer) / sizeof (CHAR8) - 1
+      );
+  }
+
   SerialPortWrite ((UINT8 *)"ASSERT DUMP:\n", 13);
   while (Frame != NULL) {
-    FillHex ((UINT32)Frame, Buffer + 9);
-    FillHex (Frame[1], Buffer + 9 + 8 + 8);
+    FillHex ((UINTN)Frame, Buffer + 9);
+    FillHex (Frame[1], Buffer + 9 + (sizeof (UINTN) * 2) + 8);
     SerialPortWrite ((UINT8 *)Buffer, AsciiStrLen (Buffer));
-    if ((Frame[0] > (UINT32)Frame) && (Frame[0] < (UINT32)Frame + 0x00100000)) {
-      Frame = (UINT32 *)Frame[0];
+    if ((Frame[0] > (UINTN)Frame) && (Frame[0] < (UINTN)Frame + 0x00100000)) {
+      Frame = (UINTN *)Frame[0];
     } else {
       Frame = NULL;
     }
@@ -178,8 +275,8 @@ DebugAssertInternal (
 
   Print a message of the form "ASSERT <FileName>(<LineNumber>): <Description>\n"
   to the debug output device.  If DEBUG_PROPERTY_ASSERT_BREAKPOINT_ENABLED bit of
-  PcdDebugProperyMask is set then CpuBreakpoint() is called. Otherwise, if
-  DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED bit of PcdDebugProperyMask is set then
+  PcdDebugPropertyMask is set then CpuBreakpoint() is called. Otherwise, if
+  DEBUG_PROPERTY_ASSERT_DEADLOOP_ENABLED bit of PcdDebugPropertyMask is set then
   CpuDeadLoop() is called.  If neither of these bits are set, then this function
   returns immediately after the message is printed to the debug output device.
   DebugAssert() must actively prevent recursion.  If DebugAssert() is called while
@@ -203,7 +300,6 @@ DebugAssert (
 {
   DebugAssertInternal ();
 }
-
 
 /**
   Fills a target buffer with PcdDebugClearMemoryValue, and returns the target buffer.
@@ -230,15 +326,14 @@ DebugClearMemory (
   return Buffer;
 }
 
-
 /**
   Returns TRUE if ASSERT() macros are enabled.
 
   This function returns TRUE if the DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED bit of
-  PcdDebugProperyMask is set.  Otherwise FALSE is returned.
+  PcdDebugPropertyMask is set.  Otherwise FALSE is returned.
 
-  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED bit of PcdDebugProperyMask is set.
-  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED bit of PcdDebugProperyMask is clear.
+  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED bit of PcdDebugPropertyMask is set.
+  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED bit of PcdDebugPropertyMask is clear.
 
 **/
 BOOLEAN
@@ -247,18 +342,17 @@ DebugAssertEnabled (
   VOID
   )
 {
-  return (BOOLEAN) ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED) != 0);
+  return (BOOLEAN)((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_ASSERT_ENABLED) != 0);
 }
-
 
 /**
   Returns TRUE if DEBUG() macros are enabled.
 
   This function returns TRUE if the DEBUG_PROPERTY_DEBUG_PRINT_ENABLED bit of
-  PcdDebugProperyMask is set.  Otherwise FALSE is returned.
+  PcdDebugPropertyMask is set.  Otherwise FALSE is returned.
 
-  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_PRINT_ENABLED bit of PcdDebugProperyMask is set.
-  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_PRINT_ENABLED bit of PcdDebugProperyMask is clear.
+  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_PRINT_ENABLED bit of PcdDebugPropertyMask is set.
+  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_PRINT_ENABLED bit of PcdDebugPropertyMask is clear.
 
 **/
 BOOLEAN
@@ -267,17 +361,17 @@ DebugPrintEnabled (
   VOID
   )
 {
-  return (BOOLEAN) ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_PRINT_ENABLED) != 0);
+  return (BOOLEAN)((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_PRINT_ENABLED) != 0);
 }
 
 /**
   Returns TRUE if DEBUG_CODE() macros are enabled.
 
   This function returns TRUE if the DEBUG_PROPERTY_DEBUG_CODE_ENABLED bit of
-  PcdDebugProperyMask is set.  Otherwise FALSE is returned.
+  PcdDebugPropertyMask is set.  Otherwise FALSE is returned.
 
-  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_CODE_ENABLED bit of PcdDebugProperyMask is set.
-  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_CODE_ENABLED bit of PcdDebugProperyMask is clear.
+  @retval  TRUE    The DEBUG_PROPERTY_DEBUG_CODE_ENABLED bit of PcdDebugPropertyMask is set.
+  @retval  FALSE   The DEBUG_PROPERTY_DEBUG_CODE_ENABLED bit of PcdDebugPropertyMask is clear.
 
 **/
 BOOLEAN
@@ -286,18 +380,17 @@ DebugCodeEnabled (
   VOID
   )
 {
-  return (BOOLEAN) ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_CODE_ENABLED) != 0);
+  return (BOOLEAN)((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_DEBUG_CODE_ENABLED) != 0);
 }
-
 
 /**
   Returns TRUE if DEBUG_CLEAR_MEMORY() macro is enabled.
 
   This function returns TRUE if the DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED bit of
-  PcdDebugProperyMask is set.  Otherwise FALSE is returned.
+  PcdDebugPropertyMask is set.  Otherwise FALSE is returned.
 
-  @retval  TRUE    The DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED bit of PcdDebugProperyMask is set.
-  @retval  FALSE   The DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED bit of PcdDebugProperyMask is clear.
+  @retval  TRUE    The DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED bit of PcdDebugPropertyMask is set.
+  @retval  FALSE   The DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED bit of PcdDebugPropertyMask is clear.
 
 **/
 BOOLEAN
@@ -306,7 +399,7 @@ DebugClearMemoryEnabled (
   VOID
   )
 {
-  return (BOOLEAN) ((PcdGet8(PcdDebugPropertyMask) & DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED) != 0);
+  return (BOOLEAN)((PcdGet8 (PcdDebugPropertyMask) & DEBUG_PROPERTY_CLEAR_MEMORY_ENABLED) != 0);
 }
 
 /**
@@ -321,8 +414,8 @@ DebugClearMemoryEnabled (
 BOOLEAN
 EFIAPI
 DebugPrintLevelEnabled (
-  IN  CONST UINTN        ErrorLevel
+  IN  CONST UINTN  ErrorLevel
   )
 {
-  return (BOOLEAN) ((ErrorLevel & PcdGet32(PcdFixedDebugPrintErrorLevel)) != 0);
+  return (BOOLEAN)((ErrorLevel & PcdGet32 (PcdFixedDebugPrintErrorLevel)) != 0);
 }

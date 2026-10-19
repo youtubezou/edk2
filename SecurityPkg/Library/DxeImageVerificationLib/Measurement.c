@@ -1,21 +1,14 @@
 /** @file
-  Measure TrEE required variable.
+  Measure TCG required variable.
 
-Copyright (c) 2013 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiDxe.h>
 #include <Guid/ImageAuthentication.h>
 #include <IndustryStandard/UefiTcgPlatform.h>
-#include <Protocol/TrEEProtocol.h>
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeServicesTableLib.h>
@@ -26,15 +19,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/TpmMeasurementLib.h>
 
 typedef struct {
-  CHAR16                                 *VariableName;
-  EFI_GUID                               *VendorGuid;
+  CHAR16      *VariableName;
+  EFI_GUID    *VendorGuid;
 } VARIABLE_TYPE;
 
 typedef struct {
-  CHAR16                                 *VariableName;
-  EFI_GUID                               *VendorGuid;
-  VOID                                   *Data;
-  UINTN                                  Size;
+  CHAR16      *VariableName;
+  EFI_GUID    *VendorGuid;
+  VOID        *Data;
+  UINTN       Size;
 } VARIABLE_RECORD;
 
 #define  MEASURED_AUTHORITY_COUNT_MAX  0x100
@@ -44,7 +37,7 @@ UINTN            mMeasuredAuthorityCountMax = 0;
 VARIABLE_RECORD  *mMeasuredAuthorityList    = NULL;
 
 VARIABLE_TYPE  mVariableType[] = {
-  {EFI_IMAGE_SECURITY_DATABASE,  &gEfiImageSecurityDatabaseGuid},
+  { EFI_IMAGE_SECURITY_DATABASE, &gEfiImageSecurityDatabaseGuid },
 };
 
 /**
@@ -56,12 +49,12 @@ VARIABLE_TYPE  mVariableType[] = {
 **/
 CHAR16 *
 AssignVarName (
-  IN      CHAR16                    *VarName
+  IN      CHAR16  *VarName
   )
 {
   UINTN  Index;
 
-  for (Index = 0; Index < sizeof(mVariableType)/sizeof(mVariableType[0]); Index++) {
+  for (Index = 0; Index < sizeof (mVariableType)/sizeof (mVariableType[0]); Index++) {
     if (StrCmp (VarName, mVariableType[Index].VariableName) == 0) {
       return mVariableType[Index].VariableName;
     }
@@ -79,12 +72,12 @@ AssignVarName (
 **/
 EFI_GUID *
 AssignVendorGuid (
-  IN      EFI_GUID                  *VendorGuid
+  IN      EFI_GUID  *VendorGuid
   )
 {
   UINTN  Index;
 
-  for (Index = 0; Index < sizeof(mVariableType)/sizeof(mVariableType[0]); Index++) {
+  for (Index = 0; Index < sizeof (mVariableType)/sizeof (mVariableType[0]); Index++) {
     if (CompareGuid (VendorGuid, mVariableType[Index].VendorGuid)) {
       return mVariableType[Index].VendorGuid;
     }
@@ -98,18 +91,18 @@ AssignVendorGuid (
 
   @param[in]  VarName           A Null-terminated string that is the name of the vendor's variable.
   @param[in]  VendorGuid        A unique identifier for the vendor.
-  @param[in]  VarData           The content of the variable data.  
-  @param[in]  VarSize           The size of the variable data.  
- 
+  @param[in]  VarData           The content of the variable data.
+  @param[in]  VarSize           The size of the variable data.
+
   @retval EFI_SUCCESS           Operation completed successfully.
   @retval EFI_OUT_OF_RESOURCES  Out of memory.
 **/
 EFI_STATUS
 AddDataMeasured (
-  IN      CHAR16                    *VarName,
-  IN      EFI_GUID                  *VendorGuid,
-  IN      VOID                      *Data,
-  IN      UINTN                     Size
+  IN      CHAR16    *VarName,
+  IN      EFI_GUID  *VendorGuid,
+  IN      VOID      *Data,
+  IN      UINTN     Size
   )
 {
   VARIABLE_RECORD  *NewMeasuredAuthorityList;
@@ -119,15 +112,17 @@ AddDataMeasured (
     //
     // Need enlarge
     //
-    NewMeasuredAuthorityList = AllocateZeroPool (sizeof(VARIABLE_RECORD) * (mMeasuredAuthorityCountMax + MEASURED_AUTHORITY_COUNT_MAX));
+    NewMeasuredAuthorityList = AllocateZeroPool (sizeof (VARIABLE_RECORD) * (mMeasuredAuthorityCountMax + MEASURED_AUTHORITY_COUNT_MAX));
     if (NewMeasuredAuthorityList == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
+
     if (mMeasuredAuthorityList != NULL) {
-      CopyMem (NewMeasuredAuthorityList, mMeasuredAuthorityList, sizeof(VARIABLE_RECORD) * mMeasuredAuthorityCount);
+      CopyMem (NewMeasuredAuthorityList, mMeasuredAuthorityList, sizeof (VARIABLE_RECORD) * mMeasuredAuthorityCount);
       FreePool (mMeasuredAuthorityList);
     }
-    mMeasuredAuthorityList     = NewMeasuredAuthorityList;
+
+    mMeasuredAuthorityList      = NewMeasuredAuthorityList;
     mMeasuredAuthorityCountMax += MEASURED_AUTHORITY_COUNT_MAX;
   }
 
@@ -141,6 +136,7 @@ AddDataMeasured (
   if (mMeasuredAuthorityList[mMeasuredAuthorityCount].Data == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   CopyMem (mMeasuredAuthorityList[mMeasuredAuthorityCount].Data, Data, Size);
   mMeasuredAuthorityCount++;
 
@@ -152,18 +148,18 @@ AddDataMeasured (
 
   @param[in]  VarName           A Null-terminated string that is the name of the vendor's variable.
   @param[in]  VendorGuid        A unique identifier for the vendor.
-  @param[in]  VarData           The content of the variable data.  
-  @param[in]  VarSize           The size of the variable data.  
+  @param[in]  VarData           The content of the variable data.
+  @param[in]  VarSize           The size of the variable data.
 
   @retval TRUE  The data is already measured.
   @retval FALSE The data is not measured yet.
 **/
 BOOLEAN
 IsDataMeasured (
-  IN      CHAR16                    *VarName,
-  IN      EFI_GUID                  *VendorGuid,
-  IN      VOID                      *Data,
-  IN      UINTN                     Size
+  IN      CHAR16    *VarName,
+  IN      EFI_GUID  *VendorGuid,
+  IN      VOID      *Data,
+  IN      UINTN     Size
   )
 {
   UINTN  Index;
@@ -172,7 +168,8 @@ IsDataMeasured (
     if ((StrCmp (VarName, mMeasuredAuthorityList[Index].VariableName) == 0) &&
         (CompareGuid (VendorGuid, mMeasuredAuthorityList[Index].VendorGuid)) &&
         (CompareMem (Data, mMeasuredAuthorityList[Index].Data, Size) == 0) &&
-        (Size == mMeasuredAuthorityList[Index].Size)) {
+        (Size == mMeasuredAuthorityList[Index].Size))
+    {
       return TRUE;
     }
   }
@@ -191,18 +188,20 @@ IsDataMeasured (
 **/
 BOOLEAN
 IsSecureAuthorityVariable (
-  IN CHAR16                                 *VariableName,
-  IN EFI_GUID                               *VendorGuid
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid
   )
 {
-  UINTN   Index;
+  UINTN  Index;
 
-  for (Index = 0; Index < sizeof(mVariableType)/sizeof(mVariableType[0]); Index++) {
-    if ((StrCmp (VariableName, mVariableType[Index].VariableName) == 0) && 
-        (CompareGuid (VendorGuid, mVariableType[Index].VendorGuid))) {
+  for (Index = 0; Index < sizeof (mVariableType)/sizeof (mVariableType[0]); Index++) {
+    if ((StrCmp (VariableName, mVariableType[Index].VariableName) == 0) &&
+        (CompareGuid (VendorGuid, mVariableType[Index].VendorGuid)))
+    {
       return TRUE;
     }
   }
+
   return FALSE;
 }
 
@@ -211,9 +210,9 @@ IsSecureAuthorityVariable (
 
   @param[in]  VarName           A Null-terminated string that is the name of the vendor's variable.
   @param[in]  VendorGuid        A unique identifier for the vendor.
-  @param[in]  VarData           The content of the variable data.  
-  @param[in]  VarSize           The size of the variable data.  
- 
+  @param[in]  VarData           The content of the variable data.
+  @param[in]  VarSize           The size of the variable data.
+
   @retval EFI_SUCCESS           Operation completed successfully.
   @retval EFI_OUT_OF_RESOURCES  Out of memory.
   @retval EFI_DEVICE_ERROR      The operation was unsuccessful.
@@ -222,46 +221,46 @@ IsSecureAuthorityVariable (
 EFI_STATUS
 EFIAPI
 MeasureVariable (
-  IN      CHAR16                    *VarName,
-  IN      EFI_GUID                  *VendorGuid,
-  IN      VOID                      *VarData,
-  IN      UINTN                     VarSize
+  IN      CHAR16    *VarName,
+  IN      EFI_GUID  *VendorGuid,
+  IN      VOID      *VarData,
+  IN      UINTN     VarSize
   )
 {
-  EFI_STATUS                        Status;
-  UINTN                             VarNameLength;
-  EFI_VARIABLE_DATA_TREE            *VarLog;
-  UINT32                            VarLogSize;
+  EFI_STATUS          Status;
+  UINTN               VarNameLength;
+  UEFI_VARIABLE_DATA  *VarLog;
+  UINT32              VarLogSize;
 
   //
-  // The EFI_VARIABLE_DATA_TREE.VariableData value shall be the EFI_SIGNATURE_DATA value
+  // The UEFI_VARIABLE_DATA.VariableData value shall be the EFI_SIGNATURE_DATA value
   // from the EFI_SIGNATURE_LIST that contained the authority that was used to validate the image
   //
-  VarNameLength      = StrLen (VarName);
-  VarLogSize = (UINT32)(sizeof (*VarLog) + VarNameLength * sizeof (*VarName) + VarSize
-                        - sizeof (VarLog->UnicodeName) - sizeof (VarLog->VariableData));
+  VarNameLength = StrLen (VarName);
+  VarLogSize    = (UINT32)(sizeof (*VarLog) + VarNameLength * sizeof (*VarName) + VarSize
+                           - sizeof (VarLog->UnicodeName) - sizeof (VarLog->VariableData));
 
-  VarLog = (EFI_VARIABLE_DATA_TREE *) AllocateZeroPool (VarLogSize);
+  VarLog = (UEFI_VARIABLE_DATA *)AllocateZeroPool (VarLogSize);
   if (VarLog == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  CopyMem (&VarLog->VariableName, VendorGuid, sizeof(VarLog->VariableName));
+  CopyMem (&VarLog->VariableName, VendorGuid, sizeof (VarLog->VariableName));
   VarLog->UnicodeNameLength  = VarNameLength;
   VarLog->VariableDataLength = VarSize;
   CopyMem (
-     VarLog->UnicodeName,
-     VarName,
-     VarNameLength * sizeof (*VarName)
-     );
+    VarLog->UnicodeName,
+    VarName,
+    VarNameLength * sizeof (*VarName)
+    );
   CopyMem (
-     (CHAR16 *)VarLog->UnicodeName + VarNameLength,
-     VarData,
-     VarSize
-     );
+    (CHAR16 *)VarLog->UnicodeName + VarNameLength,
+    VarData,
+    VarSize
+    );
 
-  DEBUG ((EFI_D_INFO, "DxeImageVerification: MeasureVariable (Pcr - %x, EventType - %x, ", (UINTN)7, (UINTN)EV_EFI_VARIABLE_AUTHORITY));
-  DEBUG ((EFI_D_INFO, "VariableName - %s, VendorGuid - %g)\n", VarName, VendorGuid));
+  DEBUG ((DEBUG_INFO, "DxeImageVerification: MeasureVariable (Pcr - %x, EventType - %x, ", (UINTN)7, (UINTN)EV_EFI_VARIABLE_AUTHORITY));
+  DEBUG ((DEBUG_INFO, "VariableName - %s, VendorGuid - %g)\n", VarName, VendorGuid));
 
   Status = TpmMeasureAndLogData (
              7,
@@ -289,21 +288,21 @@ MeasureVariable (
 VOID
 EFIAPI
 SecureBootHook (
-  IN CHAR16                                 *VariableName,
-  IN EFI_GUID                               *VendorGuid,
-  IN UINTN                                  DataSize,
-  IN VOID                                   *Data
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN UINTN     DataSize,
+  IN VOID      *Data
   )
 {
-  EFI_STATUS                        Status;
+  EFI_STATUS  Status;
 
   if (!IsSecureAuthorityVariable (VariableName, VendorGuid)) {
-    return ;
+    return;
   }
 
   if (IsDataMeasured (VariableName, VendorGuid, Data, DataSize)) {
-    DEBUG ((EFI_D_ERROR, "MeasureSecureAuthorityVariable - IsDataMeasured\n"));
-    return ;
+    DEBUG ((DEBUG_ERROR, "MeasureSecureAuthorityVariable - IsDataMeasured\n"));
+    return;
   }
 
   Status = MeasureVariable (
@@ -312,11 +311,11 @@ SecureBootHook (
              Data,
              DataSize
              );
-  DEBUG ((EFI_D_INFO, "MeasureBootPolicyVariable - %r\n", Status));
+  DEBUG ((DEBUG_INFO, "MeasureBootPolicyVariable - %r\n", Status));
 
   if (!EFI_ERROR (Status)) {
     AddDataMeasured (VariableName, VendorGuid, Data, DataSize);
   }
 
-  return ;
+  return;
 }

@@ -4,25 +4,18 @@
 
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
   Copyright (c) 2013 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _NVME_HCI_H_
-#define _NVME_HCI_H_
+#pragma once
 
-#define NVME_BAR                 0
+#define NVME_BAR  0
 
 //
 // Offset from the beginning of private data queue buffer
 //
-#define NVME_ASQ_BUF_OFFSET                  EFI_PAGE_SIZE
+#define NVME_ASQ_BUF_OFFSET  EFI_PAGE_SIZE
 
 /**
   Initialize the Nvm Express controller.
@@ -35,7 +28,7 @@
 **/
 EFI_STATUS
 NvmeControllerInit (
-  IN NVME_CONTROLLER_PRIVATE_DATA    *Private
+  IN NVME_CONTROLLER_PRIVATE_DATA  *Private
   );
 
 /**
@@ -50,8 +43,8 @@ NvmeControllerInit (
 **/
 EFI_STATUS
 NvmeIdentifyController (
-  IN NVME_CONTROLLER_PRIVATE_DATA       *Private,
-  IN VOID                               *Buffer
+  IN NVME_CONTROLLER_PRIVATE_DATA  *Private,
+  IN VOID                          *Buffer
   );
 
 /**
@@ -67,10 +60,7 @@ NvmeIdentifyController (
 **/
 EFI_STATUS
 NvmeIdentifyNamespace (
-  IN NVME_CONTROLLER_PRIVATE_DATA      *Private,
-  IN UINT32                            NamespaceId,
-  IN VOID                              *Buffer
+  IN NVME_CONTROLLER_PRIVATE_DATA  *Private,
+  IN UINT32                        NamespaceId,
+  IN VOID                          *Buffer
   );
-
-#endif
-

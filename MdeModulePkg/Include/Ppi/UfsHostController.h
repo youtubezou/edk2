@@ -2,19 +2,11 @@
 
 Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EDKII_PEI_UFS_HOST_CONTROLLER_PPI_H_
-#define _EDKII_PEI_UFS_HOST_CONTROLLER_PPI_H_
+#pragma once
 
 ///
 /// Global ID for the EDKII_UFS_HOST_CONTROLLER_PPI.
@@ -27,7 +19,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 ///
 /// Forward declaration for the UFS_HOST_CONTROLLER_PPI.
 ///
-typedef struct _EDKII_UFS_HOST_CONTROLLER_PPI  EDKII_UFS_HOST_CONTROLLER_PPI;
+typedef struct _EDKII_UFS_HOST_CONTROLLER_PPI EDKII_UFS_HOST_CONTROLLER_PPI;
 
 /**
   Get the MMIO base address of UFS host controller.
@@ -45,16 +37,14 @@ EFI_STATUS
 (EFIAPI *EDKII_UFS_HC_GET_MMIO_BAR)(
   IN     EDKII_UFS_HOST_CONTROLLER_PPI    *This,
   IN     UINT8                            ControllerId,
-     OUT UINTN                            *MmioBar
+  OUT UINTN                            *MmioBar
   );
 
 ///
 /// This PPI contains a set of services to interact with the UFS host controller.
 ///
 struct _EDKII_UFS_HOST_CONTROLLER_PPI {
-  EDKII_UFS_HC_GET_MMIO_BAR               GetUfsHcMmioBar;
+  EDKII_UFS_HC_GET_MMIO_BAR    GetUfsHcMmioBar;
 };
 
-extern EFI_GUID gEdkiiPeiUfsHostControllerPpiGuid;
-
-#endif
+extern EFI_GUID  gEdkiiPeiUfsHostControllerPpiGuid;

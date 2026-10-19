@@ -2,18 +2,11 @@
   Internal function defines the default device path string for SecureBoot configuration module.
 
 Copyright (c) 2012 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "SecureBootConfigImpl.h"
-
 
 /**
   This function converts an input device structure to a Unicode string.
@@ -26,7 +19,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 CHAR16 *
 EFIAPI
 DevicePathToStr (
-  IN EFI_DEVICE_PATH_PROTOCOL     *DevPath
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevPath
   )
 {
   return ConvertDevicePathToText (
@@ -35,4 +28,3 @@ DevicePathToStr (
            TRUE
            );
 }
-

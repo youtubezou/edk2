@@ -2,41 +2,34 @@
   Provide FSP wrapper platform related function.
 
   Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FSP_WRAPPER_PLATFORM_LIB_H__
-#define __FSP_WRAPPER_PLATFORM_LIB_H__
+#pragma once
 
 /**
   This function overrides the default configurations in the FSP-M UPD data region.
 
-  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data strcture.
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
 
 **/
 VOID
 EFIAPI
 UpdateFspmUpdData (
-  IN OUT VOID        *FspUpdRgnPtr
+  IN OUT VOID  *FspUpdRgnPtr
   );
 
 /**
   This function overrides the default configurations in the FSP-S UPD data region.
 
-  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data strcture.
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
 
 **/
 VOID
 EFIAPI
 UpdateFspsUpdData (
-  IN OUT VOID        *FspUpdRgnPtr
+  IN OUT VOID  *FspUpdRgnPtr
   );
 
 /**
@@ -66,8 +59,8 @@ UpdateTempRamExitParam (
 EFI_STATUS
 EFIAPI
 GetS3MemoryInfo (
-  OUT UINT64               *S3PeiMemSize,
-  OUT EFI_PHYSICAL_ADDRESS *S3PeiMemBase
+  OUT UINT64                *S3PeiMemSize,
+  OUT EFI_PHYSICAL_ADDRESS  *S3PeiMemBase
   );
 
 /**
@@ -80,7 +73,17 @@ GetS3MemoryInfo (
 VOID
 EFIAPI
 CallFspWrapperResetSystem (
-  IN UINT32    FspStatusResetType
+  IN EFI_STATUS  FspStatusResetType
   );
 
-#endif
+/**
+  This function overrides the default configurations in the FSP-I UPD data region.
+
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
+
+**/
+VOID
+EFIAPI
+UpdateFspiUpdData (
+  IN OUT VOID  *FspUpdRgnPtr
+  );

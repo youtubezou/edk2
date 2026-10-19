@@ -2,13 +2,7 @@
 
 Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
@@ -28,15 +22,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // EmuThunk Device Path Protocol Instance
 //
-EMU_THUNK_DEVICE_PATH mEmuThunkDevicePath = {
+EMU_THUNK_DEVICE_PATH  mEmuThunkDevicePath = {
   {
     {
       {
         HARDWARE_DEVICE_PATH,
         HW_VENDOR_DP,
         {
-          (UINT8) (sizeof (EMU_VENDOR_DEVICE_PATH_NODE)),
-          (UINT8) ((sizeof (EMU_VENDOR_DEVICE_PATH_NODE)) >> 8)
+          (UINT8)(sizeof (EMU_VENDOR_DEVICE_PATH_NODE)),
+          (UINT8)((sizeof (EMU_VENDOR_DEVICE_PATH_NODE)) >> 8)
         }
       },
       EMU_THUNK_PROTOCOL_GUID
@@ -53,13 +47,13 @@ EMU_THUNK_DEVICE_PATH mEmuThunkDevicePath = {
   }
 };
 
-
 EFI_STATUS
 EFIAPI
 InitializeEmuThunk (
-  IN EFI_HANDLE                            ImageHandle,
-  IN EFI_SYSTEM_TABLE                      *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
+
 /*++
 
 Routine Description:
@@ -80,8 +74,10 @@ Returns:
   Handle = NULL;
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Handle,
-                  &gEmuThunkProtocolGuid,       gEmuThunk,
-                  &gEfiDevicePathProtocolGuid,  &mEmuThunkDevicePath,
+                  &gEmuThunkProtocolGuid,
+                  gEmuThunk,
+                  &gEfiDevicePathProtocolGuid,
+                  &mEmuThunkDevicePath,
                   NULL
                   );
 

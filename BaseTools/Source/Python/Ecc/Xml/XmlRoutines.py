@@ -2,20 +2,16 @@
 # This is an XML API that uses a syntax similar to XPath, but it is written in
 # standard python so that no extra python packages are required to use it.
 #
-# Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
-# This program and the accompanying materials
-# are licensed and made available under the terms and conditions of the BSD License
-# which accompanies this distribution.  The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php
-#
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ##
 # Import Modules
 #
+from __future__ import print_function
 import xml.dom.minidom
+import codecs
 from Common.LongFilePathSupport import OpenLongFilePath as open
 
 ## Create a element of XML
@@ -30,14 +26,14 @@ from Common.LongFilePathSupport import OpenLongFilePath as open
 def CreateXmlElement(Name, String, NodeList, AttributeList):
     Doc = xml.dom.minidom.Document()
     Element = Doc.createElement(Name)
-    if String != '' and String != None:
+    if String != '' and String is not None:
         Element.appendChild(Doc.createTextNode(String))
-    
+
     for Item in NodeList:
-        if type(Item) == type([]):
+        if isinstance(Item, type([])):
             Key = Item[0]
             Value = Item[1]
-            if Key != '' and Key != None and Value != '' and Value != None:
+            if Key != '' and Key is not None and Value != '' and Value is not None:
                 Node = Doc.createElement(Key)
                 Node.appendChild(Doc.createTextNode(Value))
                 Element.appendChild(Node)
@@ -46,9 +42,9 @@ def CreateXmlElement(Name, String, NodeList, AttributeList):
     for Item in AttributeList:
         Key = Item[0]
         Value = Item[1]
-        if Key != '' and Key != None and Value != '' and Value != None:
+        if Key != '' and Key is not None and Value != '' and Value is not None:
             Element.setAttribute(Key, Value)
-    
+
     return Element
 
 ## Get a list of XML nodes using XPath style syntax.
@@ -62,7 +58,7 @@ def CreateXmlElement(Name, String, NodeList, AttributeList):
 # @revel  Nodes              A list of XML nodes matching XPath style Sting.
 #
 def XmlList(Dom, String):
-    if String == None or String == "" or Dom == None or Dom == "":
+    if String is None or String == "" or Dom is None or Dom == "":
         return []
     if Dom.nodeType == Dom.DOCUMENT_NODE:
         Dom = Dom.documentElement
@@ -98,7 +94,7 @@ def XmlList(Dom, String):
 # @revel  Node               A single XML node matching XPath style Sting.
 #
 def XmlNode(Dom, String):
-    if String == None or String == ""  or Dom == None or Dom == "":
+    if String is None or String == ""  or Dom is None or Dom == "":
         return ""
     if Dom.nodeType == Dom.DOCUMENT_NODE:
         Dom = Dom.documentElement
@@ -136,37 +132,6 @@ def XmlElement(Dom, String):
     except:
         return ""
 
-
-## Get a single XML element of the current node.
-#
-# Return a single XML element specified by the current root Dom.
-# If the input Dom is not valid, then an empty string is returned.
-#
-# @param  Dom                The root XML DOM object.
-#
-# @revel  Element            An XML element in current root Dom.
-#
-def XmlElementData(Dom):
-    try:
-        return Dom.firstChild.data.strip()
-    except:
-        return ""
-
-
-## Get a list of XML elements using XPath style syntax.
-#
-# Return a list of XML elements from the root Dom specified by XPath String.
-# If the input Dom or String is not valid, then an empty list is returned.
-#
-# @param  Dom                The root XML DOM object.
-# @param  String             A XPath style path.
-#
-# @revel  Elements           A list of XML elements matching XPath style Sting.
-#
-def XmlElementList(Dom, String):
-    return map(XmlElementData, XmlList(Dom, String))
-
-
 ## Get the XML attribute of the current node.
 #
 # Return a single XML attribute named Attribute from the current root Dom.
@@ -183,22 +148,6 @@ def XmlAttribute(Dom, Attribute):
     except:
         return ''
 
-
-## Get the XML node name of the current node.
-#
-# Return a single XML node name from the current root Dom.
-# If the input Dom is not valid, then an empty string is returned.
-#
-# @param  Dom                The root XML DOM object.
-#
-# @revel  Element            A single XML element matching XPath style Sting.
-#
-def XmlNodeName(Dom):
-    try:
-        return Dom.nodeName.strip()
-    except:
-        return ''
-
 ## Parse an XML file.
 #
 # Parse the input XML file named FileName and return a XML DOM it stands for.
@@ -210,12 +159,12 @@ def XmlNodeName(Dom):
 #
 def XmlParseFile(FileName):
     try:
-        XmlFile = open(FileName)
+        XmlFile = codecs.open(FileName,encoding='utf_8_sig')
         Dom = xml.dom.minidom.parse(XmlFile)
         XmlFile.close()
         return Dom
-    except Exception, X:
-        print X
+    except Exception as X:
+        print(X)
         return ""
 
 # This acts like the main() function for the script, unless it is 'import'ed
@@ -225,5 +174,5 @@ if __name__ == '__main__':
     A = CreateXmlElement('AAA', 'CCC',  [['AAA', '111'], ['BBB', '222']], [['A', '1'], ['B', '2']])
     B = CreateXmlElement('ZZZ', 'CCC',  [['XXX', '111'], ['YYY', '222']], [['A', '1'], ['B', '2']])
     C = CreateXmlList('DDD', 'EEE', [A, B], ['FFF', 'GGG'])
-    print C.toprettyxml(indent = " ")
+    print(C.toprettyxml(indent = " "))
     pass

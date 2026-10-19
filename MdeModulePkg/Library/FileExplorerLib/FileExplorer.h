@@ -1,18 +1,11 @@
 /** @file
    File explorer lib.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#ifndef _FILE_EXPLORER_H_
-#define _FILE_EXPLORER_H_
+#pragma once
 
 #include <PiDxe.h>
 #include <Guid/FileSystemVolumeLabelInfo.h>
@@ -23,7 +16,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/DevicePath.h>
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/DevicePathToText.h>
-#include <Protocol/LoadFile.h>
 #include <Protocol/FormBrowser2.h>
 
 #include <Library/DebugLib.h>
@@ -39,8 +31,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include "FormGuid.h"
 
-#define FILE_EXPLORER_CALLBACK_DATA_SIGNATURE     SIGNATURE_32 ('f', 'e', 'c', 'k')
-
+#define FILE_EXPLORER_CALLBACK_DATA_SIGNATURE  SIGNATURE_32 ('f', 'e', 'c', 'k')
 
 #pragma pack(1)
 
@@ -48,73 +39,76 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 /// HII specific Vendor Device Path definition.
 ///
 typedef struct {
-  VENDOR_DEVICE_PATH             VendorDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL       End;
+  VENDOR_DEVICE_PATH          VendorDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    End;
 } HII_VENDOR_DEVICE_PATH;
 
-typedef struct {
-  EFI_HANDLE                        DeviceHandle;
-  EFI_DEVICE_PATH_PROTOCOL          *DevicePath;
-  EFI_FILE_HANDLE                   FileHandle;
-  UINT16                            *FileName;
+#pragma pack()
 
-  BOOLEAN                           IsRoot;
-  BOOLEAN                           IsDir;
+typedef struct {
+  EFI_HANDLE                  DeviceHandle;
+  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
+  EFI_FILE_HANDLE             FileHandle;
+  UINT16                      *FileName;
+
+  BOOLEAN                     IsRoot;
+  BOOLEAN                     IsDir;
 } FILE_CONTEXT;
 
 typedef struct {
-  UINTN           Signature;
-  LIST_ENTRY      Link;
-  UINT16          *DisplayString;
-  UINT16          *HelpString;
-  EFI_STRING_ID   DisplayStringToken;
-  EFI_STRING_ID   HelpStringToken;
-  VOID            *VariableContext;
+  UINTN            Signature;
+  LIST_ENTRY       Link;
+  UINT16           *DisplayString;
+  UINT16           *HelpString;
+  EFI_STRING_ID    DisplayStringToken;
+  EFI_STRING_ID    HelpStringToken;
+  VOID             *VariableContext;
 } MENU_ENTRY;
 
 typedef struct {
-  UINTN           Signature;
-  LIST_ENTRY      Head;
-  UINTN           MenuNumber;
-  BOOLEAN         Used;
+  UINTN         Signature;
+  LIST_ENTRY    Head;
+  UINTN         MenuNumber;
+  BOOLEAN       Used;
 } MENU_OPTION;
 
 typedef struct {
   //
   // Shared callback data.
   //
-  UINTN                          Signature;
+  UINTN                             Signature;
 
   //
   // File explorer formset callback data.
   //
-  EFI_HII_HANDLE                 FeHiiHandle;
-  EFI_HANDLE                     FeDriverHandle;
-  EFI_HII_CONFIG_ACCESS_PROTOCOL FeConfigAccess;
-  EFI_FORM_BROWSER2_PROTOCOL     *FormBrowser2;
-  MENU_OPTION                    *FsOptionMenu;
-  CHAR16                         *FileType;
-  CHOOSE_HANDLER                 ChooseHandler;
-  EFI_DEVICE_PATH_PROTOCOL       *RetDevicePath;
-
+  EFI_HII_HANDLE                    FeHiiHandle;
+  EFI_HANDLE                        FeDriverHandle;
+  EFI_HII_CONFIG_ACCESS_PROTOCOL    FeConfigAccess;
+  EFI_FORM_BROWSER2_PROTOCOL        *FormBrowser2;
+  MENU_OPTION                       *FsOptionMenu;
+  CHAR16                            *FileType;
+  CHOOSE_HANDLER                    ChooseHandler;
+  EFI_DEVICE_PATH_PROTOCOL          *RetDevicePath;
 } FILE_EXPLORER_CALLBACK_DATA;
 
 #define FILE_EXPLORER_PRIVATE_FROM_THIS(a)  CR (a, FILE_EXPLORER_CALLBACK_DATA, FeConfigAccess, FILE_EXPLORER_CALLBACK_DATA_SIGNATURE)
 
-#pragma pack()
+extern UINT8  FileExplorerVfrBin[];
 
-extern UINT8    FileExplorerVfrBin[];
-
-#define MENU_OPTION_SIGNATURE      SIGNATURE_32 ('m', 'e', 'n', 'u')
-#define MENU_ENTRY_SIGNATURE       SIGNATURE_32 ('e', 'n', 't', 'r')
+#define MENU_OPTION_SIGNATURE  SIGNATURE_32 ('m', 'e', 'n', 'u')
+#define MENU_ENTRY_SIGNATURE   SIGNATURE_32 ('e', 'n', 't', 'r')
 
 ///
 /// Define the maximum characters that will be accepted.
 ///
-#define MAX_CHAR                480
-#define FILE_OPTION_OFFSET      0x8000
-#define FILE_OPTION_MASK        0x7FFF
-
+#define MAX_CHAR                     480
+#define FILE_OPTION_OFFSET           0x8000
+#define FILE_OPTION_MASK             0x7FFF
+#define QUESTION_ID_UPDATE_STEP      200
+#define MAX_FILE_NAME_LEN            20
+#define MAX_FOLDER_NAME_LEN          20
+#define NEW_FILE_QUESTION_ID_BASE    0x5000;
+#define NEW_FOLDER_QUESTION_ID_BASE  0x6000;
 
 /**
   This function processes the results of changes in configuration.
@@ -146,14 +140,13 @@ extern UINT8    FileExplorerVfrBin[];
 EFI_STATUS
 EFIAPI
 LibCallback (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  EFI_BROWSER_ACTION                     Action,
-  IN  EFI_QUESTION_ID                        QuestionId,
-  IN  UINT8                                  Type,
-  IN  EFI_IFR_TYPE_VALUE                     *Value,
-  OUT EFI_BROWSER_ACTION_REQUEST             *ActionRequest
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  EFI_BROWSER_ACTION                    Action,
+  IN  EFI_QUESTION_ID                       QuestionId,
+  IN  UINT8                                 Type,
+  IN  EFI_IFR_TYPE_VALUE                    *Value,
+  OUT EFI_BROWSER_ACTION_REQUEST            *ActionRequest
   );
-
 
 /**
   This function allows a caller to extract the current configuration for one
@@ -180,10 +173,10 @@ LibCallback (
 EFI_STATUS
 EFIAPI
 LibExtractConfig (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  CONST EFI_STRING                       Request,
-  OUT EFI_STRING                             *Progress,
-  OUT EFI_STRING                             *Results
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  CONST EFI_STRING                      Request,
+  OUT EFI_STRING                            *Progress,
+  OUT EFI_STRING                            *Results
   );
 
 /**
@@ -205,9 +198,9 @@ LibExtractConfig (
 EFI_STATUS
 EFIAPI
 LibRouteConfig (
-  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL   *This,
-  IN  CONST EFI_STRING                       Configuration,
-  OUT EFI_STRING                             *Progress
+  IN  CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
+  IN  CONST EFI_STRING                      Configuration,
+  OUT EFI_STRING                            *Progress
   );
 
 /**
@@ -221,10 +214,9 @@ LibRouteConfig (
 **/
 EFI_STATUS
 LibUpdateFileExplorer (
-  IN UINT16                       KeyValue
+  IN UINT16  KeyValue
   );
-  
-  
+
 /**
   Get the device path info saved in the menu structure.
 
@@ -233,7 +225,5 @@ LibUpdateFileExplorer (
 **/
 VOID
 LibGetDevicePath (
-  IN UINT16                       KeyValue
+  IN UINT16  KeyValue
   );
-
-#endif 

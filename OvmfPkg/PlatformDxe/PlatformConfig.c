@@ -5,13 +5,7 @@
 
   Copyright (C) 2014, Red Hat, Inc.
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -27,8 +21,8 @@
 //
 // Name of the UEFI variable that we use for persistent storage.
 //
-STATIC CHAR16 mVariableName[] = L"PlatformConfig";
-
+CHAR16  mVariableName[] = L"PlatformConfig";
+CHAR16  mHiiFormName[]  = L"MainFormState";
 
 /**
   Serialize and persistently save platform configuration.
@@ -40,10 +34,10 @@ STATIC CHAR16 mVariableName[] = L"PlatformConfig";
 EFI_STATUS
 EFIAPI
 PlatformConfigSave (
-  IN PLATFORM_CONFIG *PlatformConfig
+  IN PLATFORM_CONFIG  *PlatformConfig
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   //
   // We could implement any kind of translation here, as part of serialization.
@@ -51,13 +45,16 @@ PlatformConfigSave (
   // variables with human-readable contents, allowing other tools to access
   // them more easily. For now, just save a binary dump.
   //
-  Status = gRT->SetVariable (mVariableName, &gOvmfPlatformConfigGuid,
+  Status = gRT->SetVariable (
+                  mVariableName,
+                  &gOvmfPlatformConfigGuid,
                   EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS |
-                    EFI_VARIABLE_RUNTIME_ACCESS,
-                  sizeof *PlatformConfig, PlatformConfig);
+                  EFI_VARIABLE_RUNTIME_ACCESS,
+                  sizeof *PlatformConfig,
+                  PlatformConfig
+                  );
   return Status;
 }
-
 
 /**
   Load and deserialize platform configuration.
@@ -79,13 +76,13 @@ PlatformConfigSave (
 EFI_STATUS
 EFIAPI
 PlatformConfigLoad (
-  OUT PLATFORM_CONFIG *PlatformConfig,
-  OUT UINT64          *OptionalElements
+  OUT PLATFORM_CONFIG  *PlatformConfig,
+  OUT UINT64           *OptionalElements
   )
 {
-  VOID       *Data;
-  UINTN      DataSize;
-  EFI_STATUS Status;
+  VOID        *Data;
+  UINTN       DataSize;
+  EFI_STATUS  Status;
 
   //
   // Any translation done in PlatformConfigSave() would have to be mirrored
@@ -95,8 +92,12 @@ PlatformConfigLoad (
   // (only incremental changes, ie. new fields), and on GUID.
   // (Incompatible changes require a GUID change.)
   //
-  Status = GetVariable2 (mVariableName, &gOvmfPlatformConfigGuid, &Data,
-             &DataSize);
+  Status = GetVariable2 (
+             mVariableName,
+             &gOvmfPlatformConfigGuid,
+             &Data,
+             &DataSize
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -114,15 +115,18 @@ PlatformConfigLoad (
     //
     // Handle firmware upgrade -- zero out missing fields.
     //
-    ZeroMem ((UINT8 *)PlatformConfig + DataSize,
-      sizeof *PlatformConfig - DataSize);
+    ZeroMem (
+      (UINT8 *)PlatformConfig + DataSize,
+      sizeof *PlatformConfig - DataSize
+      );
   }
 
   //
   // Based on DataSize, report the optional features that we recognize.
   //
   if (DataSize >= (OFFSET_OF (PLATFORM_CONFIG, VerticalResolution) +
-                   sizeof PlatformConfig->VerticalResolution)) {
+                   sizeof PlatformConfig->VerticalResolution))
+  {
     *OptionalElements |= PLATFORM_CONFIG_F_GRAPHICS_RESOLUTION;
   }
 

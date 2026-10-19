@@ -2,21 +2,12 @@
 
   This library class defines a set of interfaces to customize Display module
 
-Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __CUSTOMIZED_DISPLAY_LIB_INTERNAL_H__
-#define __CUSTOMIZED_DISPLAY_LIB_INTERNAL_H__
-
-
+#pragma once
 
 #include <PiDxe.h>
 
@@ -53,33 +44,30 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include "Colors.h"
 
+#define FORMSET_CLASS_PLATFORM_SETUP  0x0001
+#define FORMSET_CLASS_FRONT_PAGE      0x0002
 
-
-#define FORMSET_CLASS_PLATFORM_SETUP         0x0001
-#define FORMSET_CLASS_FRONT_PAGE             0x0002
-
-
-#define FRONT_PAGE_HEADER_HEIGHT      6
-#define NONE_FRONT_PAGE_HEADER_HEIGHT 3
-#define FOOTER_HEIGHT                 4
-#define STATUS_BAR_HEIGHT             1
+#define FRONT_PAGE_HEADER_HEIGHT       6
+#define NONE_FRONT_PAGE_HEADER_HEIGHT  3
+#define FOOTER_HEIGHT                  4
+#define STATUS_BAR_HEIGHT              1
 
 //
 // Screen definitions
 //
-#define BANNER_HEIGHT                 6
-#define BANNER_COLUMNS                3
-#define BANNER_LEFT_COLUMN_INDENT     1
+#define BANNER_HEIGHT              6
+#define BANNER_COLUMNS             3
+#define BANNER_LEFT_COLUMN_INDENT  1
 
 //
 // Character definitions
 //
-#define UPPER_LOWER_CASE_OFFSET 0x20
+#define UPPER_LOWER_CASE_OFFSET  0x20
 
 //
 // This is the Input Error Message
 //
-#define INPUT_ERROR 1
+#define INPUT_ERROR  1
 
 //
 // This is the NV RAM update required Message
@@ -87,45 +75,46 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define NV_UPDATE_REQUIRED  2
 
 typedef struct {
-  EFI_STRING_ID  Banner[BANNER_HEIGHT][BANNER_COLUMNS];
+  EFI_STRING_ID    Banner[BANNER_HEIGHT][BANNER_COLUMNS];
 } BANNER_DATA;
 
-extern  UINT16                        gClassOfVfr;                 // Formset class information
-extern  BANNER_DATA                   *gBannerData;
-extern  EFI_SCREEN_DESCRIPTOR         gScreenDimensions;
-extern  UINTN                         gFooterHeight;
+extern  UINT16                 gClassOfVfr;                        // Formset class information
+extern  BANNER_DATA            *gBannerData;
+extern  EFI_SCREEN_DESCRIPTOR  gScreenDimensions;
+extern  UINTN                  gFooterHeight;
 
 //
 // Browser Global Strings
 //
-extern CHAR16            *gEnterString;
-extern CHAR16            *gEnterCommitString;
-extern CHAR16            *gEnterEscapeString;
-extern CHAR16            *gEscapeString;
-extern CHAR16            *gMoveHighlight;
-extern CHAR16            *gDecNumericInput;
-extern CHAR16            *gHexNumericInput;
-extern CHAR16            *gToggleCheckBox;
-extern CHAR16            *gLibEmptyString;
-extern CHAR16            *gAreYouSure;
-extern CHAR16            *gYesResponse;
-extern CHAR16            *gNoResponse;
-extern CHAR16            *gPlusString;
-extern CHAR16            *gMinusString;
-extern CHAR16            *gAdjustNumber;
-extern CHAR16            *gSaveChanges;
-extern CHAR16            *gNvUpdateMessage;
-extern CHAR16            *gInputErrorMessage;
+extern CHAR16  *gEnterString;
+extern CHAR16  *gEnterCommitString;
+extern CHAR16  *gEnterEscapeString;
+extern CHAR16  *gEscapeString;
+extern CHAR16  *gMoveHighlight;
+extern CHAR16  *gDecNumericInput;
+extern CHAR16  *gHexNumericInput;
+extern CHAR16  *gToggleCheckBox;
+extern CHAR16  *gLibEmptyString;
+extern CHAR16  *gAreYouSure;
+extern CHAR16  *gYesResponse;
+extern CHAR16  *gNoResponse;
+extern CHAR16  *gPlusString;
+extern CHAR16  *gMinusString;
+extern CHAR16  *gAdjustNumber;
+extern CHAR16  *gSaveChanges;
+extern CHAR16  *gNvUpdateMessage;
+extern CHAR16  *gInputErrorMessage;
+
 /**
 
   Print banner info for front page.
 
   @param[in]  FormData             Form Data to be shown in Page
-  
+
 **/
 VOID
-PrintBannerInfo ( 
-  IN FORM_DISPLAY_ENGINE_FORM       *FormData
+PrintBannerInfo (
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData
   );
 
 /**
@@ -135,11 +124,11 @@ PrintBannerInfo (
 **/
 VOID
 PrintFramework (
-  IN FORM_DISPLAY_ENGINE_FORM       *FormData
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData
   );
 
 /**
-  Validate the input screen diemenstion info.
+  Validate the input screen dimension info.
 
   @param  FormData               The input form data info.
 
@@ -147,9 +136,9 @@ PrintFramework (
   @return EFI_INVALID_PARAMETER  The input screen info is not acceptable.
 
 **/
-EFI_STATUS 
-ScreenDiemensionInfoValidate (
-  IN FORM_DISPLAY_ENGINE_FORM       *FormData
+EFI_STATUS
+ScreenDimensionInfoValidate (
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData
   );
 
 /**
@@ -164,8 +153,8 @@ ScreenDiemensionInfoValidate (
 **/
 CHAR16 *
 LibGetToken (
-  IN  EFI_STRING_ID                Token,
-  IN  EFI_HII_HANDLE               HiiHandle
+  IN  EFI_STRING_ID   Token,
+  IN  EFI_HII_HANDLE  HiiHandle
   );
 
 /**
@@ -186,7 +175,7 @@ LibGetToken (
 **/
 UINTN
 LibGetStringWidth (
-  IN CHAR16               *String
+  IN CHAR16  *String
   );
 
 /**
@@ -198,20 +187,20 @@ LibGetStringWidth (
 **/
 VOID
 PrintHotKeyHelpString (
-  IN FORM_DISPLAY_ENGINE_FORM      *FormData,
-  IN BOOLEAN                       SetState
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData,
+  IN BOOLEAN                   SetState
   );
-  
+
 /**
   Get step info from numeric opcode.
-  
+
   @param[in] OpCode     The input numeric op code.
 
   @return step info for this opcode.
 **/
 UINT64
 LibGetFieldFromNum (
-  IN  EFI_IFR_OP_HEADER     *OpCode
+  IN  EFI_IFR_OP_HEADER  *OpCode
   );
 
 /**
@@ -242,7 +231,7 @@ FreeLibStrings (
 **/
 EFI_STATUS
 WaitForKeyStroke (
-  OUT  EFI_INPUT_KEY           *Key
+  OUT  EFI_INPUT_KEY  *Key
   );
 
 /**
@@ -255,9 +244,9 @@ WaitForKeyStroke (
 **/
 VOID
 LibSetUnicodeMem (
-  IN VOID   *Buffer,
-  IN UINTN  Size,
-  IN CHAR16 Value
+  IN VOID    *Buffer,
+  IN UINTN   Size,
+  IN CHAR16  Value
   );
 
 /**
@@ -276,22 +265,20 @@ LibSetUnicodeMem (
 UINTN
 EFIAPI
 PrintAt (
-  IN UINTN     Width,
-  IN UINTN     Column,
-  IN UINTN     Row,
-  IN CHAR16    *Fmt,
+  IN UINTN   Width,
+  IN UINTN   Column,
+  IN UINTN   Row,
+  IN CHAR16  *Fmt,
   ...
   );
 
 /**
   Process some op codes which is out side of current form.
-  
+
   @param FormData                Pointer to the form data.
 
 **/
 VOID
 ProcessExternedOpcode (
-  IN FORM_DISPLAY_ENGINE_FORM       *FormData
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData
   );
-
-#endif

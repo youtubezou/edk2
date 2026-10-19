@@ -8,13 +8,7 @@
 
 Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -37,22 +31,23 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 EFI_STATUS
 CpuIoCheckAddressRange (
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            Address,
-  IN  UINTN                             Count,
-  IN  VOID                              *Buffer,
-  IN  UINT64                            Limit
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     Address,
+  IN  UINTN                      Count,
+  IN  VOID                       *Buffer,
+  IN  UINT64                     Limit
   );
 
 EFI_STATUS
 EFIAPI
 CpuMemoryServiceRead (
-  IN  EFI_CPU_IO2_PROTOCOL              *This,
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            Address,
-  IN  UINTN                             Count,
-  IN  OUT VOID                          *Buffer
+  IN  EFI_CPU_IO2_PROTOCOL       *This,
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     Address,
+  IN  UINTN                      Count,
+  IN  OUT VOID                   *Buffer
   )
+
 /*++
 
 Routine Description:
@@ -101,12 +96,13 @@ Returns:
 EFI_STATUS
 EFIAPI
 CpuMemoryServiceWrite (
-  IN EFI_CPU_IO2_PROTOCOL               *This,
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            Address,
-  IN  UINTN                             Count,
-  IN  OUT VOID                          *Buffer
+  IN EFI_CPU_IO2_PROTOCOL        *This,
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     Address,
+  IN  UINTN                      Count,
+  IN  OUT VOID                   *Buffer
   )
+
 /*++
 
 Routine Description:
@@ -154,12 +150,13 @@ Returns:
 EFI_STATUS
 EFIAPI
 CpuIoServiceRead (
-  IN EFI_CPU_IO2_PROTOCOL               *This,
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            UserAddress,
-  IN  UINTN                             Count,
-  IN  OUT VOID                          *UserBuffer
+  IN EFI_CPU_IO2_PROTOCOL        *This,
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     UserAddress,
+  IN  UINTN                      Count,
+  IN  OUT VOID                   *UserBuffer
   )
+
 /*++
 
 Routine Description:
@@ -192,7 +189,7 @@ Returns:
     return EFI_INVALID_PARAMETER;
   }
 
-  Address = (UINTN) UserAddress;
+  Address = (UINTN)UserAddress;
 
   if (Width >= EfiCpuIoWidthMaximum) {
     return EFI_INVALID_PARAMETER;
@@ -212,12 +209,13 @@ Returns:
 EFI_STATUS
 EFIAPI
 CpuIoServiceWrite (
-  IN EFI_CPU_IO2_PROTOCOL               *This,
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            UserAddress,
-  IN  UINTN                             Count,
-  IN  OUT VOID                          *UserBuffer
+  IN EFI_CPU_IO2_PROTOCOL        *This,
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     UserAddress,
+  IN  UINTN                      Count,
+  IN  OUT VOID                   *UserBuffer
   )
+
 /*++
 
 Routine Description:
@@ -254,7 +252,7 @@ Returns:
     return EFI_INVALID_PARAMETER;
   }
 
-  Address = (UINTN) UserAddress;
+  Address = (UINTN)UserAddress;
 
   if (Width >= EfiCpuIoWidthMaximum) {
     return EFI_INVALID_PARAMETER;
@@ -270,7 +268,6 @@ Returns:
   //
   return EFI_SUCCESS;
 }
-
 
 /*++
 
@@ -294,14 +291,14 @@ Returns:
 **/
 EFI_STATUS
 CpuIoCheckAddressRange (
-  IN  EFI_CPU_IO_PROTOCOL_WIDTH         Width,
-  IN  UINT64                            Address,
-  IN  UINTN                             Count,
-  IN  VOID                              *Buffer,
-  IN  UINT64                            Limit
+  IN  EFI_CPU_IO_PROTOCOL_WIDTH  Width,
+  IN  UINT64                     Address,
+  IN  UINTN                      Count,
+  IN  VOID                       *Buffer,
+  IN  UINT64                     Limit
   )
 {
-  UINTN AlignMask;
+  UINTN  AlignMask;
 
   if (Address > Limit) {
     return EFI_UNSUPPORTED;
@@ -310,7 +307,7 @@ CpuIoCheckAddressRange (
   //
   // For FiFo type, the target address won't increase during the access, so treat count as 1
   //
-  if (Width >= EfiCpuIoWidthFifoUint8 && Width <= EfiCpuIoWidthFifoUint64) {
+  if ((Width >= EfiCpuIoWidthFifoUint8) && (Width <= EfiCpuIoWidthFifoUint64)) {
     Count = 1;
   }
 
@@ -320,11 +317,9 @@ CpuIoCheckAddressRange (
   }
 
   AlignMask = (1 << Width) - 1;
-  if ((UINTN) Buffer & AlignMask) {
+  if ((UINTN)Buffer & AlignMask) {
     return EFI_UNSUPPORTED;
   }
 
   return EFI_SUCCESS;
 }
-
-

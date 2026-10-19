@@ -16,19 +16,11 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EMBEDDED_DEVICE_PROTOCOL_H__
-#define __EMBEDDED_DEVICE_PROTOCOL_H__
-
+#pragma once
 
 //
 // Protocol GUID
@@ -38,21 +30,15 @@
 #define EMBEDDED_DEVICE_PROTOCOL_GUID \
   { 0xbf4b9d10, 0x13ec, 0x43dd, { 0x88, 0x80, 0xe9, 0xb, 0x71, 0x8f, 0x27, 0xde } }
 
-
-
 typedef struct {
-  UINT16          VendorId;
-  UINT16          DeviceId;
-  UINT16          RevisionId;
-  UINT16          SubsystemId;
-  UINT16          SubsystemVendorId;
-  UINT8           ClassCode[3];
-  UINT8           HeaderSize;
-  UINTN           BaseAddress;
+  UINT16    VendorId;
+  UINT16    DeviceId;
+  UINT16    RevisionId;
+  UINT16    SubsystemId;
+  UINT16    SubsystemVendorId;
+  UINT8     ClassCode[3];
+  UINT8     HeaderSize;
+  UINTN     BaseAddress;
 } EMBEDDED_DEVICE_PROTOCOL;
 
-extern EFI_GUID gEmbeddedDeviceGuid;
-
-#endif
-
-
+extern EFI_GUID  gEmbeddedDeviceGuid;

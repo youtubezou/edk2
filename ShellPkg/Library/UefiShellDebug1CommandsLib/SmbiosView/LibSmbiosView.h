@@ -2,37 +2,30 @@
   API for SMBIOS Plug and Play functions, access to SMBIOS table and structures.
 
   Copyright (c) 2005 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _LIB_SMBIOS_VIEW_H_
-#define _LIB_SMBIOS_VIEW_H_
+#pragma once
 
 #include <IndustryStandard/SmBios.h>
 
-#define DMI_SUCCESS                     0x00
-#define DMI_UNKNOWN_FUNCTION            0x81
-#define DMI_FUNCTION_NOT_SUPPORTED      0x82
-#define DMI_INVALID_HANDLE              0x83
-#define DMI_BAD_PARAMETER               0x84
-#define DMI_INVALID_SUBFUNCTION         0x85
-#define DMI_NO_CHANGE                   0x86
-#define DMI_ADD_STRUCTURE_FAILED        0x87
-#define DMI_READ_ONLY                   0x8D
-#define DMI_LOCK_NOT_SUPPORTED          0x90
-#define DMI_CURRENTLY_LOCKED            0x91
-#define DMI_INVALID_LOCK                0x92
+#define DMI_SUCCESS                 0x00
+#define DMI_UNKNOWN_FUNCTION        0x81
+#define DMI_FUNCTION_NOT_SUPPORTED  0x82
+#define DMI_INVALID_HANDLE          0x83
+#define DMI_BAD_PARAMETER           0x84
+#define DMI_INVALID_SUBFUNCTION     0x85
+#define DMI_NO_CHANGE               0x86
+#define DMI_ADD_STRUCTURE_FAILED    0x87
+#define DMI_READ_ONLY               0x8D
+#define DMI_LOCK_NOT_SUPPORTED      0x90
+#define DMI_CURRENTLY_LOCKED        0x91
+#define DMI_INVALID_LOCK            0x92
 
-#define INVALID_HANDLE                  (UINT16) (-1)
+#define INVALID_HANDLE  (UINT16) (-1)
 
-#define EFI_SMBIOSERR(val)              EFIERR (0x30000 | val)
+#define EFI_SMBIOSERR(val)  EFIERR (0x30000 | val)
 
 #define EFI_SMBIOSERR_FAILURE           EFI_SMBIOSERR (1)
 #define EFI_SMBIOSERR_STRUCT_NOT_FOUND  EFI_SMBIOSERR (2)
@@ -82,7 +75,7 @@ LibSmbios64BitCleanup (
 **/
 VOID
 LibSmbiosGetEPS (
-  OUT SMBIOS_TABLE_ENTRY_POINT **EntryPointStructure
+  OUT SMBIOS_TABLE_ENTRY_POINT  **EntryPointStructure
   );
 
 /**
@@ -92,7 +85,7 @@ LibSmbiosGetEPS (
 **/
 VOID
 LibSmbios64BitGetEPS (
-  OUT SMBIOS_TABLE_3_0_ENTRY_POINT **EntryPointStructure
+  OUT SMBIOS_TABLE_3_0_ENTRY_POINT  **EntryPointStructure
   );
 
 /**
@@ -104,10 +97,10 @@ LibSmbios64BitGetEPS (
 
   @return Pointer to string, or pointer to next SMBIOS strcuture if StringNumber == -1
 **/
-CHAR8*
+CHAR8 *
 LibGetSmbiosString (
-  IN  SMBIOS_STRUCTURE_POINTER    *Smbios,
-  IN  UINT16                      StringNumber
+  IN  SMBIOS_STRUCTURE_POINTER  *Smbios,
+  IN  UINT16                    StringNumber
   );
 
 /**
@@ -155,5 +148,3 @@ LibGetSmbios64BitStructure (
   OUT UINT8       **Buffer,
   OUT UINT16      *Length
   );
-
-#endif

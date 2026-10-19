@@ -1,13 +1,7 @@
 ## @ PatchFv.py
 #
-# Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-# This program and the accompanying materials are licensed and made available under
-# the terms and conditions of the BSD License that accompanies this distribution.
-# The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php.
-#
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# Copyright (c) 2014 - 2021, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -31,7 +25,10 @@ def readDataFromFile (binfile, offset, len=1):
     if (offval & 0x80000000):
         offval = fsize - (0xFFFFFFFF - offval + 1)
     fd.seek(offval)
-    bytearray = [ord(b) for b in fd.read(len)]
+    if sys.version_info[0] < 3:
+        bytearray = [ord(b) for b in fd.read(len)]
+    else:
+        bytearray = [b for b in fd.read(len)]
     value = 0
     idx   = len - 1
     while  idx >= 0:
@@ -51,7 +48,7 @@ def IsFspHeaderValid (binfile):
     fd     = open (binfile, "rb")
     bindat = fd.read(0x200) # only read first 0x200 bytes
     fd.close()
-    HeaderList = ['FSPH' , 'FSPP' , 'FSPE']       # Check 'FSPH', 'FSPP', and 'FSPE' in the FSP header
+    HeaderList = [b'FSPH' , b'FSPP' , b'FSPE']       # Check 'FSPH', 'FSPP', and 'FSPE' in the FSP header
     OffsetList = []
     for each in HeaderList:
         if each in bindat:
@@ -61,7 +58,10 @@ def IsFspHeaderValid (binfile):
         OffsetList.append(idx)
     if not OffsetList[0] or not OffsetList[1]:    # If 'FSPH' or 'FSPP' is missing, it will return false
         return False
-    Revision = ord(bindat[OffsetList[0] + 0x0B])
+    if sys.version_info[0] < 3:
+        Revision = ord(bindat[OffsetList[0] + 0x0B])
+    else:
+        Revision = bindat[OffsetList[0] + 0x0B]
     #
     # if revision is bigger than 1, it means it is FSP v1.1 or greater revision, which must contain 'FSPE'.
     #
@@ -92,7 +92,10 @@ def patchDataInFile (binfile, offset, value, len=1):
         value          = value >> 8
         idx            = idx + 1
     fd.seek(offval)
-    fd.write("".join(chr(b) for b in bytearray))
+    if sys.version_info[0] < 3:
+        fd.write("".join(chr(b) for b in bytearray))
+    else:
+        fd.write(bytes(bytearray))
     fd.close()
     return len
 
@@ -136,11 +139,11 @@ class Symbols:
         fvInfo['Offset']  = self.getFvOffsetInFd(fvFile)
         fvInfo['Size']    = readDataFromFile (fvFile, 0x20, 4)
         fdIn        = open(infFile, "r")
-        rptLines    = fdIn.readlines() 
-        fdIn.close()       
+        rptLines    = fdIn.readlines()
+        fdIn.close()
         fvInfo['Base'] = 0
         for rptLine in rptLines:
-            match = re.match("^EFI_BASE_ADDRESS\s*=\s*(0x[a-fA-F0-9]+)", rptLine)
+            match = re.match(r"^EFI_BASE_ADDRESS\s*=\s*(0x[a-fA-F0-9]+)", rptLine)
             if match:
                 fvInfo['Base'] = int(match.group(1), 16)
                 break
@@ -157,10 +160,21 @@ class Symbols:
     #
     def createDicts (self, fvDir, fvNames):
         #
-        # If the fvDir is not a dirctory, then raise an exception
+        # If the fvDir is not a directory, then raise an exception
         #
         if not os.path.isdir(fvDir):
-            raise Exception ("'%s' is not a valid directory!" % FvDir)
+            raise Exception ("'%s' is not a valid directory!" % fvDir)
+
+        #
+        # if user provided fd name as a input, skip rest of the flow to
+        # patch fd directly
+        #
+        fdFile =  os.path.join(fvDir,fvNames + ".fd")
+        if os.path.exists(fdFile):
+            print("Tool identified Fd file as a input to patch '%s'" %fdFile)
+            self.fdFile = fdFile
+            self.fdSize = os.path.getsize(fdFile)
+            return 0
 
         #
         # If the Guid.xref is not existing in fvDir, then raise an exception
@@ -289,7 +303,7 @@ class Symbols:
     #
     def parseInfFile(self, infFile):
         #
-        # Get FV offset and search EFI_BASE_ADDRESS in the FD file 
+        # Get FV offset and search EFI_BASE_ADDRESS in the FD file
         # then assign the value of EFI_BASE_ADDRESS to fdBase
         #
         fvOffset    = self.getFvOffsetInFd(infFile[0:-4] + ".Fv")
@@ -298,13 +312,14 @@ class Symbols:
         self.fdBase = 0xFFFFFFFF
         while (rptLine != "" ):
             #EFI_BASE_ADDRESS = 0xFFFDF400
-            match = re.match("^EFI_BASE_ADDRESS\s*=\s*(0x[a-fA-F0-9]+)", rptLine)
+            match = re.match(r"^EFI_BASE_ADDRESS\s*=\s*(0x[a-fA-F0-9]+)", rptLine)
             if match is not None:
                 self.fdBase = int(match.group(1), 16) - fvOffset
+                break
             rptLine  = fdIn.readline()
         fdIn.close()
         if self.fdBase == 0xFFFFFFFF:
-            raise Exception("Could not find EFI_BASE_ADDRESS in INF file!" % fvFile)
+            raise Exception("Could not find EFI_BASE_ADDRESS in INF file!" % infFile)
         return 0
 
     #
@@ -325,7 +340,7 @@ class Symbols:
         fdIn     = open(fvTxtFile, "r")
         rptLine  = fdIn.readline()
         while (rptLine != "" ):
-            match = re.match("(0x[a-fA-F0-9]+)\s([0-9a-fA-F\-]+)", rptLine)
+            match = re.match(r"(0x[a-fA-F0-9]+)\s([0-9a-fA-F\-]+)", rptLine)
             if match is not None:
                 if match.group(2) in self.dictFfsOffset:
                     self.dictFfsOffset[fvName + ':' + match.group(2)] = "0x%08X" % (int(match.group(1), 16) + fvOffset)
@@ -358,17 +373,24 @@ class Symbols:
         foundModHdr = False
         while (rptLine != "" ):
             if rptLine[0] != ' ':
-                #DxeIpl (Fixed Flash Address, BaseAddress=0x00fffb4310, EntryPoint=0x00fffb4958)
-                #(GUID=86D70125-BAA3-4296-A62F-602BEBBB9081 .textbaseaddress=0x00fffb4398 .databaseaddress=0x00fffb4178)
-                match = re.match("([_a-zA-Z0-9\-]+)\s\(.+BaseAddress=(0x[0-9a-fA-F]+),\s+EntryPoint=(0x[0-9a-fA-F]+)\)", rptLine)
+                #DxeIpl (Fixed Flash Address, BaseAddress=0x00fffb4310, EntryPoint=0x00fffb4958,Type=PE)
+                match = re.match(r"([_a-zA-Z0-9\-]+)\s\(.+BaseAddress=(0x[0-9a-fA-F]+),\s+EntryPoint=(0x[0-9a-fA-F]+),\s*Type=\w+\)", rptLine)
+                if match is None:
+                    #DxeIpl (Fixed Flash Address, BaseAddress=0x00fffb4310, EntryPoint=0x00fffb4958)
+                    match = re.match(r"([_a-zA-Z0-9\-]+)\s\(.+BaseAddress=(0x[0-9a-fA-F]+),\s+EntryPoint=(0x[0-9a-fA-F]+)\)", rptLine)
                 if match is not None:
                     foundModHdr = True
                     modName = match.group(1)
                     if len(modName) == 36:
                        modName = self.dictGuidNameXref[modName.upper()]
                     self.dictModBase['%s:BASE'  % modName] = int (match.group(2), 16)
+
+                    # Support pseudo symbol for image base: _IMAGE_BASE_<moduleName>_
+                    self.dictVariable['_IMAGE_BASE_%s_' % modName] = int (match.group(2), 16)
+
                     self.dictModBase['%s:ENTRY' % modName] = int (match.group(3), 16)
-                match = re.match("\(GUID=([A-Z0-9\-]+)\s+\.textbaseaddress=(0x[0-9a-fA-F]+)\s+\.databaseaddress=(0x[0-9a-fA-F]+)\)", rptLine)
+                #(GUID=86D70125-BAA3-4296-A62F-602BEBBB9081 .textbaseaddress=0x00fffb4398 .databaseaddress=0x00fffb4178)
+                match = re.match(r"\(GUID=([A-Z0-9\-]+)\s+\.textbaseaddress=(0x[0-9a-fA-F]+)\s+\.databaseaddress=(0x[0-9a-fA-F]+)\)", rptLine)
                 if match is not None:
                     if foundModHdr:
                         foundModHdr = False
@@ -381,7 +403,7 @@ class Symbols:
             else:
                 #   0x00fff8016c    __ModuleEntryPoint
                 foundModHdr = False
-                match = re.match("^\s+(0x[a-z0-9]+)\s+([_a-zA-Z0-9]+)", rptLine)
+                match = re.match(r"^\s+(0x[a-z0-9]+)\s+([_a-zA-Z0-9]+)", rptLine)
                 if match is not None:
                     self.dictSymbolAddress["%s:%s"%(modName, match.group(2))] = match.group(1)
             rptLine  = fdIn.readline()
@@ -396,6 +418,7 @@ class Symbols:
     #
     #  retval      0           Parsed MOD MAP file successfully
     #  retval      1           There is no moduleEntryPoint in modSymbols
+    #  retval      2           There is no offset for moduleEntryPoint in modSymbols
     #
     def parseModMapFile(self, moduleName, mapFile):
         #
@@ -413,14 +436,14 @@ class Symbols:
         if reportLine.strip().find("Archive member included") != -1:
             #GCC
             #                0x0000000000001d55                IoRead8
-            patchMapFileMatchString = "\s+(0x[0-9a-fA-F]{16})\s+([^\s][^0x][_a-zA-Z0-9\-]+)\s"
+            patchMapFileMatchString = r"\s+(0x[0-9a-fA-F]{8,16})\s+([^\s][^0x][_a-zA-Z0-9\-]+)\s"
             matchKeyGroupIndex = 2
             matchSymbolGroupIndex  = 1
             prefix = '_'
         else:
             #MSFT
             #0003:00000190       _gComBase                  00007a50     SerialPo
-            patchMapFileMatchString =  "^\s[0-9a-fA-F]{4}:[0-9a-fA-F]{8}\s+(\w+)\s+([0-9a-fA-F]{8}\s+)"
+            patchMapFileMatchString =  r"^\s[0-9a-fA-F]{4}:[0-9a-fA-F]{8}\s+(\w+)\s+([0-9a-fA-F]{8,16}\s+)"
             matchKeyGroupIndex = 1
             matchSymbolGroupIndex  = 2
             prefix = ''
@@ -439,17 +462,23 @@ class Symbols:
                 if handleNext:
                     handleNext = False
                     pcdName = match.group(1)
-                    match   = re.match("\s+(0x[0-9a-fA-F]{16})\s+", reportLine)
+                    match   = re.match(r"\s+(0x[0-9a-fA-F]{16})\s+", reportLine)
                     if match is not None:
                         modSymbols[prefix + pcdName] = match.group(1)
                 else:
-                    match = re.match("^\s\.data\.(_gPcd_BinaryPatch[_a-zA-Z0-9\-]+)", reportLine)
+                    match = re.match(r"^\s\.data\.(_gPcd_BinaryPatch[_a-zA-Z0-9\-]+)", reportLine)
                     if match is not None:
                         handleNext = True
                         continue
 
         if not moduleEntryPoint in modSymbols:
-            return 1
+            if matchSymbolGroupIndex == 2:
+                if not '_ModuleEntryPoint' in modSymbols:
+                    return 1
+                else:
+                    moduleEntryPoint = "_ModuleEntryPoint"
+            else:
+                return 1
 
         modEntry = '%s:%s' % (moduleName,moduleEntryPoint)
         if not modEntry in self.dictSymbolAddress:
@@ -464,6 +493,7 @@ class Symbols:
             fullSym = "%s:%s" % (moduleName, symbol)
             if not fullSym in self.dictSymbolAddress:
                 self.dictSymbolAddress[fullSym] = "0x00%08x" % (baseOffset+ int(modSymbols[symbol], 16))
+
         return 0
 
     #
@@ -482,7 +512,7 @@ class Symbols:
         fdIn     = open(xrefFile, "r")
         rptLine  = fdIn.readline()
         while (rptLine != "" ):
-            match = re.match("([0-9a-fA-F\-]+)\s([_a-zA-Z0-9]+)", rptLine)
+            match = re.match(r"([0-9a-fA-F\-]+)\s([_a-zA-Z0-9]+)", rptLine)
             if match is not None:
                 self.dictGuidNameXref[match.group(1).upper()] = match.group(2)
             rptLine  = fdIn.readline()
@@ -492,7 +522,7 @@ class Symbols:
     #
     #  Get current character
     #
-    #  retval      elf.string[self.index]
+    #  retval      self.string[self.index]
     #  retval      ''                       Exception
     #
     def getCurr(self):
@@ -797,7 +827,7 @@ class Symbols:
     #  retval      ret
     #
     def getSymbols(self, value):
-        if self.dictSymbolAddress.has_key(value):
+        if value in self.dictSymbolAddress:
             # Module:Function
             ret = int (self.dictSymbolAddress[value], 16)
         else:
@@ -833,8 +863,10 @@ class Symbols:
 #
 #  Print out the usage
 #
-def usage():
-    print "Usage: \n\tPatchFv FvBuildDir [FvFileBaseNames:]FdFileBaseNameToPatch \"Offset, Value\""
+def Usage():
+    print ("PatchFv Version 0.60")
+    print ("Usage: \n\tPatchFv FvBuildDir [FvFileBaseNames:]FdFileBaseNameToPatch \"Offset, Value\"")
+    print ("\tPatchFv FdFileDir FdFileName \"Offset, Value\"")
 
 def main():
     #
@@ -853,7 +885,7 @@ def main():
     # If it fails to create dictionaries, then return an error.
     #
     if symTables.createDicts(sys.argv[1], sys.argv[2]) != 0:
-        print "ERROR: Failed to create symbol dictionary!!"
+        print ("ERROR: Failed to create symbol dictionary!!")
         return 2
 
     #
@@ -913,7 +945,7 @@ def main():
                 if ret:
                     raise Exception ("Patch failed for offset 0x%08X" % offset)
                 else:
-                    print  "Patched offset 0x%08X:[%08X] with value 0x%08X  # %s" % (offset, oldvalue, value, comment)
+                    print ("Patched offset 0x%08X:[%08X] with value 0x%08X  # %s" % (offset, oldvalue, value, comment))
 
             elif command == "COPY":
                 #
@@ -934,13 +966,13 @@ def main():
                 if ret:
                     raise Exception ("Copy failed from offset 0x%08X to offset 0x%08X!" % (src, dest))
                 else :
-                    print  "Copied %d bytes from offset 0x%08X ~ offset 0x%08X  # %s" % (clen, src, dest, comment)
+                    print ("Copied %d bytes from offset 0x%08X ~ offset 0x%08X  # %s" % (clen, src, dest, comment))
             else:
                 raise Exception ("Unknown command %s!" % command)
         return 0
 
-    except Exception as (ex):
-        print "ERROR: %s" % ex
+    except Exception as ex:
+        print ("ERROR: %s" % ex)
         return 1
 
 if __name__ == '__main__':

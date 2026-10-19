@@ -1,14 +1,8 @@
 /** @file
   PCI Rom supporting funtions implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -24,7 +18,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
                        On output with a return code of EFI_BUFFER_TOO_SMALL,
                        the size of Buffer required to retrieve the requested file.
   @param Buffer        The memory buffer to transfer the file to. If Buffer is NULL,
-                       then no the size of the requested file is returned in BufferSize.
+                       then the size of the requested file is returned in BufferSize.
 
   @retval EFI_SUCCESS           The file was loaded.
   @retval EFI_INVALID_PARAMETER FilePath is not a valid device path, or
@@ -36,26 +30,26 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 EFI_STATUS
 LocalLoadFile2 (
-  IN PCI_IO_DEVICE            *PciIoDevice,
-  IN EFI_DEVICE_PATH_PROTOCOL *FilePath,
-  IN OUT UINTN                *BufferSize,
-  IN VOID                     *Buffer      OPTIONAL
+  IN PCI_IO_DEVICE             *PciIoDevice,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer      OPTIONAL
   )
 {
-  EFI_STATUS                                Status;
-  MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH   *EfiOpRomImageNode;
-  EFI_PCI_EXPANSION_ROM_HEADER              *EfiRomHeader;
-  PCI_DATA_STRUCTURE                        *Pcir;
-  UINT32                                    ImageSize;
-  UINT8                                     *ImageBuffer;
-  UINT32                                    ImageLength;
-  UINT32                                    DestinationSize;
-  UINT32                                    ScratchSize;
-  VOID                                      *Scratch;
-  EFI_DECOMPRESS_PROTOCOL                   *Decompress;
-  UINT32                                    InitializationSize;
+  EFI_STATUS                               Status;
+  MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH  *EfiOpRomImageNode;
+  EFI_PCI_EXPANSION_ROM_HEADER             *EfiRomHeader;
+  PCI_DATA_STRUCTURE                       *Pcir;
+  UINT32                                   ImageSize;
+  UINT8                                    *ImageBuffer;
+  UINT32                                   ImageLength;
+  UINT32                                   DestinationSize;
+  UINT32                                   ScratchSize;
+  VOID                                     *Scratch;
+  EFI_DECOMPRESS_PROTOCOL                  *Decompress;
+  UINT32                                   InitializationSize;
 
-  EfiOpRomImageNode = (MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH *) FilePath;
+  EfiOpRomImageNode = (MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH *)FilePath;
   if ((EfiOpRomImageNode == NULL) ||
       (DevicePathType (FilePath) != MEDIA_DEVICE_PATH) ||
       (DevicePathSubType (FilePath) != MEDIA_RELATIVE_OFFSET_RANGE_DP) ||
@@ -64,19 +58,19 @@ LocalLoadFile2 (
       (EfiOpRomImageNode->StartingOffset > EfiOpRomImageNode->EndingOffset) ||
       (EfiOpRomImageNode->EndingOffset >= PciIoDevice->RomSize) ||
       (BufferSize == NULL)
-      ) {
+      )
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  EfiRomHeader = (EFI_PCI_EXPANSION_ROM_HEADER *) (
-      (UINT8 *) PciIoDevice->PciIo.RomImage + EfiOpRomImageNode->StartingOffset
-      );
+  EfiRomHeader = (EFI_PCI_EXPANSION_ROM_HEADER *)(
+                                                  (UINT8 *)PciIoDevice->PciIo.RomImage + EfiOpRomImageNode->StartingOffset
+                                                  );
   if (EfiRomHeader->Signature != PCI_EXPANSION_ROM_HEADER_SIGNATURE) {
     return EFI_NOT_FOUND;
   }
 
-
-  Pcir = (PCI_DATA_STRUCTURE *) ((UINT8 *) EfiRomHeader + EfiRomHeader->PcirOffset);
+  Pcir = (PCI_DATA_STRUCTURE *)((UINT8 *)EfiRomHeader + EfiRomHeader->PcirOffset);
   ASSERT (Pcir->Signature == PCI_DATA_STRUCTURE_SIGNATURE);
 
   if ((Pcir->CodeType == PCI_CODE_TYPE_EFI_IMAGE) &&
@@ -84,22 +78,22 @@ LocalLoadFile2 (
       ((EfiRomHeader->EfiSubsystem == EFI_IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER) ||
        (EfiRomHeader->EfiSubsystem == EFI_IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER)) &&
       (EfiRomHeader->CompressionType <= EFI_PCI_EXPANSION_ROM_HEADER_COMPRESSED)
-       ) {
-
-    ImageSize = Pcir->ImageLength * 512;
-    InitializationSize = (UINT32) EfiRomHeader->InitializationSize * 512;
-    if (InitializationSize > ImageSize || EfiRomHeader->EfiImageHeaderOffset >=  InitializationSize) {
+      )
+  {
+    ImageSize          = Pcir->ImageLength * 512;
+    InitializationSize = (UINT32)EfiRomHeader->InitializationSize * 512;
+    if ((InitializationSize > ImageSize) || (EfiRomHeader->EfiImageHeaderOffset >=  InitializationSize)) {
       return EFI_NOT_FOUND;
     }
 
-    ImageBuffer             = (UINT8 *) EfiRomHeader + EfiRomHeader->EfiImageHeaderOffset;
-    ImageLength             = InitializationSize - EfiRomHeader->EfiImageHeaderOffset;
+    ImageBuffer = (UINT8 *)EfiRomHeader + EfiRomHeader->EfiImageHeaderOffset;
+    ImageLength = InitializationSize - EfiRomHeader->EfiImageHeaderOffset;
 
     if (EfiRomHeader->CompressionType != EFI_PCI_EXPANSION_ROM_HEADER_COMPRESSED) {
       //
       // Uncompressed: Copy the EFI Image directly to user's buffer
       //
-      if (Buffer == NULL || *BufferSize < ImageLength) {
+      if ((Buffer == NULL) || (*BufferSize < ImageLength)) {
         *BufferSize = ImageLength;
         return EFI_BUFFER_TOO_SMALL;
       }
@@ -107,15 +101,15 @@ LocalLoadFile2 (
       *BufferSize = ImageLength;
       CopyMem (Buffer, ImageBuffer, ImageLength);
       return EFI_SUCCESS;
-
     } else {
       //
       // Compressed: Uncompress before copying
       //
-      Status = gBS->LocateProtocol (&gEfiDecompressProtocolGuid, NULL, (VOID **) &Decompress);
+      Status = gBS->LocateProtocol (&gEfiDecompressProtocolGuid, NULL, (VOID **)&Decompress);
       if (EFI_ERROR (Status)) {
         return EFI_DEVICE_ERROR;
       }
+
       Status = Decompress->GetInfo (
                              Decompress,
                              ImageBuffer,
@@ -127,13 +121,13 @@ LocalLoadFile2 (
         return EFI_DEVICE_ERROR;
       }
 
-      if (Buffer == NULL || *BufferSize < DestinationSize) {
+      if ((Buffer == NULL) || (*BufferSize < DestinationSize)) {
         *BufferSize = DestinationSize;
         return EFI_BUFFER_TOO_SMALL;
       }
 
       *BufferSize = DestinationSize;
-      Scratch = AllocatePool (ScratchSize);
+      Scratch     = AllocatePool (ScratchSize);
       if (Scratch == NULL) {
         return EFI_DEVICE_ERROR;
       }
@@ -152,6 +146,7 @@ LocalLoadFile2 (
       if (EFI_ERROR (Status)) {
         return EFI_DEVICE_ERROR;
       }
+
       return EFI_SUCCESS;
     }
   }
@@ -167,7 +162,7 @@ LocalLoadFile2 (
 **/
 VOID
 InitializePciLoadFile2 (
-  IN PCI_IO_DEVICE       *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   )
 {
   PciIoDevice->LoadFile2.LoadFile = LoadFile2;
@@ -184,7 +179,7 @@ InitializePciLoadFile2 (
                      On output with a return code of EFI_BUFFER_TOO_SMALL,
                      the size of Buffer required to retrieve the requested file.
   @param Buffer      The memory buffer to transfer the file to. If Buffer is NULL,
-                     then no the size of the requested file is returned in BufferSize.
+                     then the size of the requested file is returned in BufferSize.
 
   @retval EFI_SUCCESS           The file was loaded.
   @retval EFI_UNSUPPORTED       BootPolicy is TRUE.
@@ -199,18 +194,19 @@ InitializePciLoadFile2 (
 EFI_STATUS
 EFIAPI
 LoadFile2 (
-  IN EFI_LOAD_FILE2_PROTOCOL  *This,
-  IN EFI_DEVICE_PATH_PROTOCOL *FilePath,
-  IN BOOLEAN                  BootPolicy,
-  IN OUT UINTN                *BufferSize,
-  IN VOID                     *Buffer      OPTIONAL
+  IN EFI_LOAD_FILE2_PROTOCOL   *This,
+  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
+  IN BOOLEAN                   BootPolicy,
+  IN OUT UINTN                 *BufferSize,
+  IN VOID                      *Buffer      OPTIONAL
   )
 {
-  PCI_IO_DEVICE                             *PciIoDevice;
+  PCI_IO_DEVICE  *PciIoDevice;
 
   if (BootPolicy) {
     return EFI_UNSUPPORTED;
   }
+
   PciIoDevice = PCI_IO_DEVICE_FROM_LOAD_FILE2_THIS (This);
 
   return LocalLoadFile2 (
@@ -233,21 +229,21 @@ LoadFile2 (
 **/
 EFI_STATUS
 GetOpRomInfo (
-  IN OUT PCI_IO_DEVICE    *PciIoDevice
+  IN OUT PCI_IO_DEVICE  *PciIoDevice
   )
 {
-  UINT8                           RomBarIndex;
-  UINT32                          AllOnes;
-  UINT64                          Address;
-  EFI_STATUS                      Status;
-  UINT8                           Bus;
-  UINT8                           Device;
-  UINT8                           Function;
-  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL *PciRootBridgeIo;
+  UINT8                            RomBarIndex;
+  UINT32                           AllOnes;
+  UINT64                           Address;
+  EFI_STATUS                       Status;
+  UINT8                            Bus;
+  UINT8                            Device;
+  UINT8                            Function;
+  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL  *PciRootBridgeIo;
 
-  Bus             = PciIoDevice->BusNumber;
-  Device          = PciIoDevice->DeviceNumber;
-  Function        = PciIoDevice->FunctionNumber;
+  Bus      = PciIoDevice->BusNumber;
+  Device   = PciIoDevice->DeviceNumber;
+  Function = PciIoDevice->FunctionNumber;
 
   PciRootBridgeIo = PciIoDevice->PciRootBridgeIo;
 
@@ -266,6 +262,7 @@ GetOpRomInfo (
     //
     RomBarIndex = PCI_BRIDGE_ROMBAR;
   }
+
   //
   // The bit0 is 0 to prevent the enabling of the Rom address decoder
   //
@@ -286,7 +283,7 @@ GetOpRomInfo (
   //
   // Read back
   //
-  Status = PciRootBridgeIo->Pci.Read(
+  Status = PciRootBridgeIo->Pci.Read (
                                   PciRootBridgeIo,
                                   EfiPciWidthUint32,
                                   Address,
@@ -305,7 +302,7 @@ GetOpRomInfo (
     return EFI_NOT_FOUND;
   }
 
-  PciIoDevice->RomSize = (UINT64) ((~AllOnes) + 1);
+  PciIoDevice->RomSize = (~AllOnes) + 1;
   return EFI_SUCCESS;
 }
 
@@ -321,8 +318,8 @@ GetOpRomInfo (
 **/
 BOOLEAN
 ContainEfiImage (
-  IN VOID            *RomImage,
-  IN UINT64          RomSize
+  IN VOID    *RomImage,
+  IN UINT64  RomSize
   )
 {
   PCI_EXPANSION_ROM_HEADER  *RomHeader;
@@ -337,20 +334,21 @@ ContainEfiImage (
 
   do {
     if (RomHeader->Signature != PCI_EXPANSION_ROM_HEADER_SIGNATURE) {
-      RomHeader = (PCI_EXPANSION_ROM_HEADER *) ((UINT8 *) RomHeader + 512);
+      RomHeader = (PCI_EXPANSION_ROM_HEADER *)((UINT8 *)RomHeader + 512);
       continue;
     }
 
     //
-    // The PCI Data Structure must be DWORD aligned. 
+    // The PCI Data Structure must be DWORD aligned.
     //
-    if (RomHeader->PcirOffset == 0 ||
-        (RomHeader->PcirOffset & 3) != 0 ||
-        (UINT8 *) RomHeader + RomHeader->PcirOffset + sizeof (PCI_DATA_STRUCTURE) > (UINT8 *) RomImage + RomSize) {
+    if ((RomHeader->PcirOffset == 0) ||
+        ((RomHeader->PcirOffset & 3) != 0) ||
+        ((UINT8 *)RomHeader + RomHeader->PcirOffset + sizeof (PCI_DATA_STRUCTURE) > (UINT8 *)RomImage + RomSize))
+    {
       break;
     }
 
-    RomPcir = (PCI_DATA_STRUCTURE *) ((UINT8 *) RomHeader + RomHeader->PcirOffset);
+    RomPcir = (PCI_DATA_STRUCTURE *)((UINT8 *)RomHeader + RomHeader->PcirOffset);
     if (RomPcir->Signature != PCI_DATA_STRUCTURE_SIGNATURE) {
       break;
     }
@@ -360,8 +358,8 @@ ContainEfiImage (
     }
 
     Indicator = RomPcir->Indicator;
-    RomHeader = (PCI_EXPANSION_ROM_HEADER *) ((UINT8 *) RomHeader + RomPcir->ImageLength * 512);
-  } while (((UINT8 *) RomHeader < (UINT8 *) RomImage + RomSize) && ((Indicator & 0x80) == 0x00));
+    RomHeader = (PCI_EXPANSION_ROM_HEADER *)((UINT8 *)RomHeader + RomPcir->ImageLength * 512);
+  } while (((UINT8 *)RomHeader < (UINT8 *)RomImage + RomSize) && ((Indicator & 0x80) == 0x00));
 
   return FALSE;
 }
@@ -373,13 +371,13 @@ ContainEfiImage (
   @param RomBase   Base address of Option Rom.
 
   @retval EFI_OUT_OF_RESOURCES No enough memory to hold image.
-  @retval EFI_SUCESS           Successfully loaded Option Rom.
+  @retval EFI_SUCCESS          Successfully loaded Option Rom.
 
 **/
 EFI_STATUS
 LoadOpRomImage (
-  IN PCI_IO_DEVICE   *PciDevice,
-  IN UINT64          RomBase
+  IN PCI_IO_DEVICE  *PciDevice,
+  IN UINT64         RomBase
   )
 {
   UINT8                     RomBarIndex;
@@ -398,12 +396,12 @@ LoadOpRomImage (
   UINT8                     *RomInMemory;
   UINT8                     CodeType;
 
-  RomSize       = PciDevice->RomSize;
+  RomSize = PciDevice->RomSize;
 
-  Indicator     = 0;
-  RomImageSize  = 0;
-  RomInMemory   = NULL;
-  CodeType      = 0xFF;
+  Indicator    = 0;
+  RomImageSize = 0;
+  RomInMemory  = NULL;
+  CodeType     = 0xFF;
 
   //
   // Get the RomBarIndex
@@ -423,6 +421,7 @@ LoadOpRomImage (
     //
     RomBarIndex = PCI_BRIDGE_ROMBAR;
   }
+
   //
   // Allocate memory for Rom header and PCIR
   //
@@ -437,16 +436,16 @@ LoadOpRomImage (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  RomBar = (UINT32) RomBase;
+  RomBar = (UINT32)RomBase;
 
   //
   // Enable RomBar
   //
   RomDecode (PciDevice, RomBarIndex, RomBar, TRUE);
 
-  RomBarOffset  = RomBar;
-  RetStatus     = EFI_NOT_FOUND;
-  FirstCheck    = TRUE;
+  RomBarOffset      = RomBar;
+  RetStatus         = EFI_NOT_FOUND;
+  FirstCheck        = TRUE;
   LegacyImageLength = 0;
 
   do {
@@ -455,7 +454,7 @@ LoadOpRomImage (
                                       EfiPciWidthUint8,
                                       RomBarOffset,
                                       sizeof (PCI_EXPANSION_ROM_HEADER),
-                                      (UINT8 *) RomHeader
+                                      (UINT8 *)RomHeader
                                       );
 
     if (RomHeader->Signature != PCI_EXPANSION_ROM_HEADER_SIGNATURE) {
@@ -468,23 +467,25 @@ LoadOpRomImage (
       }
     }
 
-    FirstCheck  = FALSE;
-    OffsetPcir  = RomHeader->PcirOffset;
+    FirstCheck = FALSE;
+    OffsetPcir = RomHeader->PcirOffset;
     //
-    // If the pointer to the PCI Data Structure is invalid, no further images can be located. 
-    // The PCI Data Structure must be DWORD aligned. 
+    // If the pointer to the PCI Data Structure is invalid, no further images can be located.
+    // The PCI Data Structure must be DWORD aligned.
     //
-    if (OffsetPcir == 0 ||
-        (OffsetPcir & 3) != 0 ||
-        RomImageSize + OffsetPcir + sizeof (PCI_DATA_STRUCTURE) > RomSize) {
+    if ((OffsetPcir == 0) ||
+        ((OffsetPcir & 3) != 0) ||
+        (RomImageSize + OffsetPcir + sizeof (PCI_DATA_STRUCTURE) > RomSize))
+    {
       break;
     }
+
     PciDevice->PciRootBridgeIo->Mem.Read (
                                       PciDevice->PciRootBridgeIo,
                                       EfiPciWidthUint8,
                                       RomBarOffset + OffsetPcir,
                                       sizeof (PCI_DATA_STRUCTURE),
-                                      (UINT8 *) RomPcir
+                                      (UINT8 *)RomPcir
                                       );
     //
     // If a valid signature is not present in the PCI Data Structure, no further images can be located.
@@ -492,29 +493,32 @@ LoadOpRomImage (
     if (RomPcir->Signature != PCI_DATA_STRUCTURE_SIGNATURE) {
       break;
     }
+
     if (RomImageSize + RomPcir->ImageLength * 512 > RomSize) {
       break;
     }
+
     if (RomPcir->CodeType == PCI_CODE_TYPE_PCAT_IMAGE) {
-      CodeType = PCI_CODE_TYPE_PCAT_IMAGE;
+      CodeType          = PCI_CODE_TYPE_PCAT_IMAGE;
       LegacyImageLength = ((UINT32)((EFI_LEGACY_EXPANSION_ROM_HEADER *)RomHeader)->Size512) * 512;
     }
-    Indicator     = RomPcir->Indicator;
-    RomImageSize  = RomImageSize + RomPcir->ImageLength * 512;
-    RomBarOffset  = RomBarOffset + RomPcir->ImageLength * 512;
-  } while (((Indicator & 0x80) == 0x00) && ((RomBarOffset - RomBar) < RomSize));
+
+    Indicator    = RomPcir->Indicator;
+    RomImageSize = RomImageSize + RomPcir->ImageLength * 512;
+    RomBarOffset = RomBarOffset + RomPcir->ImageLength * 512;
+  } while (((Indicator & 0x80) == 0x00) && ((RomBarOffset - RomBar) < RomSize) && (RomImageSize > 0));
 
   //
   // Some Legacy Cards do not report the correct ImageLength so used the maximum
   // of the legacy length and the PCIR Image Length
   //
-  if (CodeType == PCI_CODE_TYPE_PCAT_IMAGE) {
+  if ((RomImageSize > 0) && (CodeType == PCI_CODE_TYPE_PCAT_IMAGE)) {
     RomImageSize = MAX (RomImageSize, LegacyImageLength);
   }
 
   if (RomImageSize > 0) {
     RetStatus = EFI_SUCCESS;
-    Image     = AllocatePool ((UINT32) RomImageSize);
+    Image     = AllocatePool ((UINT32)RomImageSize);
     if (Image == NULL) {
       RomDecode (PciDevice, RomBarIndex, RomBar, FALSE);
       FreePool (RomHeader);
@@ -527,9 +531,9 @@ LoadOpRomImage (
     //
     PciDevice->PciRootBridgeIo->Mem.Read (
                                       PciDevice->PciRootBridgeIo,
-                                      EfiPciWidthUint8,
+                                      EfiPciWidthUint32,
                                       RomBar,
-                                      (UINT32) RomImageSize,
+                                      (UINT32)RomImageSize/sizeof (UINT32),
                                       Image
                                       );
     RomInMemory = Image;
@@ -551,7 +555,7 @@ LoadOpRomImage (
     PciDevice->BusNumber,
     PciDevice->DeviceNumber,
     PciDevice->FunctionNumber,
-    (UINT64) (UINTN) PciDevice->PciIo.RomImage,
+    PciDevice->PciIo.RomImage,
     PciDevice->PciIo.RomSize
     );
 
@@ -576,31 +580,17 @@ LoadOpRomImage (
 **/
 VOID
 RomDecode (
-  IN PCI_IO_DEVICE   *PciDevice,
-  IN UINT8           RomBarIndex,
-  IN UINT32          RomBar,
-  IN BOOLEAN         Enable
+  IN PCI_IO_DEVICE  *PciDevice,
+  IN UINT8          RomBarIndex,
+  IN UINT32         RomBar,
+  IN BOOLEAN        Enable
   )
 {
-  UINT32              Value32;
-  UINT32              Offset;
-  UINT32              OffsetMax;
-  EFI_PCI_IO_PROTOCOL *PciIo;
+  UINT32               Value32;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
 
   PciIo = &PciDevice->PciIo;
   if (Enable) {
-    //
-    // Clear all bars
-    //
-    OffsetMax = 0x24;
-    if (IS_PCI_BRIDGE(&PciDevice->Pci)) {
-      OffsetMax = 0x14;
-    }
-
-    for (Offset = 0x10; Offset <= OffsetMax; Offset += sizeof (UINT32)) {
-      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint32, Offset, 1, &gAllZero);
-    }
-
     //
     // set the Rom base address: now is hardcode
     // enable its decoder
@@ -608,7 +598,7 @@ RomDecode (
     Value32 = RomBar | 0x1;
     PciIo->Pci.Write (
                  PciIo,
-                 (EFI_PCI_IO_PROTOCOL_WIDTH) EfiPciWidthUint32,
+                 EfiPciIoWidthUint32,
                  RomBarIndex,
                  1,
                  &Value32
@@ -617,24 +607,22 @@ RomDecode (
     //
     // Programe all upstream bridge
     //
-    ProgrameUpstreamBridgeForRom(PciDevice, RomBar, TRUE);
+    ProgramUpstreamBridgeForRom (PciDevice, RomBar, TRUE);
 
     //
     // Setting the memory space bit in the function's command register
     //
-    PCI_ENABLE_COMMAND_REGISTER(PciDevice, EFI_PCI_COMMAND_MEMORY_SPACE);
-
+    PCI_ENABLE_COMMAND_REGISTER (PciDevice, EFI_PCI_COMMAND_MEMORY_SPACE);
   } else {
-
     //
     // disable command register decode to memory
     //
-    PCI_DISABLE_COMMAND_REGISTER(PciDevice, EFI_PCI_COMMAND_MEMORY_SPACE);
+    PCI_DISABLE_COMMAND_REGISTER (PciDevice, EFI_PCI_COMMAND_MEMORY_SPACE);
 
     //
     // Destroy the programmed bar in all the upstream bridge.
     //
-    ProgrameUpstreamBridgeForRom(PciDevice, RomBar, FALSE);
+    ProgramUpstreamBridgeForRom (PciDevice, RomBar, FALSE);
 
     //
     // disable rom decode
@@ -642,12 +630,11 @@ RomDecode (
     Value32 = 0xFFFFFFFE;
     PciIo->Pci.Write (
                  PciIo,
-                 (EFI_PCI_IO_PROTOCOL_WIDTH) EfiPciWidthUint32,
+                 EfiPciIoWidthUint32,
                  RomBarIndex,
                  1,
                  &Value32
                  );
-
   }
 }
 
@@ -655,6 +642,7 @@ RomDecode (
   Load and start the Option Rom image.
 
   @param PciDevice       Pci device instance.
+  @param NativeOnly      Whether to consider only the native image.
 
   @retval EFI_SUCCESS    Successfully loaded and started PCI Option Rom image.
   @retval EFI_NOT_FOUND  Failed to process PCI Option Rom image.
@@ -662,7 +650,8 @@ RomDecode (
 **/
 EFI_STATUS
 ProcessOpRomImage (
-  IN  PCI_IO_DEVICE   *PciDevice
+  IN  PCI_IO_DEVICE  *PciDevice,
+  IN  BOOLEAN        NativeOnly
   )
 {
   UINT8                                    Indicator;
@@ -684,26 +673,27 @@ ProcessOpRomImage (
   //
   // Get the Address of the Option Rom image
   //
-  RomBar        = PciDevice->PciIo.RomImage;
-  RomBarOffset  = (UINT8 *) RomBar;
-  RetStatus     = EFI_NOT_FOUND;
+  RomBar       = PciDevice->PciIo.RomImage;
+  RomBarOffset = (UINT8 *)RomBar;
+  RetStatus    = EFI_NOT_FOUND;
 
   if (RomBar == NULL) {
     return RetStatus;
   }
-  ASSERT (((EFI_PCI_EXPANSION_ROM_HEADER *) RomBarOffset)->Signature == PCI_EXPANSION_ROM_HEADER_SIGNATURE);
+
+  ASSERT (((EFI_PCI_EXPANSION_ROM_HEADER *)RomBarOffset)->Signature == PCI_EXPANSION_ROM_HEADER_SIGNATURE);
 
   do {
-    EfiRomHeader = (EFI_PCI_EXPANSION_ROM_HEADER *) RomBarOffset;
+    EfiRomHeader = (EFI_PCI_EXPANSION_ROM_HEADER *)RomBarOffset;
     if (EfiRomHeader->Signature != PCI_EXPANSION_ROM_HEADER_SIGNATURE) {
       RomBarOffset += 512;
       continue;
     }
 
-    Pcir        = (PCI_DATA_STRUCTURE *) (RomBarOffset + EfiRomHeader->PcirOffset);
+    Pcir = (PCI_DATA_STRUCTURE *)(RomBarOffset + EfiRomHeader->PcirOffset);
     ASSERT (Pcir->Signature == PCI_DATA_STRUCTURE_SIGNATURE);
-    ImageSize   = (UINT32) (Pcir->ImageLength * 512);
-    Indicator   = Pcir->Indicator;
+    ImageSize = (UINT32)(Pcir->ImageLength * 512);
+    Indicator = Pcir->Indicator;
 
     //
     // Skip the image if it is not an EFI PCI Option ROM image
@@ -713,9 +703,10 @@ ProcessOpRomImage (
     }
 
     //
-    // Skip the EFI PCI Option ROM image if its machine type is not supported
+    // Skip the EFI PCI Option ROM image if it's machine type is not supported
+    // and the native image is only considered.
     //
-    if (!EFI_IMAGE_MACHINE_TYPE_SUPPORTED (EfiRomHeader->EfiMachineType)) {
+    if (EFI_IMAGE_MACHINE_TYPE_SUPPORTED (EfiRomHeader->EfiMachineType) ^ (NativeOnly == TRUE)) {
       goto NextImage;
     }
 
@@ -729,14 +720,16 @@ ProcessOpRomImage (
     //
     // Create Pci Option Rom Image device path header
     //
-    EfiOpRomImageNode.Header.Type     = MEDIA_DEVICE_PATH;
-    EfiOpRomImageNode.Header.SubType  = MEDIA_RELATIVE_OFFSET_RANGE_DP;
+    EfiOpRomImageNode.Header.Type    = MEDIA_DEVICE_PATH;
+    EfiOpRomImageNode.Header.SubType = MEDIA_RELATIVE_OFFSET_RANGE_DP;
     SetDevicePathNodeLength (&EfiOpRomImageNode.Header, sizeof (EfiOpRomImageNode));
-    EfiOpRomImageNode.StartingOffset  = (UINTN) RomBarOffset - (UINTN) RomBar;
-    EfiOpRomImageNode.EndingOffset    = (UINTN) RomBarOffset + ImageSize - 1 - (UINTN) RomBar;
+    EfiOpRomImageNode.StartingOffset = (UINTN)RomBarOffset - (UINTN)RomBar;
+    EfiOpRomImageNode.EndingOffset   = (UINTN)RomBarOffset + ImageSize - 1 - (UINTN)RomBar;
 
     PciOptionRomImageDevicePath = AppendDevicePathNode (PciDevice->DevicePath, &EfiOpRomImageNode.Header);
-    ASSERT (PciOptionRomImageDevicePath != NULL);
+    if (PciOptionRomImageDevicePath == NULL) {
+      return EFI_NOT_FOUND;
+    }
 
     //
     // load image and start image
@@ -753,31 +746,37 @@ ProcessOpRomImage (
                     BufferSize,
                     &ImageHandle
                     );
-
-    FreePool (PciOptionRomImageDevicePath);
-
-    if (!EFI_ERROR (Status)) {
+    if (EFI_ERROR (Status)) {
+      //
+      // Record the Option ROM Image device path when LoadImage fails.
+      // PciOverride.GetDriver() will try to look for the Image Handle using the device path later.
+      //
+      AddDriver (PciDevice, NULL, PciOptionRomImageDevicePath);
+    } else {
       Status = gBS->StartImage (ImageHandle, NULL, NULL);
       if (!EFI_ERROR (Status)) {
-        AddDriver (PciDevice, ImageHandle);
+        //
+        // Record the Option ROM Image Handle
+        //
+        AddDriver (PciDevice, ImageHandle, NULL);
         PciRomAddImageMapping (
           ImageHandle,
           PciDevice->PciRootBridgeIo->SegmentNumber,
           PciDevice->BusNumber,
           PciDevice->DeviceNumber,
           PciDevice->FunctionNumber,
-          (UINT64) (UINTN) PciDevice->PciIo.RomImage,
+          PciDevice->PciIo.RomImage,
           PciDevice->PciIo.RomSize
           );
         RetStatus = EFI_SUCCESS;
       }
     }
 
+    FreePool (PciOptionRomImageDevicePath);
+
 NextImage:
     RomBarOffset += ImageSize;
-
-  } while (((Indicator & 0x80) == 0x00) && ((UINTN) (RomBarOffset - (UINT8 *) RomBar) < PciDevice->RomSize));
+  } while (((Indicator & 0x80) == 0x00) && (((UINTN)RomBarOffset - (UINTN)RomBar) < PciDevice->RomSize));
 
   return RetStatus;
 }
-

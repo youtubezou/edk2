@@ -1,19 +1,12 @@
 /** @file
   Provides a service to retrieve the PE/COFF entry point from a PE/COFF image.
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __PE_COFF_GET_ENTRY_POINT_LIB_H__
-#define __PE_COFF_GET_ENTRY_POINT_LIB_H__
+#pragma once
 
 /**
   Retrieves and returns a pointer to the entry point to a PE/COFF image that has been loaded
@@ -59,7 +52,7 @@ PeCoffLoaderGetMachineType (
 
 /**
   Returns a pointer to the PDB file name for a PE/COFF image that has been
-  loaded into system memory with the PE/COFF Loader Library functions. 
+  loaded into system memory with the PE/COFF Loader Library functions.
 
   Returns the PDB file name for the PE/COFF image specified by Pe32Data.  If
   the PE/COFF image specified by Pe32Data is not a valid, then NULL is
@@ -82,7 +75,6 @@ PeCoffLoaderGetPdbPointer (
   IN VOID  *Pe32Data
   );
 
-
 /**
   Returns the size of the PE/COFF headers
 
@@ -98,7 +90,23 @@ PeCoffLoaderGetPdbPointer (
 UINT32
 EFIAPI
 PeCoffGetSizeOfHeaders (
-  IN VOID     *Pe32Data
+  IN VOID  *Pe32Data
   );
 
-#endif
+/**
+  Returns PE/COFF image base specified by the address in this PE/COFF image.
+
+  On DEBUG build, searches the PE/COFF image base forward the address in this
+  PE/COFF image and returns it.
+
+  @param  Address    Address located in one PE/COFF image.
+
+  @retval 0          RELEASE build or cannot find the PE/COFF image base.
+  @retval others     PE/COFF image base found.
+
+**/
+UINTN
+EFIAPI
+PeCoffSearchImageBase (
+  IN UINTN  Address
+  );

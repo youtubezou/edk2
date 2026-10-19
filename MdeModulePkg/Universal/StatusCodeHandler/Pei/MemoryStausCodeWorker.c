@@ -1,14 +1,8 @@
 /** @file
   PEI memory status code worker.
 
-  Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -28,7 +22,7 @@ MemoryStatusCodeInitializeWorker (
   //
   // Create memory status code GUID'ed HOB.
   //
-  MEMORY_STATUSCODE_PACKET_HEADER *PacketHeader;
+  MEMORY_STATUSCODE_PACKET_HEADER  *PacketHeader;
 
   //
   // Build GUID'ed HOB with PCD defined size.
@@ -45,7 +39,6 @@ MemoryStatusCodeInitializeWorker (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Report status code into GUID'ed HOB.
@@ -76,28 +69,27 @@ MemoryStatusCodeInitializeWorker (
 EFI_STATUS
 EFIAPI
 MemoryStatusCodeReportWorker (
-  IN CONST  EFI_PEI_SERVICES    **PeiServices,
-  IN EFI_STATUS_CODE_TYPE       CodeType,
-  IN EFI_STATUS_CODE_VALUE      Value,
-  IN UINT32                     Instance,
-  IN CONST EFI_GUID             *CallerId,
-  IN CONST EFI_STATUS_CODE_DATA *Data OPTIONAL
+  IN CONST  EFI_PEI_SERVICES     **PeiServices,
+  IN EFI_STATUS_CODE_TYPE        CodeType,
+  IN EFI_STATUS_CODE_VALUE       Value,
+  IN UINT32                      Instance,
+  IN CONST EFI_GUID              *CallerId,
+  IN CONST EFI_STATUS_CODE_DATA  *Data OPTIONAL
   )
 {
-
-  EFI_PEI_HOB_POINTERS              Hob;
-  MEMORY_STATUSCODE_PACKET_HEADER   *PacketHeader;
-  MEMORY_STATUSCODE_RECORD          *Record;
+  EFI_PEI_HOB_POINTERS             Hob;
+  MEMORY_STATUSCODE_PACKET_HEADER  *PacketHeader;
+  MEMORY_STATUSCODE_RECORD         *Record;
 
   //
-  // Find GUID'ed HOBs to locate current record buffer. 
+  // Find GUID'ed HOBs to locate current record buffer.
   //
   Hob.Raw = GetFirstGuidHob (&gMemoryStatusCodeRecordGuid);
   ASSERT (Hob.Raw != NULL);
 
-  PacketHeader = (MEMORY_STATUSCODE_PACKET_HEADER *) GET_GUID_HOB_DATA (Hob.Guid);
-  Record = (MEMORY_STATUSCODE_RECORD *) (PacketHeader + 1);
-  Record = &Record[PacketHeader->RecordIndex++];
+  PacketHeader = (MEMORY_STATUSCODE_PACKET_HEADER *)GET_GUID_HOB_DATA (Hob.Guid);
+  Record       = (MEMORY_STATUSCODE_RECORD *)(PacketHeader + 1);
+  Record       = &Record[PacketHeader->RecordIndex++];
 
   //
   // Save status code.
@@ -119,9 +111,8 @@ MemoryStatusCodeReportWorker (
     // Wrap around record index.
     //
     PacketHeader->RecordIndex = 0;
-    PacketHeader->PacketIndex ++;
+    PacketHeader->PacketIndex++;
   }
 
   return EFI_SUCCESS;
 }
-

@@ -2,13 +2,7 @@
 
 Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2010,Apple Inc. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -34,17 +28,17 @@ EmuGopComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuGopComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
 
 //
 // EFI Component Name Protocol
 //
-EFI_COMPONENT_NAME_PROTOCOL     gEmuGopComponentName = {
+EFI_COMPONENT_NAME_PROTOCOL  gEmuGopComponentName = {
   EmuGopComponentNameGetDriverName,
   EmuGopComponentNameGetControllerName,
   "eng"
@@ -53,18 +47,16 @@ EFI_COMPONENT_NAME_PROTOCOL     gEmuGopComponentName = {
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gEmuGopComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) EmuGopComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) EmuGopComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gEmuGopComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)EmuGopComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)EmuGopComponentNameGetControllerName,
   "en"
 };
 
-
-EFI_UNICODE_STRING_TABLE mEmuGopDriverNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mEmuGopDriverNameTable[] = {
   { "eng", L"Emulator GOP Driver" },
-  { NULL , NULL }
+  { NULL,  NULL                   }
 };
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -121,7 +113,6 @@ EmuGopComponentNameGetDriverName (
            (BOOLEAN)(This == &gEmuGopComponentName)
            );
 }
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -194,11 +185,11 @@ EmuGopComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuGopComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   EFI_STATUS                    Status;
@@ -223,6 +214,7 @@ EmuGopComponentNameGetControllerName (
   if (EFI_ERROR (Status)) {
     return EFI_UNSUPPORTED;
   }
+
   //
   // Get our context back
   //

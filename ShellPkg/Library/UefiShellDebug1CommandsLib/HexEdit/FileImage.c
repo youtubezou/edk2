@@ -1,35 +1,29 @@
 /** @file
   Functions to deal with file buffer.
 
-  Copyright (c) 2005 - 2015, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "HexEditor.h"
 
-extern EFI_HANDLE                 HImageHandleBackup;
-extern HEFI_EDITOR_BUFFER_IMAGE   HBufferImage;
+extern EFI_HANDLE                HImageHandleBackup;
+extern HEFI_EDITOR_BUFFER_IMAGE  HBufferImage;
 
-extern BOOLEAN                    HBufferImageNeedRefresh;
-extern BOOLEAN                    HBufferImageOnlyLineNeedRefresh;
-extern BOOLEAN                    HBufferImageMouseNeedRefresh;
+extern BOOLEAN  HBufferImageNeedRefresh;
+extern BOOLEAN  HBufferImageOnlyLineNeedRefresh;
+extern BOOLEAN  HBufferImageMouseNeedRefresh;
 
 extern HEFI_EDITOR_GLOBAL_EDITOR  HMainEditor;
 
-HEFI_EDITOR_FILE_IMAGE            HFileImage;
-HEFI_EDITOR_FILE_IMAGE            HFileImageBackupVar;
+HEFI_EDITOR_FILE_IMAGE  HFileImage;
+HEFI_EDITOR_FILE_IMAGE  HFileImageBackupVar;
 
 //
 // for basic initialization of HFileImage
 //
-HEFI_EDITOR_BUFFER_IMAGE          HFileImageConst = {
+HEFI_EDITOR_BUFFER_IMAGE  HFileImageConst = {
   NULL,
   0,
   FALSE
@@ -37,7 +31,7 @@ HEFI_EDITOR_BUFFER_IMAGE          HFileImageConst = {
 
 /**
   Initialization function for HFileImage
- 
+
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
@@ -60,7 +54,7 @@ HFileImageInit (
 }
 
 /**
-  Backup function for HFileImage. Only a few fields need to be backup. 
+  Backup function for HFileImage. Only a few fields need to be backup.
   This is for making the file buffer refresh as few as possible.
 
   @retval EFI_SUCCESS           The operation was successful.
@@ -72,7 +66,7 @@ HFileImageBackup (
   )
 {
   SHELL_FREE_NON_NULL (HFileImageBackupVar.FileName);
-  HFileImageBackupVar.FileName = CatSPrint(NULL, L"%s", HFileImage.FileName);
+  HFileImageBackupVar.FileName = CatSPrint (NULL, L"%s", HFileImage.FileName);
   if (HFileImageBackupVar.FileName == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -90,7 +84,6 @@ HFileImageCleanup (
   VOID
   )
 {
-
   SHELL_FREE_NON_NULL (HFileImage.FileName);
   SHELL_FREE_NON_NULL (HFileImageBackupVar.FileName);
 
@@ -107,29 +100,25 @@ HFileImageCleanup (
 **/
 EFI_STATUS
 HFileImageSetFileName (
-  IN CONST CHAR16 *Str
+  IN CONST CHAR16  *Str
   )
 {
-  UINTN Size;
-  UINTN Index;
+  if (Str == HFileImage.FileName) {
+    //
+    // This function might be called using HFileImage.FileName as Str.
+    // Directly return without updating HFileImage.FileName.
+    //
+    return EFI_SUCCESS;
+  }
 
   //
   // free the old file name
   //
   SHELL_FREE_NON_NULL (HFileImage.FileName);
-
-  Size                = StrLen (Str);
-
-  HFileImage.FileName = AllocateZeroPool (2 * (Size + 1));
+  HFileImage.FileName = AllocateCopyPool (StrSize (Str), Str);
   if (HFileImage.FileName == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-
-  for (Index = 0; Index < Size; Index++) {
-    HFileImage.FileName[Index] = Str[Index];
-  }
-
-  HFileImage.FileName[Size] = L'\0';
 
   return EFI_SUCCESS;
 }
@@ -142,23 +131,23 @@ HFileImageSetFileName (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
+  @retval EFI_LOAD_ERROR        A load error occurred.
 **/
 EFI_STATUS
 HFileImageRead (
   IN CONST CHAR16  *FileName,
-  IN BOOLEAN Recover
+  IN BOOLEAN       Recover
   )
 {
-  HEFI_EDITOR_LINE                *Line;
-  UINT8                           *Buffer;
-  CHAR16                          *UnicodeBuffer;
-  EFI_STATUS                      Status;
+  HEFI_EDITOR_LINE  *Line;
+  UINT8             *Buffer;
+  CHAR16            *UnicodeBuffer;
+  EFI_STATUS        Status;
 
   //
   // variable initialization
   //
-  Line                    = NULL;
+  Line = NULL;
 
   //
   // in this function, when you return error ( except EFI_OUT_OF_RESOURCES )
@@ -168,14 +157,14 @@ HFileImageRead (
   // so if you want to print the error status
   // you should set the status string
   //
-  Status = ReadFileIntoBuffer (FileName, (VOID**)&Buffer, &HFileImage.Size, &HFileImage.ReadOnly);
+  Status = ReadFileIntoBuffer (FileName, (VOID **)&Buffer, &HFileImage.Size, &HFileImage.ReadOnly);
   //
   // NULL pointer is only also a failure for a non-zero file size.
   //
-  if ((EFI_ERROR(Status)) || (Buffer == NULL && HFileImage.Size != 0)) {
-    UnicodeBuffer = CatSPrint(NULL, L"Read error on file %s: %r", FileName, Status);
+  if ((EFI_ERROR (Status)) || ((Buffer == NULL) && (HFileImage.Size != 0))) {
+    UnicodeBuffer = CatSPrint (NULL, L"Read error on file %s: %r", FileName, Status);
     if (UnicodeBuffer == NULL) {
-      SHELL_FREE_NON_NULL(Buffer);
+      SHELL_FREE_NON_NULL (Buffer);
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -206,12 +195,12 @@ HFileImageRead (
   HBufferImage.HighBits               = TRUE;
   HBufferImage.BufferPosition.Row     = 1;
   HBufferImage.BufferPosition.Column  = 1;
-  HBufferImage.BufferType = FileTypeFileBuffer;
+  HBufferImage.BufferType             = FileTypeFileBuffer;
 
   if (!Recover) {
-    UnicodeBuffer = CatSPrint(NULL, L"%d Lines Read", HBufferImage.NumLines);
+    UnicodeBuffer = CatSPrint (NULL, L"%d Lines Read", HBufferImage.NumLines);
     if (UnicodeBuffer == NULL) {
-      SHELL_FREE_NON_NULL(Buffer);
+      SHELL_FREE_NON_NULL (Buffer);
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -233,7 +222,7 @@ HFileImageRead (
     //
     Line = HBufferImageCreateLine ();
     if (Line == NULL) {
-      SHELL_FREE_NON_NULL(Buffer);
+      SHELL_FREE_NON_NULL (Buffer);
       return EFI_OUT_OF_RESOURCES;
     }
 
@@ -255,24 +244,23 @@ HFileImageRead (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
+  @retval EFI_LOAD_ERROR        A load error occurred.
 **/
 EFI_STATUS
 HFileImageSave (
-  IN CHAR16 *FileName
+  IN CHAR16  *FileName
   )
 {
-
-  LIST_ENTRY                      *Link;
-  HEFI_EDITOR_LINE                *Line;
-  CHAR16                          *Str;
-  EFI_STATUS                      Status;
-  UINTN                           NumLines;
-  SHELL_FILE_HANDLE                 FileHandle;
-  UINTN                           TotalSize;
-  UINT8                           *Buffer;
-  UINT8                           *Ptr;
-  EDIT_FILE_TYPE                  BufferTypeBackup;
+  LIST_ENTRY         *Link;
+  HEFI_EDITOR_LINE   *Line;
+  CHAR16             *Str;
+  EFI_STATUS         Status;
+  UINTN              NumLines;
+  SHELL_FILE_HANDLE  FileHandle;
+  UINTN              TotalSize;
+  UINT8              *Buffer;
+  UINT8              *Ptr;
+  EDIT_FILE_TYPE     BufferTypeBackup;
 
   BufferTypeBackup        = HBufferImage.BufferType;
   HBufferImage.BufferType = FileTypeFileBuffer;
@@ -280,11 +268,11 @@ HFileImageSave (
   //
   // if is the old file
   //
-  if (HFileImage.FileName != NULL && FileName != NULL && StrCmp (FileName, HFileImage.FileName) == 0) {
+  if ((HFileImage.FileName != NULL) && (FileName != NULL) && (StrCmp (FileName, HFileImage.FileName) == 0)) {
     //
     // check whether file exists on disk
     //
-    if (ShellIsFile(FileName) == EFI_SUCCESS) {
+    if (ShellIsFile (FileName) == EFI_SUCCESS) {
       //
       // current file exists on disk
       // so if not modified, then not save
@@ -292,6 +280,7 @@ HFileImageSave (
       if (HBufferImage.Modified == FALSE) {
         return EFI_SUCCESS;
       }
+
       //
       // if file is read-only, set error
       //
@@ -302,7 +291,7 @@ HFileImageSave (
     }
   }
 
-   if (ShellIsDirectory(FileName) == EFI_SUCCESS) {
+  if (ShellIsDirectory (FileName) == EFI_SUCCESS) {
     StatusBarSetStatusString (L"Directory Can Not Be Saved");
     return EFI_LOAD_ERROR;
   }
@@ -314,11 +303,11 @@ HFileImageSave (
     // the file exits, delete it
     //
     Status = ShellDeleteFile (&FileHandle);
-    if (EFI_ERROR (Status) || Status == EFI_WARN_DELETE_FAILURE) {
+    if (EFI_ERROR (Status) || (Status == EFI_WARN_DELETE_FAILURE)) {
       StatusBarSetStatusString (L"Write File Failed");
       return EFI_LOAD_ERROR;
     }
- }
+  }
 
   //
   // write all the lines back to disk
@@ -331,11 +320,13 @@ HFileImageSave (
     if (Line->Size != 0) {
       TotalSize += Line->Size;
     }
+
     //
     // end of if Line -> Size != 0
     //
     NumLines++;
   }
+
   //
   // end of for Link
   //
@@ -352,11 +343,11 @@ HFileImageSave (
       CopyMem (Ptr, Line->Buffer, Line->Size);
       Ptr += Line->Size;
     }
+
     //
     // end of if Line -> Size != 0
     //
   }
-
 
   Status = ShellOpenFileByName (FileName, &FileHandle, EFI_FILE_MODE_READ|EFI_FILE_MODE_WRITE|EFI_FILE_MODE_CREATE, 0);
 
@@ -372,22 +363,27 @@ HFileImageSave (
     return EFI_LOAD_ERROR;
   }
 
-  ShellCloseFile(&FileHandle);
+  ShellCloseFile (&FileHandle);
 
   HBufferImage.Modified = FALSE;
 
   //
   // set status string
   //
-  Str = CatSPrint(NULL, L"%d Lines Wrote", NumLines);
+  Str = CatSPrint (NULL, L"%d Lines Written", NumLines);
+  if (Str == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
   StatusBarSetStatusString (Str);
   FreePool (Str);
 
   //
   // now everything is ready , you can set the new file name to filebuffer
   //
-  if ((BufferTypeBackup != FileTypeFileBuffer && FileName != NULL) ||
-     (FileName != NULL && HFileImage.FileName != NULL && StringNoCaseCompare (&FileName, &HFileImage.FileName) != 0)){
+  if (((BufferTypeBackup != FileTypeFileBuffer) && (FileName != NULL)) ||
+      ((FileName != NULL) && (HFileImage.FileName != NULL) && (StringNoCaseCompare (&FileName, &HFileImage.FileName) != 0)))
+  {
     //
     // not the same
     //

@@ -2,13 +2,7 @@
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -19,8 +13,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/EmuThunkLib.h>
 #include <Library/BaseMemoryLib.h>
 
-EMU_THUNK_PROTOCOL   *gEmuThunk = NULL;
-
+EMU_THUNK_PROTOCOL  *gEmuThunk = NULL;
 
 /**
   The constructor function caches the pointer of EMU Thunk protocol.
@@ -38,7 +31,7 @@ DxeEmuLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HOB_GUID_TYPE        *GuidHob;
+  EFI_HOB_GUID_TYPE  *GuidHob;
 
   GuidHob = GetFirstGuidHob (&gEmuThunkProtocolGuid);
   ASSERT (GuidHob != NULL);
@@ -48,7 +41,6 @@ DxeEmuLibConstructor (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Serach the EMU IO Thunk database for a matching EMU IO Thunk
@@ -68,8 +60,8 @@ GetIoThunkInstance (
   IN  UINTN     Instance
   )
 {
-  EFI_STATUS              Status;
-  EMU_IO_THUNK_PROTOCOL   *EmuIoThunk;
+  EFI_STATUS             Status;
+  EMU_IO_THUNK_PROTOCOL  *EmuIoThunk;
 
   for (Status = EFI_SUCCESS, EmuIoThunk = NULL; !EFI_ERROR (Status); ) {
     Status = gEmuThunk->GetNextProtocol (FALSE, &EmuIoThunk);

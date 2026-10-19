@@ -2,19 +2,11 @@
 
 Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EDKII_PEI_SD_MMC_HOST_CONTROLLER_PPI_H_
-#define _EDKII_PEI_SD_MMC_HOST_CONTROLLER_PPI_H_
+#pragma once
 
 ///
 /// Global ID for the EDKII_SD_MMC_HOST_CONTROLLER_PPI.
@@ -27,7 +19,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 ///
 /// Forward declaration for the SD_MMC_HOST_CONTROLLER_PPI.
 ///
-typedef struct _EDKII_SD_MMC_HOST_CONTROLLER_PPI  EDKII_SD_MMC_HOST_CONTROLLER_PPI;
+typedef struct _EDKII_SD_MMC_HOST_CONTROLLER_PPI EDKII_SD_MMC_HOST_CONTROLLER_PPI;
 
 /**
   Get the MMIO base address of SD/MMC host controller.
@@ -49,16 +41,14 @@ EFI_STATUS
   IN     EDKII_SD_MMC_HOST_CONTROLLER_PPI *This,
   IN     UINT8                            ControllerId,
   IN OUT UINTN                            **MmioBar,
-     OUT UINT8                            *BarNum
+  OUT UINT8                            *BarNum
   );
 
 ///
 /// This PPI contains a set of services to interact with the SD_MMC host controller.
 ///
 struct _EDKII_SD_MMC_HOST_CONTROLLER_PPI {
-  EDKII_SD_MMC_HC_GET_MMIO_BAR               GetSdMmcHcMmioBar;
+  EDKII_SD_MMC_HC_GET_MMIO_BAR    GetSdMmcHcMmioBar;
 };
 
-extern EFI_GUID gEdkiiPeiSdMmcHostControllerPpiGuid;
-
-#endif
+extern EFI_GUID  gEdkiiPeiSdMmcHostControllerPpiGuid;

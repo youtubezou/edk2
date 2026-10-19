@@ -1,19 +1,28 @@
 /** @file
   Task priority (TPL) functions.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeMain.h"
 #include "Event.h"
+
+//
+// Maximum interrupt nesting depth allowed by the UEFI/PI specifications.
+// Comprised of 3 software TPL levels (TPL_APPLICATION, TPL_CALLBACK,
+// TPL_NOTIFY) plus 16 hardware interrupt priority levels (TPL 16..31).
+//
+#define MAX_INTERRUPT_ENABLE_NEST_DEPTH  (3 + 16)
+
+//
+// Counter for tracking interrupt enable recursion depth.
+// Incremented on entry to CoreSetInterruptState(TRUE) and decremented on exit.
+// Prevents stack overflow from infinite interrupt recursion loops.
+// Must not exceed MAX_INTERRUPT_ENABLE_NEST_DEPTH per UEFI/PI specs.
+//
+static volatile UINTN  mInterruptEnableNestDepth = 0;
 
 /**
   Set Interrupt State.
@@ -23,29 +32,35 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 CoreSetInterruptState (
-  IN BOOLEAN      Enable
+  IN BOOLEAN  Enable
   )
 {
   EFI_STATUS  Status;
   BOOLEAN     InSmm;
-  
+
   if (gCpu == NULL) {
     return;
   }
+
   if (!Enable) {
     gCpu->DisableInterrupt (gCpu);
     return;
   }
-  if (gSmmBase2 == NULL) {
-    gCpu->EnableInterrupt (gCpu);
-    return;
-  }
-  Status = gSmmBase2->InSmm (gSmmBase2, &InSmm);
-  if (!EFI_ERROR (Status) && !InSmm) {
-    gCpu->EnableInterrupt(gCpu);
-  }
-}
 
+  if (gSmmBase2 != NULL) {
+    Status = gSmmBase2->InSmm (gSmmBase2, &InSmm);
+    if (EFI_ERROR (Status) || InSmm) {
+      return;
+    }
+  }
+
+  mInterruptEnableNestDepth++;
+  ASSERT (mInterruptEnableNestDepth < MAX_INTERRUPT_ENABLE_NEST_DEPTH);
+
+  gCpu->EnableInterrupt (gCpu);
+
+  mInterruptEnableNestDepth--;
+}
 
 /**
   Raise the task priority level to the new level.
@@ -59,22 +74,23 @@ CoreSetInterruptState (
 EFI_TPL
 EFIAPI
 CoreRaiseTpl (
-  IN EFI_TPL      NewTpl
+  IN EFI_TPL  NewTpl
   )
 {
-  EFI_TPL     OldTpl;
+  EFI_TPL  OldTpl;
 
   OldTpl = gEfiCurrentTpl;
   if (OldTpl > NewTpl) {
-    DEBUG ((EFI_D_ERROR, "FATAL ERROR - RaiseTpl with OldTpl(0x%x) > NewTpl(0x%x)\n", OldTpl, NewTpl));
+    DEBUG ((DEBUG_ERROR, "FATAL ERROR - RaiseTpl with OldTpl(0x%x) > NewTpl(0x%x)\n", OldTpl, NewTpl));
     ASSERT (FALSE);
   }
+
   ASSERT (VALID_TPL (NewTpl));
 
   //
   // If raising to high level, disable interrupts
   //
-  if (NewTpl >= TPL_HIGH_LEVEL  &&  OldTpl < TPL_HIGH_LEVEL) {
+  if ((NewTpl >= TPL_HIGH_LEVEL) &&  (OldTpl < TPL_HIGH_LEVEL)) {
     CoreSetInterruptState (FALSE);
   }
 
@@ -86,9 +102,6 @@ CoreRaiseTpl (
   return OldTpl;
 }
 
-
-
-
 /**
   Lowers the task priority to the previous value.   If the new
   priority unmasks events at a higher priority, they are dispatched.
@@ -99,16 +112,18 @@ CoreRaiseTpl (
 VOID
 EFIAPI
 CoreRestoreTpl (
-  IN EFI_TPL NewTpl
+  IN EFI_TPL  NewTpl
   )
 {
-  EFI_TPL     OldTpl;
+  EFI_TPL  OldTpl;
+  EFI_TPL  PendingTpl;
 
   OldTpl = gEfiCurrentTpl;
   if (NewTpl > OldTpl) {
-    DEBUG ((EFI_D_ERROR, "FATAL ERROR - RestoreTpl with NewTpl(0x%x) > OldTpl(0x%x)\n", NewTpl, OldTpl));
+    DEBUG ((DEBUG_ERROR, "FATAL ERROR - RestoreTpl with NewTpl(0x%x) > OldTpl(0x%x)\n", NewTpl, OldTpl));
     ASSERT (FALSE);
   }
+
   ASSERT (VALID_TPL (NewTpl));
 
   //
@@ -116,18 +131,24 @@ CoreRestoreTpl (
   // interrupts are enabled
   //
 
-  if (OldTpl >= TPL_HIGH_LEVEL  &&  NewTpl < TPL_HIGH_LEVEL) {
+  if ((OldTpl >= TPL_HIGH_LEVEL) &&  (NewTpl < TPL_HIGH_LEVEL)) {
     gEfiCurrentTpl = TPL_HIGH_LEVEL;
   }
 
   //
   // Dispatch any pending events
   //
-  while (((-2 << NewTpl) & gEventPending) != 0) {
-    gEfiCurrentTpl = (UINTN) HighBitSet64 (gEventPending);
+  while (gEventPending != 0) {
+    PendingTpl = (UINTN)HighBitSet64 (gEventPending);
+    if (PendingTpl <= NewTpl) {
+      break;
+    }
+
+    gEfiCurrentTpl = PendingTpl;
     if (gEfiCurrentTpl < TPL_HIGH_LEVEL) {
       CoreSetInterruptState (TRUE);
     }
+
     CoreDispatchEventNotifies (gEfiCurrentTpl);
   }
 
@@ -144,5 +165,4 @@ CoreRestoreTpl (
   if (gEfiCurrentTpl < TPL_HIGH_LEVEL) {
     CoreSetInterruptState (TRUE);
   }
-
 }

@@ -1,21 +1,13 @@
-/** @file   
-  ACPI debug port table definition, defined at 
+/** @file
+  ACPI debug port table definition, defined at
   Microsoft DebugPortSpecification.
 
-  Copyright (c) 2012, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
-#ifndef _DEBUG_PORT_TABLE_H_
-#define _DEBUG_PORT_TABLE_H_
+#pragma once
 
 #include <IndustryStandard/Acpi.h>
 
@@ -39,12 +31,10 @@ typedef struct {
 //
 // DBGP Revision (defined in spec)
 //
-#define EFI_ACPI_DEBUG_PORT_TABLE_REVISION      0x01
+#define EFI_ACPI_DEBUG_PORT_TABLE_REVISION  0x01
 
 //
 // Interface Type
 //
 #define EFI_ACPI_DBGP_INTERFACE_TYPE_FULL_16550                                 0
 #define EFI_ACPI_DBGP_INTERFACE_TYPE_16550_SUBSET_COMPATIBLE_WITH_MS_DBGP_SPEC  1
-
-#endif

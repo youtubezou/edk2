@@ -6,13 +6,7 @@
 
   Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2011 Hewlett-Packard Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -34,10 +28,10 @@
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
   )
 {
-  ArmWriteTpidrurw((UINTN)PeiServicesTablePointer);
+  ArmWriteTpidrurw ((UINTN)PeiServicesTablePointer);
 }
 
 /**
@@ -58,7 +52,7 @@ GetPeiServicesTablePointer (
   VOID
   )
 {
-  return (CONST EFI_PEI_SERVICES **)ArmReadTpidrurw();
+  return (CONST EFI_PEI_SERVICES **)ArmReadTpidrurw ();
 }
 
 /**
@@ -77,9 +71,9 @@ migration actions are required for Itanium or ARM CPUs.
 **/
 VOID
 EFIAPI
-MigratePeiServicesTablePointer(
-VOID
-)
+MigratePeiServicesTablePointer (
+  VOID
+  )
 {
   return;
 }

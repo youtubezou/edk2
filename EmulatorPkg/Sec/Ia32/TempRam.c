@@ -2,13 +2,7 @@
   Temp RAM PPI
 
 Copyright (c) 2011, Apple Inc. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,26 +15,25 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 VOID
 EFIAPI
 SecSwitchStack (
-  UINT32   TemporaryMemoryBase,
-  UINT32   PermenentMemoryBase
+  UINT32  TemporaryMemoryBase,
+  UINT32  PermenentMemoryBase
   );
-
 
 EFI_STATUS
 EFIAPI
 SecTemporaryRamSupport (
-  IN CONST EFI_PEI_SERVICES   **PeiServices,
-  IN EFI_PHYSICAL_ADDRESS     TemporaryMemoryBase,
-  IN EFI_PHYSICAL_ADDRESS     PermanentMemoryBase,
-  IN UINTN                    CopySize
+  IN CONST EFI_PEI_SERVICES  **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS    TemporaryMemoryBase,
+  IN EFI_PHYSICAL_ADDRESS    PermanentMemoryBase,
+  IN UINTN                   CopySize
   )
 {
   //
   // Migrate the whole temporary memory to permanent memory.
   //
   CopyMem (
-    (VOID*)(UINTN)PermanentMemoryBase,
-    (VOID*)(UINTN)TemporaryMemoryBase,
+    (VOID *)(UINTN)PermanentMemoryBase,
+    (VOID *)(UINTN)TemporaryMemoryBase,
     CopySize
     );
 
@@ -49,7 +42,7 @@ SecTemporaryRamSupport (
   // immediately, also we need fixup the stack change caused by new call into
   // permanent memory.
   //
-  SecSwitchStack ((UINT32) TemporaryMemoryBase, (UINT32) PermanentMemoryBase);
+  SecSwitchStack ((UINT32)TemporaryMemoryBase, (UINT32)PermanentMemoryBase);
 
   //
   // We need *not* fix the return address because currently,
@@ -59,7 +52,7 @@ SecTemporaryRamSupport (
   //
   // Simulate to invalid temporary memory, terminate temporary memory
   //
-  //ZeroMem ((VOID*)(UINTN)TemporaryMemoryBase, CopySize);
+  // ZeroMem ((VOID*)(UINTN)TemporaryMemoryBase, CopySize);
 
   return EFI_SUCCESS;
 }

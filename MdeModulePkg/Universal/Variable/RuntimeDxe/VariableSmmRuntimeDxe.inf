@@ -13,13 +13,9 @@
 #  may not be modified without authorization. If platform fails to protect these resources,
 #  the authentication service provided in this driver will be broken, and the behavior is undefined.
 #
-# Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
-# This program and the accompanying materials
-# are licensed and made available under the terms and conditions of the BSD License
-# which accompanies this distribution. The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# Copyright (c) 2010 - 2024, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) Microsoft Corporation.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -42,7 +38,12 @@
 
 [Sources]
   VariableSmmRuntimeDxe.c
+  PrivilegePolymorphic.h
   Measurement.c
+  VariableParsing.c
+  VariableParsing.h
+  Variable.h
+  VariablePolicySmmDxe.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -57,19 +58,42 @@
   DxeServicesTableLib
   UefiDriverEntryPoint
   TpmMeasurementLib
+  SafeIntLib
+  PcdLib
+  HobLib
 
 [Protocols]
   gEfiVariableWriteArchProtocolGuid             ## PRODUCES
   gEfiVariableArchProtocolGuid                  ## PRODUCES
-  gEfiSmmCommunicationProtocolGuid              ## CONSUMES
+  gEfiMmCommunication2ProtocolGuid              ## CONSUMES
+  gEfiMmCommunication3ProtocolGuid              ## CONSUMES
   ## CONSUMES
   ## NOTIFY
   ## UNDEFINED # Used to do smm communication
   gEfiSmmVariableProtocolGuid
   gEdkiiVariableLockProtocolGuid                ## PRODUCES
   gEdkiiVarCheckProtocolGuid                    ## PRODUCES
+  gEdkiiVariablePolicyProtocolGuid              ## PRODUCES
+
+[FeaturePcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVariableCollectStatistics            ## CONSUMES
+
+[Pcd]
+  gEfiMdeModulePkgTokenSpaceGuid.PcdAllowVariablePolicyEnforcementDisable     ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision                 ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdEnableSpdmDeviceAuthentication             ## PRODUCES AND CONSUMES
 
 [Guids]
+  ## PRODUCES             ## GUID # Signature of Variable store header
+  ## CONSUMES             ## GUID # Signature of Variable store header
+  ## SOMETIMES_PRODUCES   ## SystemTable
+  gEfiAuthenticatedVariableGuid
+
+  ## PRODUCES             ## GUID # Signature of Variable store header
+  ## CONSUMES             ## GUID # Signature of Variable store header
+  ## SOMETIMES_PRODUCES   ## SystemTable
+  gEfiVariableGuid
+
   gEfiEventVirtualAddressChangeGuid             ## CONSUMES ## Event
   gEfiEventExitBootServicesGuid                 ## CONSUMES ## Event
   ## CONSUMES ## GUID # Locate protocol
@@ -81,12 +105,19 @@
   ## SOMETIMES_CONSUMES   ## Variable:L"SecureBoot"
   gEfiGlobalVariableGuid
 
-  ## SOMETIMES_CONSUMES   ## Variable:L"DB"
-  ## SOMETIMES_CONSUMES   ## Variable:L"DBX"
+  ## SOMETIMES_CONSUMES   ## Variable:L"db"
+  ## SOMETIMES_CONSUMES   ## Variable:L"dbx"
+  ## SOMETIMES_CONSUMES   ## Variable:L"dbt"
   gEfiImageSecurityDatabaseGuid
 
+  gVarCheckPolicyLibMmiHandlerGuid
+  gEfiEndOfDxeEventGroupGuid
+  gEfiDeviceSignatureDatabaseGuid
+  gEdkiiVariableRuntimeCacheInfoHobGuid
+  gEfiMmCommunicateHeaderV3Guid
+
 [Depex]
-  gEfiSmmCommunicationProtocolGuid
+  gEfiMmCommunication2ProtocolGuid OR gEfiMmCommunication3ProtocolGuid
 
 [UserExtensions.TianoCore."ExtraFiles"]
   VariableSmmRuntimeDxeExtra.uni

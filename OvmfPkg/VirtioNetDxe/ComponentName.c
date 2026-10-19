@@ -5,13 +5,7 @@
   Copyright (C) 2013, Red Hat, Inc.
   Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,13 +14,13 @@
 #include "VirtioNet.h"
 
 STATIC
-EFI_UNICODE_STRING_TABLE mVirtioNetDriverNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mVirtioNetDriverNameTable[] = {
   { "eng;en", L"Virtio Network Driver" },
   { NULL,     NULL                     }
 };
 
 STATIC
-EFI_UNICODE_STRING_TABLE mVirtioNetControllerNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mVirtioNetControllerNameTable[] = {
   { "eng;en", L"Virtio Network Device" },
   { NULL,     NULL                     }
 };
@@ -54,14 +48,13 @@ EFI_UNICODE_STRING_TABLE mVirtioNetControllerNameTable[] = {
                                 the language specified by Language.
 
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **DriverName
   )
 {
   return (Language == NULL || DriverName == NULL) ?
@@ -71,10 +64,9 @@ VirtioNetGetDriverName (
            This->SupportedLanguages,
            mVirtioNetDriverNameTable,
            DriverName,
-           (BOOLEAN) (This == &gVirtioNetComponentName) // Iso639Language
+           (BOOLEAN)(This == &gVirtioNetComponentName)  // Iso639Language
            );
 }
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -120,22 +112,28 @@ VirtioNetGetDriverName (
                                 the language specified by Language.
 
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  EFI_HANDLE                  ControllerHandle,
-  IN  EFI_HANDLE                  ChildHandle,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  if (ControllerHandle == NULL || Language == NULL || ControllerName == NULL) {
+  if ((ControllerHandle == NULL) || (Language == NULL) || (ControllerName == NULL)) {
     return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // This is a device driver, so ChildHandle must be NULL.
+  //
+  if (ChildHandle != NULL) {
+    return EFI_UNSUPPORTED;
   }
 
   //
@@ -160,18 +158,18 @@ VirtioNetGetControllerName (
            This->SupportedLanguages,
            mVirtioNetControllerNameTable,
            ControllerName,
-           (BOOLEAN) (This == &gVirtioNetComponentName) // Iso639Language
+           (BOOLEAN)(This == &gVirtioNetComponentName)  // Iso639Language
            );
 }
 
-EFI_COMPONENT_NAME_PROTOCOL gVirtioNetComponentName = {
+EFI_COMPONENT_NAME_PROTOCOL  gVirtioNetComponentName = {
   &VirtioNetGetDriverName,
   &VirtioNetGetControllerName,
   "eng" // SupportedLanguages, ISO 639-2 language codes
 };
 
-EFI_COMPONENT_NAME2_PROTOCOL gVirtioNetComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)     &VirtioNetGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) &VirtioNetGetControllerName,
+EFI_COMPONENT_NAME2_PROTOCOL  gVirtioNetComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)&VirtioNetGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)&VirtioNetGetControllerName,
   "en" // SupportedLanguages, RFC 4646 language codes
 };

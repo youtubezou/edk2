@@ -1,19 +1,12 @@
 /** @file
   This library is used by other modules to send TPM2 command.
 
-Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2024, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _TPM2_COMMAND_LIB_H_
-#define _TPM2_COMMAND_LIB_H_
+#pragma once
 
 #include <IndustryStandard/Tpm20.h>
 
@@ -25,15 +18,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
   @param[in]  HashAlg           The hash algorithm to use for the hash sequence
                                 An Event sequence starts if this is TPM_ALG_NULL.
   @param[out] SequenceHandle    A handle to reference the sequence
- 
+
   @retval EFI_SUCCESS      Operation completed successfully.
   @retval EFI_DEVICE_ERROR Unexpected device behavior.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2HashSequenceStart (
-  IN TPMI_ALG_HASH   HashAlg,
-  OUT TPMI_DH_OBJECT *SequenceHandle
+  IN TPMI_ALG_HASH    HashAlg,
+  OUT TPMI_DH_OBJECT  *SequenceHandle
   );
 
 /**
@@ -43,15 +36,15 @@ Tpm2HashSequenceStart (
 
   @param[in] SequenceHandle    Handle for the sequence object
   @param[in] Buffer            Data to be added to hash
- 
+
   @retval EFI_SUCCESS      Operation completed successfully.
   @retval EFI_DEVICE_ERROR Unexpected device behavior.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2SequenceUpdate (
-  IN TPMI_DH_OBJECT   SequenceHandle,
-  IN TPM2B_MAX_BUFFER *Buffer
+  IN TPMI_DH_OBJECT    SequenceHandle,
+  IN TPM2B_MAX_BUFFER  *Buffer
   );
 
 /**
@@ -64,17 +57,17 @@ Tpm2SequenceUpdate (
   @param[in]  SequenceHandle    Authorization for the sequence
   @param[in]  Buffer            Data to be added to the Event
   @param[out] Results           List of digests computed for the PCR
- 
+
   @retval EFI_SUCCESS      Operation completed successfully.
   @retval EFI_DEVICE_ERROR Unexpected device behavior.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2EventSequenceComplete (
-  IN TPMI_DH_PCR         PcrHandle,
-  IN TPMI_DH_OBJECT      SequenceHandle,
-  IN TPM2B_MAX_BUFFER    *Buffer,
-  OUT TPML_DIGEST_VALUES *Results
+  IN TPMI_DH_PCR          PcrHandle,
+  IN TPMI_DH_OBJECT       SequenceHandle,
+  IN TPM2B_MAX_BUFFER     *Buffer,
+  OUT TPML_DIGEST_VALUES  *Results
   );
 
 /**
@@ -83,16 +76,16 @@ Tpm2EventSequenceComplete (
   @param[in]  SequenceHandle    Authorization for the sequence
   @param[in]  Buffer            Data to be added to the hash/HMAC
   @param[out] Result            The returned HMAC or digest in a sized buffer
- 
+
   @retval EFI_SUCCESS      Operation completed successfully.
   @retval EFI_DEVICE_ERROR Unexpected device behavior.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2SequenceComplete (
-  IN TPMI_DH_OBJECT      SequenceHandle,
-  IN TPM2B_MAX_BUFFER    *Buffer,
-  OUT TPM2B_DIGEST       *Result
+  IN TPMI_DH_OBJECT    SequenceHandle,
+  IN TPM2B_MAX_BUFFER  *Buffer,
+  OUT TPM2B_DIGEST     *Result
   );
 
 /**
@@ -106,7 +99,7 @@ Tpm2SequenceComplete (
 EFI_STATUS
 EFIAPI
 Tpm2Startup (
-  IN      TPM_SU             StartupType
+  IN      TPM_SU  StartupType
   );
 
 /**
@@ -120,7 +113,7 @@ Tpm2Startup (
 EFI_STATUS
 EFIAPI
 Tpm2Shutdown (
-  IN      TPM_SU             ShutdownType
+  IN      TPM_SU  ShutdownType
   );
 
 /**
@@ -137,7 +130,7 @@ Tpm2Shutdown (
 EFI_STATUS
 EFIAPI
 Tpm2SelfTest (
-  IN TPMI_YES_NO          FullTest
+  IN TPMI_YES_NO  FullTest
   );
 
 /**
@@ -155,10 +148,10 @@ Tpm2SelfTest (
 EFI_STATUS
 EFIAPI
 Tpm2SetPrimaryPolicy (
-  IN  TPMI_RH_HIERARCHY_AUTH    AuthHandle,
-  IN  TPMS_AUTH_COMMAND         *AuthSession,
-  IN  TPM2B_DIGEST              *AuthPolicy,
-  IN  TPMI_ALG_HASH             HashAlg
+  IN  TPMI_RH_HIERARCHY_AUTH  AuthHandle,
+  IN  TPMS_AUTH_COMMAND       *AuthSession,
+  IN  TPM2B_DIGEST            *AuthPolicy,
+  IN  TPMI_ALG_HASH           HashAlg
   );
 
 /**
@@ -166,15 +159,15 @@ Tpm2SetPrimaryPolicy (
 
   @param[in] AuthHandle        TPM_RH_LOCKOUT or TPM_RH_PLATFORM+{PP}
   @param[in] AuthSession       Auth Session context
- 
+
   @retval EFI_SUCCESS      Operation completed successfully.
   @retval EFI_DEVICE_ERROR Unexpected device behavior.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2Clear (
-  IN TPMI_RH_CLEAR             AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession OPTIONAL
+  IN TPMI_RH_CLEAR      AuthHandle,
+  IN TPMS_AUTH_COMMAND  *AuthSession OPTIONAL
   );
 
 /**
@@ -191,9 +184,9 @@ Tpm2Clear (
 EFI_STATUS
 EFIAPI
 Tpm2ClearControl (
-  IN TPMI_RH_CLEAR             AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession, OPTIONAL
-  IN TPMI_YES_NO               Disable
+  IN TPMI_RH_CLEAR      AuthHandle,
+  IN TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN TPMI_YES_NO        Disable
   );
 
 /**
@@ -210,9 +203,9 @@ Tpm2ClearControl (
 EFI_STATUS
 EFIAPI
 Tpm2HierarchyChangeAuth (
-  IN TPMI_RH_HIERARCHY_AUTH    AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession,
-  IN TPM2B_AUTH                *NewAuth
+  IN TPMI_RH_HIERARCHY_AUTH  AuthHandle,
+  IN TPMS_AUTH_COMMAND       *AuthSession,
+  IN TPM2B_AUTH              *NewAuth
   );
 
 /**
@@ -228,8 +221,8 @@ Tpm2HierarchyChangeAuth (
 EFI_STATUS
 EFIAPI
 Tpm2ChangeEPS (
-  IN TPMI_RH_PLATFORM          AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession
+  IN TPMI_RH_PLATFORM   AuthHandle,
+  IN TPMS_AUTH_COMMAND  *AuthSession
   );
 
 /**
@@ -245,8 +238,8 @@ Tpm2ChangeEPS (
 EFI_STATUS
 EFIAPI
 Tpm2ChangePPS (
-  IN TPMI_RH_PLATFORM          AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession
+  IN TPMI_RH_PLATFORM   AuthHandle,
+  IN TPMS_AUTH_COMMAND  *AuthSession
   );
 
 /**
@@ -264,10 +257,10 @@ Tpm2ChangePPS (
 EFI_STATUS
 EFIAPI
 Tpm2HierarchyControl (
-  IN TPMI_RH_HIERARCHY         AuthHandle,
-  IN TPMS_AUTH_COMMAND         *AuthSession,
-  IN TPMI_RH_HIERARCHY         Hierarchy,
-  IN TPMI_YES_NO               State
+  IN TPMI_RH_HIERARCHY  AuthHandle,
+  IN TPMS_AUTH_COMMAND  *AuthSession,
+  IN TPMI_RH_HIERARCHY  Hierarchy,
+  IN TPMI_YES_NO        State
   );
 
 /**
@@ -283,8 +276,8 @@ Tpm2HierarchyControl (
 EFI_STATUS
 EFIAPI
 Tpm2DictionaryAttackLockReset (
-  IN  TPMI_RH_LOCKOUT           LockHandle,
-  IN  TPMS_AUTH_COMMAND         *AuthSession
+  IN  TPMI_RH_LOCKOUT    LockHandle,
+  IN  TPMS_AUTH_COMMAND  *AuthSession
   );
 
 /**
@@ -303,11 +296,11 @@ Tpm2DictionaryAttackLockReset (
 EFI_STATUS
 EFIAPI
 Tpm2DictionaryAttackParameters (
-  IN  TPMI_RH_LOCKOUT           LockHandle,
-  IN  TPMS_AUTH_COMMAND         *AuthSession,
-  IN  UINT32                    NewMaxTries,
-  IN  UINT32                    NewRecoveryTime,
-  IN  UINT32                    LockoutRecovery
+  IN  TPMI_RH_LOCKOUT    LockHandle,
+  IN  TPMS_AUTH_COMMAND  *AuthSession,
+  IN  UINT32             NewMaxTries,
+  IN  UINT32             NewRecoveryTime,
+  IN  UINT32             LockoutRecovery
   );
 
 /**
@@ -316,16 +309,16 @@ Tpm2DictionaryAttackParameters (
   @param[in]  NvIndex            The NV Index.
   @param[out] NvPublic           The public area of the index.
   @param[out] NvName             The Name of the nvIndex.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2NvReadPublic (
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  OUT     TPM2B_NV_PUBLIC           *NvPublic,
-  OUT     TPM2B_NAME                *NvName
+  IN      TPMI_RH_NV_INDEX  NvIndex,
+  OUT     TPM2B_NV_PUBLIC   *NvPublic,
+  OUT     TPM2B_NAME        *NvName
   );
 
 /**
@@ -337,7 +330,7 @@ Tpm2NvReadPublic (
   @param[in]  AuthSession        Auth Session context
   @param[in]  Auth               The authorization data.
   @param[in]  NvPublic           The public area of the index.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
   @retval EFI_ALREADY_STARTED    The command was returned successfully, but NvIndex is already defined.
@@ -345,10 +338,10 @@ Tpm2NvReadPublic (
 EFI_STATUS
 EFIAPI
 Tpm2NvDefineSpace (
-  IN      TPMI_RH_PROVISION         AuthHandle,
-  IN      TPMS_AUTH_COMMAND         *AuthSession, OPTIONAL
-  IN      TPM2B_AUTH                *Auth,
-  IN      TPM2B_NV_PUBLIC           *NvPublic
+  IN      TPMI_RH_PROVISION  AuthHandle,
+  IN      TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN      TPM2B_AUTH         *Auth,
+  IN      TPM2B_NV_PUBLIC    *NvPublic
   );
 
 /**
@@ -357,7 +350,7 @@ Tpm2NvDefineSpace (
   @param[in]  AuthHandle         TPM_RH_OWNER or TPM_RH_PLATFORM+{PP}.
   @param[in]  NvIndex            The NV Index.
   @param[in]  AuthSession        Auth Session context
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
   @retval EFI_NOT_FOUND          The command was returned successfully, but NvIndex is not found.
@@ -365,9 +358,9 @@ Tpm2NvDefineSpace (
 EFI_STATUS
 EFIAPI
 Tpm2NvUndefineSpace (
-  IN      TPMI_RH_PROVISION         AuthHandle,
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  IN      TPMS_AUTH_COMMAND         *AuthSession OPTIONAL
+  IN      TPMI_RH_PROVISION  AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession OPTIONAL
   );
 
 /**
@@ -379,7 +372,7 @@ Tpm2NvUndefineSpace (
   @param[in]     Size               Number of bytes to read.
   @param[in]     Offset             Byte offset into the area.
   @param[in,out] OutData            The data read.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
   @retval EFI_NOT_FOUND          The command was returned successfully, but NvIndex is not found.
@@ -387,12 +380,12 @@ Tpm2NvUndefineSpace (
 EFI_STATUS
 EFIAPI
 Tpm2NvRead (
-  IN      TPMI_RH_NV_AUTH           AuthHandle,
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  IN      TPMS_AUTH_COMMAND         *AuthSession, OPTIONAL
-  IN      UINT16                    Size,
-  IN      UINT16                    Offset,
-  IN OUT  TPM2B_MAX_BUFFER          *OutData
+  IN      TPMI_RH_NV_AUTH    AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN      UINT16             Size,
+  IN      UINT16             Offset,
+  IN OUT  TPM2B_MAX_BUFFER   *OutData
   );
 
 /**
@@ -403,7 +396,7 @@ Tpm2NvRead (
   @param[in]  AuthSession        Auth Session context
   @param[in]  InData             The data to write.
   @param[in]  Offset             The offset into the NV Area.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
   @retval EFI_NOT_FOUND          The command was returned successfully, but NvIndex is not found.
@@ -411,11 +404,11 @@ Tpm2NvRead (
 EFI_STATUS
 EFIAPI
 Tpm2NvWrite (
-  IN      TPMI_RH_NV_AUTH           AuthHandle,
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  IN      TPMS_AUTH_COMMAND         *AuthSession, OPTIONAL
-  IN      TPM2B_MAX_BUFFER          *InData,
-  IN      UINT16                    Offset
+  IN      TPMI_RH_NV_AUTH    AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN      TPM2B_MAX_BUFFER   *InData,
+  IN      UINT16             Offset
   );
 
 /**
@@ -432,9 +425,9 @@ Tpm2NvWrite (
 EFI_STATUS
 EFIAPI
 Tpm2NvReadLock (
-  IN      TPMI_RH_NV_AUTH           AuthHandle,
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  IN      TPMS_AUTH_COMMAND         *AuthSession OPTIONAL
+  IN      TPMI_RH_NV_AUTH    AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession OPTIONAL
   );
 
 /**
@@ -451,9 +444,9 @@ Tpm2NvReadLock (
 EFI_STATUS
 EFIAPI
 Tpm2NvWriteLock (
-  IN      TPMI_RH_NV_AUTH           AuthHandle,
-  IN      TPMI_RH_NV_INDEX          NvIndex,
-  IN      TPMS_AUTH_COMMAND         *AuthSession OPTIONAL
+  IN      TPMI_RH_NV_AUTH    AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession OPTIONAL
   );
 
 /**
@@ -469,8 +462,29 @@ Tpm2NvWriteLock (
 EFI_STATUS
 EFIAPI
 Tpm2NvGlobalWriteLock (
-  IN      TPMI_RH_PROVISION         AuthHandle,
-  IN      TPMS_AUTH_COMMAND         *AuthSession OPTIONAL
+  IN      TPMI_RH_PROVISION  AuthHandle,
+  IN      TPMS_AUTH_COMMAND  *AuthSession OPTIONAL
+  );
+
+/**
+  This command extends a value to an area in NV memory that was previously defined by TPM2_NV_DefineSpace().
+
+  @param[in]  AuthHandle         the handle indicating the source of the authorization value.
+  @param[in]  NvIndex            The NV Index of the area to extend.
+  @param[in]  AuthSession        Auth Session context
+  @param[in]  InData             The data to extend.
+
+  @retval EFI_SUCCESS            Operation completed successfully.
+  @retval EFI_DEVICE_ERROR       The command was unsuccessful.
+  @retval EFI_NOT_FOUND          The command was returned successfully, but NvIndex is not found.
+**/
+EFI_STATUS
+EFIAPI
+Tpm2NvExtend (
+  IN      TPMI_RH_NV_AUTH    AuthHandle,
+  IN      TPMI_RH_NV_INDEX   NvIndex,
+  IN      TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN      TPM2B_MAX_BUFFER   *InData
   );
 
 /**
@@ -487,8 +501,8 @@ Tpm2NvGlobalWriteLock (
 EFI_STATUS
 EFIAPI
 Tpm2PcrExtend (
-  IN      TPMI_DH_PCR               PcrHandle,
-  IN      TPML_DIGEST_VALUES        *Digests
+  IN      TPMI_DH_PCR         PcrHandle,
+  IN      TPML_DIGEST_VALUES  *Digests
   );
 
 /**
@@ -509,9 +523,9 @@ Tpm2PcrExtend (
 EFI_STATUS
 EFIAPI
 Tpm2PcrEvent (
-  IN      TPMI_DH_PCR               PcrHandle,
-  IN      TPM2B_EVENT               *EventData,
-     OUT  TPML_DIGEST_VALUES        *Digests
+  IN      TPMI_DH_PCR         PcrHandle,
+  IN      TPM2B_EVENT         *EventData,
+  OUT     TPML_DIGEST_VALUES  *Digests
   );
 
 /**
@@ -521,17 +535,17 @@ Tpm2PcrEvent (
   @param[out] PcrUpdateCounter   The current value of the PCR update counter.
   @param[out] PcrSelectionOut    The PCR in the returned list.
   @param[out] PcrValues          The contents of the PCR indicated in pcrSelect.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PcrRead (
-  IN      TPML_PCR_SELECTION        *PcrSelectionIn,
-     OUT  UINT32                    *PcrUpdateCounter,
-     OUT  TPML_PCR_SELECTION        *PcrSelectionOut,
-     OUT  TPML_DIGEST               *PcrValues
+  IN   TPML_PCR_SELECTION  *PcrSelectionIn,
+  OUT  UINT32              *PcrUpdateCounter,
+  OUT  TPML_PCR_SELECTION  *PcrSelectionOut,
+  OUT  TPML_DIGEST         *PcrValues
   );
 
 /**
@@ -544,20 +558,20 @@ Tpm2PcrRead (
   @param[out] MaxPCR             maximum number of PCR that may be in a bank
   @param[out] SizeNeeded         number of octets required to satisfy the request
   @param[out] SizeAvailable      Number of octets available. Computed before the allocation
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PcrAllocate (
-  IN  TPMI_RH_PLATFORM          AuthHandle,
-  IN  TPMS_AUTH_COMMAND         *AuthSession,
-  IN  TPML_PCR_SELECTION        *PcrAllocation,
-  OUT TPMI_YES_NO               *AllocationSuccess,
-  OUT UINT32                    *MaxPCR,
-  OUT UINT32                    *SizeNeeded,
-  OUT UINT32                    *SizeAvailable
+  IN  TPMI_RH_PLATFORM    AuthHandle,
+  IN  TPMS_AUTH_COMMAND   *AuthSession,
+  IN  TPML_PCR_SELECTION  *PcrAllocation,
+  OUT TPMI_YES_NO         *AllocationSuccess,
+  OUT UINT32              *MaxPCR,
+  OUT UINT32              *SizeNeeded,
+  OUT UINT32              *SizeAvailable
   );
 
 /**
@@ -572,44 +586,44 @@ Tpm2PcrAllocate (
 EFI_STATUS
 EFIAPI
 Tpm2PcrAllocateBanks (
-  IN TPM2B_AUTH                *PlatformAuth,  OPTIONAL
-  IN UINT32                    SupportedPCRBanks,
-  IN UINT32                    PCRBanks
+  IN TPM2B_AUTH  *PlatformAuth   OPTIONAL,
+  IN UINT32      SupportedPCRBanks,
+  IN UINT32      PCRBanks
   );
 
 /**
   This command returns various information regarding the TPM and its current state.
 
-  The capability parameter determines the category of data returned. The property parameter 
-  selects the first value of the selected category to be returned. If there is no property 
+  The capability parameter determines the category of data returned. The property parameter
+  selects the first value of the selected category to be returned. If there is no property
   that corresponds to the value of property, the next higher value is returned, if it exists.
-  The moreData parameter will have a value of YES if there are more values of the requested 
+  The moreData parameter will have a value of YES if there are more values of the requested
   type that were not returned.
-  If no next capability exists, the TPM will return a zero-length list and moreData will have 
+  If no next capability exists, the TPM will return a zero-length list and moreData will have
   a value of NO.
 
-  NOTE: 
-  To simplify this function, leave returned CapabilityData for caller to unpack since there are 
+  NOTE:
+  To simplify this function, leave returned CapabilityData for caller to unpack since there are
   many capability categories and only few categories will be used in firmware. It means the caller
-  need swap the byte order for the feilds in CapabilityData.
+  need swap the byte order for the fields in CapabilityData.
 
   @param[in]  Capability         Group selection; determines the format of the response.
-  @param[in]  Property           Further definition of information. 
+  @param[in]  Property           Further definition of information.
   @param[in]  PropertyCount      Number of properties of the indicated type to return.
   @param[out] MoreData           Flag to indicate if there are more values of this type.
   @param[out] CapabilityData     The capability data.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapability (
-  IN      TPM_CAP                   Capability,
-  IN      UINT32                    Property,
-  IN      UINT32                    PropertyCount,
-  OUT     TPMI_YES_NO               *MoreData,
-  OUT     TPMS_CAPABILITY_DATA      *CapabilityData
+  IN      TPM_CAP               Capability,
+  IN      UINT32                Property,
+  IN      UINT32                PropertyCount,
+  OUT     TPMI_YES_NO           *MoreData,
+  OUT     TPMS_CAPABILITY_DATA  *CapabilityData
   );
 
 /**
@@ -618,14 +632,14 @@ Tpm2GetCapability (
   This function parse the value got from TPM2_GetCapability and return the Family.
 
   @param[out] Family             The Family of TPM. (a 4-octet character string)
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityFamily (
-  OUT     CHAR8                     *Family
+  OUT     CHAR8  *Family
   );
 
 /**
@@ -634,14 +648,14 @@ Tpm2GetCapabilityFamily (
   This function parse the value got from TPM2_GetCapability and return the TPM manufacture ID.
 
   @param[out] ManufactureId      The manufacture ID of TPM.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityManufactureID (
-  OUT     UINT32                    *ManufactureId
+  OUT     UINT32  *ManufactureId
   );
 
 /**
@@ -651,15 +665,15 @@ Tpm2GetCapabilityManufactureID (
 
   @param[out] FirmwareVersion1   The FirmwareVersion1.
   @param[out] FirmwareVersion2   The FirmwareVersion2.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityFirmwareVersion (
-  OUT     UINT32                    *FirmwareVersion1,
-  OUT     UINT32                    *FirmwareVersion2
+  OUT     UINT32  *FirmwareVersion1,
+  OUT     UINT32  *FirmwareVersion2
   );
 
 /**
@@ -669,32 +683,32 @@ Tpm2GetCapabilityFirmwareVersion (
 
   @param[out] MaxCommandSize     The maximum value for commandSize in a command.
   @param[out] MaxResponseSize    The maximum value for responseSize in a command.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityMaxCommandResponseSize (
-  OUT UINT32                    *MaxCommandSize,
-  OUT UINT32                    *MaxResponseSize
+  OUT UINT32  *MaxCommandSize,
+  OUT UINT32  *MaxResponseSize
   );
 
 /**
   This command returns Returns a list of TPMS_ALG_PROPERTIES. Each entry is an
-  algorithm ID and a set of properties of the algorithm. 
+  algorithm ID and a set of properties of the algorithm.
 
   This function parse the value got from TPM2_GetCapability and return the list.
 
   @param[out] AlgList      List of algorithm.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilitySupportedAlg (
-  OUT TPML_ALG_PROPERTY      *AlgList
+  OUT TPML_ALG_PROPERTY  *AlgList
   );
 
 /**
@@ -703,14 +717,14 @@ Tpm2GetCapabilitySupportedAlg (
   This function parse the value got from TPM2_GetCapability and return the LockoutCounter.
 
   @param[out] LockoutCounter     The LockoutCounter of TPM.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityLockoutCounter (
-  OUT     UINT32                    *LockoutCounter
+  OUT     UINT32  *LockoutCounter
   );
 
 /**
@@ -719,14 +733,14 @@ Tpm2GetCapabilityLockoutCounter (
   This function parse the value got from TPM2_GetCapability and return the LockoutInterval.
 
   @param[out] LockoutInterval    The LockoutInterval of TPM.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityLockoutInterval (
-  OUT     UINT32                    *LockoutInterval
+  OUT     UINT32  *LockoutInterval
   );
 
 /**
@@ -736,14 +750,14 @@ Tpm2GetCapabilityLockoutInterval (
 
   @param[out] InputBufferSize    The InputBufferSize of TPM.
                                  the maximum size of a parameter (typically, a TPM2B_MAX_BUFFER)
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityInputBufferSize (
-  OUT     UINT32                    *InputBufferSize
+  OUT     UINT32  *InputBufferSize
   );
 
 /**
@@ -752,14 +766,14 @@ Tpm2GetCapabilityInputBufferSize (
   This function parse the value got from TPM2_GetCapability and return the PcrSelection.
 
   @param[out] Pcrs    The Pcr Selection
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityPcrs (
-  OUT TPML_PCR_SELECTION      *Pcrs
+  OUT TPML_PCR_SELECTION  *Pcrs
   );
 
 /**
@@ -775,9 +789,9 @@ Tpm2GetCapabilityPcrs (
 **/
 EFI_STATUS
 EFIAPI
-Tpm2GetCapabilitySupportedAndActivePcrs(
-  OUT UINT32                            *TpmHashAlgorithmBitmap,
-  OUT UINT32                            *ActivePcrBanks
+Tpm2GetCapabilitySupportedAndActivePcrs (
+  OUT UINT32  *TpmHashAlgorithmBitmap,
+  OUT UINT32  *ActivePcrBanks
   );
 
 /**
@@ -786,14 +800,30 @@ Tpm2GetCapabilitySupportedAndActivePcrs(
   This function parse the value got from TPM2_GetCapability and return the AlgorithmSet.
 
   @param[out] AlgorithmSet    The AlgorithmSet of TPM.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2GetCapabilityAlgorithmSet (
-  OUT     UINT32      *AlgorithmSet
+  OUT     UINT32  *AlgorithmSet
+  );
+
+/**
+  This function will query if the command is supported.
+
+  @param[In]  Command         TPM_CC command starts from TPM_CC_FIRST.
+  @param[out] IsCmdImpl       The command is supported or not.
+
+  @retval EFI_SUCCESS            Operation completed successfully.
+  @retval EFI_DEVICE_ERROR       The command was unsuccessful.
+**/
+EFI_STATUS
+EFIAPI
+Tpm2GetCapabilityIsCommandImplemented (
+  IN      TPM_CC   Command,
+  OUT     BOOLEAN  *IsCmdImpl
   );
 
 /**
@@ -807,7 +837,7 @@ Tpm2GetCapabilityAlgorithmSet (
 EFI_STATUS
 EFIAPI
 Tpm2TestParms (
-  IN  TPMT_PUBLIC_PARMS           *Parameters
+  IN  TPMT_PUBLIC_PARMS  *Parameters
   );
 
 /**
@@ -825,9 +855,9 @@ Tpm2TestParms (
 EFI_STATUS
 EFIAPI
 Tpm2SetAlgorithmSet (
-  IN  TPMI_RH_PLATFORM          AuthHandle,
-  IN  TPMS_AUTH_COMMAND         *AuthSession,
-  IN  UINT32                    AlgorithmSet
+  IN  TPMI_RH_PLATFORM   AuthHandle,
+  IN  TPMS_AUTH_COMMAND  *AuthSession,
+  IN  UINT32             AlgorithmSet
   );
 
 /**
@@ -843,43 +873,43 @@ Tpm2SetAlgorithmSet (
   @param[in]  AuthHash           Hash algorithm to use for the session.
   @param[out] SessionHandle      Handle for the newly created session.
   @param[out] NonceTPM           The initial nonce from the TPM, used in the computation of the sessionKey.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2StartAuthSession (
-  IN      TPMI_DH_OBJECT            TpmKey,
-  IN      TPMI_DH_ENTITY            Bind,
-  IN      TPM2B_NONCE               *NonceCaller,
-  IN      TPM2B_ENCRYPTED_SECRET    *Salt,
-  IN      TPM_SE                    SessionType,
-  IN      TPMT_SYM_DEF              *Symmetric,
-  IN      TPMI_ALG_HASH             AuthHash,
-     OUT  TPMI_SH_AUTH_SESSION      *SessionHandle,
-     OUT  TPM2B_NONCE               *NonceTPM
+  IN      TPMI_DH_OBJECT          TpmKey,
+  IN      TPMI_DH_ENTITY          Bind,
+  IN      TPM2B_NONCE             *NonceCaller,
+  IN      TPM2B_ENCRYPTED_SECRET  *Salt,
+  IN      TPM_SE                  SessionType,
+  IN      TPMT_SYM_DEF            *Symmetric,
+  IN      TPMI_ALG_HASH           AuthHash,
+  OUT  TPMI_SH_AUTH_SESSION       *SessionHandle,
+  OUT  TPM2B_NONCE                *NonceTPM
   );
 
 /**
   This command causes all context associated with a loaded object or session to be removed from TPM memory.
 
   @param[in]  FlushHandle        The handle of the item to flush.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2FlushContext (
-  IN      TPMI_DH_CONTEXT           FlushHandle
+  IN      TPMI_DH_CONTEXT  FlushHandle
   );
 
 /**
   This command includes a secret-based authorization to a policy.
   The caller proves knowledge of the secret value using an authorization
   session using the authValue associated with authHandle.
-  
+
   @param[in]  AuthHandle         Handle for an entity providing the authorization
   @param[in]  PolicySession      Handle for the policy session being extended.
   @param[in]  AuthSession        Auth Session context
@@ -889,22 +919,22 @@ Tpm2FlushContext (
   @param[in]  Expiration         Time when authorization will expire, measured in seconds from the time that nonceTPM was generated.
   @param[out] Timeout            Time value used to indicate to the TPM when the ticket expires.
   @param[out] PolicyTicket       A ticket that includes a value indicating when the authorization expires.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PolicySecret (
-  IN      TPMI_DH_ENTITY            AuthHandle,
-  IN      TPMI_SH_POLICY            PolicySession,
-  IN      TPMS_AUTH_COMMAND         *AuthSession, OPTIONAL
-  IN      TPM2B_NONCE               *NonceTPM,
-  IN      TPM2B_DIGEST              *CpHashA,
-  IN      TPM2B_NONCE               *PolicyRef,
-  IN      INT32                     Expiration,
-  OUT     TPM2B_TIMEOUT             *Timeout,
-  OUT     TPMT_TK_AUTH              *PolicyTicket
+  IN      TPMI_DH_ENTITY     AuthHandle,
+  IN      TPMI_SH_POLICY     PolicySession,
+  IN      TPMS_AUTH_COMMAND  *AuthSession  OPTIONAL,
+  IN      TPM2B_NONCE        *NonceTPM,
+  IN      TPM2B_DIGEST       *CpHashA,
+  IN      TPM2B_NONCE        *PolicyRef,
+  IN      INT32              Expiration,
+  OUT     TPM2B_TIMEOUT      *Timeout,
+  OUT     TPMT_TK_AUTH       *PolicyTicket
   );
 
 /**
@@ -915,15 +945,15 @@ Tpm2PolicySecret (
 
   @param[in] PolicySession      Handle for the policy session being extended.
   @param[in] HashList           the list of hashes to check for a match.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PolicyOR (
-  IN TPMI_SH_POLICY           PolicySession,
-  IN TPML_DIGEST              *HashList
+  IN TPMI_SH_POLICY  PolicySession,
+  IN TPML_DIGEST     *HashList
   );
 
 /**
@@ -931,15 +961,15 @@ Tpm2PolicyOR (
 
   @param[in]  PolicySession      Handle for the policy session being extended.
   @param[in]  Code               The allowed commandCode.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PolicyCommandCode (
-  IN      TPMI_SH_POLICY            PolicySession,
-  IN      TPM_CC                    Code
+  IN      TPMI_SH_POLICY  PolicySession,
+  IN      TPM_CC          Code
   );
 
 /**
@@ -948,15 +978,35 @@ Tpm2PolicyCommandCode (
 
   @param[in]  PolicySession      Handle for the policy session.
   @param[out] PolicyHash         the current value of the policyHash of policySession.
-  
+
   @retval EFI_SUCCESS            Operation completed successfully.
   @retval EFI_DEVICE_ERROR       The command was unsuccessful.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2PolicyGetDigest (
-  IN      TPMI_SH_POLICY            PolicySession,
-     OUT  TPM2B_DIGEST              *PolicyHash
+  IN      TPMI_SH_POLICY  PolicySession,
+  OUT  TPM2B_DIGEST       *PolicyHash
+  );
+
+/**
+  This command allows access to the public area of a loaded object.
+
+  @param[in]  ObjectHandle            TPM handle of an object
+  @param[out] OutPublic               Structure containing the public area of an object
+  @param[out] Name                    Name of the object
+  @param[out] QualifiedName           The Qualified Name of the object
+
+  @retval EFI_SUCCESS      Operation completed successfully.
+  @retval EFI_DEVICE_ERROR Unexpected device behavior.
+**/
+EFI_STATUS
+EFIAPI
+Tpm2ReadPublic (
+  IN  TPMI_DH_OBJECT  ObjectHandle,
+  OUT TPM2B_PUBLIC    *OutPublic,
+  OUT TPM2B_NAME      *Name,
+  OUT TPM2B_NAME      *QualifiedName
   );
 
 //
@@ -974,8 +1024,8 @@ Tpm2PolicyGetDigest (
 UINT32
 EFIAPI
 CopyAuthSessionCommand (
-  IN      TPMS_AUTH_COMMAND         *AuthSessionIn, OPTIONAL
-  OUT     UINT8                     *AuthSessionOut
+  IN      TPMS_AUTH_COMMAND  *AuthSessionIn  OPTIONAL,
+  OUT     UINT8              *AuthSessionOut
   );
 
 /**
@@ -989,8 +1039,8 @@ CopyAuthSessionCommand (
 UINT32
 EFIAPI
 CopyAuthSessionResponse (
-  IN      UINT8                      *AuthSessionIn,
-  OUT     TPMS_AUTH_RESPONSE         *AuthSessionOut OPTIONAL
+  IN      UINT8               *AuthSessionIn,
+  OUT     TPMS_AUTH_RESPONSE  *AuthSessionOut OPTIONAL
   );
 
 /**
@@ -1003,13 +1053,42 @@ CopyAuthSessionResponse (
 UINT16
 EFIAPI
 GetHashSizeFromAlgo (
-  IN TPMI_ALG_HASH    HashAlgo
+  IN TPMI_ALG_HASH  HashAlgo
+  );
+
+/**
+  Get hash mask from algorithm.
+
+  @param[in] HashAlgo   Hash algorithm
+
+  @return Hash mask
+**/
+UINT32
+EFIAPI
+GetHashMaskFromAlgo (
+  IN TPMI_ALG_HASH  HashAlgo
+  );
+
+/**
+  Return if hash alg is supported in HashAlgorithmMask.
+
+  @param HashAlg            Hash algorithm to be checked.
+  @param HashAlgorithmMask  Bitfield of allowed hash algorithms.
+
+  @retval TRUE  Hash algorithm is supported.
+  @retval FALSE Hash algorithm is not supported.
+**/
+BOOLEAN
+EFIAPI
+IsHashAlgSupportedInHashAlgorithmMask (
+  IN TPMI_ALG_HASH  HashAlg,
+  IN UINT32         HashAlgorithmMask
   );
 
 /**
   Copy TPML_DIGEST_VALUES into a buffer
 
-  @param[in,out] Buffer             Buffer to hold TPML_DIGEST_VALUES.
+  @param[in,out] Buffer             Buffer to hold copied TPML_DIGEST_VALUES compact binary.
   @param[in]     DigestList         TPML_DIGEST_VALUES to be copied.
   @param[in]     HashAlgorithmMask  HASH bits corresponding to the desired digests to copy.
 
@@ -1017,10 +1096,31 @@ GetHashSizeFromAlgo (
 **/
 VOID *
 EFIAPI
-CopyDigestListToBuffer(
-  IN OUT VOID                       *Buffer,
-  IN TPML_DIGEST_VALUES             *DigestList,
-  IN UINT32                         HashAlgorithmMask
+CopyDigestListToBuffer (
+  IN OUT VOID            *Buffer,
+  IN TPML_DIGEST_VALUES  *DigestList,
+  IN UINT32              HashAlgorithmMask
+  );
+
+/**
+  Copy a buffer into a TPML_DIGEST_VALUES structure.
+
+  @param[in]     Buffer             Buffer to hold TPML_DIGEST_VALUES compact binary.
+  @param[in]     BufferSize         Size of Buffer.
+  @param[out]    DigestList         TPML_DIGEST_VALUES.
+
+  @retval EFI_SUCCESS               Buffer was succesfully copied to DigestList.
+  @retval EFI_BAD_BUFFER_SIZE       A bad buffer size passed to the function.
+  @retval EFI_INVALID_PARAMETER     An invalid parameter passed to the function: NULL pointer or
+                                    BufferSize bigger than TPML_DIGEST_VALUES.
+
+**/
+EFI_STATUS
+EFIAPI
+CopyBufferToDigestList (
+  IN CONST  VOID                *Buffer,
+  IN        UINTN               BufferSize,
+  OUT       TPML_DIGEST_VALUES  *DigestList
   );
 
 /**
@@ -1032,8 +1132,21 @@ CopyDigestListToBuffer(
 **/
 UINT32
 EFIAPI
-GetDigestListSize(
-  IN TPML_DIGEST_VALUES             *DigestList
+GetDigestListSize (
+  IN TPML_DIGEST_VALUES  *DigestList
+  );
+
+/**
+  Get the total digest size from a hash algorithm mask.
+
+  @param[in]     HashAlgorithmMask.
+
+  @return Digest size in bytes.
+**/
+UINT32
+EFIAPI
+GetDigestListSizeFromHashAlgorithmMask (
+  IN UINT32  HashAlgorithmMask
   );
 
 /**
@@ -1048,10 +1161,25 @@ GetDigestListSize(
 **/
 EFI_STATUS
 EFIAPI
-GetDigestFromDigestList(
-  IN TPMI_ALG_HASH      HashAlg,
-  IN TPML_DIGEST_VALUES *DigestList,
-  OUT VOID              *Digest
+GetDigestFromDigestList (
+  IN TPMI_ALG_HASH       HashAlg,
+  IN TPML_DIGEST_VALUES  *DigestList,
+  OUT VOID               *Digest
   );
 
-#endif
+/**
+   This function will query the TPM to determine which hashing algorithms and
+   get the digests of all active and supported PCR banks of a specific PCR register.
+
+   @param[in]     PcrHandle     The index of the PCR register to be read.
+   @param[out]    HashList      List of digests from PCR register being read.
+
+   @retval EFI_SUCCESS           The Pcr was read successfully.
+   @retval EFI_DEVICE_ERROR      The command was unsuccessful.
+**/
+EFI_STATUS
+EFIAPI
+Tpm2PcrReadForActiveBank (
+  IN      TPMI_DH_PCR  PcrHandle,
+  OUT     TPML_DIGEST  *HashList
+  );

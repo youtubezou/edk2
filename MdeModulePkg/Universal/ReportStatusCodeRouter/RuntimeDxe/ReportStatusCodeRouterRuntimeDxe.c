@@ -2,37 +2,32 @@
   Report Status Code Router Driver which produces Report Stataus Code Handler Protocol
   and Status Code Runtime Protocol.
 
-  Copyright (c) 2009 - 2011, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) Microsoft Corporation.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "ReportStatusCodeRouterRuntimeDxe.h"
 
-EFI_HANDLE   mHandle                    = NULL;
-LIST_ENTRY   mCallbackListHead          = INITIALIZE_LIST_HEAD_VARIABLE (mCallbackListHead);
-EFI_EVENT    mVirtualAddressChangeEvent = NULL;
+EFI_HANDLE  mHandle                    = NULL;
+LIST_ENTRY  mCallbackListHead          = INITIALIZE_LIST_HEAD_VARIABLE (mCallbackListHead);
+EFI_EVENT   mVirtualAddressChangeEvent = NULL;
 
 //
 // Report operation nest status.
 // If it is set, then the report operation has nested.
 //
-UINT32       mStatusCodeNestStatus = 0;
+UINT32  mStatusCodeNestStatus = 0;
 
-EFI_STATUS_CODE_PROTOCOL  mStatusCodeProtocol  = {
+EFI_STATUS_CODE_PROTOCOL  mStatusCodeProtocol = {
   ReportDispatcher
 };
 
 EFI_RSC_HANDLER_PROTOCOL  mRscHandlerProtocol = {
   Register,
   Unregister
-  };
+};
 
 /**
   Event callback function to invoke status code handler in list.
@@ -45,15 +40,15 @@ EFI_RSC_HANDLER_PROTOCOL  mRscHandlerProtocol = {
 VOID
 EFIAPI
 RscHandlerNotification (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   RSC_HANDLER_CALLBACK_ENTRY  *CallbackEntry;
   EFI_PHYSICAL_ADDRESS        Address;
   RSC_DATA_ENTRY              *RscData;
 
-  CallbackEntry = (RSC_HANDLER_CALLBACK_ENTRY *) Context;
+  CallbackEntry = (RSC_HANDLER_CALLBACK_ENTRY *)Context;
 
   //
   // Traverse the status code data buffer to parse all
@@ -61,7 +56,7 @@ RscHandlerNotification (
   //
   Address = CallbackEntry->StatusCodeDataBuffer;
   while (Address < CallbackEntry->EndPointer) {
-    RscData = (RSC_DATA_ENTRY *) (UINTN) Address;
+    RscData = (RSC_DATA_ENTRY *)(UINTN)Address;
     CallbackEntry->RscHandlerCallback (
                      RscData->Type,
                      RscData->Value,
@@ -70,7 +65,7 @@ RscHandlerNotification (
                      &RscData->Data
                      );
 
-    Address += (sizeof (RSC_DATA_ENTRY) + RscData->Data.Size);
+    Address += (OFFSET_OF (RSC_DATA_ENTRY, Data) + RscData->Data.HeaderSize + RscData->Data.Size);
     Address  = ALIGN_VARIABLE (Address);
   }
 
@@ -79,7 +74,7 @@ RscHandlerNotification (
 
 /**
   Register the callback function for ReportStatusCode() notification.
-  
+
   When this function is called the function pointer is added to an internal list and any future calls to
   ReportStatusCode() will be forwarded to the Callback function. During the bootservices,
   this is the callback for which this service can be invoked. The report status code router
@@ -93,11 +88,11 @@ RscHandlerNotification (
   2. not unregister at exit boot services so that the router will still have its callback address
   3. the caller must be self-contained (eg. Not call out into any boot-service interfaces) and be
   runtime safe, in general.
-  
+
   @param[in] Callback   A pointer to a function of type EFI_RSC_HANDLER_CALLBACK that is called when
                         a call to ReportStatusCode() occurs.
-  @param[in] Tpl        TPL at which callback can be safely invoked.   
-  
+  @param[in] Tpl        TPL at which callback can be safely invoked.
+
   @retval  EFI_SUCCESS              Function was successfully registered.
   @retval  EFI_INVALID_PARAMETER    The callback function was NULL.
   @retval  EFI_OUT_OF_RESOURCES     The internal buffer ran out of space. No more functions can be
@@ -108,13 +103,13 @@ RscHandlerNotification (
 EFI_STATUS
 EFIAPI
 Register (
-  IN EFI_RSC_HANDLER_CALLBACK   Callback,
-  IN EFI_TPL                    Tpl
+  IN EFI_RSC_HANDLER_CALLBACK  Callback,
+  IN EFI_TPL                   Tpl
   )
 {
-  EFI_STATUS                    Status;
-  LIST_ENTRY                    *Link;
-  RSC_HANDLER_CALLBACK_ENTRY    *CallbackEntry;
+  EFI_STATUS                  Status;
+  LIST_ENTRY                  *Link;
+  RSC_HANDLER_CALLBACK_ENTRY  *CallbackEntry;
 
   if (Callback == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -138,7 +133,7 @@ Register (
   CallbackEntry->Tpl                = Tpl;
 
   //
-  // If TPL of registered callback funtion is not TPL_HIGH_LEVEL, then event should be created
+  // If TPL of registered callback function is not TPL_HIGH_LEVEL, then event should be created
   // for it, and related buffer for status code data should be prepared.
   // Here the data buffer must be prepared in advance, because Report Status Code Protocol might
   // be invoked under TPL_HIGH_LEVEL and no memory allocation is allowed then.
@@ -146,16 +141,16 @@ Register (
   // buffer and event trigger.
   //
   if (Tpl != TPL_HIGH_LEVEL) {
-    CallbackEntry->StatusCodeDataBuffer = (EFI_PHYSICAL_ADDRESS) (UINTN) AllocatePool (EFI_PAGE_SIZE);
+    CallbackEntry->StatusCodeDataBuffer = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocatePool (EFI_PAGE_SIZE);
     CallbackEntry->BufferSize           = EFI_PAGE_SIZE;
     CallbackEntry->EndPointer           = CallbackEntry->StatusCodeDataBuffer;
-    Status = gBS->CreateEvent (
-                    EVT_NOTIFY_SIGNAL,
-                    Tpl,
-                    RscHandlerNotification,
-                    CallbackEntry,
-                    &CallbackEntry->Event
-                    );
+    Status                              = gBS->CreateEvent (
+                                                 EVT_NOTIFY_SIGNAL,
+                                                 Tpl,
+                                                 RscHandlerNotification,
+                                                 CallbackEntry,
+                                                 &CallbackEntry->Event
+                                                 );
     ASSERT_EFI_ERROR (Status);
   }
 
@@ -166,13 +161,13 @@ Register (
 
 /**
   Remove a previously registered callback function from the notification list.
-  
+
   A callback function must be unregistered before it is deallocated. It is important that any registered
   callbacks that are not runtime complaint be unregistered when ExitBootServices() is called.
-  
+
   @param[in]  Callback  A pointer to a function of type EFI_RSC_HANDLER_CALLBACK that is to be
                         unregistered.
-                        
+
   @retval EFI_SUCCESS           The function was successfully unregistered.
   @retval EFI_INVALID_PARAMETER The callback function was NULL.
   @retval EFI_NOT_FOUND         The callback function was not found to be unregistered.
@@ -181,11 +176,11 @@ Register (
 EFI_STATUS
 EFIAPI
 Unregister (
-  IN EFI_RSC_HANDLER_CALLBACK Callback
+  IN EFI_RSC_HANDLER_CALLBACK  Callback
   )
 {
-  LIST_ENTRY                    *Link;
-  RSC_HANDLER_CALLBACK_ENTRY    *CallbackEntry;
+  LIST_ENTRY                  *Link;
+  RSC_HANDLER_CALLBACK_ENTRY  *CallbackEntry;
 
   if (Callback == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -198,9 +193,10 @@ Unregister (
       // If the function is found in list, delete it and return.
       //
       if (CallbackEntry->Tpl != TPL_HIGH_LEVEL) {
-        FreePool ((VOID *) (UINTN) CallbackEntry->StatusCodeDataBuffer);
+        FreePool ((VOID *)(UINTN)CallbackEntry->StatusCodeDataBuffer);
         gBS->CloseEvent (CallbackEntry->Event);
       }
+
       RemoveEntryList (&CallbackEntry->Node);
       FreePool (CallbackEntry);
       return EFI_SUCCESS;
@@ -231,18 +227,19 @@ Unregister (
 EFI_STATUS
 EFIAPI
 ReportDispatcher (
-  IN EFI_STATUS_CODE_TYPE     Type,
-  IN EFI_STATUS_CODE_VALUE    Value,
-  IN UINT32                   Instance,
-  IN EFI_GUID                 *CallerId  OPTIONAL,
-  IN EFI_STATUS_CODE_DATA     *Data      OPTIONAL
+  IN EFI_STATUS_CODE_TYPE   Type,
+  IN EFI_STATUS_CODE_VALUE  Value,
+  IN UINT32                 Instance,
+  IN EFI_GUID               *CallerId  OPTIONAL,
+  IN EFI_STATUS_CODE_DATA   *Data      OPTIONAL
   )
 {
-  LIST_ENTRY                    *Link;
-  RSC_HANDLER_CALLBACK_ENTRY    *CallbackEntry;
-  RSC_DATA_ENTRY                *RscData;
-  EFI_STATUS                    Status;
-  VOID                          *NewBuffer;
+  LIST_ENTRY                  *Link;
+  RSC_HANDLER_CALLBACK_ENTRY  *CallbackEntry;
+  RSC_DATA_ENTRY              *RscData;
+  EFI_STATUS                  Status;
+  VOID                        *NewBuffer;
+  EFI_PHYSICAL_ADDRESS        FailSafeEndPointer;
 
   //
   // Use atom operation to avoid the reentant of report.
@@ -273,11 +270,12 @@ ReportDispatcher (
     // If callback is registered with TPL lower than TPL_HIGH_LEVEL, event must be signaled at boot time to possibly wait for
     // allowed TPL to report status code. Related data should also be stored in data buffer.
     //
+    FailSafeEndPointer         = CallbackEntry->EndPointer;
     CallbackEntry->EndPointer  = ALIGN_VARIABLE (CallbackEntry->EndPointer);
-    RscData = (RSC_DATA_ENTRY *) (UINTN) CallbackEntry->EndPointer;
+    RscData                    = (RSC_DATA_ENTRY *)(UINTN)CallbackEntry->EndPointer;
     CallbackEntry->EndPointer += sizeof (RSC_DATA_ENTRY);
     if (Data != NULL) {
-      CallbackEntry->EndPointer += Data->Size;
+      CallbackEntry->EndPointer += (Data->Size + Data->HeaderSize - sizeof (EFI_STATUS_CODE_DATA));
     }
 
     //
@@ -288,12 +286,14 @@ ReportDispatcher (
         NewBuffer = ReallocatePool (
                       CallbackEntry->BufferSize,
                       CallbackEntry->BufferSize * 2,
-                      (VOID *) (UINTN) CallbackEntry->StatusCodeDataBuffer
+                      (VOID *)(UINTN)CallbackEntry->StatusCodeDataBuffer
                       );
         if (NewBuffer != NULL) {
-          CallbackEntry->EndPointer = (EFI_PHYSICAL_ADDRESS) (UINTN) NewBuffer + (CallbackEntry->EndPointer - CallbackEntry->StatusCodeDataBuffer);
-          CallbackEntry->StatusCodeDataBuffer = (EFI_PHYSICAL_ADDRESS) (UINTN) NewBuffer;
-          CallbackEntry->BufferSize *= 2;
+          FailSafeEndPointer                  = (EFI_PHYSICAL_ADDRESS)(UINTN)NewBuffer + (FailSafeEndPointer - CallbackEntry->StatusCodeDataBuffer);
+          CallbackEntry->EndPointer           = (EFI_PHYSICAL_ADDRESS)(UINTN)NewBuffer + (CallbackEntry->EndPointer - CallbackEntry->StatusCodeDataBuffer);
+          RscData                             = (RSC_DATA_ENTRY *)(UINTN)((UINTN)NewBuffer + ((UINTN)RscData - CallbackEntry->StatusCodeDataBuffer));
+          CallbackEntry->StatusCodeDataBuffer = (EFI_PHYSICAL_ADDRESS)(UINTN)NewBuffer;
+          CallbackEntry->BufferSize          *= 2;
         }
       }
     }
@@ -302,17 +302,22 @@ ReportDispatcher (
     // If data buffer is used up, do not report for this time.
     //
     if (CallbackEntry->EndPointer > (CallbackEntry->StatusCodeDataBuffer + CallbackEntry->BufferSize)) {
+      CallbackEntry->EndPointer = FailSafeEndPointer;
       continue;
     }
 
-    RscData->Type      = Type;
-    RscData->Value     = Value;
-    RscData->Instance  = Instance;
+    RscData->Type     = Type;
+    RscData->Value    = Value;
+    RscData->Instance = Instance;
     if (CallerId != NULL) {
       CopyGuid (&RscData->CallerId, CallerId);
     }
+
     if (Data != NULL) {
       CopyMem (&RscData->Data, Data, Data->HeaderSize + Data->Size);
+    } else {
+      ZeroMem (&RscData->Data, sizeof (RscData->Data));
+      RscData->Data.HeaderSize = sizeof (RscData->Data);
     }
 
     Status = gBS->SignalEvent (CallbackEntry->Event);
@@ -339,17 +344,17 @@ ReportDispatcher (
 VOID
 EFIAPI
 VirtualAddressChangeCallBack (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  EFI_STATUS					Status;
-  LIST_ENTRY                    *Link;
-  RSC_HANDLER_CALLBACK_ENTRY    *CallbackEntry;
+  EFI_STATUS                  Status;
+  LIST_ENTRY                  *Link;
+  RSC_HANDLER_CALLBACK_ENTRY  *CallbackEntry;
 
   for (Link = GetFirstNode (&mCallbackListHead); !IsNull (&mCallbackListHead, Link); Link = GetNextNode (&mCallbackListHead, Link)) {
     CallbackEntry = CR (Link, RSC_HANDLER_CALLBACK_ENTRY, Node, RSC_HANDLER_CALLBACK_ENTRY_SIGNATURE);
-    Status = EfiConvertFunctionPointer (0, (VOID **) &CallbackEntry->RscHandlerCallback);
+    Status        = EfiConvertFunctionPointer (0, (VOID **)&CallbackEntry->RscHandlerCallback);
     ASSERT_EFI_ERROR (Status);
   }
 
@@ -369,18 +374,18 @@ VirtualAddressChangeCallBack (
 
   @param  ImageHandle       The firmware allocated handle for the EFI image.
   @param  SystemTable       A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS       The entry point is executed successfully.
 
 **/
 EFI_STATUS
 EFIAPI
 GenericStatusCodeRuntimeDxeEntry (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS     Status;
+  EFI_STATUS  Status;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &mHandle,

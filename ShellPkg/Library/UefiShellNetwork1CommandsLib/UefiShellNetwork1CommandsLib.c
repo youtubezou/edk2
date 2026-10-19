@@ -2,26 +2,20 @@
   Main file for NULL named library for network1 shell command functions.
 
   Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 #include "UefiShellNetwork1CommandsLib.h"
 
-CONST CHAR16 gShellNetwork1FileName[] = L"ShellCommands";
-EFI_HANDLE gShellNetwork1HiiHandle = NULL;
+CONST CHAR16    gShellNetwork1FileName[] = L"ShellCommands";
+EFI_HII_HANDLE  gShellNetwork1HiiHandle  = NULL;
 
 /**
   return the file name of the help text file if not using HII.
 
   @return The string pointer to the file name.
 **/
-CONST CHAR16*
+CONST CHAR16 *
 EFIAPI
 ShellCommandGetManFileNameNetwork1 (
   VOID
@@ -38,7 +32,7 @@ ShellCommandGetManFileNameNetwork1 (
   @param ImageHandle            The image handle of the process.
   @param SystemTable            The EFI System Table pointer.
 
-  @retval EFI_SUCCESS           The shell command handlers were installed sucessfully.
+  @retval EFI_SUCCESS           The shell command handlers were installed successfully.
   @retval EFI_UNSUPPORTED       The shell level required was not found.
 **/
 EFI_STATUS
@@ -53,7 +47,7 @@ ShellNetwork1CommandsLibConstructor (
   //
   // check our bit of the profiles mask
   //
-  if ((PcdGet8(PcdShellProfileMask) & BIT3) == 0) {
+  if ((PcdGet8 (PcdShellProfileMask) & BIT3) == 0) {
     return (EFI_SUCCESS);
   }
 
@@ -61,11 +55,12 @@ ShellNetwork1CommandsLibConstructor (
   if (gShellNetwork1HiiHandle == NULL) {
     return (EFI_DEVICE_ERROR);
   }
+
   //
   // install our shell command handlers
   //
-  ShellCommandRegisterCommandName(L"ping",    ShellCommandRunPing     , ShellCommandGetManFileNameNetwork1, 0, L"network1", TRUE , gShellNetwork1HiiHandle, STRING_TOKEN(STR_GET_HELP_PING));
-  ShellCommandRegisterCommandName(L"ifconfig",ShellCommandRunIfconfig , ShellCommandGetManFileNameNetwork1, 0, L"network1", TRUE , gShellNetwork1HiiHandle, STRING_TOKEN(STR_GET_HELP_IFCONFIG));
+  ShellCommandRegisterCommandName (L"ping", ShellCommandRunPing, ShellCommandGetManFileNameNetwork1, 0, L"network1", TRUE, gShellNetwork1HiiHandle, STRING_TOKEN (STR_GET_HELP_PING));
+  ShellCommandRegisterCommandName (L"ifconfig", ShellCommandRunIfconfig, ShellCommandGetManFileNameNetwork1, 0, L"network1", TRUE, gShellNetwork1HiiHandle, STRING_TOKEN (STR_GET_HELP_IFCONFIG));
 
   return (EFI_SUCCESS);
 }
@@ -84,7 +79,8 @@ ShellNetwork1CommandsLibDestructor (
   )
 {
   if (gShellNetwork1HiiHandle != NULL) {
-    HiiRemovePackages(gShellNetwork1HiiHandle);
+    HiiRemovePackages (gShellNetwork1HiiHandle);
   }
+
   return (EFI_SUCCESS);
 }

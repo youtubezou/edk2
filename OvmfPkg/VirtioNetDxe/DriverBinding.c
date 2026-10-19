@@ -5,13 +5,7 @@
   Copyright (C) 2013, Red Hat, Inc.
   Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,7 +16,7 @@
 
 #include "VirtioNet.h"
 
-#define RECEIVE_FILTERS_NO_MCAST ((UINT32) (       \
+#define RECEIVE_FILTERS_NO_MCAST  ((UINT32) (      \
           EFI_SIMPLE_NETWORK_RECEIVE_UNICAST     | \
           EFI_SIMPLE_NETWORK_RECEIVE_BROADCAST   | \
           EFI_SIMPLE_NETWORK_RECEIVE_PROMISCUOUS   \
@@ -56,36 +50,36 @@ STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetGetFeatures (
-  IN OUT  VNET_DEV        *Dev,
-  OUT     EFI_MAC_ADDRESS *MacAddress,
-  OUT     BOOLEAN         *MediaPresentSupported,
-  OUT     BOOLEAN         *MediaPresent
+  IN OUT  VNET_DEV         *Dev,
+  OUT     EFI_MAC_ADDRESS  *MacAddress,
+  OUT     BOOLEAN          *MediaPresentSupported,
+  OUT     BOOLEAN          *MediaPresent
   )
 {
-  EFI_STATUS Status;
-  UINT8      NextDevStat;
-  UINT64     Features;
-  UINTN      MacIdx;
-  UINT16     LinkStatus;
+  EFI_STATUS  Status;
+  UINT8       NextDevStat;
+  UINT64      Features;
+  UINTN       MacIdx;
+  UINT16      LinkStatus;
 
   //
   // Interrogate the device for features (virtio-0.9.5, 2.2.1 Device
   // Initialization Sequence), but don't complete setting it up.
   //
   NextDevStat = 0;             // step 1 -- reset device
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status      = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   NextDevStat |= VSTAT_ACK;    // step 2 -- acknowledge device presence
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto YieldDevice;
   }
 
   NextDevStat |= VSTAT_DRIVER; // step 3 -- we know how to drive it
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto YieldDevice;
   }
@@ -105,8 +99,10 @@ VirtioNetGetFeatures (
     Status = EFI_UNSUPPORTED;
     goto YieldDevice;
   }
+
   for (MacIdx = 0; MacIdx < SIZE_OF_VNET (Mac); ++MacIdx) {
-    Status = Dev->VirtIo->ReadDevice (Dev->VirtIo,
+    Status = Dev->VirtIo->ReadDevice (
+                            Dev->VirtIo,
                             OFFSET_OF_VNET (Mac) + MacIdx, // Offset
                             1,                             // FieldSize
                             1,                             // BufferSize
@@ -122,23 +118,24 @@ VirtioNetGetFeatures (
   //
   if ((Features & VIRTIO_NET_F_STATUS) == 0) {
     *MediaPresentSupported = FALSE;
-  }
-  else {
+  } else {
     *MediaPresentSupported = TRUE;
-    Status = VIRTIO_CFG_READ (Dev, LinkStatus, &LinkStatus);
+    Status                 = VIRTIO_CFG_READ (Dev, LinkStatus, &LinkStatus);
     if (EFI_ERROR (Status)) {
       goto YieldDevice;
     }
-    *MediaPresent = (BOOLEAN) ((LinkStatus & VIRTIO_NET_S_LINK_UP) != 0);
+
+    *MediaPresent = (BOOLEAN)((LinkStatus & VIRTIO_NET_S_LINK_UP) != 0);
   }
 
 YieldDevice:
-  Dev->VirtIo->SetDeviceStatus (Dev->VirtIo,
-    EFI_ERROR (Status) ? VSTAT_FAILED : 0);
+  Dev->VirtIo->SetDeviceStatus (
+                 Dev->VirtIo,
+                 EFI_ERROR (Status) ? VSTAT_FAILED : 0
+                 );
 
   return Status;
 }
-
 
 /**
   Set up the Simple Network Protocol fields, the Simple Network Mode fields,
@@ -157,10 +154,10 @@ STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetSnpPopulate (
-  IN OUT VNET_DEV *Dev
+  IN OUT VNET_DEV  *Dev
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   //
   // We set up a function here that is asynchronously callable by an
@@ -183,8 +180,13 @@ VirtioNetSnpPopulate (
   // I/O)". Because none of our functions block, we'd satisfy an even stronger
   // requirement.
   //
-  Status = gBS->CreateEvent (EVT_NOTIFY_WAIT, TPL_CALLBACK,
-                  &VirtioNetIsPacketAvailable, Dev, &Dev->Snp.WaitForPacket);
+  Status = gBS->CreateEvent (
+                  EVT_NOTIFY_WAIT,
+                  TPL_CALLBACK,
+                  &VirtioNetIsPacketAvailable,
+                  Dev,
+                  &Dev->Snp.WaitForPacket
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -205,31 +207,39 @@ VirtioNetSnpPopulate (
   Dev->Snp.Receive        = &VirtioNetReceive;
   Dev->Snp.Mode           = &Dev->Snm;
 
-  Dev->Snm.State                 = EfiSimpleNetworkStopped;
-  Dev->Snm.HwAddressSize         = SIZE_OF_VNET (Mac);
-  Dev->Snm.MediaHeaderSize       = SIZE_OF_VNET (Mac) + // dst MAC
-                                   SIZE_OF_VNET (Mac) + // src MAC
-                                   2;                       // Ethertype
-  Dev->Snm.MaxPacketSize         = 1500;
-  Dev->Snm.NvRamSize             = 0;
-  Dev->Snm.NvRamAccessSize       = 0;
-  Dev->Snm.ReceiveFilterMask     = RECEIVE_FILTERS_NO_MCAST;
-  Dev->Snm.ReceiveFilterSetting  = RECEIVE_FILTERS_NO_MCAST;
-  Dev->Snm.MaxMCastFilterCount   = 0;
-  Dev->Snm.MCastFilterCount      = 0;
-  Dev->Snm.IfType                = 1; // ethernet
-  Dev->Snm.MacAddressChangeable  = FALSE;
-  Dev->Snm.MultipleTxSupported   = TRUE;
+  Dev->Snm.State           = EfiSimpleNetworkStopped;
+  Dev->Snm.HwAddressSize   = SIZE_OF_VNET (Mac);
+  Dev->Snm.MediaHeaderSize = SIZE_OF_VNET (Mac) +       // dst MAC
+                             SIZE_OF_VNET (Mac) +       // src MAC
+                             2;                         // Ethertype
+  Dev->Snm.MaxPacketSize        = 1500;
+  Dev->Snm.NvRamSize            = 0;
+  Dev->Snm.NvRamAccessSize      = 0;
+  Dev->Snm.ReceiveFilterMask    = RECEIVE_FILTERS_NO_MCAST;
+  Dev->Snm.ReceiveFilterSetting = RECEIVE_FILTERS_NO_MCAST;
+  Dev->Snm.MaxMCastFilterCount  = 0;
+  Dev->Snm.MCastFilterCount     = 0;
+  Dev->Snm.IfType               = 1;  // ethernet
+  Dev->Snm.MacAddressChangeable = FALSE;
+  Dev->Snm.MultipleTxSupported  = TRUE;
 
   ASSERT (SIZE_OF_VNET (Mac) <= sizeof (EFI_MAC_ADDRESS));
 
-  Status = VirtioNetGetFeatures (Dev, &Dev->Snm.CurrentAddress,
-             &Dev->Snm.MediaPresentSupported, &Dev->Snm.MediaPresent);
+  Status = VirtioNetGetFeatures (
+             Dev,
+             &Dev->Snm.CurrentAddress,
+             &Dev->Snm.MediaPresentSupported,
+             &Dev->Snm.MediaPresent
+             );
   if (EFI_ERROR (Status)) {
     goto CloseWaitForPacket;
   }
-  CopyMem (&Dev->Snm.PermanentAddress, &Dev->Snm.CurrentAddress,
-    SIZE_OF_VNET (Mac));
+
+  CopyMem (
+    &Dev->Snm.PermanentAddress,
+    &Dev->Snm.CurrentAddress,
+    SIZE_OF_VNET (Mac)
+    );
   SetMem (&Dev->Snm.BroadcastAddress, SIZE_OF_VNET (Mac), 0xFF);
 
   //
@@ -241,8 +251,13 @@ VirtioNetSnpPopulate (
   // could be entered immediately. VirtioNetExitBoot() checks Dev->Snm.State,
   // so we're safe.
   //
-  Status = gBS->CreateEvent (EVT_SIGNAL_EXIT_BOOT_SERVICES, TPL_CALLBACK,
-                  &VirtioNetExitBoot, Dev, &Dev->ExitBoot);
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
+                  TPL_CALLBACK,
+                  &VirtioNetExitBoot,
+                  Dev,
+                  &Dev->ExitBoot
+                  );
   if (EFI_ERROR (Status)) {
     goto CloseWaitForPacket;
   }
@@ -253,7 +268,6 @@ CloseWaitForPacket:
   gBS->CloseEvent (Dev->Snp.WaitForPacket);
   return Status;
 }
-
 
 /**
   Release any resources allocated by VirtioNetSnpPopulate().
@@ -269,7 +283,7 @@ STATIC
 VOID
 EFIAPI
 VirtioNetSnpEvacuate (
-  IN OUT VNET_DEV *Dev
+  IN OUT VNET_DEV  *Dev
   )
 {
   //
@@ -281,7 +295,6 @@ VirtioNetSnpEvacuate (
   gBS->CloseEvent (Dev->ExitBoot);
   gBS->CloseEvent (Dev->Snp.WaitForPacket);
 }
-
 
 /**
   Tests to see if this driver supports a given controller. If a child device is
@@ -336,18 +349,17 @@ VirtioNetSnpEvacuate (
                                    RemainingDevicePath is not supported by the
                                    driver specified by This.
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS          Status;
-  VIRTIO_DEVICE_PROTOCOL *VirtIo;
+  EFI_STATUS              Status;
+  VIRTIO_DEVICE_PROTOCOL  *VirtIo;
 
   //
   // Attempt to open the device with the VirtIo set of interfaces. On success,
@@ -376,11 +388,14 @@ VirtioNetDriverBindingSupported (
   // We needed VirtIo access only transitorily, to see whether we support the
   // device or not.
   //
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
   return Status;
 }
-
 
 /**
   Starts a device controller or a bus controller.
@@ -425,37 +440,42 @@ VirtioNetDriverBindingSupported (
                                    device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a
                                    lack of resources.
-  @retval Others                   The driver failded to start the device.
+  @retval Others                   The driver failed to start the device.
 
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS               Status;
-  VNET_DEV                 *Dev;
-  EFI_DEVICE_PATH_PROTOCOL *DevicePath;
-  MAC_ADDR_DEVICE_PATH     MacNode;
-  VOID                     *ChildVirtIo;
+  EFI_STATUS                Status;
+  VNET_DEV                  *Dev;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
+  MAC_ADDR_DEVICE_PATH      MacNode;
+  VOID                      *ChildVirtIo;
 
   //
   // allocate space for the driver instance
   //
-  Dev = (VNET_DEV *) AllocateZeroPool (sizeof *Dev);
+  Dev = (VNET_DEV *)AllocateZeroPool (sizeof *Dev);
   if (Dev == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   Dev->Signature = VNET_SIG;
 
-  Status = gBS->OpenProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-                  (VOID **)&Dev->VirtIo, This->DriverBindingHandle,
-                  DeviceHandle, EFI_OPEN_PROTOCOL_BY_DRIVER);
+  Status = gBS->OpenProtocol (
+                  DeviceHandle,
+                  &gVirtioDeviceProtocolGuid,
+                  (VOID **)&Dev->VirtIo,
+                  This->DriverBindingHandle,
+                  DeviceHandle,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
   if (EFI_ERROR (Status)) {
     goto FreeVirtioNet;
   }
@@ -472,9 +492,14 @@ VirtioNetDriverBindingStart (
   //
   // get the device path of the virtio-net device -- one-shot open
   //
-  Status = gBS->OpenProtocol (DeviceHandle, &gEfiDevicePathProtocolGuid,
-                  (VOID **)&DevicePath, This->DriverBindingHandle,
-                  DeviceHandle, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  Status = gBS->OpenProtocol (
+                  DeviceHandle,
+                  &gEfiDevicePathProtocolGuid,
+                  (VOID **)&DevicePath,
+                  This->DriverBindingHandle,
+                  DeviceHandle,
+                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                  );
   if (EFI_ERROR (Status)) {
     goto Evacuate;
   }
@@ -485,9 +510,12 @@ VirtioNetDriverBindingStart (
   MacNode.Header.Type    = MESSAGING_DEVICE_PATH;
   MacNode.Header.SubType = MSG_MAC_ADDR_DP;
   SetDevicePathNodeLength (&MacNode, sizeof MacNode);
-  CopyMem (&MacNode.MacAddress, &Dev->Snm.CurrentAddress,
-    sizeof (EFI_MAC_ADDRESS));
-  MacNode.IfType         = Dev->Snm.IfType;
+  CopyMem (
+    &MacNode.MacAddress,
+    &Dev->Snm.CurrentAddress,
+    sizeof (EFI_MAC_ADDRESS)
+    );
+  MacNode.IfType = Dev->Snm.IfType;
 
   Dev->MacDevicePath = AppendDevicePathNode (DevicePath, &MacNode.Header);
   if (Dev->MacDevicePath == NULL) {
@@ -499,10 +527,14 @@ VirtioNetDriverBindingStart (
   // create a child handle with the Simple Network Protocol and the new
   // device path installed on it
   //
-  Status = gBS->InstallMultipleProtocolInterfaces (&Dev->MacHandle,
-                  &gEfiSimpleNetworkProtocolGuid, &Dev->Snp,
-                  &gEfiDevicePathProtocolGuid,    Dev->MacDevicePath,
-                  NULL);
+  Status = gBS->InstallMultipleProtocolInterfaces (
+                  &Dev->MacHandle,
+                  &gEfiSimpleNetworkProtocolGuid,
+                  &Dev->Snp,
+                  &gEfiDevicePathProtocolGuid,
+                  Dev->MacDevicePath,
+                  NULL
+                  );
   if (EFI_ERROR (Status)) {
     goto FreeMacDevicePath;
   }
@@ -511,9 +543,14 @@ VirtioNetDriverBindingStart (
   // make a note that we keep this device open with VirtIo for the sake of this
   // child
   //
-  Status = gBS->OpenProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-                  &ChildVirtIo, This->DriverBindingHandle,
-                  Dev->MacHandle, EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER);
+  Status = gBS->OpenProtocol (
+                  DeviceHandle,
+                  &gVirtioDeviceProtocolGuid,
+                  &ChildVirtIo,
+                  This->DriverBindingHandle,
+                  Dev->MacHandle,
+                  EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+                  );
   if (EFI_ERROR (Status)) {
     goto UninstallMultiple;
   }
@@ -521,10 +558,14 @@ VirtioNetDriverBindingStart (
   return EFI_SUCCESS;
 
 UninstallMultiple:
-  gBS->UninstallMultipleProtocolInterfaces (Dev->MacHandle,
-         &gEfiDevicePathProtocolGuid,    Dev->MacDevicePath,
-         &gEfiSimpleNetworkProtocolGuid, &Dev->Snp,
-         NULL);
+  gBS->UninstallMultipleProtocolInterfaces (
+         Dev->MacHandle,
+         &gEfiDevicePathProtocolGuid,
+         Dev->MacDevicePath,
+         &gEfiSimpleNetworkProtocolGuid,
+         &Dev->Snp,
+         NULL
+         );
 
 FreeMacDevicePath:
   FreePool (Dev->MacDevicePath);
@@ -533,15 +574,18 @@ Evacuate:
   VirtioNetSnpEvacuate (Dev);
 
 CloseVirtIo:
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
 FreeVirtioNet:
   FreePool (Dev);
 
   return Status;
 }
-
 
 /**
   Stops a device controller or a bus controller.
@@ -580,10 +624,10 @@ STATIC
 EFI_STATUS
 EFIAPI
 VirtioNetDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN UINTN                       NumberOfChildren,
-  IN EFI_HANDLE                  *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   )
 {
   if (NumberOfChildren > 0) {
@@ -591,17 +635,21 @@ VirtioNetDriverBindingStop (
     // free all resources for whose access we need the child handle, because
     // the child handle is going away
     //
-    EFI_STATUS                  Status;
-    EFI_SIMPLE_NETWORK_PROTOCOL *Snp;
-    VNET_DEV                    *Dev;
-    EFI_TPL                     OldTpl;
+    EFI_STATUS                   Status;
+    EFI_SIMPLE_NETWORK_PROTOCOL  *Snp;
+    VNET_DEV                     *Dev;
+    EFI_TPL                      OldTpl;
 
     ASSERT (NumberOfChildren == 1);
 
-    Status = gBS->OpenProtocol (ChildHandleBuffer[0],
-                    &gEfiSimpleNetworkProtocolGuid, (VOID **)&Snp,
-                    This->DriverBindingHandle, DeviceHandle,
-                    EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+    Status = gBS->OpenProtocol (
+                    ChildHandleBuffer[0],
+                    &gEfiSimpleNetworkProtocolGuid,
+                    (VOID **)&Snp,
+                    This->DriverBindingHandle,
+                    DeviceHandle,
+                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                    );
     ASSERT_EFI_ERROR (Status);
     Dev = VIRTIO_NET_FROM_SNP (Snp);
 
@@ -616,14 +664,21 @@ VirtioNetDriverBindingStop (
       // device in use, cannot stop driver instance
       //
       Status = EFI_DEVICE_ERROR;
-    }
-    else {
-      gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-             This->DriverBindingHandle, Dev->MacHandle);
-      gBS->UninstallMultipleProtocolInterfaces (Dev->MacHandle,
-             &gEfiDevicePathProtocolGuid,    Dev->MacDevicePath,
-             &gEfiSimpleNetworkProtocolGuid, &Dev->Snp,
-             NULL);
+    } else {
+      gBS->CloseProtocol (
+             DeviceHandle,
+             &gVirtioDeviceProtocolGuid,
+             This->DriverBindingHandle,
+             Dev->MacHandle
+             );
+      gBS->UninstallMultipleProtocolInterfaces (
+             Dev->MacHandle,
+             &gEfiDevicePathProtocolGuid,
+             Dev->MacDevicePath,
+             &gEfiSimpleNetworkProtocolGuid,
+             &Dev->Snp,
+             NULL
+             );
       FreePool (Dev->MacDevicePath);
       VirtioNetSnpEvacuate (Dev);
       FreePool (Dev);
@@ -636,14 +691,17 @@ VirtioNetDriverBindingStop (
   //
   // release remaining resources, tied directly to the parent handle
   //
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
   return EFI_SUCCESS;
 }
 
-
-EFI_DRIVER_BINDING_PROTOCOL gVirtioNetDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gVirtioNetDriverBinding = {
   &VirtioNetDriverBindingSupported,
   &VirtioNetDriverBindingStart,
   &VirtioNetDriverBindingStop,

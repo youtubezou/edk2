@@ -1,10 +1,7 @@
 /** @file
 
 Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -24,17 +21,17 @@ EmuBusDriverComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuBusDriverComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
 
 //
 // EFI Component Name Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL     gEmuBusDriverComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gEmuBusDriverComponentName = {
   EmuBusDriverComponentNameGetDriverName,
   EmuBusDriverComponentNameGetControllerName,
   "eng"
@@ -43,15 +40,15 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL     gEmuBusDriverCompo
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gEmuBusDriverComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) EmuBusDriverComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) EmuBusDriverComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gEmuBusDriverComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)EmuBusDriverComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)EmuBusDriverComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mEmuBusDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mEmuBusDriverNameTable[] = {
   { "eng", L"Emu Bus Driver" },
-  { NULL , NULL }
+  { NULL,  NULL              }
 };
 
 /**
@@ -102,12 +99,12 @@ EmuBusDriverComponentNameGetDriverName (
   )
 {
   return LookupUnicodeString2 (
-          Language,
-          This->SupportedLanguages,
-          mEmuBusDriverNameTable,
-          DriverName,
-          (BOOLEAN)(This == &gEmuBusDriverComponentName)
-          );
+           Language,
+           This->SupportedLanguages,
+           mEmuBusDriverNameTable,
+           DriverName,
+           (BOOLEAN)(This == &gEmuBusDriverComponentName)
+           );
 }
 
 /**
@@ -181,16 +178,16 @@ EmuBusDriverComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuBusDriverComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS              Status;
-  EMU_IO_THUNK_PROTOCOL   *EmuIo;
-  EMU_IO_DEVICE           *Private;
+  EFI_STATUS             Status;
+  EMU_IO_THUNK_PROTOCOL  *EmuIo;
+  EMU_IO_DEVICE          *Private;
 
   //
   // Make sure this driver is currently managing ControllHandle
@@ -226,7 +223,7 @@ EmuBusDriverComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   ChildHandle,
                   &gEmuIoThunkProtocolGuid,
-                  (VOID**)&EmuIo,
+                  (VOID **)&EmuIo,
                   gEmuBusDriverBinding.DriverBindingHandle,
                   ChildHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -243,5 +240,5 @@ EmuBusDriverComponentNameGetControllerName (
            Private->ControllerNameTable,
            ControllerName,
            (BOOLEAN)(This == &gEmuBusDriverComponentName)
-          );
+           );
 }

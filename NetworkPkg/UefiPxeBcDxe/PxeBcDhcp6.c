@@ -2,15 +2,10 @@
   Functions implementation related with DHCPv6 for UefiPxeBc Driver.
 
   (C) Copyright 2014 Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) Microsoft Corporation
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +16,9 @@
 //
 //   ALL_DHCP_Relay_Agents_and_Servers address: FF02::1:2
 //
-EFI_IPv6_ADDRESS   mAllDhcpRelayAndServersAddress = {{0xFF, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2}};
+EFI_IPv6_ADDRESS  mAllDhcpRelayAndServersAddress = {
+  { 0xFF, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2 }
+};
 
 /**
   Parse out a DHCPv6 option by OptTag, and find the position in buffer.
@@ -31,39 +28,36 @@ EFI_IPv6_ADDRESS   mAllDhcpRelayAndServersAddress = {{0xFF, 2, 0, 0, 0, 0, 0, 0,
   @param[in]  OptTag        The required option tag.
 
   @retval     NULL          Failed to parse the required option.
-  @retval     Others        The postion of the required option in buffer.
+  @retval     Others        The position of the required option in buffer.
 
 **/
 EFI_DHCP6_PACKET_OPTION *
 PxeBcParseDhcp6Options (
-  IN UINT8                       *Buffer,
-  IN UINT32                      Length,
-  IN UINT16                      OptTag
+  IN UINT8   *Buffer,
+  IN UINT32  Length,
+  IN UINT16  OptTag
   )
 {
-  EFI_DHCP6_PACKET_OPTION        *Option;
-  UINT32                         Offset;
+  EFI_DHCP6_PACKET_OPTION  *Option;
+  UINT32                   Offset;
 
-  Option  = (EFI_DHCP6_PACKET_OPTION *) Buffer;
-  Offset  = 0;
+  Option = (EFI_DHCP6_PACKET_OPTION *)Buffer;
+  Offset = 0;
 
   //
   // OpLen and OpCode here are both stored in network order.
   //
   while (Offset < Length) {
-
     if (NTOHS (Option->OpCode) == OptTag) {
-
       return Option;
     }
 
-    Offset += (NTOHS(Option->OpLen) + 4);
-    Option  = (EFI_DHCP6_PACKET_OPTION *) (Buffer + Offset);
+    Offset += (NTOHS (Option->OpLen) + 4);
+    Option  = (EFI_DHCP6_PACKET_OPTION *)(Buffer + Offset);
   }
 
   return NULL;
 }
-
 
 /**
   Build the options buffer for the DHCPv6 request packet.
@@ -77,69 +71,70 @@ PxeBcParseDhcp6Options (
 **/
 UINT32
 PxeBcBuildDhcp6Options (
-  IN  PXEBC_PRIVATE_DATA           *Private,
-  OUT EFI_DHCP6_PACKET_OPTION      **OptList,
-  IN  UINT8                        *Buffer
+  IN  PXEBC_PRIVATE_DATA       *Private,
+  OUT EFI_DHCP6_PACKET_OPTION  **OptList,
+  IN  UINT8                    *Buffer
   )
 {
-  PXEBC_DHCP6_OPTION_ENTRY         OptEnt;
-  UINT32                           Index;
-  UINT16                           Value;
+  PXEBC_DHCP6_OPTION_ENTRY  OptEnt;
+  UINT32                    Index;
+  UINT16                    Value;
 
-  Index       = 0;
-  OptList[0]  = (EFI_DHCP6_PACKET_OPTION *) Buffer;
+  Index      = 0;
+  OptList[0] = (EFI_DHCP6_PACKET_OPTION *)Buffer;
 
   //
   // Append client option request option
   //
-  OptList[Index]->OpCode     = HTONS (DHCP6_OPT_ORO);
-  OptList[Index]->OpLen      = HTONS (6);
-  OptEnt.Oro                 = (PXEBC_DHCP6_OPTION_ORO *) OptList[Index]->Data;
-  OptEnt.Oro->OpCode[0]      = HTONS(DHCP6_OPT_BOOT_FILE_URL);
-  OptEnt.Oro->OpCode[1]      = HTONS(DHCP6_OPT_BOOT_FILE_PARAM);
-  OptEnt.Oro->OpCode[2]      = HTONS(DHCP6_OPT_DNS_SERVERS);
+  OptList[Index]->OpCode = HTONS (DHCP6_OPT_ORO);
+  OptList[Index]->OpLen  = HTONS (8);
+  OptEnt.Oro             = (PXEBC_DHCP6_OPTION_ORO *)OptList[Index]->Data;
+  OptEnt.Oro->OpCode[0]  = HTONS (DHCP6_OPT_BOOT_FILE_URL);
+  OptEnt.Oro->OpCode[1]  = HTONS (DHCP6_OPT_BOOT_FILE_PARAM);
+  OptEnt.Oro->OpCode[2]  = HTONS (DHCP6_OPT_DNS_SERVERS);
+  OptEnt.Oro->OpCode[3]  = HTONS (DHCP6_OPT_VENDOR_CLASS);
   Index++;
-  OptList[Index]             = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
+  OptList[Index] = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
 
   //
   // Append client network device interface option
   //
-  OptList[Index]->OpCode     = HTONS (DHCP6_OPT_UNDI);
-  OptList[Index]->OpLen      = HTONS ((UINT16)3);
-  OptEnt.Undi                = (PXEBC_DHCP6_OPTION_UNDI *) OptList[Index]->Data;
+  OptList[Index]->OpCode = HTONS (DHCP6_OPT_UNDI);
+  OptList[Index]->OpLen  = HTONS ((UINT16)3);
+  OptEnt.Undi            = (PXEBC_DHCP6_OPTION_UNDI *)OptList[Index]->Data;
 
   if (Private->Nii != NULL) {
-    OptEnt.Undi->Type        = Private->Nii->Type;
-    OptEnt.Undi->MajorVer    = Private->Nii->MajorVer;
-    OptEnt.Undi->MinorVer    = Private->Nii->MinorVer;
+    OptEnt.Undi->Type     = Private->Nii->Type;
+    OptEnt.Undi->MajorVer = Private->Nii->MajorVer;
+    OptEnt.Undi->MinorVer = Private->Nii->MinorVer;
   } else {
-    OptEnt.Undi->Type        = DEFAULT_UNDI_TYPE;
-    OptEnt.Undi->MajorVer    = DEFAULT_UNDI_MAJOR;
-    OptEnt.Undi->MinorVer    = DEFAULT_UNDI_MINOR;
+    OptEnt.Undi->Type     = DEFAULT_UNDI_TYPE;
+    OptEnt.Undi->MajorVer = DEFAULT_UNDI_MAJOR;
+    OptEnt.Undi->MinorVer = DEFAULT_UNDI_MINOR;
   }
 
   Index++;
-  OptList[Index]             = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
+  OptList[Index] = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
 
   //
   // Append client system architecture option
   //
-  OptList[Index]->OpCode     = HTONS (DHCP6_OPT_ARCH);
-  OptList[Index]->OpLen      = HTONS ((UINT16) sizeof (PXEBC_DHCP6_OPTION_ARCH));
-  OptEnt.Arch                = (PXEBC_DHCP6_OPTION_ARCH *) OptList[Index]->Data;
-  Value                      = HTONS (EFI_PXE_CLIENT_SYSTEM_ARCHITECTURE);
+  OptList[Index]->OpCode = HTONS (DHCP6_OPT_ARCH);
+  OptList[Index]->OpLen  = HTONS ((UINT16)sizeof (PXEBC_DHCP6_OPTION_ARCH));
+  OptEnt.Arch            = (PXEBC_DHCP6_OPTION_ARCH *)OptList[Index]->Data;
+  Value                  = HTONS (EFI_PXE_CLIENT_SYSTEM_ARCHITECTURE);
   CopyMem (&OptEnt.Arch->Type, &Value, sizeof (UINT16));
   Index++;
-  OptList[Index]             = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
+  OptList[Index] = GET_NEXT_DHCP6_OPTION (OptList[Index - 1]);
 
   //
   // Append vendor class option to store the PXE class identifier.
   //
   OptList[Index]->OpCode       = HTONS (DHCP6_OPT_VENDOR_CLASS);
-  OptList[Index]->OpLen        = HTONS ((UINT16) sizeof (PXEBC_DHCP6_OPTION_VENDOR_CLASS));
-  OptEnt.VendorClass           = (PXEBC_DHCP6_OPTION_VENDOR_CLASS *) OptList[Index]->Data;
+  OptList[Index]->OpLen        = HTONS ((UINT16)sizeof (PXEBC_DHCP6_OPTION_VENDOR_CLASS));
+  OptEnt.VendorClass           = (PXEBC_DHCP6_OPTION_VENDOR_CLASS *)OptList[Index]->Data;
   OptEnt.VendorClass->Vendor   = HTONL (PXEBC_DHCP6_ENTERPRISE_NUM);
-  OptEnt.VendorClass->ClassLen = HTONS ((UINT16) sizeof (PXEBC_CLASS_ID));
+  OptEnt.VendorClass->ClassLen = HTONS ((UINT16)sizeof (PXEBC_CLASS_ID));
   CopyMem (
     &OptEnt.VendorClass->ClassId,
     DEFAULT_CLASS_ID_DATA,
@@ -174,47 +169,30 @@ PxeBcBuildDhcp6Options (
   return Index;
 }
 
-
 /**
   Cache the DHCPv6 packet.
 
   @param[in]  Dst          The pointer to the cache buffer for DHCPv6 packet.
   @param[in]  Src          The pointer to the DHCPv6 packet to be cached.
 
+  @retval     EFI_SUCCESS                Packet is copied.
+  @retval     EFI_BUFFER_TOO_SMALL       Cache buffer is not big enough to hold the packet.
+
 **/
-VOID
+EFI_STATUS
 PxeBcCacheDhcp6Packet (
-  IN EFI_DHCP6_PACKET          *Dst,
-  IN EFI_DHCP6_PACKET          *Src
+  IN EFI_DHCP6_PACKET  *Dst,
+  IN EFI_DHCP6_PACKET  *Src
   )
 {
-  ASSERT (Dst->Size >= Src->Length);
+  if (Dst->Size < Src->Length) {
+    return EFI_BUFFER_TOO_SMALL;
+  }
 
   CopyMem (&Dst->Dhcp6, &Src->Dhcp6, Src->Length);
   Dst->Length = Src->Length;
-}
 
-
-/**
-  Free all the nodes in the list for boot file.
-
-  @param[in]  Head            The pointer to the head of list.
-
-**/
-VOID
-PxeBcFreeBootFileOption (
-  IN LIST_ENTRY               *Head
-  )
-{
-  LIST_ENTRY                  *Entry;
-  LIST_ENTRY                  *NextEntry;
-  PXEBC_DHCP6_OPTION_NODE     *Node;
-
-  NET_LIST_FOR_EACH_SAFE (Entry, NextEntry, Head) {
-    Node = NET_LIST_USER_STRUCT (Entry, PXEBC_DHCP6_OPTION_NODE, Link);
-    RemoveEntryList (Entry);
-    FreePool (Node);
-  }
+  return EFI_SUCCESS;
 }
 
 /**
@@ -228,26 +206,26 @@ PxeBcFreeBootFileOption (
   @retval EFI_OUT_OF_RESOURCES    Failed to allocate needed resources.
   @retval EFI_DEVICE_ERROR        An unexpected network error occurred.
   @retval Others                  Other errors as indicated.
-  
+
 **/
 EFI_STATUS
 PxeBcDns6 (
-  IN PXEBC_PRIVATE_DATA           *Private,
-  IN     CHAR16                   *HostName,
-     OUT EFI_IPv6_ADDRESS         *IpAddress                
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN     CHAR16          *HostName,
+  OUT EFI_IPv6_ADDRESS   *IpAddress
   )
 {
-  EFI_STATUS                      Status;
-  EFI_DNS6_PROTOCOL               *Dns6;
-  EFI_DNS6_CONFIG_DATA            Dns6ConfigData;
-  EFI_DNS6_COMPLETION_TOKEN       Token;
-  EFI_HANDLE                      Dns6Handle;
-  EFI_IPv6_ADDRESS                *DnsServerList;
-  BOOLEAN                         IsDone;
-  
-  Dns6                = NULL;
-  Dns6Handle          = NULL;
-  DnsServerList       = Private->DnsServer;
+  EFI_STATUS                 Status;
+  EFI_DNS6_PROTOCOL          *Dns6;
+  EFI_DNS6_CONFIG_DATA       Dns6ConfigData;
+  EFI_DNS6_COMPLETION_TOKEN  Token;
+  EFI_HANDLE                 Dns6Handle;
+  EFI_IPv6_ADDRESS           *DnsServerList;
+  BOOLEAN                    IsDone;
+
+  Dns6          = NULL;
+  Dns6Handle    = NULL;
+  DnsServerList = Private->DnsServer;
   ZeroMem (&Token, sizeof (EFI_DNS6_COMPLETION_TOKEN));
 
   //
@@ -261,12 +239,12 @@ PxeBcDns6 (
              );
   if (EFI_ERROR (Status)) {
     goto Exit;
-  } 
-  
+  }
+
   Status = gBS->OpenProtocol (
                   Dns6Handle,
                   &gEfiDns6ProtocolGuid,
-                  (VOID **) &Dns6,
+                  (VOID **)&Dns6,
                   Private->Image,
                   Private->Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -323,39 +301,43 @@ PxeBcDns6 (
   //
   // Name resolution is done, check result.
   //
-  Status = Token.Status;  
+  Status = Token.Status;
   if (!EFI_ERROR (Status)) {
     if (Token.RspData.H2AData == NULL) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
-    if (Token.RspData.H2AData->IpCount == 0 || Token.RspData.H2AData->IpList == NULL) {
+
+    if ((Token.RspData.H2AData->IpCount == 0) || (Token.RspData.H2AData->IpList == NULL)) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
+
     //
     // We just return the first IPv6 address from DNS protocol.
     //
     IP6_COPY_ADDRESS (IpAddress, Token.RspData.H2AData->IpList);
     Status = EFI_SUCCESS;
   }
-  
+
 Exit:
   FreePool (HostName);
 
   if (Token.Event != NULL) {
     gBS->CloseEvent (Token.Event);
   }
+
   if (Token.RspData.H2AData != NULL) {
     if (Token.RspData.H2AData->IpList != NULL) {
       FreePool (Token.RspData.H2AData->IpList);
     }
+
     FreePool (Token.RspData.H2AData);
   }
 
   if (Dns6 != NULL) {
     Dns6->Configure (Dns6, NULL);
-    
+
     gBS->CloseProtocol (
            Dns6Handle,
            &gEfiDns6ProtocolGuid,
@@ -376,8 +358,8 @@ Exit:
   if (DnsServerList != NULL) {
     FreePool (DnsServerList);
   }
-  
-  return Status;  
+
+  return Status;
 }
 
 /**
@@ -391,31 +373,31 @@ Exit:
 
   @retval EFI_ABORTED     User cancel operation.
   @retval EFI_SUCCESS     Selected the boot menu successfully.
-  @retval EFI_NOT_READY   Read the input key from the keybroad has not finish.
+  @retval EFI_NOT_READY   Read the input key from the keyboard has not finish.
 
 **/
 EFI_STATUS
 PxeBcExtractBootFileUrl (
-  IN PXEBC_PRIVATE_DATA      *Private,
-     OUT UINT8               **FileName,
-  IN OUT EFI_IPv6_ADDRESS    *SrvAddr,
-  IN     CHAR8               *BootFile,
-  IN     UINT16              Length
+  IN PXEBC_PRIVATE_DATA    *Private,
+  OUT UINT8                **FileName,
+  IN OUT EFI_IPv6_ADDRESS  *SrvAddr,
+  IN     CHAR8             *BootFile,
+  IN     UINT16            Length
   )
 {
-  UINT16                     PrefixLen;
-  CHAR8                      *BootFileNamePtr;
-  CHAR8                      *BootFileName;
-  UINT16                     BootFileNameLen;
-  CHAR8                      *TmpStr;
-  CHAR8                      TmpChar;
-  CHAR8                      *ServerAddressOption;
-  CHAR8                      *ServerAddress;
-  CHAR8                      *ModeStr;
-  CHAR16                     *HostName;
-  BOOLEAN                    IpExpressedUrl;
-  UINTN                      Len;
-  EFI_STATUS                 Status;
+  UINT16      PrefixLen;
+  CHAR8       *BootFileNamePtr;
+  CHAR8       *BootFileName;
+  UINT16      BootFileNameLen;
+  CHAR8       *TmpStr;
+  CHAR8       TmpChar;
+  CHAR8       *ServerAddressOption;
+  CHAR8       *ServerAddress;
+  CHAR8       *ModeStr;
+  CHAR16      *HostName;
+  BOOLEAN     IpExpressedUrl;
+  UINTN       Len;
+  EFI_STATUS  Status;
 
   IpExpressedUrl = TRUE;
   //
@@ -438,17 +420,18 @@ PxeBcExtractBootFileUrl (
   // As an example where the BOOTFILE_NAME is the EFI loader and
   // SERVER_ADDRESS is the ASCII encoding of an IPV6 address.
   //
-  PrefixLen = (UINT16) AsciiStrLen (PXEBC_DHCP6_BOOT_FILE_URL_PREFIX);
+  PrefixLen = (UINT16)AsciiStrLen (PXEBC_DHCP6_BOOT_FILE_URL_PREFIX);
 
-  if (Length <= PrefixLen ||
-      CompareMem (BootFile, PXEBC_DHCP6_BOOT_FILE_URL_PREFIX, PrefixLen) != 0) {
+  if ((Length <= PrefixLen) ||
+      (CompareMem (BootFile, PXEBC_DHCP6_BOOT_FILE_URL_PREFIX, PrefixLen) != 0))
+  {
     return EFI_NOT_FOUND;
   }
 
   BootFile = BootFile + PrefixLen;
-  Length   = (UINT16) (Length - PrefixLen);
+  Length   = (UINT16)(Length - PrefixLen);
 
-  TmpStr = (CHAR8 *) AllocateZeroPool (Length + 1);
+  TmpStr = (CHAR8 *)AllocateZeroPool (Length + 1);
   if (TmpStr == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -461,19 +444,19 @@ PxeBcExtractBootFileUrl (
   //
   ServerAddressOption = TmpStr;
   if (*ServerAddressOption == PXEBC_ADDR_START_DELIMITER) {
-    ServerAddressOption ++;
+    ServerAddressOption++;
     ServerAddress = ServerAddressOption;
     while (*ServerAddress != '\0' && *ServerAddress != PXEBC_ADDR_END_DELIMITER) {
       ServerAddress++;
     }
-    
+
     if (*ServerAddress != PXEBC_ADDR_END_DELIMITER) {
       FreePool (TmpStr);
       return EFI_INVALID_PARAMETER;
     }
-    
+
     *ServerAddress = '\0';
-    
+
     //
     // Convert the string of server address to Ipv6 address format and store it.
     //
@@ -482,10 +465,9 @@ PxeBcExtractBootFileUrl (
       FreePool (TmpStr);
       return Status;
     }
-
   } else {
     IpExpressedUrl = FALSE;
-    ServerAddress = ServerAddressOption;
+    ServerAddress  = ServerAddressOption;
     while (*ServerAddress != '\0' && *ServerAddress != PXEBC_TFTP_URL_SEPARATOR) {
       ServerAddress++;
     }
@@ -494,14 +476,16 @@ PxeBcExtractBootFileUrl (
       FreePool (TmpStr);
       return EFI_INVALID_PARAMETER;
     }
+
     *ServerAddress = '\0';
 
-    Len = AsciiStrSize (ServerAddressOption);
+    Len      = AsciiStrSize (ServerAddressOption);
     HostName = AllocateZeroPool (Len * sizeof (CHAR16));
     if (HostName == NULL) {
       FreePool (TmpStr);
       return EFI_OUT_OF_RESOURCES;
     }
+
     AsciiStrToUnicodeStrS (
       ServerAddressOption,
       HostName,
@@ -511,7 +495,7 @@ PxeBcExtractBootFileUrl (
     //
     // Perform DNS resolution.
     //
-    Status = PxeBcDns6 (Private,HostName, SrvAddr);
+    Status = PxeBcDns6 (Private, HostName, SrvAddr);
     if (EFI_ERROR (Status)) {
       FreePool (TmpStr);
       return Status;
@@ -521,55 +505,59 @@ PxeBcExtractBootFileUrl (
   //
   // Get the part of BOOTFILE_NAME string.
   //
-  BootFileNamePtr = (CHAR8*)((UINTN)ServerAddress + 1);
+  BootFileNamePtr = (CHAR8 *)((UINTN)ServerAddress + 1);
   if (IpExpressedUrl) {
     if (*BootFileNamePtr != PXEBC_TFTP_URL_SEPARATOR) {
       FreePool (TmpStr);
       return EFI_INVALID_PARAMETER;
     }
+
     ++BootFileNamePtr;
   }
 
-  BootFileNameLen = (UINT16)(Length - (UINT16) ((UINTN)BootFileNamePtr - (UINTN)TmpStr) + 1);
-  if (BootFileNameLen != 0 || FileName != NULL) {
+  BootFileNameLen = (UINT16)(Length - (UINT16)((UINTN)BootFileNamePtr - (UINTN)TmpStr) + 1);
+  if ((BootFileNameLen != 0) || (FileName != NULL)) {
     //
     // Remove trailing mode=octet if present and ignore.  All other modes are
     // invalid for netboot6, so reject them.
     //
     ModeStr = AsciiStrStr (BootFileNamePtr, ";mode=octet");
-    if (ModeStr != NULL && *(ModeStr + AsciiStrLen (";mode=octet")) == '\0') {
+    if ((ModeStr != NULL) && (*(ModeStr + AsciiStrLen (";mode=octet")) == '\0')) {
       *ModeStr = '\0';
     } else if (AsciiStrStr (BootFileNamePtr, ";mode=") != NULL) {
+      FreePool (TmpStr);
       return EFI_INVALID_PARAMETER;
     }
 
     //
     // Extract boot file name from URL.
     //
-    BootFileName = (CHAR8 *) AllocateZeroPool (BootFileNameLen);
+    BootFileName = (CHAR8 *)AllocateZeroPool (BootFileNameLen);
     if (BootFileName == NULL) {
       FreePool (TmpStr);
       return EFI_OUT_OF_RESOURCES;
     }
-    *FileName = (UINT8*) BootFileName;
+
+    *FileName = (UINT8 *)BootFileName;
 
     //
     // Decode percent-encoding in boot file name.
     //
     while (*BootFileNamePtr != '\0') {
       if (*BootFileNamePtr == '%') {
-        TmpChar = *(BootFileNamePtr+ 3);
+        TmpChar               = *(BootFileNamePtr+ 3);
         *(BootFileNamePtr+ 3) = '\0';
-        *BootFileName = (UINT8) AsciiStrHexToUintn ((CHAR8*)(BootFileNamePtr + 1));
+        *BootFileName         = (UINT8)AsciiStrHexToUintn ((CHAR8 *)(BootFileNamePtr + 1));
         BootFileName++;
         *(BootFileNamePtr+ 3) = TmpChar;
-        BootFileNamePtr += 3;
+        BootFileNamePtr      += 3;
       } else {
         *BootFileName = *BootFileNamePtr;
         BootFileName++;
         BootFileNamePtr++;
       }
     }
+
     *BootFileName = '\0';
   }
 
@@ -577,7 +565,6 @@ PxeBcExtractBootFileUrl (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Parse the Boot File Parameter option.
@@ -591,14 +578,14 @@ PxeBcExtractBootFileUrl (
 **/
 EFI_STATUS
 PxeBcExtractBootFileParam (
-  IN  CHAR8                  *BootFilePara,
-  OUT UINT16                 *BootFileSize
+  IN  CHAR8   *BootFilePara,
+  OUT UINT16  *BootFileSize
   )
 {
-  UINT16                     Length;
-  UINT8                      Index;
-  UINT8                      Digit;
-  UINT32                     Size;
+  UINT16  Length;
+  UINT8   Index;
+  UINT8   Digit;
+  UINT32  Size;
 
   CopyMem (&Length, BootFilePara, sizeof (UINT16));
   Length = NTOHS (Length);
@@ -606,7 +593,7 @@ PxeBcExtractBootFileParam (
   //
   // The BootFile Size should be 1~5 byte ASCII strings
   //
-  if (Length < 1 || Length > 5) {
+  if ((Length < 1) || (Length > 5)) {
     return EFI_NOT_FOUND;
   }
 
@@ -628,10 +615,9 @@ PxeBcExtractBootFileParam (
     return EFI_NOT_FOUND;
   }
 
-  *BootFileSize = (UINT16) Size;
+  *BootFileSize = (UINT16)Size;
   return EFI_SUCCESS;
 }
-
 
 /**
   Parse the cached DHCPv6 packet, including all the options.
@@ -647,15 +633,15 @@ PxeBcParseDhcp6Packet (
   IN PXEBC_DHCP6_PACKET_CACHE  *Cache6
   )
 {
-  EFI_DHCP6_PACKET             *Offer;
-  EFI_DHCP6_PACKET_OPTION      **Options;
-  EFI_DHCP6_PACKET_OPTION      *Option;
-  PXEBC_OFFER_TYPE             OfferType;
-  BOOLEAN                      IsProxyOffer;
-  BOOLEAN                      IsPxeOffer;
-  UINT32                       Offset;
-  UINT32                       Length;
-  UINT32                       EnterpriseNum;
+  EFI_DHCP6_PACKET         *Offer;
+  EFI_DHCP6_PACKET_OPTION  **Options;
+  EFI_DHCP6_PACKET_OPTION  *Option;
+  PXEBC_OFFER_TYPE         OfferType;
+  BOOLEAN                  IsProxyOffer;
+  BOOLEAN                  IsPxeOffer;
+  UINT32                   Offset;
+  UINT32                   Length;
+  UINT32                   EnterpriseNum;
 
   IsProxyOffer = TRUE;
   IsPxeOffer   = FALSE;
@@ -664,15 +650,14 @@ PxeBcParseDhcp6Packet (
 
   ZeroMem (Cache6->OptList, sizeof (Cache6->OptList));
 
-  Option  = (EFI_DHCP6_PACKET_OPTION *) (Offer->Dhcp6.Option);
-  Offset  = 0;
-  Length  = GET_DHCP6_OPTION_SIZE (Offer);
+  Option = (EFI_DHCP6_PACKET_OPTION *)(Offer->Dhcp6.Option);
+  Offset = 0;
+  Length = GET_DHCP6_OPTION_SIZE (Offer);
 
   //
   // OpLen and OpCode here are both stored in network order, since they are from original packet.
   //
   while (Offset < Length) {
-
     if (NTOHS (Option->OpCode) == DHCP6_OPT_IA_NA) {
       Options[PXEBC_DHCP6_IDX_IA_NA] = Option;
     } else if (NTOHS (Option->OpCode) == DHCP6_OPT_BOOT_FILE_URL) {
@@ -689,12 +674,12 @@ PxeBcParseDhcp6Packet (
     }
 
     Offset += (NTOHS (Option->OpLen) + 4);
-    Option  = (EFI_DHCP6_PACKET_OPTION *) (Offer->Dhcp6.Option + Offset);
+    Option  = (EFI_DHCP6_PACKET_OPTION *)(Offer->Dhcp6.Option + Offset);
   }
 
   //
   // The offer with assigned client address is NOT a proxy offer.
-  // An ia_na option, embeded with valid ia_addr option and a status_code of success.
+  // An ia_na option, embedded with valid ia_addr option and a status_code of success.
   //
   Option = Options[PXEBC_DHCP6_IDX_IA_NA];
   if (Option != NULL) {
@@ -703,7 +688,7 @@ PxeBcParseDhcp6Packet (
                NTOHS (Option->OpLen),
                DHCP6_OPT_STATUS_CODE
                );
-    if ((Option != NULL && Option->Data[0] == 0) || (Option == NULL)) {
+    if (((Option != NULL) && (Option->Data[0] == 0)) || (Option == NULL)) {
       IsProxyOffer = FALSE;
     }
   }
@@ -712,12 +697,13 @@ PxeBcParseDhcp6Packet (
   // The offer with "PXEClient" is a pxe offer.
   //
   Option        = Options[PXEBC_DHCP6_IDX_VENDOR_CLASS];
-  EnterpriseNum = HTONL(PXEBC_DHCP6_ENTERPRISE_NUM);
+  EnterpriseNum = HTONL (PXEBC_DHCP6_ENTERPRISE_NUM);
 
-  if (Option != NULL &&
-      NTOHS(Option->OpLen) >= 13 &&
-      CompareMem (Option->Data, &EnterpriseNum, sizeof (UINT32)) == 0 &&
-      CompareMem (&Option->Data[6], DEFAULT_CLASS_ID_DATA, 9) == 0) {
+  if ((Option != NULL) &&
+      (NTOHS (Option->OpLen) >= 13) &&
+      (CompareMem (Option->Data, &EnterpriseNum, sizeof (UINT32)) == 0) &&
+      (CompareMem (&Option->Data[6], DEFAULT_CLASS_ID_DATA, 9) == 0))
+  {
     IsPxeOffer = TRUE;
   }
 
@@ -741,7 +727,6 @@ PxeBcParseDhcp6Packet (
   return EFI_SUCCESS;
 }
 
-
 /**
   Cache the DHCPv6 ack packet, and parse it on demand.
 
@@ -749,19 +734,26 @@ PxeBcParseDhcp6Packet (
   @param[in]  Ack                 The pointer to the DHCPv6 ack packet.
   @param[in]  Verified            If TRUE, parse the ACK packet and store info into mode data.
 
+  @retval     EFI_SUCCESS                Cache and parse the packet successfully.
+  @retval     EFI_BUFFER_TOO_SMALL       Cache buffer is not big enough to hold the packet.
+
 **/
-VOID
+EFI_STATUS
 PxeBcCopyDhcp6Ack (
-  IN PXEBC_PRIVATE_DATA   *Private,
-  IN EFI_DHCP6_PACKET     *Ack,
-  IN BOOLEAN              Verified
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN EFI_DHCP6_PACKET    *Ack,
+  IN BOOLEAN             Verified
   )
 {
   EFI_PXE_BASE_CODE_MODE  *Mode;
+  EFI_STATUS              Status;
 
   Mode = Private->PxeBc.Mode;
 
-  PxeBcCacheDhcp6Packet (&Private->DhcpAck.Dhcp6.Packet.Ack, Ack);
+  Status = PxeBcCacheDhcp6Packet (&Private->DhcpAck.Dhcp6.Packet.Ack, Ack);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   if (Verified) {
     //
@@ -771,8 +763,9 @@ PxeBcCopyDhcp6Ack (
     CopyMem (&Mode->DhcpAck.Dhcpv6, &Ack->Dhcp6, Ack->Length);
     Mode->DhcpAckReceived = TRUE;
   }
-}
 
+  return EFI_SUCCESS;
+}
 
 /**
   Cache the DHCPv6 proxy offer packet according to the received order.
@@ -780,15 +773,19 @@ PxeBcCopyDhcp6Ack (
   @param[in]  Private               The pointer to PxeBc private data.
   @param[in]  OfferIndex            The received order of offer packets.
 
+  @retval     EFI_SUCCESS                Cache and parse the packet successfully.
+  @retval     EFI_BUFFER_TOO_SMALL       Cache buffer is not big enough to hold the packet.
+
 **/
-VOID
+EFI_STATUS
 PxeBcCopyDhcp6Proxy (
-  IN PXEBC_PRIVATE_DATA     *Private,
-  IN UINT32                 OfferIndex
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN UINT32              OfferIndex
   )
 {
-  EFI_PXE_BASE_CODE_MODE    *Mode;
-  EFI_DHCP6_PACKET          *Offer;
+  EFI_PXE_BASE_CODE_MODE  *Mode;
+  EFI_DHCP6_PACKET        *Offer;
+  EFI_STATUS              Status;
 
   ASSERT (OfferIndex < Private->OfferNum);
   ASSERT (OfferIndex < PXEBC_OFFER_MAX_NUM);
@@ -799,7 +796,11 @@ PxeBcCopyDhcp6Proxy (
   //
   // Cache the proxy offer packet and parse it.
   //
-  PxeBcCacheDhcp6Packet (&Private->ProxyOffer.Dhcp6.Packet.Offer, Offer);
+  Status = PxeBcCacheDhcp6Packet (&Private->ProxyOffer.Dhcp6.Packet.Offer, Offer);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
   PxeBcParseDhcp6Packet (&Private->ProxyOffer.Dhcp6);
 
   //
@@ -807,6 +808,8 @@ PxeBcCopyDhcp6Proxy (
   //
   CopyMem (&Mode->ProxyOffer.Dhcpv6, &Offer->Dhcp6, Offer->Length);
   Mode->ProxyOfferReceived = TRUE;
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -822,32 +825,32 @@ PxeBcCopyDhcp6Proxy (
 **/
 UINT8 *
 PxeBcDhcp6SeekOption (
-  IN UINT8           *Buf,
-  IN UINT32          SeekLen,
-  IN UINT16          OptType
+  IN UINT8   *Buf,
+  IN UINT32  SeekLen,
+  IN UINT16  OptType
   )
 {
-  UINT8              *Cursor;
-  UINT8              *Option;
-  UINT16             DataLen;
-  UINT16             OpCode;
+  UINT8   *Cursor;
+  UINT8   *Option;
+  UINT16  DataLen;
+  UINT16  OpCode;
 
   Option = NULL;
   Cursor = Buf;
 
   while (Cursor < Buf + SeekLen) {
-    OpCode = ReadUnaligned16 ((UINT16 *) Cursor);
+    OpCode = ReadUnaligned16 ((UINT16 *)Cursor);
     if (OpCode == HTONS (OptType)) {
       Option = Cursor;
       break;
     }
-    DataLen = NTOHS (ReadUnaligned16 ((UINT16 *) (Cursor + 2)));
+
+    DataLen = NTOHS (ReadUnaligned16 ((UINT16 *)(Cursor + 2)));
     Cursor += (DataLen + 4);
   }
 
   return Option;
 }
-
 
 /**
   Build and send out the request packet for the bootfile, and parse the reply.
@@ -863,40 +866,42 @@ PxeBcDhcp6SeekOption (
 **/
 EFI_STATUS
 PxeBcRequestBootService (
-  IN  PXEBC_PRIVATE_DATA              *Private,
-  IN  UINT32                          Index
+  IN  PXEBC_PRIVATE_DATA  *Private,
+  IN  UINT32              Index
   )
 {
-  EFI_PXE_BASE_CODE_UDP_PORT          SrcPort;
-  EFI_PXE_BASE_CODE_UDP_PORT          DestPort;
-  EFI_PXE_BASE_CODE_PROTOCOL          *PxeBc;
-  EFI_PXE_BASE_CODE_DHCPV6_PACKET     *Discover;
-  UINTN                               DiscoverLen;
-  EFI_DHCP6_PACKET                    *Request;
-  UINTN                               RequestLen;
-  EFI_DHCP6_PACKET                    *Reply;
-  UINT8                               *RequestOpt;
-  UINT8                               *DiscoverOpt;
-  UINTN                               ReadSize;
-  UINT16                              OpFlags;
-  UINT16                              OpCode;
-  UINT16                              OpLen;
-  EFI_STATUS                          Status;
-  EFI_DHCP6_PACKET                    *ProxyOffer;
-  UINT8                               *Option;
+  EFI_PXE_BASE_CODE_UDP_PORT       SrcPort;
+  EFI_PXE_BASE_CODE_UDP_PORT       DestPort;
+  EFI_PXE_BASE_CODE_PROTOCOL       *PxeBc;
+  EFI_PXE_BASE_CODE_DHCPV6_PACKET  *Discover;
+  UINTN                            DiscoverLen;
+  EFI_DHCP6_PACKET                 *Request;
+  UINTN                            RequestLen;
+  EFI_DHCP6_PACKET                 *Reply;
+  UINT8                            *RequestOpt;
+  UINT8                            *DiscoverOpt;
+  UINTN                            ReadSize;
+  UINT16                           OpFlags;
+  UINT16                           OpCode;
+  UINT16                           OpLen;
+  EFI_STATUS                       Status;
+  EFI_DHCP6_PACKET                 *IndexOffer;
+  UINT8                            *Option;
+  UINTN                            DiscoverLenNeeded;
 
-  PxeBc       = &Private->PxeBc;
-  Request     = Private->Dhcp6Request;
-  ProxyOffer = &Private->OfferBuffer[Index].Dhcp6.Packet.Offer;
-  SrcPort     = PXEBC_BS_DISCOVER_PORT;
-  DestPort    = PXEBC_BS_DISCOVER_PORT;
-  OpFlags     = 0;
+  PxeBc      = &Private->PxeBc;
+  Request    = Private->Dhcp6Request;
+  IndexOffer = &Private->OfferBuffer[Index].Dhcp6.Packet.Offer;
+  SrcPort    = PXEBC_BS_DISCOVER_PORT;
+  DestPort   = PXEBC_BS_DISCOVER_PORT;
+  OpFlags    = 0;
 
   if (Request == NULL) {
     return EFI_DEVICE_ERROR;
   }
 
-  Discover = AllocateZeroPool (sizeof (EFI_PXE_BASE_CODE_DHCPV6_PACKET));
+  DiscoverLenNeeded = sizeof (EFI_PXE_BASE_CODE_DHCPV6_PACKET);
+  Discover          = AllocateZeroPool (DiscoverLenNeeded);
   if (Discover == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -904,7 +909,7 @@ PxeBcRequestBootService (
   //
   // Build the request packet by the cached request packet before.
   //
-  Discover->TransactionId = ProxyOffer->Dhcp6.Header.TransactionId;
+  Discover->TransactionId = IndexOffer->Dhcp6.Header.TransactionId;
   Discover->MessageType   = Request->Dhcp6.Header.MessageType;
   RequestOpt              = Request->Dhcp6.Option;
   DiscoverOpt             = Discover->DhcpOptions;
@@ -914,43 +919,73 @@ PxeBcRequestBootService (
   //
   // Find Server ID Option from ProxyOffer.
   //
-  Option = PxeBcDhcp6SeekOption (
-             ProxyOffer->Dhcp6.Option,
-             ProxyOffer->Length - 4,
-             DHCP6_OPT_SERVER_ID
-             );
-  if (Option == NULL) {
-    return EFI_NOT_FOUND;
+  if (Private->OfferBuffer[Index].Dhcp6.OfferType == PxeOfferTypeProxyBinl) {
+    Option = PxeBcDhcp6SeekOption (
+               IndexOffer->Dhcp6.Option,
+               IndexOffer->Length - 4,
+               DHCP6_OPT_SERVER_ID
+               );
+    if (Option == NULL) {
+      Status = EFI_NOT_FOUND;
+      goto ON_ERROR;
+    }
+
+    //
+    // Add Server ID Option.
+    //
+    OpLen = NTOHS (((EFI_DHCP6_PACKET_OPTION *)Option)->OpLen);
+
+    //
+    // Check that the minimum and maximum requirements are met
+    //
+    if ((OpLen < PXEBC_MIN_SIZE_OF_DUID) || (OpLen > PXEBC_MAX_SIZE_OF_DUID)) {
+      Status = EFI_INVALID_PARAMETER;
+      goto ON_ERROR;
+    }
+
+    //
+    // Check that the option length is valid.
+    //
+    if ((DiscoverLen + OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN) > DiscoverLenNeeded) {
+      Status = EFI_OUT_OF_RESOURCES;
+      goto ON_ERROR;
+    }
+
+    CopyMem (DiscoverOpt, Option, OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+    DiscoverOpt += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+    DiscoverLen += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
   }
-  
-  //
-  // Add Server ID Option.
-  //
-  OpLen = NTOHS (((EFI_DHCP6_PACKET_OPTION *) Option)->OpLen);
-  CopyMem (DiscoverOpt, Option, OpLen + 4);
-  DiscoverOpt += (OpLen + 4);
-  DiscoverLen += (OpLen + 4);
 
   while (RequestLen < Request->Length) {
-    OpCode = NTOHS (((EFI_DHCP6_PACKET_OPTION *) RequestOpt)->OpCode);
-    OpLen  = NTOHS (((EFI_DHCP6_PACKET_OPTION *) RequestOpt)->OpLen);
-    if (OpCode != EFI_DHCP6_IA_TYPE_NA &&
-        OpCode != EFI_DHCP6_IA_TYPE_TA &&
-        OpCode != DHCP6_OPT_SERVER_ID
-        ) {
+    OpCode = NTOHS (((EFI_DHCP6_PACKET_OPTION *)RequestOpt)->OpCode);
+    OpLen  = NTOHS (((EFI_DHCP6_PACKET_OPTION *)RequestOpt)->OpLen);
+    if ((OpCode != EFI_DHCP6_IA_TYPE_NA) &&
+        (OpCode != EFI_DHCP6_IA_TYPE_TA) &&
+        (OpCode != DHCP6_OPT_SERVER_ID)
+        )
+    {
+      //
+      // Check that the option length is valid.
+      //
+      if (DiscoverLen + OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN > DiscoverLenNeeded) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto ON_ERROR;
+      }
+
       //
       // Copy all the options except IA option and Server ID
       //
-      CopyMem (DiscoverOpt, RequestOpt, OpLen + 4);
-      DiscoverOpt += (OpLen + 4);
-      DiscoverLen += (OpLen + 4);
+      CopyMem (DiscoverOpt, RequestOpt, OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+      DiscoverOpt += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+      DiscoverLen += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
     }
-    RequestOpt += (OpLen + 4);
-    RequestLen += (OpLen + 4);
+
+    RequestOpt += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+    RequestLen += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
   }
 
   //
-  // Update Elapsed option in the package 
+  // Update Elapsed option in the package
   //
   Option = PxeBcDhcp6SeekOption (
              Discover->DhcpOptions,
@@ -959,8 +994,8 @@ PxeBcRequestBootService (
              );
   if (Option != NULL) {
     CalcElapsedTime (Private);
-    WriteUnaligned16 ((UINT16*)(Option + 4), HTONS((UINT16) Private->ElapsedTime));
-  }  
+    WriteUnaligned16 ((UINT16 *)(Option + 4), HTONS ((UINT16)Private->ElapsedTime));
+  }
 
   Status = PxeBc->UdpWrite (
                     PxeBc,
@@ -973,28 +1008,28 @@ PxeBcRequestBootService (
                     NULL,
                     NULL,
                     &DiscoverLen,
-                    (VOID *) Discover
+                    (VOID *)Discover
                     );
 
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
 
   //
   // Cache the right PXE reply packet here, set valid flag later.
   // Especially for PXE discover packet, store it into mode data here.
   //
-  Reply = &Private->ProxyOffer.Dhcp6.Packet.Offer;
-  ReadSize = (UINTN) Reply->Size;
+  Reply    = &Private->ProxyOffer.Dhcp6.Packet.Offer;
+  ReadSize = (UINTN)Reply->Size;
 
   //
   // Start Udp6Read instance
   //
   Status = Private->Udp6Read->Configure (Private->Udp6Read, &Private->Udp6CfgData);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
-    
+
   Status = PxeBc->UdpRead (
                     PxeBc,
                     EFI_PXE_BASE_CODE_UDP_OPFLAGS_ANY_SRC_IP | EFI_PXE_BASE_CODE_UDP_OPFLAGS_ANY_DEST_IP,
@@ -1005,7 +1040,7 @@ PxeBcRequestBootService (
                     NULL,
                     NULL,
                     &ReadSize,
-                    (VOID *) &Reply->Dhcp6
+                    (VOID *)&Reply->Dhcp6
                     );
   //
   // Stop Udp6Read instance
@@ -1013,17 +1048,23 @@ PxeBcRequestBootService (
   Private->Udp6Read->Configure (Private->Udp6Read, NULL);
 
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
 
   //
   // Update length
   //
-  Reply->Length = (UINT32) ReadSize;
+  Reply->Length = (UINT32)ReadSize;
 
   return EFI_SUCCESS;
-}
 
+ON_ERROR:
+  if (Discover != NULL) {
+    FreePool (Discover);
+  }
+
+  return Status;
+}
 
 /**
   Retry to request bootfile name by the BINL offer.
@@ -1047,13 +1088,15 @@ PxeBcRetryDhcp6Binl (
   EFI_STATUS                Status;
 
   ASSERT (Index < PXEBC_OFFER_MAX_NUM);
-  ASSERT (Private->OfferBuffer[Index].Dhcp6.OfferType == PxeOfferTypeDhcpBinl ||
-          Private->OfferBuffer[Index].Dhcp6.OfferType == PxeOfferTypeProxyBinl);
+  ASSERT (
+    Private->OfferBuffer[Index].Dhcp6.OfferType == PxeOfferTypeDhcpBinl ||
+    Private->OfferBuffer[Index].Dhcp6.OfferType == PxeOfferTypeProxyBinl
+    );
 
   Mode                  = Private->PxeBc.Mode;
   Private->IsDoDiscover = FALSE;
   Offer                 = &Private->OfferBuffer[Index].Dhcp6;
-  if (Offer->OfferType == PxeOfferTypeDhcpBinl) {
+  if (Offer->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] == NULL) {
     //
     // There is no BootFileUrl option in dhcp6 offer, so use servers multi-cast address instead.
     //
@@ -1071,7 +1114,7 @@ PxeBcRetryDhcp6Binl (
                Private,
                &Private->BootFileName,
                &Private->ServerIp.v6,
-               (CHAR8 *) (Offer->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL]->Data),
+               (CHAR8 *)(Offer->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL]->Data),
                NTOHS (Offer->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL]->OpLen)
                );
     if (EFI_ERROR (Status)) {
@@ -1094,9 +1137,10 @@ PxeBcRetryDhcp6Binl (
     return Status;
   }
 
-  if (Cache6->OfferType != PxeOfferTypeProxyPxe10 &&
-      Cache6->OfferType != PxeOfferTypeProxyWfm11a &&
-      Cache6->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] == NULL) {
+  if ((Cache6->OfferType != PxeOfferTypeProxyPxe10) &&
+      (Cache6->OfferType != PxeOfferTypeProxyWfm11a) &&
+      (Cache6->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] == NULL))
+  {
     //
     // This BINL ack doesn't have discovery option set or multicast option set
     // or bootfile name specified.
@@ -1114,23 +1158,25 @@ PxeBcRetryDhcp6Binl (
   return EFI_SUCCESS;
 }
 
-
 /**
   Cache all the received DHCPv6 offers, and set OfferIndex and OfferCount.
 
   @param[in]  Private               The pointer to PXEBC_PRIVATE_DATA.
   @param[in]  RcvdOffer             The pointer to the received offer packet.
 
+  @retval     EFI_SUCCESS      Cache and parse the packet successfully.
+  @retval     Others           Operation failed.
 **/
-VOID
+EFI_STATUS
 PxeBcCacheDhcp6Offer (
-  IN PXEBC_PRIVATE_DATA     *Private,
-  IN EFI_DHCP6_PACKET       *RcvdOffer
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN EFI_DHCP6_PACKET    *RcvdOffer
   )
 {
   PXEBC_DHCP6_PACKET_CACHE  *Cache6;
   EFI_DHCP6_PACKET          *Offer;
   PXEBC_OFFER_TYPE          OfferType;
+  EFI_STATUS                Status;
 
   Cache6 = &Private->OfferBuffer[Private->OfferNum].Dhcp6;
   Offer  = &Cache6->Packet.Offer;
@@ -1138,13 +1184,16 @@ PxeBcCacheDhcp6Offer (
   //
   // Cache the content of DHCPv6 packet firstly.
   //
-  PxeBcCacheDhcp6Packet (Offer, RcvdOffer);
+  Status = PxeBcCacheDhcp6Packet (Offer, RcvdOffer);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
 
   //
   // Validate the DHCPv6 packet, and parse the options and offer type.
   //
   if (EFI_ERROR (PxeBcParseDhcp6Packet (Cache6))) {
-    return ;
+    return EFI_ABORTED;
   }
 
   //
@@ -1166,14 +1215,16 @@ PxeBcCacheDhcp6Offer (
       //
       Private->OfferIndex[OfferType][Private->OfferCount[OfferType]] = Private->OfferNum;
       Private->OfferCount[OfferType]++;
-    } else if (Private->OfferCount[OfferType] > 0) {
+    } else if (((OfferType == PxeOfferTypeProxyPxe10) || (OfferType == PxeOfferTypeProxyWfm11a)) &&
+               (Private->OfferCount[OfferType] < 1))
+    {
       //
       // Only cache the first PXE10/WFM11a offer, and discard the others.
       //
       Private->OfferIndex[OfferType][0] = Private->OfferNum;
       Private->OfferCount[OfferType]    = 1;
     } else {
-      return;
+      return EFI_ABORTED;
     }
   } else {
     //
@@ -1184,8 +1235,9 @@ PxeBcCacheDhcp6Offer (
   }
 
   Private->OfferNum++;
-}
 
+  return EFI_SUCCESS;
+}
 
 /**
   Select an DHCPv6 offer, and record SelectIndex and SelectProxyType.
@@ -1195,12 +1247,12 @@ PxeBcCacheDhcp6Offer (
 **/
 VOID
 PxeBcSelectDhcp6Offer (
-  IN PXEBC_PRIVATE_DATA     *Private
+  IN PXEBC_PRIVATE_DATA  *Private
   )
 {
-  UINT32                Index;
-  UINT32                OfferIndex;
-  PXEBC_OFFER_TYPE      OfferType;
+  UINT32            Index;
+  UINT32            OfferIndex;
+  PXEBC_OFFER_TYPE  OfferType;
 
   Private->SelectIndex = 0;
 
@@ -1213,43 +1265,40 @@ PxeBcSelectDhcp6Offer (
       // 1. DhcpPxe10 offer
       //
       Private->SelectIndex = Private->OfferIndex[PxeOfferTypeDhcpPxe10][0] + 1;
-
     } else if (Private->OfferCount[PxeOfferTypeDhcpWfm11a] > 0) {
       //
       // 2. DhcpWfm11a offer
       //
       Private->SelectIndex = Private->OfferIndex[PxeOfferTypeDhcpWfm11a][0] + 1;
-
-    } else if (Private->OfferCount[PxeOfferTypeDhcpOnly] > 0 &&
-               Private->OfferCount[PxeOfferTypeProxyPxe10] > 0) {
+    } else if ((Private->OfferCount[PxeOfferTypeDhcpOnly] > 0) &&
+               (Private->OfferCount[PxeOfferTypeProxyPxe10] > 0))
+    {
       //
       // 3. DhcpOnly offer and ProxyPxe10 offer.
       //
       Private->SelectIndex     = Private->OfferIndex[PxeOfferTypeDhcpOnly][0] + 1;
       Private->SelectProxyType = PxeOfferTypeProxyPxe10;
-
-    } else if (Private->OfferCount[PxeOfferTypeDhcpOnly] > 0 &&
-               Private->OfferCount[PxeOfferTypeProxyWfm11a] > 0) {
+    } else if ((Private->OfferCount[PxeOfferTypeDhcpOnly] > 0) &&
+               (Private->OfferCount[PxeOfferTypeProxyWfm11a] > 0))
+    {
       //
       // 4. DhcpOnly offer and ProxyWfm11a offer.
       //
       Private->SelectIndex     = Private->OfferIndex[PxeOfferTypeDhcpOnly][0] + 1;
       Private->SelectProxyType = PxeOfferTypeProxyWfm11a;
-
     } else if (Private->OfferCount[PxeOfferTypeDhcpBinl] > 0) {
       //
       // 5. DhcpBinl offer.
       //
       Private->SelectIndex = Private->OfferIndex[PxeOfferTypeDhcpBinl][0] + 1;
-
-    } else if (Private->OfferCount[PxeOfferTypeDhcpOnly] > 0 &&
-               Private->OfferCount[PxeOfferTypeProxyBinl] > 0) {
+    } else if ((Private->OfferCount[PxeOfferTypeDhcpOnly] > 0) &&
+               (Private->OfferCount[PxeOfferTypeProxyBinl] > 0))
+    {
       //
       // 6. DhcpOnly offer and ProxyBinl offer.
       //
       Private->SelectIndex     = Private->OfferIndex[PxeOfferTypeDhcpOnly][0] + 1;
       Private->SelectProxyType = PxeOfferTypeProxyBinl;
-
     } else {
       //
       // 7. DhcpOnly offer with bootfilename.
@@ -1267,7 +1316,6 @@ PxeBcSelectDhcp6Offer (
     // Select offer by received order.
     //
     for (Index = 0; Index < Private->OfferNum; Index++) {
-
       OfferType = Private->OfferBuffer[Index].Dhcp6.OfferType;
 
       if (IS_PROXY_OFFER (OfferType)) {
@@ -1278,8 +1326,9 @@ PxeBcSelectDhcp6Offer (
       }
 
       if (!Private->IsProxyRecved &&
-          OfferType == PxeOfferTypeDhcpOnly &&
-          Private->OfferBuffer[Index].Dhcp6.OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] == NULL) {
+          (OfferType == PxeOfferTypeDhcpOnly) &&
+          (Private->OfferBuffer[Index].Dhcp6.OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] == NULL))
+      {
         //
         // Skip if DhcpOnly offer without any other proxy offers or bootfilename.
         //
@@ -1292,6 +1341,64 @@ PxeBcSelectDhcp6Offer (
   }
 }
 
+/**
+  Cache the DHCPv6 DNS Server addresses
+
+  @param[in] Private               The pointer to PXEBC_PRIVATE_DATA.
+  @param[in] Cache6                The pointer to PXEBC_DHCP6_PACKET_CACHE.
+
+  @retval    EFI_SUCCESS           Cache the DHCPv6 DNS Server address successfully.
+  @retval    EFI_OUT_OF_RESOURCES  Failed to allocate resources.
+  @retval    EFI_DEVICE_ERROR      The DNS Server Address Length provided by a untrusted
+                                   option is not a multiple of 16 bytes (sizeof (EFI_IPv6_ADDRESS)).
+**/
+EFI_STATUS
+PxeBcCacheDnsServerAddresses (
+  IN PXEBC_PRIVATE_DATA        *Private,
+  IN PXEBC_DHCP6_PACKET_CACHE  *Cache6
+  )
+{
+  UINT16  DnsServerLen;
+
+  DnsServerLen = NTOHS (Cache6->OptList[PXEBC_DHCP6_IDX_DNS_SERVER]->OpLen);
+  //
+  // Make sure that the number is nonzero
+  //
+  if (DnsServerLen == 0) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  //
+  // Make sure the DnsServerlen is a multiple of EFI_IPv6_ADDRESS (16)
+  //
+  if (DnsServerLen % sizeof (EFI_IPv6_ADDRESS) != 0) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  //
+  // This code is currently written to only support a single DNS Server instead
+  // of multiple such as is spec defined (RFC3646, Section 3). The proper behavior
+  // would be to allocate the full space requested, CopyMem all of the data,
+  // and then add a DnsServerCount field to Private and update additional code
+  // that depends on this.
+  //
+  // To support multiple DNS servers the `AllocationSize` would need to be changed to DnsServerLen
+  //
+  // This is tracked in https://bugzilla.tianocore.org/show_bug.cgi?id=1886
+  //
+  Private->DnsServer = AllocateZeroPool (sizeof (EFI_IPv6_ADDRESS));
+  if (Private->DnsServer == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  //
+  // Intentionally only copy over the first server address.
+  // To support multiple DNS servers, the `Length` would need to be changed to DnsServerLen
+  //
+  CopyMem (Private->DnsServer, Cache6->OptList[PXEBC_DHCP6_IDX_DNS_SERVER]->Data, sizeof (EFI_IPv6_ADDRESS));
+
+  return EFI_SUCCESS;
+}
 
 /**
   Handle the DHCPv6 offer packet.
@@ -1301,35 +1408,36 @@ PxeBcSelectDhcp6Offer (
   @retval     EFI_SUCCESS           Handled the DHCPv6 offer packet successfully.
   @retval     EFI_NO_RESPONSE       No response to the following request packet.
   @retval     EFI_OUT_OF_RESOURCES  Failed to allocate resources.
+  @retval     EFI_BUFFER_TOO_SMALL  Can't cache the offer pacet.
 
 **/
 EFI_STATUS
 PxeBcHandleDhcp6Offer (
-  IN PXEBC_PRIVATE_DATA            *Private
+  IN PXEBC_PRIVATE_DATA  *Private
   )
 {
-  PXEBC_DHCP6_PACKET_CACHE         *Cache6;
-  EFI_STATUS                       Status;
-  PXEBC_OFFER_TYPE                 OfferType;
-  UINT32                           ProxyIndex;
-  UINT32                           SelectIndex;
-  UINT32                           Index;
+  PXEBC_DHCP6_PACKET_CACHE  *Cache6;
+  EFI_STATUS                Status;
+  PXEBC_OFFER_TYPE          OfferType;
+  UINT32                    ProxyIndex;
+  UINT32                    SelectIndex;
+  UINT32                    Index;
 
+  ASSERT (Private != NULL);
   ASSERT (Private->SelectIndex > 0);
-  SelectIndex = (UINT32) (Private->SelectIndex - 1);
+  SelectIndex = (UINT32)(Private->SelectIndex - 1);
   ASSERT (SelectIndex < PXEBC_OFFER_MAX_NUM);
-  Cache6      = &Private->OfferBuffer[SelectIndex].Dhcp6;
-  Status      = EFI_SUCCESS;
+  Cache6 = &Private->OfferBuffer[SelectIndex].Dhcp6;
+  Status = EFI_SUCCESS;
 
   //
-  // First try to cache DNS server address if DHCP6 offer provides.
+  // First try to cache DNS server addresses if DHCP6 offer provides.
   //
   if (Cache6->OptList[PXEBC_DHCP6_IDX_DNS_SERVER] != NULL) {
-    Private->DnsServer = AllocateZeroPool (NTOHS (Cache6->OptList[PXEBC_DHCP6_IDX_DNS_SERVER]->OpLen));
-    if (Private->DnsServer == NULL) {
-      return EFI_OUT_OF_RESOURCES;
+    Status = PxeBcCacheDnsServerAddresses (Private, Cache6);
+    if (EFI_ERROR (Status)) {
+      return Status;
     }
-    CopyMem (Private->DnsServer, Cache6->OptList[PXEBC_DHCP6_IDX_DNS_SERVER]->Data, sizeof (EFI_IPv6_ADDRESS));
   }
 
   if (Cache6->OfferType == PxeOfferTypeDhcpBinl) {
@@ -1340,7 +1448,6 @@ PxeBcHandleDhcp6Offer (
       Status = EFI_NO_RESPONSE;
     }
   } else if (Cache6->OfferType == PxeOfferTypeDhcpOnly) {
-
     if (Private->IsProxyRecved) {
       //
       // DhcpOnly offer is selected, so need try to request bootfilename.
@@ -1358,12 +1465,12 @@ PxeBcHandleDhcp6Offer (
           // Try all the cached ProxyBinl offer one by one to request bootfilename.
           //
           for (Index = 0; Index < Private->OfferCount[Private->SelectProxyType]; Index++) {
-
             ProxyIndex = Private->OfferIndex[Private->SelectProxyType][Index];
             if (!EFI_ERROR (PxeBcRetryDhcp6Binl (Private, ProxyIndex))) {
               break;
             }
           }
+
           if (Index == Private->OfferCount[Private->SelectProxyType]) {
             Status = EFI_NO_RESPONSE;
           }
@@ -1380,7 +1487,6 @@ PxeBcHandleDhcp6Offer (
         Status = EFI_NO_RESPONSE;
 
         for (Index = 0; Index < Private->OfferNum; Index++) {
-
           OfferType = Private->OfferBuffer[Index].Dhcp6.OfferType;
 
           if (!IS_PROXY_OFFER (OfferType)) {
@@ -1406,15 +1512,15 @@ PxeBcHandleDhcp6Offer (
         }
       }
 
-      if (!EFI_ERROR (Status) && Private->SelectProxyType != PxeOfferTypeProxyBinl) {
+      if (!EFI_ERROR (Status) && (Private->SelectProxyType != PxeOfferTypeProxyBinl)) {
         //
         // Success to try to request by a ProxyPxe10 or ProxyWfm11a offer, copy and parse it.
         //
-        PxeBcCopyDhcp6Proxy (Private, ProxyIndex);
+        Status = PxeBcCopyDhcp6Proxy (Private, ProxyIndex);
       }
     } else {
       //
-      //  Othewise, the bootfilename must be included in DhcpOnly offer.
+      //  Otherwise, the bootfilename must be included in DhcpOnly offer.
       //
       ASSERT (Cache6->OptList[PXEBC_DHCP6_IDX_BOOT_FILE_URL] != NULL);
     }
@@ -1424,13 +1530,12 @@ PxeBcHandleDhcp6Offer (
     //
     // All PXE boot information is ready by now.
     //
-    PxeBcCopyDhcp6Ack (Private, &Private->DhcpAck.Dhcp6.Packet.Ack, TRUE);
+    Status                                 = PxeBcCopyDhcp6Ack (Private, &Private->DhcpAck.Dhcp6.Packet.Ack, TRUE);
     Private->PxeBc.Mode->DhcpDiscoverValid = TRUE;
   }
 
   return Status;
 }
-
 
 /**
   Unregister the address by Ip6Config protocol.
@@ -1440,7 +1545,7 @@ PxeBcHandleDhcp6Offer (
 **/
 VOID
 PxeBcUnregisterIp6Address (
-  IN PXEBC_PRIVATE_DATA           *Private
+  IN PXEBC_PRIVATE_DATA  *Private
   )
 {
   if (Private->Ip6Policy != PXEBC_IP6_POLICY_MAX) {
@@ -1453,7 +1558,7 @@ PxeBcUnregisterIp6Address (
 
 /**
   Check whether IP driver could route the message which will be sent to ServerIp address.
-  
+
   This function will check the IP6 route table every 1 seconds until specified timeout is expired, if a valid
   route is found in IP6 route table, the address will be filed in GatewayAddr and return.
 
@@ -1463,23 +1568,23 @@ PxeBcUnregisterIp6Address (
 
   @retval     EFI_SUCCESS         Found a valid gateway address successfully.
   @retval     EFI_TIMEOUT         The operation is time out.
-  @retval     Other               Unexpect error happened.
-  
+  @retval     Other               Unexpected error happened.
+
 **/
 EFI_STATUS
 PxeBcCheckRouteTable (
-  IN  PXEBC_PRIVATE_DATA            *Private,
-  IN  UINTN                         TimeOutInSecond,
-  OUT EFI_IPv6_ADDRESS              *GatewayAddr
+  IN  PXEBC_PRIVATE_DATA  *Private,
+  IN  UINTN               TimeOutInSecond,
+  OUT EFI_IPv6_ADDRESS    *GatewayAddr
   )
 {
-  EFI_STATUS                       Status;
-  EFI_IP6_PROTOCOL                 *Ip6;
-  EFI_IP6_MODE_DATA                Ip6ModeData;
-  UINTN                            Index;
-  EFI_EVENT                        TimeOutEvt;
-  UINTN                            RetryCount;
-  BOOLEAN                          GatewayIsFound;
+  EFI_STATUS         Status;
+  EFI_IP6_PROTOCOL   *Ip6;
+  EFI_IP6_MODE_DATA  Ip6ModeData;
+  UINTN              Index;
+  EFI_EVENT          TimeOutEvt;
+  UINTN              RetryCount;
+  BOOLEAN            GatewayIsFound;
 
   ASSERT (GatewayAddr != NULL);
   ASSERT (Private != NULL);
@@ -1510,28 +1615,33 @@ PxeBcCheckRouteTable (
     if (Ip6ModeData.AddressList != NULL) {
       FreePool (Ip6ModeData.AddressList);
     }
+
     if (Ip6ModeData.GroupTable != NULL) {
       FreePool (Ip6ModeData.GroupTable);
     }
+
     if (Ip6ModeData.RouteTable != NULL) {
       FreePool (Ip6ModeData.RouteTable);
     }
+
     if (Ip6ModeData.NeighborCache != NULL) {
       FreePool (Ip6ModeData.NeighborCache);
     }
+
     if (Ip6ModeData.PrefixTable != NULL) {
       FreePool (Ip6ModeData.PrefixTable);
     }
+
     if (Ip6ModeData.IcmpTypeList != NULL) {
       FreePool (Ip6ModeData.IcmpTypeList);
     }
-    
-    if (GatewayIsFound || RetryCount == TimeOutInSecond) {
+
+    if (GatewayIsFound || (RetryCount == TimeOutInSecond)) {
       break;
     }
-    
+
     RetryCount++;
-    
+
     //
     // Delay 1 second then recheck it again.
     //
@@ -1552,23 +1662,24 @@ PxeBcCheckRouteTable (
     if (EFI_ERROR (Status)) {
       goto ON_EXIT;
     }
+
     while (EFI_ERROR (gBS->CheckEvent (TimeOutEvt))) {
       Ip6->Poll (Ip6);
     }
   }
-  
+
 ON_EXIT:
   if (TimeOutEvt != NULL) {
     gBS->CloseEvent (TimeOutEvt);
   }
-  
+
   if (GatewayIsFound) {
     Status = EFI_SUCCESS;
   } else if (RetryCount == TimeOutInSecond) {
     Status = EFI_TIMEOUT;
   }
 
-  return Status; 
+  return Status;
 }
 
 /**
@@ -1577,35 +1688,34 @@ ON_EXIT:
   @param[in]  Private             The pointer to PXEBC_PRIVATE_DATA.
   @param[in]  Address             The pointer to the ready address.
 
-  @retval     EFI_SUCCESS         Registered the address succesfully.
+  @retval     EFI_SUCCESS         Registered the address successfully.
   @retval     Others              Failed to register the address.
 
 **/
 EFI_STATUS
 PxeBcRegisterIp6Address (
-  IN PXEBC_PRIVATE_DATA            *Private,
-  IN EFI_IPv6_ADDRESS              *Address
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN EFI_IPv6_ADDRESS    *Address
   )
 {
-  EFI_IP6_PROTOCOL                 *Ip6;
-  EFI_IP6_CONFIG_PROTOCOL          *Ip6Cfg;
-  EFI_IP6_CONFIG_POLICY            Policy;
-  EFI_IP6_CONFIG_MANUAL_ADDRESS    CfgAddr;
-  EFI_IPv6_ADDRESS                 GatewayAddr;
-  UINTN                            DataSize;
-  EFI_EVENT                        MappedEvt;
-  EFI_STATUS                       Status;
-  BOOLEAN                          NoGateway;
-  EFI_IPv6_ADDRESS                 *Ip6Addr;
-  UINTN                            Index;
+  EFI_IP6_PROTOCOL               *Ip6;
+  EFI_IP6_CONFIG_PROTOCOL        *Ip6Cfg;
+  EFI_IP6_CONFIG_POLICY          Policy;
+  EFI_IP6_CONFIG_MANUAL_ADDRESS  CfgAddr;
+  EFI_IPv6_ADDRESS               GatewayAddr;
+  UINTN                          DataSize;
+  EFI_EVENT                      MappedEvt;
+  EFI_STATUS                     Status;
+  BOOLEAN                        NoGateway;
+  EFI_IPv6_ADDRESS               *Ip6Addr;
+  UINTN                          Index;
 
-  Status     = EFI_SUCCESS;
-  MappedEvt  = NULL;
-  Ip6Addr    = NULL;
-  DataSize   = sizeof (EFI_IP6_CONFIG_POLICY);
-  Ip6Cfg     = Private->Ip6Cfg;
-  Ip6        = Private->Ip6;
-  NoGateway  = FALSE;
+  MappedEvt = NULL;
+  Ip6Addr   = NULL;
+  DataSize  = sizeof (EFI_IP6_CONFIG_POLICY);
+  Ip6Cfg    = Private->Ip6Cfg;
+  Ip6       = Private->Ip6;
+  NoGateway = FALSE;
 
   ZeroMem (&CfgAddr, sizeof (EFI_IP6_CONFIG_MANUAL_ADDRESS));
   CopyMem (&CfgAddr.Address, Address, sizeof (EFI_IPv6_ADDRESS));
@@ -1622,7 +1732,7 @@ PxeBcRegisterIp6Address (
   if (EFI_ERROR (Status)) {
     NoGateway = TRUE;
   }
-  
+
   //
   // There is no channel between IP6 and PXE driver about address setting,
   // so it has to set the new address by Ip6ConfigProtocol manually.
@@ -1631,7 +1741,7 @@ PxeBcRegisterIp6Address (
   Status = Ip6Cfg->SetData (
                      Ip6Cfg,
                      Ip6ConfigDataTypePolicy,
-                     sizeof(EFI_IP6_CONFIG_POLICY),
+                     sizeof (EFI_IP6_CONFIG_POLICY),
                      &Policy
                      );
   if (EFI_ERROR (Status)) {
@@ -1657,22 +1767,22 @@ PxeBcRegisterIp6Address (
   }
 
   Private->IsAddressOk = FALSE;
-  Status = Ip6Cfg->RegisterDataNotify (
-                     Ip6Cfg,
-                     Ip6ConfigDataTypeManualAddress,
-                     MappedEvt
-                     );
-  if (EFI_ERROR(Status)) {
+  Status               = Ip6Cfg->RegisterDataNotify (
+                                   Ip6Cfg,
+                                   Ip6ConfigDataTypeManualAddress,
+                                   MappedEvt
+                                   );
+  if (EFI_ERROR (Status)) {
     goto ON_EXIT;
   }
 
   Status = Ip6Cfg->SetData (
                      Ip6Cfg,
                      Ip6ConfigDataTypeManualAddress,
-                     sizeof(EFI_IP6_CONFIG_MANUAL_ADDRESS),
+                     sizeof (EFI_IP6_CONFIG_MANUAL_ADDRESS),
                      &CfgAddr
                      );
-  if (EFI_ERROR(Status) && Status != EFI_NOT_READY) {
+  if (EFI_ERROR (Status) && (Status != EFI_NOT_READY)) {
     goto ON_EXIT;
   } else if (Status == EFI_NOT_READY) {
     //
@@ -1681,17 +1791,18 @@ PxeBcRegisterIp6Address (
     while (!Private->IsAddressOk) {
       Ip6->Poll (Ip6);
     }
+
     //
     // Check whether the IP6 address setting is successed.
     //
     DataSize = 0;
-    Status = Ip6Cfg->GetData (
-                       Ip6Cfg,
-                       Ip6ConfigDataTypeManualAddress,
-                       &DataSize,
-                       NULL
-                       );
-    if (Status != EFI_BUFFER_TOO_SMALL || DataSize == 0) {
+    Status   = Ip6Cfg->GetData (
+                         Ip6Cfg,
+                         Ip6ConfigDataTypeManualAddress,
+                         &DataSize,
+                         NULL
+                         );
+    if ((Status != EFI_BUFFER_TOO_SMALL) || (DataSize == 0)) {
       Status = EFI_DEVICE_ERROR;
       goto ON_EXIT;
     }
@@ -1700,11 +1811,12 @@ PxeBcRegisterIp6Address (
     if (Ip6Addr == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
+
     Status = Ip6Cfg->GetData (
                        Ip6Cfg,
                        Ip6ConfigDataTypeManualAddress,
                        &DataSize,
-                       (VOID*) Ip6Addr
+                       (VOID *)Ip6Addr
                        );
     if (EFI_ERROR (Status)) {
       Status = EFI_DEVICE_ERROR;
@@ -1716,12 +1828,13 @@ PxeBcRegisterIp6Address (
         break;
       }
     }
+
     if (Index == DataSize / sizeof (EFI_IPv6_ADDRESS)) {
       Status = EFI_ABORTED;
       goto ON_EXIT;
     }
   }
-  
+
   //
   // Set the default gateway address back if needed.
   //
@@ -1746,9 +1859,11 @@ ON_EXIT:
               );
     gBS->CloseEvent (MappedEvt);
   }
+
   if (Ip6Addr != NULL) {
     FreePool (Ip6Addr);
   }
+
   return Status;
 }
 
@@ -1757,22 +1872,22 @@ ON_EXIT:
 
   @param[in]  Private             The pointer to PXEBC_PRIVATE_DATA.
 
-  @retval     EFI_SUCCESS         Switch the IP policy succesfully.
-  @retval     Others              Unexpect error happened.
+  @retval     EFI_SUCCESS         Switch the IP policy successfully.
+  @retval     Others              Unexpected error happened.
 
 **/
 EFI_STATUS
 PxeBcSetIp6Policy (
-  IN PXEBC_PRIVATE_DATA            *Private
+  IN PXEBC_PRIVATE_DATA  *Private
   )
 {
-  EFI_IP6_CONFIG_POLICY            Policy;
-  EFI_STATUS                       Status;
-  EFI_IP6_CONFIG_PROTOCOL          *Ip6Cfg;
-  UINTN                            DataSize;
+  EFI_IP6_CONFIG_POLICY    Policy;
+  EFI_STATUS               Status;
+  EFI_IP6_CONFIG_PROTOCOL  *Ip6Cfg;
+  UINTN                    DataSize;
 
-  Ip6Cfg      = Private->Ip6Cfg;
-  DataSize    = sizeof (EFI_IP6_CONFIG_POLICY);
+  Ip6Cfg   = Private->Ip6Cfg;
+  DataSize = sizeof (EFI_IP6_CONFIG_POLICY);
 
   //
   // Get and store the current policy of IP6 driver.
@@ -1792,7 +1907,7 @@ PxeBcSetIp6Policy (
     Status = Ip6Cfg->SetData (
                        Ip6Cfg,
                        Ip6ConfigDataTypePolicy,
-                       sizeof(EFI_IP6_CONFIG_POLICY),
+                       sizeof (EFI_IP6_CONFIG_POLICY),
                        &Policy
                        );
     if (EFI_ERROR (Status)) {
@@ -1808,7 +1923,7 @@ PxeBcSetIp6Policy (
 
 /**
   This function will register the station IP address and flush IP instance to start using the new IP address.
-  
+
   @param[in]  Private             The pointer to PXEBC_PRIVATE_DATA.
 
   @retval     EFI_SUCCESS         The new IP address has been configured successfully.
@@ -1817,12 +1932,12 @@ PxeBcSetIp6Policy (
 **/
 EFI_STATUS
 PxeBcSetIp6Address (
-  IN  PXEBC_PRIVATE_DATA              *Private
+  IN  PXEBC_PRIVATE_DATA  *Private
   )
 {
-  EFI_STATUS                  Status;
-  EFI_DHCP6_PROTOCOL          *Dhcp6;
-    
+  EFI_STATUS          Status;
+  EFI_DHCP6_PROTOCOL  *Dhcp6;
+
   Dhcp6 = Private->Dhcp6;
 
   CopyMem (&Private->StationIp.v6, &Private->TmpStationIp.v6, sizeof (EFI_IPv6_ADDRESS));
@@ -1868,47 +1983,48 @@ PxeBcSetIp6Address (
 EFI_STATUS
 EFIAPI
 PxeBcDhcp6CallBack (
-  IN  EFI_DHCP6_PROTOCOL           *This,
-  IN  VOID                         *Context,
-  IN  EFI_DHCP6_STATE              CurrentState,
-  IN  EFI_DHCP6_EVENT              Dhcp6Event,
-  IN  EFI_DHCP6_PACKET             *Packet,
-  OUT EFI_DHCP6_PACKET             **NewPacket     OPTIONAL
+  IN  EFI_DHCP6_PROTOCOL  *This,
+  IN  VOID                *Context,
+  IN  EFI_DHCP6_STATE     CurrentState,
+  IN  EFI_DHCP6_EVENT     Dhcp6Event,
+  IN  EFI_DHCP6_PACKET    *Packet,
+  OUT EFI_DHCP6_PACKET    **NewPacket     OPTIONAL
   )
 {
-  PXEBC_PRIVATE_DATA                  *Private;
-  EFI_PXE_BASE_CODE_MODE              *Mode;
-  EFI_PXE_BASE_CODE_CALLBACK_PROTOCOL *Callback;
-  EFI_DHCP6_PACKET                    *SelectAd;
-  EFI_STATUS                          Status;
-  BOOLEAN                             Received;
+  PXEBC_PRIVATE_DATA                   *Private;
+  EFI_PXE_BASE_CODE_MODE               *Mode;
+  EFI_PXE_BASE_CODE_CALLBACK_PROTOCOL  *Callback;
+  EFI_DHCP6_PACKET                     *SelectAd;
+  EFI_STATUS                           Status;
+  BOOLEAN                              Received;
 
   if ((Dhcp6Event != Dhcp6RcvdAdvertise) &&
       (Dhcp6Event != Dhcp6SelectAdvertise) &&
       (Dhcp6Event != Dhcp6SendSolicit) &&
       (Dhcp6Event != Dhcp6SendRequest) &&
-      (Dhcp6Event != Dhcp6RcvdReply)) {
+      (Dhcp6Event != Dhcp6RcvdReply))
+  {
     return EFI_SUCCESS;
   }
 
   ASSERT (Packet != NULL);
 
-  Private   = (PXEBC_PRIVATE_DATA *) Context;
-  Mode      = Private->PxeBc.Mode;
-  Callback  = Private->PxeBcCallback;
+  Private  = (PXEBC_PRIVATE_DATA *)Context;
+  Mode     = Private->PxeBc.Mode;
+  Callback = Private->PxeBcCallback;
 
   //
-  // Callback to user when any traffic ocurred if has.
+  // Callback to user when any traffic occurred if has.
   //
-  if (Dhcp6Event != Dhcp6SelectAdvertise && Callback != NULL) {
-    Received = (BOOLEAN) (Dhcp6Event == Dhcp6RcvdAdvertise || Dhcp6Event == Dhcp6RcvdReply);
-    Status = Callback->Callback (
-                         Callback,
-                         Private->Function,
-                         Received,
-                         Packet->Length,
-                         (EFI_PXE_BASE_CODE_PACKET *) &Packet->Dhcp6
-                         );
+  if ((Dhcp6Event != Dhcp6SelectAdvertise) && (Callback != NULL)) {
+    Received = (BOOLEAN)(Dhcp6Event == Dhcp6RcvdAdvertise || Dhcp6Event == Dhcp6RcvdReply);
+    Status   = Callback->Callback (
+                           Callback,
+                           Private->Function,
+                           Received,
+                           Packet->Length,
+                           (EFI_PXE_BASE_CODE_PACKET *)&Packet->Dhcp6
+                           );
     if (Status != EFI_PXE_BASE_CODE_CALLBACK_STATUS_CONTINUE) {
       return EFI_ABORTED;
     }
@@ -1917,79 +2033,113 @@ PxeBcDhcp6CallBack (
   Status = EFI_SUCCESS;
 
   switch (Dhcp6Event) {
+    case Dhcp6SendSolicit:
+      if (Packet->Length > PXEBC_DHCP6_PACKET_MAX_SIZE) {
+        //
+        // If the to be sent packet exceeds the maximum length, abort the DHCP process.
+        //
+        Status = EFI_ABORTED;
+        break;
+      }
 
-  case Dhcp6SendSolicit:
-    //
-    // Record the first Solicate msg time
-    //
-    if (Private->SolicitTimes == 0) {
-      CalcElapsedTime (Private);
-      Private->SolicitTimes++;
-    }
-    //
-    // Cache the dhcp discover packet to mode data directly.
-    //
-    CopyMem (&Mode->DhcpDiscover.Dhcpv4, &Packet->Dhcp6, Packet->Length);
-    break;
-
-  case Dhcp6RcvdAdvertise:
-    Status = EFI_NOT_READY;
-    if (Private->OfferNum < PXEBC_OFFER_MAX_NUM) {
       //
-      // Cache the dhcp offers to OfferBuffer[] for select later, and record
-      // the OfferIndex and OfferCount.
+      // Record the first Solicate msg time
       //
-      PxeBcCacheDhcp6Offer (Private, Packet);
-    }
-    break;
+      if (Private->SolicitTimes == 0) {
+        CalcElapsedTime (Private);
+        Private->SolicitTimes++;
+      }
 
-  case Dhcp6SendRequest:
-    //
-    // Store the request packet as seed packet for discover.
-    //
-    if (Private->Dhcp6Request != NULL) {
-      FreePool (Private->Dhcp6Request);
-    }
-    Private->Dhcp6Request = AllocateZeroPool (Packet->Size);
-    if (Private->Dhcp6Request != NULL) {
-      CopyMem (Private->Dhcp6Request, Packet, Packet->Size);
-    }
-    break;
+      //
+      // Cache the dhcp discover packet to mode data directly.
+      //
+      CopyMem (&Mode->DhcpDiscover.Dhcpv6, &Packet->Dhcp6, Packet->Length);
+      break;
 
-  case Dhcp6SelectAdvertise:
-    //
-    // Select offer by the default policy or by order, and record the SelectIndex
-    // and SelectProxyType.
-    //
-    PxeBcSelectDhcp6Offer (Private);
+    case Dhcp6RcvdAdvertise:
+      Status = EFI_NOT_READY;
+      if (Packet->Length > PXEBC_DHCP6_PACKET_MAX_SIZE) {
+        //
+        // Ignore the incoming packets which exceed the maximum length.
+        //
+        break;
+      }
 
-    if (Private->SelectIndex == 0) {
-      Status = EFI_ABORTED;
-    } else {
-      ASSERT (NewPacket != NULL);
-      SelectAd   = &Private->OfferBuffer[Private->SelectIndex - 1].Dhcp6.Packet.Offer;
-      *NewPacket = AllocateZeroPool (SelectAd->Size);
-      ASSERT (*NewPacket != NULL);
-      CopyMem (*NewPacket, SelectAd, SelectAd->Size);
-    }
-    break;
+      if (Private->OfferNum < PXEBC_OFFER_MAX_NUM) {
+        //
+        // Cache the dhcp offers to OfferBuffer[] for select later, and record
+        // the OfferIndex and OfferCount.
+        //
+        PxeBcCacheDhcp6Offer (Private, Packet);
+      }
 
-  case Dhcp6RcvdReply:
-    //
-    // Cache the dhcp ack to Private->Dhcp6Ack, but it's not the final ack in mode data
-    // without verification.
-    //
-    ASSERT (Private->SelectIndex != 0);
-    PxeBcCopyDhcp6Ack (Private, Packet, FALSE);
-    break;
+      break;
 
-  default:
-    ASSERT (0);
+    case Dhcp6SendRequest:
+      if (Packet->Length > PXEBC_DHCP6_PACKET_MAX_SIZE) {
+        //
+        // If the to be sent packet exceeds the maximum length, abort the DHCP process.
+        //
+        Status = EFI_ABORTED;
+        break;
+      }
+
+      //
+      // Store the request packet as seed packet for discover.
+      //
+      if (Private->Dhcp6Request != NULL) {
+        FreePool (Private->Dhcp6Request);
+      }
+
+      Private->Dhcp6Request = AllocateZeroPool (Packet->Size);
+      if (Private->Dhcp6Request != NULL) {
+        CopyMem (Private->Dhcp6Request, Packet, Packet->Size);
+      }
+
+      break;
+
+    case Dhcp6SelectAdvertise:
+      //
+      // Select offer by the default policy or by order, and record the SelectIndex
+      // and SelectProxyType.
+      //
+      PxeBcSelectDhcp6Offer (Private);
+
+      if (Private->SelectIndex == 0) {
+        Status = EFI_ABORTED;
+      } else {
+        ASSERT (NewPacket != NULL);
+        SelectAd   = &Private->OfferBuffer[Private->SelectIndex - 1].Dhcp6.Packet.Offer;
+        *NewPacket = AllocateZeroPool (SelectAd->Size);
+        ASSERT (*NewPacket != NULL);
+        if (*NewPacket == NULL) {
+          return EFI_ABORTED;
+        }
+
+        CopyMem (*NewPacket, SelectAd, SelectAd->Size);
+      }
+
+      break;
+
+    case Dhcp6RcvdReply:
+      //
+      // Cache the dhcp ack to Private->Dhcp6Ack, but it's not the final ack in mode data
+      // without verification.
+      //
+      ASSERT (Private->SelectIndex != 0);
+      Status = PxeBcCopyDhcp6Ack (Private, Packet, FALSE);
+      if (EFI_ERROR (Status)) {
+        Status = EFI_ABORTED;
+      }
+
+      break;
+
+    default:
+      ASSERT (0);
   }
 
   return Status;
 }
-
 
 /**
   Build and send out the request packet for the bootfile, and parse the reply.
@@ -2008,37 +2158,38 @@ PxeBcDhcp6CallBack (
 **/
 EFI_STATUS
 PxeBcDhcp6Discover (
-  IN  PXEBC_PRIVATE_DATA              *Private,
-  IN  UINT16                          Type,
-  IN  UINT16                          *Layer,
-  IN  BOOLEAN                         UseBis,
-  IN  EFI_IP_ADDRESS                  *DestIp
+  IN  PXEBC_PRIVATE_DATA  *Private,
+  IN  UINT16              Type,
+  IN  UINT16              *Layer,
+  IN  BOOLEAN             UseBis,
+  IN  EFI_IP_ADDRESS      *DestIp
   )
 {
-  EFI_PXE_BASE_CODE_UDP_PORT          SrcPort;
-  EFI_PXE_BASE_CODE_UDP_PORT          DestPort;
-  EFI_PXE_BASE_CODE_MODE              *Mode;
-  EFI_PXE_BASE_CODE_PROTOCOL          *PxeBc;
-  EFI_PXE_BASE_CODE_DHCPV6_PACKET     *Discover;
-  UINTN                               DiscoverLen;
-  EFI_DHCP6_PACKET                    *Request;
-  UINTN                               RequestLen;
-  EFI_DHCP6_PACKET                    *Reply;
-  UINT8                               *RequestOpt;
-  UINT8                               *DiscoverOpt;
-  UINTN                               ReadSize;
-  UINT16                              OpCode;
-  UINT16                              OpLen;
-  UINT32                              Xid;
-  EFI_STATUS                          Status;
+  EFI_PXE_BASE_CODE_UDP_PORT       SrcPort;
+  EFI_PXE_BASE_CODE_UDP_PORT       DestPort;
+  EFI_PXE_BASE_CODE_MODE           *Mode;
+  EFI_PXE_BASE_CODE_PROTOCOL       *PxeBc;
+  EFI_PXE_BASE_CODE_DHCPV6_PACKET  *Discover;
+  UINTN                            DiscoverLen;
+  EFI_DHCP6_PACKET                 *Request;
+  UINTN                            RequestLen;
+  EFI_DHCP6_PACKET                 *Reply;
+  UINT8                            *RequestOpt;
+  UINT8                            *DiscoverOpt;
+  UINTN                            ReadSize;
+  UINT16                           OpCode;
+  UINT16                           OpLen;
+  UINT32                           Random;
+  EFI_STATUS                       Status;
+  UINTN                            DiscoverLenNeeded;
 
-  PxeBc       = &Private->PxeBc;
-  Mode        = PxeBc->Mode;
-  Request     = Private->Dhcp6Request;
-  SrcPort     = PXEBC_BS_DISCOVER_PORT;
-  DestPort    = PXEBC_BS_DISCOVER_PORT;
+  PxeBc    = &Private->PxeBc;
+  Mode     = PxeBc->Mode;
+  Request  = Private->Dhcp6Request;
+  SrcPort  = PXEBC_BS_DISCOVER_PORT;
+  DestPort = PXEBC_BS_DISCOVER_PORT;
 
-  if (!UseBis && Layer != NULL) {
+  if (!UseBis && (Layer != NULL)) {
     *Layer &= EFI_PXE_BASE_CODE_BOOT_LAYER_MASK;
   }
 
@@ -2046,7 +2197,14 @@ PxeBcDhcp6Discover (
     return EFI_DEVICE_ERROR;
   }
 
-  Discover = AllocateZeroPool (sizeof (EFI_PXE_BASE_CODE_DHCPV6_PACKET));
+  Status = PseudoRandomU32 (&Random);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a failed to generate random number: %r\n", __func__, Status));
+    return Status;
+  }
+
+  DiscoverLenNeeded = sizeof (EFI_PXE_BASE_CODE_DHCPV6_PACKET);
+  Discover          = AllocateZeroPool (DiscoverLenNeeded);
   if (Discover == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -2054,28 +2212,44 @@ PxeBcDhcp6Discover (
   //
   // Build the discover packet by the cached request packet before.
   //
-  Xid                     = NET_RANDOM (NetRandomInitSeed ());
-  Discover->TransactionId = HTONL (Xid);
+  Discover->TransactionId = HTONL (Random);
   Discover->MessageType   = Request->Dhcp6.Header.MessageType;
   RequestOpt              = Request->Dhcp6.Option;
   DiscoverOpt             = Discover->DhcpOptions;
   DiscoverLen             = sizeof (EFI_DHCP6_HEADER);
   RequestLen              = DiscoverLen;
 
+  //
+  // The request packet is generated by the UEFI network stack. In the DHCP4 DORA and DHCP6 SARR sequence,
+  // the first (discover in DHCP4 and solicit in DHCP6) and third (request in both DHCP4 and DHCP6) are
+  // generated by the DHCP client (the UEFI network stack in this case). By the time this function executes,
+  // the DHCP sequence already has been executed once (see UEFI Specification Figures 24.2 and 24.3), with
+  // Private->Dhcp6Request being a cached copy of the DHCP6 request packet that UEFI network stack previously
+  // generated and sent.
+  //
+  // Therefore while this code looks like it could overflow, in practice it's not possible.
+  //
   while (RequestLen < Request->Length) {
-    OpCode = NTOHS (((EFI_DHCP6_PACKET_OPTION *) RequestOpt)->OpCode);
-    OpLen  = NTOHS (((EFI_DHCP6_PACKET_OPTION *) RequestOpt)->OpLen);
-    if (OpCode != EFI_DHCP6_IA_TYPE_NA &&
-        OpCode != EFI_DHCP6_IA_TYPE_TA) {
+    OpCode = NTOHS (((EFI_DHCP6_PACKET_OPTION *)RequestOpt)->OpCode);
+    OpLen  = NTOHS (((EFI_DHCP6_PACKET_OPTION *)RequestOpt)->OpLen);
+    if ((OpCode != EFI_DHCP6_IA_TYPE_NA) &&
+        (OpCode != EFI_DHCP6_IA_TYPE_TA))
+    {
+      if (DiscoverLen + OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN > DiscoverLenNeeded) {
+        Status = EFI_OUT_OF_RESOURCES;
+        goto ON_ERROR;
+      }
+
       //
       // Copy all the options except IA option.
       //
-      CopyMem (DiscoverOpt, RequestOpt, OpLen + 4);
-      DiscoverOpt += (OpLen + 4);
-      DiscoverLen += (OpLen + 4);
+      CopyMem (DiscoverOpt, RequestOpt, OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+      DiscoverOpt += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+      DiscoverLen += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
     }
-    RequestOpt += (OpLen + 4);
-    RequestLen += (OpLen + 4);
+
+    RequestOpt += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
+    RequestLen += (OpLen + PXEBC_COMBINED_SIZE_OF_OPT_CODE_AND_LEN);
   }
 
   Status = PxeBc->UdpWrite (
@@ -2089,10 +2263,10 @@ PxeBcDhcp6Discover (
                     NULL,
                     NULL,
                     &DiscoverLen,
-                    (VOID *) Discover
+                    (VOID *)Discover
                     );
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
 
   //
@@ -2105,16 +2279,17 @@ PxeBcDhcp6Discover (
   } else {
     Reply = &Private->ProxyOffer.Dhcp6.Packet.Offer;
   }
-  ReadSize = (UINTN) Reply->Size;
+
+  ReadSize = (UINTN)Reply->Size;
 
   //
   // Start Udp6Read instance
   //
   Status = Private->Udp6Read->Configure (Private->Udp6Read, &Private->Udp6CfgData);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
-  
+
   Status = PxeBc->UdpRead (
                     PxeBc,
                     EFI_PXE_BASE_CODE_UDP_OPFLAGS_ANY_DEST_IP,
@@ -2125,19 +2300,25 @@ PxeBcDhcp6Discover (
                     NULL,
                     NULL,
                     &ReadSize,
-                    (VOID *) &Reply->Dhcp6
+                    (VOID *)&Reply->Dhcp6
                     );
   //
   // Stop Udp6Read instance
   //
   Private->Udp6Read->Configure (Private->Udp6Read, NULL);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto ON_ERROR;
   }
 
   return EFI_SUCCESS;
-}
 
+ON_ERROR:
+  if (Discover != NULL) {
+    FreePool (Discover);
+  }
+
+  return Status;
+}
 
 /**
   Start the DHCPv6 S.A.R.R. process to acquire the IPv6 address and other PXE boot information.
@@ -2151,35 +2332,34 @@ PxeBcDhcp6Discover (
 **/
 EFI_STATUS
 PxeBcDhcp6Sarr (
-  IN PXEBC_PRIVATE_DATA            *Private,
-  IN EFI_DHCP6_PROTOCOL            *Dhcp6
+  IN PXEBC_PRIVATE_DATA  *Private,
+  IN EFI_DHCP6_PROTOCOL  *Dhcp6
   )
 {
-  EFI_PXE_BASE_CODE_MODE           *PxeMode;
-  EFI_DHCP6_CONFIG_DATA            Config;
-  EFI_DHCP6_MODE_DATA              Mode;
-  EFI_DHCP6_RETRANSMISSION         *Retransmit;
-  EFI_DHCP6_PACKET_OPTION          *OptList[PXEBC_DHCP6_OPTION_MAX_NUM];
-  UINT8                            Buffer[PXEBC_DHCP6_OPTION_MAX_SIZE];
-  UINT32                           OptCount;
-  EFI_STATUS                       Status;
-  EFI_IP6_CONFIG_PROTOCOL          *Ip6Cfg;
-  EFI_STATUS                       TimerStatus;
-  EFI_EVENT                        Timer;
-  UINT64                           GetMappingTimeOut;
-  UINTN                            DataSize;
-  EFI_IP6_CONFIG_DUP_ADDR_DETECT_TRANSMITS    DadXmits;
+  EFI_PXE_BASE_CODE_MODE                    *PxeMode;
+  EFI_DHCP6_CONFIG_DATA                     Config;
+  EFI_DHCP6_MODE_DATA                       Mode;
+  EFI_DHCP6_RETRANSMISSION                  *Retransmit;
+  EFI_DHCP6_PACKET_OPTION                   *OptList[PXEBC_DHCP6_OPTION_MAX_NUM];
+  UINT8                                     Buffer[PXEBC_DHCP6_OPTION_MAX_SIZE];
+  UINT32                                    OptCount;
+  EFI_STATUS                                Status;
+  EFI_IP6_CONFIG_PROTOCOL                   *Ip6Cfg;
+  EFI_STATUS                                TimerStatus;
+  EFI_EVENT                                 Timer;
+  UINT64                                    GetMappingTimeOut;
+  UINTN                                     DataSize;
+  EFI_IP6_CONFIG_DUP_ADDR_DETECT_TRANSMITS  DadXmits;
 
-  Status     = EFI_SUCCESS;
-  PxeMode    = Private->PxeBc.Mode;
-  Ip6Cfg     = Private->Ip6Cfg;
-  Timer      = NULL;
+  PxeMode = Private->PxeBc.Mode;
+  Ip6Cfg  = Private->Ip6Cfg;
+  Timer   = NULL;
 
   //
   // Build option list for the request packet.
   //
-  OptCount   = PxeBcBuildDhcp6Options (Private, OptList, Buffer);
-  ASSERT (OptCount> 0);
+  OptCount = PxeBcBuildDhcp6Options (Private, OptList, Buffer);
+  ASSERT (OptCount > 0);
 
   Retransmit = AllocateZeroPool (sizeof (EFI_DHCP6_RETRANSMISSION));
   if (Retransmit == NULL) {
@@ -2222,7 +2402,6 @@ PxeBcDhcp6Sarr (
   ZeroMem (Private->OfferCount, sizeof (Private->OfferCount));
   ZeroMem (Private->OfferIndex, sizeof (Private->OfferIndex));
 
-
   //
   // Start DHCPv6 S.A.R.R. process to acquire IPv6 address.
   //
@@ -2238,12 +2417,12 @@ PxeBcDhcp6Sarr (
     // Get Duplicate Address Detection Transmits count.
     //
     DataSize = sizeof (EFI_IP6_CONFIG_DUP_ADDR_DETECT_TRANSMITS);
-    Status = Ip6Cfg->GetData (
-                       Ip6Cfg,
-                       Ip6ConfigDataTypeDupAddrDetectTransmits,
-                       &DataSize,
-                       &DadXmits
-                       );
+    Status   = Ip6Cfg->GetData (
+                         Ip6Cfg,
+                         Ip6ConfigDataTypeDupAddrDetectTransmits,
+                         &DataSize,
+                         &DadXmits
+                         );
     if (EFI_ERROR (Status)) {
       Dhcp6->Configure (Dhcp6, NULL);
       return Status;
@@ -2256,7 +2435,7 @@ PxeBcDhcp6Sarr (
     }
 
     GetMappingTimeOut = TICKS_PER_SECOND * DadXmits.DupAddrDetectTransmits + PXEBC_DAD_ADDITIONAL_DELAY;
-    Status = gBS->SetTimer (Timer, TimerRelative, GetMappingTimeOut);
+    Status            = gBS->SetTimer (Timer, TimerRelative, GetMappingTimeOut);
     if (EFI_ERROR (Status)) {
       gBS->CloseEvent (Timer);
       Dhcp6->Configure (Dhcp6, NULL);
@@ -2264,19 +2443,20 @@ PxeBcDhcp6Sarr (
     }
 
     do {
-      
       TimerStatus = gBS->CheckEvent (Timer);
       if (!EFI_ERROR (TimerStatus)) {
         Status = Dhcp6->Start (Dhcp6);
       }
     } while (TimerStatus == EFI_NOT_READY);
-    
+
     gBS->CloseEvent (Timer);
   }
+
   if (EFI_ERROR (Status)) {
     if (Status == EFI_ICMP_ERROR) {
       PxeMode->IcmpErrorReceived = TRUE;
     }
+
     Dhcp6->Configure (Dhcp6, NULL);
     return Status;
   }
@@ -2295,16 +2475,18 @@ PxeBcDhcp6Sarr (
   // DHCP6 doesn't have an option to specify the router address on the subnet, the only way to get the
   // router address in IP6 is the router discovery mechanism (the RS and RA, which only be handled when
   // the IP policy is Automatic). So we just hold the station IP address here and leave the IP policy as
-  // Automatic, until we get the server IP address. This could let IP6 driver finish the router discovery 
+  // Automatic, until we get the server IP address. This could let IP6 driver finish the router discovery
   // to find a valid router address.
   //
   CopyMem (&Private->TmpStationIp.v6, &Mode.Ia->IaAddress[0].IpAddress, sizeof (EFI_IPv6_ADDRESS));
   if (Mode.ClientId != NULL) {
     FreePool (Mode.ClientId);
   }
+
   if (Mode.Ia != NULL) {
     FreePool (Mode.Ia);
   }
+
   //
   // Check the selected offer whether BINL retry is needed.
   //
@@ -2313,6 +2495,6 @@ PxeBcDhcp6Sarr (
     Dhcp6->Stop (Dhcp6);
     return Status;
   }
-  
+
   return EFI_SUCCESS;
 }

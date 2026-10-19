@@ -2,14 +2,9 @@
   Serial I/O Port library functions with no library constructor/destructor
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
+  Copyright (c) 2021, Arm Limited. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -17,7 +12,6 @@
 #include <Library/DebugLib.h>
 #include <Library/SemihostLib.h>
 #include <Library/SerialPortLib.h>
-
 
 /*
 
@@ -42,11 +36,11 @@ SerialPortInitialize (
 /**
   Write data to serial device.
 
-  @param  Buffer           Point of data buffer which need to be writed.
+  @param  Buffer           Point of data buffer which need to be written.
   @param  NumberOfBytes    Number of output bytes which are cached in Buffer.
 
   @retval 0                Write data failed.
-  @retval !0               Actual number of bytes writed to serial device.
+  @retval !0               Actual number of bytes written to serial device.
 
 **/
 
@@ -56,80 +50,76 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
-)
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
+  )
 {
-  UINT8 PrintBuffer[PRINT_BUFFER_SIZE];
-  UINTN SourceIndex      = 0;
-  UINTN DestinationIndex = 0;
-  UINT8 CurrentCharacter;
+  UINT8  PrintBuffer[PRINT_BUFFER_SIZE];
+  UINTN  SourceIndex;
+  UINTN  DestinationIndex;
+  UINT8  CurrentCharacter;
 
-  while (SourceIndex < NumberOfBytes)
-  {
-      CurrentCharacter = Buffer[SourceIndex++];
+  SourceIndex      = 0;
+  DestinationIndex = 0;
 
-      switch (CurrentCharacter)
-      {
+  while (SourceIndex < NumberOfBytes) {
+    CurrentCharacter = Buffer[SourceIndex++];
+
+    switch (CurrentCharacter) {
       case '\r':
-          continue;
+        continue;
 
       case '\n':
-          PrintBuffer[DestinationIndex++] = ' ';
-          // fall through
+        PrintBuffer[DestinationIndex++] = ' ';
+      // fall through
 
       default:
-          PrintBuffer[DestinationIndex++] = CurrentCharacter;
-          break;
-      }
+        PrintBuffer[DestinationIndex++] = CurrentCharacter;
+        break;
+    }
 
-      if (DestinationIndex > PRINT_BUFFER_THRESHOLD)
-      {
-          PrintBuffer[DestinationIndex] = '\0';
-          SemihostWriteString ((CHAR8 *) PrintBuffer);
+    if (DestinationIndex > PRINT_BUFFER_THRESHOLD) {
+      PrintBuffer[DestinationIndex] = '\0';
+      SemihostWriteString ((CHAR8 *)PrintBuffer);
 
-          DestinationIndex = 0;
-      }
+      DestinationIndex = 0;
+    }
   }
 
-  if (DestinationIndex > 0)
-  {
-      PrintBuffer[DestinationIndex] = '\0';
-      SemihostWriteString ((CHAR8 *) PrintBuffer);
+  if (DestinationIndex > 0) {
+    PrintBuffer[DestinationIndex] = '\0';
+    SemihostWriteString ((CHAR8 *)PrintBuffer);
   }
 
   return NumberOfBytes;
 }
 
-
 /**
   Read data from serial device and save the datas in buffer.
 
-  @param  Buffer           Point of data buffer which need to be writed.
+  @param  Buffer           Point of data buffer which need to be written.
   @param  NumberOfBytes    Number of output bytes which are cached in Buffer.
 
   @retval 0                Read data failed.
-  @retval !0               Aactual number of bytes read from serial device.
+  @retval !0               Actual number of bytes read from serial device.
 
 **/
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
   *Buffer = SemihostReadCharacter ();
   return 1;
 }
 
-
-
 /**
-  Check to see if any data is avaiable to be read from the debug device.
+  Check to see if any data is available to be read from the debug device.
 
-  @retval TRUE       At least one byte of data is avaiable to be read
-  @retval FALSE      No data is avaiable to be read
+  @retval TRUE       At least one byte of data is available to be read
+  @retval FALSE      No data is available to be read
 
 **/
 BOOLEAN
@@ -141,4 +131,3 @@ SerialPortPoll (
   // Since SemiHosting read character is blocking always say we have a char ready?
   return SemihostConnectionSupported ();
 }
-

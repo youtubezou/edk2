@@ -1,14 +1,8 @@
 /** @file
  Section Extraction DXE Driver
 
-Copyright (c) 2013 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -106,22 +100,22 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 CustomGuidedSectionExtract (
-  IN CONST  EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL *This,
-  IN CONST  VOID                                   *InputSection,
-  OUT       VOID                                   **OutputBuffer,
-  OUT       UINTN                                  *OutputSize,
-  OUT       UINT32                                 *AuthenticationStatus
+  IN CONST  EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL  *This,
+  IN CONST  VOID                                    *InputSection,
+  OUT       VOID                                    **OutputBuffer,
+  OUT       UINTN                                   *OutputSize,
+  OUT       UINT32                                  *AuthenticationStatus
   );
 
 //
 // Module global for the Section Extraction Protocol handle
 //
-EFI_HANDLE mSectionExtractionHandle = NULL;
+EFI_HANDLE  mSectionExtractionHandle = NULL;
 
 //
 // Module global for the Section Extraction Protocol instance
 //
-EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL mCustomGuidedSectionExtractionProtocol = {
+EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL  mCustomGuidedSectionExtractionProtocol = {
   CustomGuidedSectionExtract
 };
 
@@ -211,19 +205,19 @@ EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL mCustomGuidedSectionExtractionProtocol = 
 EFI_STATUS
 EFIAPI
 CustomGuidedSectionExtract (
-  IN CONST  EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL *This,
-  IN CONST  VOID                                   *InputSection,
-  OUT       VOID                                   **OutputBuffer,
-  OUT       UINTN                                  *OutputSize,
-  OUT       UINT32                                 *AuthenticationStatus
+  IN CONST  EFI_GUIDED_SECTION_EXTRACTION_PROTOCOL  *This,
+  IN CONST  VOID                                    *InputSection,
+  OUT       VOID                                    **OutputBuffer,
+  OUT       UINTN                                   *OutputSize,
+  OUT       UINT32                                  *AuthenticationStatus
   )
 {
-  EFI_STATUS      Status;
-  VOID            *ScratchBuffer;
-  VOID            *AllocatedOutputBuffer;
-  UINT32          OutputBufferSize;
-  UINT32          ScratchBufferSize;
-  UINT16          SectionAttribute;
+  EFI_STATUS  Status;
+  VOID        *ScratchBuffer;
+  VOID        *AllocatedOutputBuffer;
+  UINT32      OutputBufferSize;
+  UINT32      ScratchBufferSize;
+  UINT16      SectionAttribute;
 
   //
   // Init local variable
@@ -265,6 +259,7 @@ CustomGuidedSectionExtract (
       FreePool (ScratchBuffer);
       return EFI_OUT_OF_RESOURCES;
     }
+
     *OutputBuffer = AllocatedOutputBuffer;
   }
 
@@ -284,9 +279,11 @@ CustomGuidedSectionExtract (
     if (AllocatedOutputBuffer != NULL) {
       FreePool (AllocatedOutputBuffer);
     }
+
     if (ScratchBuffer != NULL) {
       FreePool (ScratchBuffer);
     }
+
     DEBUG ((DEBUG_ERROR, "Extract guided section Failed - %r\n", Status));
     return Status;
   }
@@ -303,7 +300,7 @@ CustomGuidedSectionExtract (
   //
   // Set real size of output buffer.
   //
-  *OutputSize = (UINTN) OutputBufferSize;
+  *OutputSize = (UINTN)OutputBufferSize;
 
   //
   // Free unused scratch buffer.
@@ -318,12 +315,12 @@ CustomGuidedSectionExtract (
 /**
   Main entry for the Section Extraction DXE module.
 
-  This routine registers the Section Extraction Protocols that have been registered 
+  This routine registers the Section Extraction Protocols that have been registered
   with the Section Extraction Library.
-  
+
   @param[in] ImageHandle    The firmware allocated handle for the EFI image.
   @param[in] SystemTable    A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS       The entry point is executed successfully.
   @retval other             Some error occurs when executing this entry point.
 
@@ -350,7 +347,8 @@ SectionExtractionDxeEntry (
   while (ExtractHandlerNumber-- > 0) {
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &mSectionExtractionHandle,
-                    &ExtractHandlerGuidTable [ExtractHandlerNumber], &mCustomGuidedSectionExtractionProtocol,
+                    &ExtractHandlerGuidTable[ExtractHandlerNumber],
+                    &mCustomGuidedSectionExtractionProtocol,
                     NULL
                     );
     ASSERT_EFI_ERROR (Status);

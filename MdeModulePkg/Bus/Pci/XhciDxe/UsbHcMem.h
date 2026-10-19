@@ -2,34 +2,27 @@
 
   This file contains the definination for host controller memory management routines.
 
-Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_XHCI_MEM_H_
-#define _EFI_XHCI_MEM_H_
+#pragma once
 
-#define USB_HC_BIT(a)                  ((UINTN)(1 << (a)))
+#define USB_HC_BIT(a)  ((UINTN)(1 << (a)))
 
 #define USB_HC_BIT_IS_SET(Data, Bit)   \
           ((BOOLEAN)(((Data) & USB_HC_BIT(Bit)) == USB_HC_BIT(Bit)))
 
 typedef struct _USBHC_MEM_BLOCK USBHC_MEM_BLOCK;
 struct _USBHC_MEM_BLOCK {
-  UINT8                   *Bits;    // Bit array to record which unit is allocated
-  UINTN                   BitsLen;
-  UINT8                   *Buf;
-  UINT8                   *BufHost;
-  UINTN                   BufLen;   // Memory size in bytes
-  VOID                    *Mapping;
-  USBHC_MEM_BLOCK         *Next;
+  UINT8              *Bits;         // Bit array to record which unit is allocated
+  UINTN              BitsLen;
+  UINT8              *Buf;
+  UINT8              *BufHost;
+  UINTN              BufLen;        // Memory size in bytes
+  VOID               *Mapping;
+  USBHC_MEM_BLOCK    *Next;
 };
 
 //
@@ -38,21 +31,23 @@ struct _USBHC_MEM_BLOCK {
 // data to be on the same 4G memory.
 //
 typedef struct _USBHC_MEM_POOL {
-  EFI_PCI_IO_PROTOCOL     *PciIo;
-  BOOLEAN                 Check4G;
-  UINT32                  Which4G;
-  USBHC_MEM_BLOCK         *Head;
+  EFI_PCI_IO_PROTOCOL    *PciIo;
+  BOOLEAN                Check4G;
+  UINT32                 Which4G;
+  USBHC_MEM_BLOCK        *Head;
 } USBHC_MEM_POOL;
 
 //
 // Memory allocation unit, must be 2^n, n>4
 //
-#define USBHC_MEM_UNIT           64
+#define USBHC_MEM_UNIT  64
 
 #define USBHC_MEM_UNIT_MASK      (USBHC_MEM_UNIT - 1)
 #define USBHC_MEM_DEFAULT_PAGES  16
 
 #define USBHC_MEM_ROUND(Len)  (((Len) + USBHC_MEM_UNIT_MASK) & (~USBHC_MEM_UNIT_MASK))
+
+#define USBHC_MEM_TRB_RINGS_BOUNDARY  SIZE_64KB
 
 //
 // Advance the byte and bit to the next bit, adjust byte accordingly.
@@ -65,8 +60,6 @@ typedef struct _USBHC_MEM_POOL {
               (Bit) = 0;      \
             }                 \
           } while (0)
-
-
 
 /**
   Initialize the memory management pool for the host controller.
@@ -82,7 +75,6 @@ UsbHcInitMemPool (
   IN EFI_PCI_IO_PROTOCOL  *PciIo
   );
 
-
 /**
   Release the memory management pool.
 
@@ -94,26 +86,26 @@ UsbHcInitMemPool (
 **/
 EFI_STATUS
 UsbHcFreeMemPool (
-  IN USBHC_MEM_POOL       *Pool
+  IN USBHC_MEM_POOL  *Pool
   );
-
 
 /**
   Allocate some memory from the host controller's memory pool
   which can be used to communicate with host controller.
 
-  @param  Pool  The host controller's memory pool.
-  @param  Size  Size of the memory to allocate.
+  @param  Pool                 The host controller's memory pool.
+  @param  Size                 Size of the memory to allocate.
+  @param  AllocationForRing    The allocated memory is for Ring or not.
 
   @return The allocated memory or NULL.
 
 **/
 VOID *
 UsbHcAllocateMem (
-  IN  USBHC_MEM_POOL      *Pool,
-  IN  UINTN               Size
+  IN  USBHC_MEM_POOL  *Pool,
+  IN  UINTN           Size,
+  IN  BOOLEAN         AllocationForRing
   );
-
 
 /**
   Free the allocated memory back to the memory pool.
@@ -125,9 +117,9 @@ UsbHcAllocateMem (
 **/
 VOID
 UsbHcFreeMem (
-  IN USBHC_MEM_POOL       *Pool,
-  IN VOID                 *Mem,
-  IN UINTN                Size
+  IN USBHC_MEM_POOL  *Pool,
+  IN VOID            *Mem,
+  IN UINTN           Size
   );
 
 /**
@@ -136,15 +128,17 @@ UsbHcFreeMem (
   @param  Pool           The memory pool of the host controller.
   @param  Mem            The pointer to host memory.
   @param  Size           The size of the memory region.
+  @param  Alignment      Alignment the size to USBHC_MEM_UNIT bytes.
 
   @return                The pci memory address
 
 **/
 EFI_PHYSICAL_ADDRESS
 UsbHcGetPciAddrForHostAddr (
-  IN USBHC_MEM_POOL       *Pool,
-  IN VOID                 *Mem,
-  IN UINTN                Size
+  IN USBHC_MEM_POOL  *Pool,
+  IN VOID            *Mem,
+  IN UINTN           Size,
+  IN BOOLEAN         Alignment
   );
 
 /**
@@ -153,34 +147,36 @@ UsbHcGetPciAddrForHostAddr (
   @param  Pool           The memory pool of the host controller.
   @param  Mem            The pointer to pci memory.
   @param  Size           The size of the memory region.
+  @param  Alignment      Alignment the size to USBHC_MEM_UNIT bytes.
 
   @return                The host memory address
 
 **/
 EFI_PHYSICAL_ADDRESS
 UsbHcGetHostAddrForPciAddr (
-  IN USBHC_MEM_POOL       *Pool,
-  IN VOID                 *Mem,
-  IN UINTN                Size
+  IN USBHC_MEM_POOL  *Pool,
+  IN VOID            *Mem,
+  IN UINTN           Size,
+  IN BOOLEAN         Alignment
   );
 
-/**  
+/**
   Allocates pages at a specified alignment that are suitable for an EfiPciIoOperationBusMasterCommonBuffer mapping.
-  
+
   If Alignment is not a power of two and Alignment is not zero, then ASSERT().
 
   @param  PciIo                 The PciIo that can be used to access the host controller.
   @param  Pages                 The number of pages to allocate.
   @param  Alignment             The requested alignment of the allocation.  Must be a power of two.
   @param  HostAddress           The system memory address to map to the PCI controller.
-  @param  DeviceAddress         The resulting map address for the bus master PCI controller to 
+  @param  DeviceAddress         The resulting map address for the bus master PCI controller to
                                 use to access the hosts HostAddress.
   @param  Mapping               A resulting value to pass to Unmap().
 
   @retval EFI_SUCCESS           Success to allocate aligned pages.
   @retval EFI_INVALID_PARAMETER Pages or Alignment is not valid.
   @retval EFI_OUT_OF_RESOURCES  Do not have enough resources to allocate memory.
-  
+
 
 **/
 EFI_STATUS
@@ -192,10 +188,10 @@ UsbHcAllocateAlignedPages (
   OUT EFI_PHYSICAL_ADDRESS  *DeviceAddress,
   OUT VOID                  **Mapping
   );
-  
+
 /**
   Frees memory that was allocated with UsbHcAllocateAlignedPages().
-  
+
   @param  PciIo                 The PciIo that can be used to access the host controller.
   @param  HostAddress           The system memory address to map to the PCI controller.
   @param  Pages                 The number of pages to free.
@@ -204,10 +200,8 @@ UsbHcAllocateAlignedPages (
 **/
 VOID
 UsbHcFreeAlignedPages (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN VOID                   *HostAddress,
-  IN UINTN                  Pages,
-  VOID                      *Mapping
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN VOID                 *HostAddress,
+  IN UINTN                Pages,
+  VOID                    *Mapping
   );
-
-#endif

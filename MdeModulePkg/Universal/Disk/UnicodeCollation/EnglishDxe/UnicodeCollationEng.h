@@ -1,21 +1,12 @@
 /** @file
   Head file for Unicode Collation Protocol (English)
 
-Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _UNICODE_COLLATION_ENG_H_
-#define _UNICODE_COLLATION_ENG_H_
-
-
+#pragma once
 
 #include <Uefi.h>
 
@@ -39,16 +30,17 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Macro to map character a to upper case.
 //
-#define TO_UPPER(a)      (CHAR16) ((a) <= 0xFF ? mEngUpperMap[a] : (a))
+#define TO_UPPER(a)  (CHAR16) ((a) <= 0xFF ? mEngUpperMap[a] : (a))
 
 //
 // Macro to map character a to lower case.
 //
-#define TO_LOWER(a)      (CHAR16) ((a) <= 0xFF ? mEngLowerMap[a] : (a))
+#define TO_LOWER(a)  (CHAR16) ((a) <= 0xFF ? mEngLowerMap[a] : (a))
 
 //
 // Prototypes
 //
+
 /**
   Performs a case-insensitive comparison of two Null-terminated strings.
 
@@ -64,9 +56,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 INTN
 EFIAPI
 EngStriColl (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN CHAR16                           *Str1,
-  IN CHAR16                           *Str2
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN CHAR16                          *Str1,
+  IN CHAR16                          *Str2
   );
 
 /**
@@ -84,13 +76,13 @@ EngStriColl (
 BOOLEAN
 EFIAPI
 EngMetaiMatch (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN CHAR16                           *String,
-  IN CHAR16                           *Pattern
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN CHAR16                          *String,
+  IN CHAR16                          *Pattern
   );
 
 /**
-  Converts all the characters in a Null-terminated string to 
+  Converts all the characters in a Null-terminated string to
   lower case characters.
 
   @param  This   Protocol instance pointer.
@@ -100,8 +92,8 @@ EngMetaiMatch (
 VOID
 EFIAPI
 EngStrLwr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN OUT CHAR16                       *Str
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN OUT CHAR16                      *Str
   );
 
 /**
@@ -115,8 +107,8 @@ EngStrLwr (
 VOID
 EFIAPI
 EngStrUpr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN OUT CHAR16                       *Str
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN OUT CHAR16                      *Str
   );
 
 /**
@@ -133,15 +125,15 @@ EngStrUpr (
 VOID
 EFIAPI
 EngFatToStr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN UINTN                            FatSize,
-  IN CHAR8                            *Fat,
-  OUT CHAR16                          *String
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN UINTN                           FatSize,
+  IN CHAR8                           *Fat,
+  OUT CHAR16                         *String
   );
 
 /**
-  Converts a Null-terminated string to legal characters in a FAT 
-  filename using an OEM character set. 
+  Converts a Null-terminated string to legal characters in a FAT
+  filename using an OEM character set.
 
   @param  This    Protocol instance pointer.
   @param  String  A pointer to a Null-terminated string. The string must
@@ -157,21 +149,21 @@ EngFatToStr (
 BOOLEAN
 EFIAPI
 EngStrToFat (
-  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
-  IN CHAR16                           *String,
-  IN UINTN                            FatSize,
-  OUT CHAR8                           *Fat
+  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
+  IN CHAR16                          *String,
+  IN UINTN                           FatSize,
+  OUT CHAR8                          *Fat
   );
 
 /**
   The user Entry Point for English module.
- 
-  This function initializes unicode character mapping and then installs Unicode
-  Collation & Unicode Collation 2 Protocols based on the feature flags.  
 
-  @param  ImageHandle    The firmware allocated handle for the EFI image.  
+  This function initializes unicode character mapping and then installs Unicode
+  Collation & Unicode Collation 2 Protocols based on the feature flags.
+
+  @param  ImageHandle    The firmware allocated handle for the EFI image.
   @param  SystemTable    A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS    The entry point is executed successfully.
   @retval other          Some error occurs when executing this entry point.
 
@@ -179,9 +171,6 @@ EngStrToFat (
 EFI_STATUS
 EFIAPI
 InitializeUnicodeCollationEng (
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   );
-
-#endif
-

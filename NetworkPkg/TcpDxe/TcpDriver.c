@@ -1,29 +1,23 @@
 /** @file
   The driver binding and service binding protocol for the TCP driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
-
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) Microsoft Corporation
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "TcpMain.h"
 
-UINT16                        mTcp4RandomPort;
-UINT16                        mTcp6RandomPort;
+UINT16  mTcp4RandomPort;
+UINT16  mTcp6RandomPort;
 
-TCP_HEARTBEAT_TIMER           mTcpTimer = {
+TCP_HEARTBEAT_TIMER  mTcpTimer = {
   NULL,
   0
 };
 
-EFI_TCP4_PROTOCOL             gTcp4ProtocolTemplate = {
+EFI_TCP4_PROTOCOL  gTcp4ProtocolTemplate = {
   Tcp4GetModeData,
   Tcp4Configure,
   Tcp4Routes,
@@ -36,7 +30,7 @@ EFI_TCP4_PROTOCOL             gTcp4ProtocolTemplate = {
   Tcp4Poll
 };
 
-EFI_TCP6_PROTOCOL             gTcp6ProtocolTemplate = {
+EFI_TCP6_PROTOCOL  gTcp6ProtocolTemplate = {
   Tcp6GetModeData,
   Tcp6Configure,
   Tcp6Connect,
@@ -48,7 +42,7 @@ EFI_TCP6_PROTOCOL             gTcp6ProtocolTemplate = {
   Tcp6Poll
 };
 
-SOCK_INIT_DATA                mTcpDefaultSockData = {
+SOCK_INIT_DATA  mTcpDefaultSockData = {
   SockStream,
   SO_CLOSED,
   NULL,
@@ -66,7 +60,7 @@ SOCK_INIT_DATA                mTcpDefaultSockData = {
   NULL,
 };
 
-EFI_DRIVER_BINDING_PROTOCOL   gTcp4DriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gTcp4DriverBinding = {
   Tcp4DriverBindingSupported,
   Tcp4DriverBindingStart,
   Tcp4DriverBindingStop,
@@ -75,7 +69,7 @@ EFI_DRIVER_BINDING_PROTOCOL   gTcp4DriverBinding = {
   NULL
 };
 
-EFI_DRIVER_BINDING_PROTOCOL   gTcp6DriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gTcp6DriverBinding = {
   Tcp6DriverBindingSupported,
   Tcp6DriverBindingStart,
   Tcp6DriverBindingStop,
@@ -89,6 +83,11 @@ EFI_SERVICE_BINDING_PROTOCOL  gTcpServiceBinding = {
   TcpServiceBindingDestroyChild
 };
 
+//
+// This is the handle for the Hash2ServiceBinding Protocol instance this driver produces
+// if the platform does not provide one.
+//
+EFI_HANDLE  mHash2ServiceHandle = NULL;
 
 /**
   Create and start the heartbeat timer for the TCP driver.
@@ -107,7 +106,6 @@ TcpCreateTimer (
   Status = EFI_SUCCESS;
 
   if (mTcpTimer.RefCnt == 0) {
-
     Status = gBS->CreateEvent (
                     EVT_TIMER | EVT_NOTIFY_SIGNAL,
                     TPL_NOTIFY,
@@ -116,17 +114,15 @@ TcpCreateTimer (
                     &mTcpTimer.TimerEvent
                     );
     if (!EFI_ERROR (Status)) {
-
       Status = gBS->SetTimer (
                       mTcpTimer.TimerEvent,
                       TimerPeriodic,
-                      (UINT64) (TICKS_PER_SECOND / TCP_TICK_HZ)
+                      (UINT64)(TICKS_PER_SECOND / TCP_TICK_HZ)
                       );
     }
   }
 
   if (!EFI_ERROR (Status)) {
-
     mTcpTimer.RefCnt++;
   }
 
@@ -173,7 +169,30 @@ TcpDriverEntryPoint (
   )
 {
   EFI_STATUS  Status;
-  UINT32      Seed;
+  UINT32      Random;
+
+  //
+  // Initialize the Secret used for hashing TCP sequence numbers
+  //
+  // Normally this should be regenerated periodically, but since
+  // this is only used for UEFI networking and not a general purpose
+  // operating system, it is not necessary to regenerate it.
+  //
+  Status = PseudoRandomU32 (&mTcpGlobalSecret);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a failed to generate random number: %r\n", __func__, Status));
+    return Status;
+  }
+
+  //
+  // Get a random number used to generate a random port number
+  // Intentionally not linking this to mTcpGlobalSecret to avoid leaking information about the secret
+  //
+  Status = PseudoRandomU32 (&Random);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a Failed to generate random number: %r\n", __func__, Status));
+    return Status;
+  }
 
   //
   // Install the TCP Driver Binding Protocol
@@ -202,25 +221,18 @@ TcpDriverEntryPoint (
              &gTcpComponentName2
              );
   if (EFI_ERROR (Status)) {
-    gBS->UninstallMultipleProtocolInterfaces (
-           ImageHandle,
-           &gEfiDriverBindingProtocolGuid,
-           &gTcp4DriverBinding,
-           &gEfiComponentName2ProtocolGuid,
-           &gTcpComponentName2,
-           &gEfiComponentNameProtocolGuid,
-           &gTcpComponentName,
-           NULL
-           );
+    EfiLibUninstallDriverBindingComponentName2 (
+      &gTcp4DriverBinding,
+      &gTcpComponentName,
+      &gTcpComponentName2
+      );
     return Status;
   }
 
   //
-  // Initialize ISS and random port.
+  // Initialize the random port.
   //
-  Seed            = NetRandomInitSeed ();
-  mTcpGlobalIss   = NET_RANDOM (Seed) % mTcpGlobalIss;
-  mTcp4RandomPort = (UINT16) (TCP_PORT_KNOWN + (NET_RANDOM (Seed) % TCP_PORT_KNOWN));
+  mTcp4RandomPort = (UINT16)(TCP_PORT_KNOWN + (Random % TCP_PORT_KNOWN));
   mTcp6RandomPort = mTcp4RandomPort;
 
   return EFI_SUCCESS;
@@ -234,6 +246,8 @@ TcpDriverEntryPoint (
   @param[in]  IpVersion          IP_VERSION_4 or IP_VERSION_6.
 
   @retval EFI_OUT_OF_RESOURCES   Failed to allocate some resources.
+  @retval EFI_UNSUPPORTED        Service Binding Protocols are unavailable.
+  @retval EFI_ALREADY_STARTED    The TCP driver is already started on the controller.
   @retval EFI_SUCCESS            A new IP6 service binding private was created.
 
 **/
@@ -244,11 +258,13 @@ TcpCreateService (
   IN UINT8       IpVersion
   )
 {
-  EFI_STATUS         Status;
-  EFI_GUID           *IpServiceBindingGuid;
-  EFI_GUID           *TcpServiceBindingGuid;
-  TCP_SERVICE_DATA   *TcpServiceData;
-  IP_IO_OPEN_DATA    OpenData;
+  EFI_STATUS                    Status;
+  EFI_GUID                      *IpServiceBindingGuid;
+  EFI_GUID                      *TcpServiceBindingGuid;
+  TCP_SERVICE_DATA              *TcpServiceData;
+  IP_IO_OPEN_DATA               OpenData;
+  EFI_SERVICE_BINDING_PROTOCOL  *Hash2ServiceBinding;
+  EFI_HASH2_PROTOCOL            *Hash2Protocol;
 
   if (IpVersion == IP_VERSION_4) {
     IpServiceBindingGuid  = &gEfiIp4ServiceBindingProtocolGuid;
@@ -282,6 +298,33 @@ TcpCreateService (
     return EFI_UNSUPPORTED;
   }
 
+  Status = gBS->LocateProtocol (&gEfiHash2ProtocolGuid, NULL, (VOID **)&Hash2Protocol);
+  if (EFI_ERROR (Status)) {
+    //
+    // If we can't find the Hashing protocol, then we need to create one.
+    //
+
+    //
+    // Platform is expected to publish the hash service binding protocol to support TCP.
+    //
+    Status = gBS->LocateProtocol (
+                    &gEfiHash2ServiceBindingProtocolGuid,
+                    NULL,
+                    (VOID **)&Hash2ServiceBinding
+                    );
+    if (EFI_ERROR (Status) || (Hash2ServiceBinding == NULL) || (Hash2ServiceBinding->CreateChild == NULL)) {
+      return EFI_UNSUPPORTED;
+    }
+
+    //
+    // Create an instance of the hash protocol for this controller.
+    //
+    Status = Hash2ServiceBinding->CreateChild (Hash2ServiceBinding, &mHash2ServiceHandle);
+    if (EFI_ERROR (Status)) {
+      return EFI_UNSUPPORTED;
+    }
+  }
+
   //
   // Create the TCP service data.
   //
@@ -290,10 +333,10 @@ TcpCreateService (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  TcpServiceData->Signature            = TCP_DRIVER_SIGNATURE;
-  TcpServiceData->ControllerHandle     = Controller;
-  TcpServiceData->DriverBindingHandle  = Image;
-  TcpServiceData->IpVersion            = IpVersion;
+  TcpServiceData->Signature           = TCP_DRIVER_SIGNATURE;
+  TcpServiceData->ControllerHandle    = Controller;
+  TcpServiceData->DriverBindingHandle = Image;
+  TcpServiceData->IpVersion           = IpVersion;
   CopyMem (
     &TcpServiceData->ServiceBinding,
     &gTcpServiceBinding,
@@ -305,7 +348,6 @@ TcpCreateService (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
 
   InitializeListHead (&TcpServiceData->SocketList);
   ZeroMem (&OpenData, sizeof (IP_IO_OPEN_DATA));
@@ -326,8 +368,8 @@ TcpCreateService (
     OpenData.IpConfigData.Ip6CfgData.DefaultProtocol = EFI_IP_PROTO_TCP;
   }
 
-  OpenData.PktRcvdNotify  = TcpRxCallback;
-  Status                  = IpIoOpen (TcpServiceData->IpIo, &OpenData);
+  OpenData.PktRcvdNotify = TcpRxCallback;
+  Status                 = IpIoOpen (TcpServiceData->IpIo, &OpenData);
   if (EFI_ERROR (Status)) {
     goto ON_ERROR;
   }
@@ -365,7 +407,7 @@ ON_ERROR:
 
 /**
   Callback function which provided by user to remove one node in NetDestroyLinkList process.
-  
+
   @param[in]    Entry           The entry to be removed.
   @param[in]    Context         Pointer to the callback context corresponds to the Context in NetDestroyLinkList.
 
@@ -376,8 +418,8 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 TcpDestroyChildEntryInHandleBuffer (
-  IN LIST_ENTRY         *Entry,
-  IN VOID               *Context
+  IN LIST_ENTRY  *Entry,
+  IN VOID        *Context
   )
 {
   SOCKET                        *Sock;
@@ -385,14 +427,14 @@ TcpDestroyChildEntryInHandleBuffer (
   UINTN                         NumberOfChildren;
   EFI_HANDLE                    *ChildHandleBuffer;
 
-  if (Entry == NULL || Context == NULL) {
+  if ((Entry == NULL) || (Context == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Sock = NET_LIST_USER_STRUCT_S (Entry, SOCKET, Link, SOCK_SIGNATURE);
-  ServiceBinding    = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->ServiceBinding;
-  NumberOfChildren  = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->NumberOfChildren;
-  ChildHandleBuffer = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->ChildHandleBuffer;
+  Sock              = NET_LIST_USER_STRUCT_S (Entry, SOCKET, Link, SOCK_SIGNATURE);
+  ServiceBinding    = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->ServiceBinding;
+  NumberOfChildren  = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->NumberOfChildren;
+  ChildHandleBuffer = ((TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->ChildHandleBuffer;
 
   if (!NetIsInHandleBuffer (Sock->SockHandle, NumberOfChildren, ChildHandleBuffer)) {
     return EFI_SUCCESS;
@@ -410,7 +452,7 @@ TcpDestroyChildEntryInHandleBuffer (
   @param[in]  NumberOfChildren   Number of Handles in ChildHandleBuffer. If number
                                  of children is zero stop the entire bus driver.
   @param[in]  ChildHandleBuffer  An array of child handles to be freed. May be NULL
-                                 if NumberOfChildren is 0.  
+                                 if NumberOfChildren is 0.
   @param[in]  IpVersion          IP_VERSION_4 or IP_VERSION_6
 
   @retval EFI_SUCCESS            The resources used by the instance were cleaned up.
@@ -422,18 +464,19 @@ TcpDestroyService (
   IN EFI_HANDLE  Controller,
   IN EFI_HANDLE  ImageHandle,
   IN UINTN       NumberOfChildren,
-  IN EFI_HANDLE  *ChildHandleBuffer, OPTIONAL
+  IN EFI_HANDLE  *ChildHandleBuffer  OPTIONAL,
   IN UINT8       IpVersion
   )
 {
-  EFI_HANDLE                    NicHandle;
-  EFI_GUID                      *IpProtocolGuid;
-  EFI_GUID                      *ServiceBindingGuid;
-  EFI_SERVICE_BINDING_PROTOCOL  *ServiceBinding;
-  TCP_SERVICE_DATA              *TcpServiceData;
-  EFI_STATUS                    Status;
-  LIST_ENTRY                    *List;
+  EFI_HANDLE                               NicHandle;
+  EFI_GUID                                 *IpProtocolGuid;
+  EFI_GUID                                 *ServiceBindingGuid;
+  EFI_SERVICE_BINDING_PROTOCOL             *ServiceBinding;
+  TCP_SERVICE_DATA                         *TcpServiceData;
+  EFI_STATUS                               Status;
+  LIST_ENTRY                               *List;
   TCP_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT  Context;
+  EFI_SERVICE_BINDING_PROTOCOL             *Hash2ServiceBinding;
 
   ASSERT ((IpVersion == IP_VERSION_4) || (IpVersion == IP_VERSION_6));
 
@@ -450,10 +493,34 @@ TcpDestroyService (
     return EFI_SUCCESS;
   }
 
+  //
+  // Destroy the Hash2ServiceBinding instance if it is created by Tcp driver.
+  //
+  if (mHash2ServiceHandle != NULL) {
+    Status = gBS->LocateProtocol (
+                    &gEfiHash2ServiceBindingProtocolGuid,
+                    NULL,
+                    (VOID **)&Hash2ServiceBinding
+                    );
+    if (EFI_ERROR (Status) || (Hash2ServiceBinding == NULL) || (Hash2ServiceBinding->DestroyChild == NULL)) {
+      return EFI_UNSUPPORTED;
+    }
+
+    //
+    // Destroy the instance of the hashing protocol for this controller.
+    //
+    Status = Hash2ServiceBinding->DestroyChild (Hash2ServiceBinding, mHash2ServiceHandle);
+    if (EFI_ERROR (Status)) {
+      return EFI_UNSUPPORTED;
+    }
+
+    mHash2ServiceHandle = NULL;
+  }
+
   Status = gBS->OpenProtocol (
                   NicHandle,
                   ServiceBindingGuid,
-                  (VOID **) &ServiceBinding,
+                  (VOID **)&ServiceBinding,
                   ImageHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -465,16 +532,16 @@ TcpDestroyService (
   TcpServiceData = TCP_SERVICE_FROM_THIS (ServiceBinding);
 
   if (NumberOfChildren != 0) {
-    List = &TcpServiceData->SocketList;
-    Context.ServiceBinding = ServiceBinding;
-    Context.NumberOfChildren = NumberOfChildren;
+    List                      = &TcpServiceData->SocketList;
+    Context.ServiceBinding    = ServiceBinding;
+    Context.NumberOfChildren  = NumberOfChildren;
     Context.ChildHandleBuffer = ChildHandleBuffer;
-    Status = NetDestroyLinkList (
-               List,
-               TcpDestroyChildEntryInHandleBuffer,
-               &Context,
-               NULL
-               );
+    Status                    = NetDestroyLinkList (
+                                  List,
+                                  TcpDestroyChildEntryInHandleBuffer,
+                                  &Context,
+                                  NULL
+                                  );
   } else if (IsListEmpty (&TcpServiceData->SocketList)) {
     //
     // Uninstall TCP servicebinding protocol
@@ -545,7 +612,7 @@ Tcp4DriverBindingSupported (
   if (!EFI_ERROR (Status)) {
     return EFI_ALREADY_STARTED;
   }
-  
+
   //
   // Test for the Ip4ServiceBinding Protocol
   //
@@ -662,7 +729,7 @@ Tcp6DriverBindingSupported (
   if (!EFI_ERROR (Status)) {
     return EFI_ALREADY_STARTED;
   }
-  
+
   //
   // Test for the Ip6ServiceBinding Protocol
   //
@@ -743,13 +810,13 @@ Tcp6DriverBindingStop (
 }
 
 /**
-  The Callback funtion called after the TCP socket was created.
+  The Callback function called after the TCP socket was created.
 
   @param[in]  This            Pointer to the socket just created
   @param[in]  Context         Context of the socket
 
   @retval EFI_SUCCESS         This protocol installed successfully.
-  @retval other               An error occured.
+  @retval other               An error occurred.
 
 **/
 EFI_STATUS
@@ -769,7 +836,7 @@ TcpCreateSocketCallback (
     IpProtocolGuid = &gEfiIp6ProtocolGuid;
   }
 
-  TcpServiceData = ((TCP_PROTO_DATA *) This->ProtoReserved)->TcpService;
+  TcpServiceData = ((TCP_PROTO_DATA *)This->ProtoReserved)->TcpService;
 
   //
   // Open the default IP protocol of IP_IO BY_DRIVER.
@@ -792,7 +859,7 @@ TcpCreateSocketCallback (
   Status = gBS->OpenProtocol (
                   TcpServiceData->ControllerHandle,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **) &This->ParentDevicePath,
+                  (VOID **)&This->ParentDevicePath,
                   TcpServiceData->DriverBindingHandle,
                   This->SockHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -836,7 +903,7 @@ TcpDestroySocketCallback (
     IpProtocolGuid = &gEfiIp6ProtocolGuid;
   }
 
-  TcpServiceData = ((TCP_PROTO_DATA *) This->ProtoReserved)->TcpService;
+  TcpServiceData = ((TCP_PROTO_DATA *)This->ProtoReserved)->TcpService;
 
   //
   // Remove this node from the list.
@@ -867,7 +934,7 @@ TcpDestroySocketCallback (
                                 If it is a pointer to an existing UEFI handle,
                                 then the protocol is added to the existing UEFI handle.
 
-  @retval EFI_SUCCES            The protocol was added to ChildHandle.
+  @retval EFI_SUCCESS           The protocol was added to ChildHandle.
   @retval EFI_INVALID_PARAMETER ChildHandle is NULL.
   @retval EFI_OUT_OF_RESOURCES  There are not enough resources available to create
                                 the child.
@@ -887,7 +954,7 @@ TcpServiceBindingCreateChild (
   EFI_STATUS        Status;
   EFI_TPL           OldTpl;
 
-  if (NULL == This || NULL == ChildHandle) {
+  if ((NULL == This) || (NULL == ChildHandle)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -899,7 +966,7 @@ TcpServiceBindingCreateChild (
   TcpProto.TcpPcb     = NULL;
 
   //
-  // Create a tcp instance with defualt Tcp default
+  // Create a tcp instance with default Tcp default
   // sock init data and TcpProto
   //
   mTcpDefaultSockData.ProtoData     = &TcpProto;
@@ -916,8 +983,8 @@ TcpServiceBindingCreateChild (
   Sock = SockCreateChild (&mTcpDefaultSockData);
   if (NULL == Sock) {
     DEBUG (
-      (EFI_D_ERROR,
-      "TcpDriverBindingCreateChild: No resource to create a Tcp Child\n")
+      (DEBUG_ERROR,
+       "TcpDriverBindingCreateChild: No resource to create a Tcp Child\n")
       );
 
     Status = EFI_OUT_OF_RESOURCES;
@@ -925,7 +992,7 @@ TcpServiceBindingCreateChild (
     *ChildHandle = Sock->SockHandle;
   }
 
-  mTcpDefaultSockData.ProtoData  = NULL;
+  mTcpDefaultSockData.ProtoData = NULL;
 
   gBS->RestoreTPL (OldTpl);
   return Status;
@@ -941,7 +1008,7 @@ TcpServiceBindingCreateChild (
   @param  This        Pointer to the EFI_SERVICE_BINDING_PROTOCOL instance.
   @param  ChildHandle Handle of the child to be destroyed.
 
-  @retval EFI_SUCCES            The protocol was removed from ChildHandle.
+  @retval EFI_SUCCESS           The protocol was removed from ChildHandle.
   @retval EFI_UNSUPPORTED       ChildHandle does not support the protocol that is being removed.
   @retval EFI_INVALID_PARAMETER Child handle is NULL.
   @retval EFI_ACCESS_DENIED     The protocol could not be removed from the ChildHandle
@@ -960,7 +1027,7 @@ TcpServiceBindingDestroyChild (
   VOID        *Tcp;
   SOCKET      *Sock;
 
-  if (NULL == This || NULL == ChildHandle) {
+  if ((NULL == This) || (NULL == ChildHandle)) {
     return EFI_INVALID_PARAMETER;
   }
 

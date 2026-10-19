@@ -1,23 +1,19 @@
 @REM @file
-@REM   This stand-alone program is typically called by the edksetup.bat file, 
+@REM   This stand-alone program is typically called by the edksetup.bat file,
 @REM   however it may be executed directly from the BaseTools project folder
 @REM   if the file is not executed within a WORKSPACE\BaseTools folder.
 @REM
-@REM Copyright (c) 2006 - 2013, Intel Corporation. All rights reserved.<BR>
+@REM Copyright (c) 2006 - 2025, Intel Corporation. All rights reserved.<BR>
 @REM (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 @REM
-@REM This program and the accompanying materials are licensed and made available
-@REM under the terms and conditions of the BSD License which accompanies this 
-@REM distribution.  The full text of the license may be found at:
-@REM   http://opensource.org/licenses/bsd-license.php
-@REM
-@REM THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-@REM WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR 
-@REM IMPLIED.
+@REM SPDX-License-Identifier: BSD-2-Clause-Patent
 @REM
 
 @echo off
 pushd .
+set SCRIPT_ERROR=0
+set PYTHON_VER_MAJOR=3
+set PYTHON_VER_MINOR=6
 
 @REM ##############################################################
 @REM # You should not have to modify anything below this line
@@ -33,14 +29,6 @@ if /I "%1"=="/?" goto Usage
 
 :loop
   if "%1"=="" goto setup_workspace
-  if /I "%1"=="--nt32" (
-    if /I "%2" == "X64" (
-      shift
-    )
-    @REM Ignore --nt32 flag
-    shift
-    goto loop
-  )
   if /I "%1"=="Reconfig" (
     shift
     set RECONFIG=TRUE
@@ -54,6 +42,29 @@ if /I "%1"=="/?" goto Usage
   if /I "%1"=="ForceRebuild" (
     shift
     set FORCE_REBUILD=TRUE
+    goto loop
+  )
+  if /I "%1"=="Mingw-w64" (
+    shift
+    set BASETOOLS_MINGW_BUILD=TRUE
+    goto loop
+  )
+  if /I "%1"=="VS2026" (
+    shift
+    set VS2026=TRUE
+    set VSTool=VS2026
+    goto loop
+  )
+  if /I "%1"=="VS2022" (
+    shift
+    set VS2022=TRUE
+    set VSTool=VS2022
+    goto loop
+  )
+  if /I "%1"=="VS2019" (
+    shift
+    set VS2019=TRUE
+    set VSTool=VS2019
     goto loop
   )
   if "%1"=="" goto setup_workspace
@@ -87,6 +98,18 @@ if /I "%1"=="/?" goto Usage
 
 :setup_workspace
   REM
+  REM check the BASETOOLS_MINGW_PATH
+  REM
+  if defined BASETOOLS_MINGW_BUILD (
+    if not defined BASETOOLS_MINGW_PATH (
+      echo.
+      echo !!! ERROR !!! BASETOOLS_MINGW_PATH must be set to use mingw-w64. !!!
+      echo.
+      goto end
+    )
+  )
+
+  REM
   REM check the EDK_TOOLS_PATH
   REM
   if not defined EDK_TOOLS_PATH goto no_EDK_TOOLS_PATH
@@ -116,17 +139,114 @@ if /I "%1"=="/?" goto Usage
   )
 
 :set_PATH
-  if defined WORKSPACE_TOOLS_PATH goto check_PATH
-  if not defined EDK_TOOLS_BIN (
-    if exist %EDK_TOOLS_PATH%\Bin\Win32 (
-      set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
-    ) else (
+  if not defined BASE_TOOLS_PATH (
+     if not exist "Source\C\Makefile" (
+       if not exist "%EDK_TOOLS_PATH%\Source\C\Makefile" goto no_source_files
+       set BASE_TOOLS_PATH=%EDK_TOOLS_PATH%
+     ) else (
+       set BASE_TOOLS_PATH=%CD%
+     )
+  )
+
+  REM
+  REM Check Python environment
+  REM
+  set PYTHONHASHSEED=1
+  if not defined PYTHON_COMMAND (
+    set PYTHON_COMMAND=py -3
+    py -3 %BASE_TOOLS_PATH%\Tests\PythonTest.py %PYTHON_VER_MAJOR% %PYTHON_VER_MINOR% >NUL 2>NUL
+    if %ERRORLEVEL% EQU 1 (
       echo.
-      echo !!! ERROR !!! Cannot find BaseTools Bin Win32!!!
-      echo Please check the directory %EDK_TOOLS_PATH%\Bin\Win32
-      echo Or configure EDK_TOOLS_BIN env to point Win32 directory.
-      echo. 
+      echo !!! ERROR !!! Python %PYTHON_VER_MAJOR%.%PYTHON_VER_MINOR% or newer is required.
+      echo.
       goto end
+    )
+    if %ERRORLEVEL% NEQ 0 (
+      if not defined PYTHON_HOME if not defined PYTHONHOME (
+        set PYTHON_COMMAND=
+        echo.
+        echo !!! ERROR !!! Binary python tools are missing.
+        echo PYTHON_COMMAND or PYTHON_HOME
+        echo Environment variable is not set correctly.
+        echo They are required to build or execute the python tools.
+        echo.
+        goto end
+      )
+    )
+  )
+
+  if not defined PYTHON_COMMAND (
+    if defined PYTHON_HOME (
+      if EXIST "%PYTHON_HOME%" (
+        set PYTHON_COMMAND=%PYTHON_HOME%\python.exe
+      ) else (
+        echo .
+        echo !!! ERROR !!!  PYTHON_HOME="%PYTHON_HOME%" does not exist.
+        echo .
+        goto end
+      )
+    )
+  )
+  if defined WORKSPACE_TOOLS_PATH goto check_PATH
+  REM If MinGW build, add mingw-w64 tools to the PATH
+  if defined BASETOOLS_MINGW_BUILD (
+    if %BASETOOLS_MINGW_PATH:~-1% EQU \ (
+      if not exist "%BASETOOLS_MINGW_PATH%bin\mingw32-make.exe" (
+        echo .
+        echo !!! ERROR !!! mingw32-make is missing.
+        echo mingw32-make is needed for a mingw32-w64 build.
+        echo Check that the BASETOOLS_MINGW_BUILD
+        echo Environment variable is set correctly.
+        echo .
+        goto end
+      )
+      set "PATH=%BASETOOLS_MINGW_PATH%bin;%PATH%"
+    ) else (
+      if not exist "%BASETOOLS_MINGW_PATH%\bin\mingw32-make.exe" (
+        echo .
+        echo !!! ERROR !!! mingw32-make is missing.
+        echo mingw32-make is needed for a mingw32-w64 build.
+        echo Check that the BASETOOLS_MINGW_BUILD
+        echo Environment variable is set correctly.
+        echo .
+        goto end
+      )
+      set "PATH=%BASETOOLS_MINGW_PATH%\bin;%PATH%"
+    )
+  )
+  if not defined EDK_TOOLS_BIN (
+    if defined BASETOOLS_MINGW_BUILD (
+      pushd .
+      cd "%BASE_TOOLS_PATH%\Source\C"
+      for /f %%i in ('mingw32-make -q --eval="$(info $(shell %PYTHON_COMMAND% Makefiles\GnuMakeUtils.py get_host_arch))"') do set MINGW_ARCH=%%i
+      popd
+    )
+  )
+  if not defined EDK_TOOLS_BIN (
+    if defined BASETOOLS_MINGW_BUILD (
+      if /I "%MINGW_ARCH%"=="X64" (
+        set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win64
+      ) else (
+        if /I "%MINGW_ARCH%"=="AARCH64" (
+          set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win64
+        ) else (
+          set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
+        )
+      )
+      set MINGW_ARCH=
+    ) else (
+      set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
+    )
+    if not defined FORCE_REBUILD (
+      if not defined REBUILD (
+        if not exist "%EDK_TOOLS_BIN%" (
+          echo.
+          echo !!! ERROR !!! Cannot find BaseTools Bin Win32!!!
+          echo Please check the directory %EDK_TOOLS_BIN%
+          echo Or configure EDK_TOOLS_BIN env to point to Bin directory.
+          echo.
+        )
+      )
     )
   )
   set PATH=%EDK_TOOLS_BIN%;%PATH%
@@ -136,15 +256,39 @@ if /I "%1"=="/?" goto Usage
 :check_PATH
   if "%EDK_TOOLS_PATH%"=="%WORKSPACE_TOOLS_PATH%" goto PATH_ok
   if not defined EDK_TOOLS_BIN (
-    if exist %EDK_TOOLS_PATH%\Bin\Win32 (
-      set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
+    if defined BASETOOLS_MINGW_BUILD (
+      pushd .
+      cd "%BASE_TOOLS_PATH%\Source\C"
+      for /f %%i in ('mingw32-make -q --eval="$(info $(shell %PYTHON_COMMAND% Makefiles\GnuMakeUtils.py get_host_arch))"') do set MINGW_ARCH=%%i
+      popd
+    )
+  )
+  if not defined EDK_TOOLS_BIN (
+    if defined BASETOOLS_MINGW_BUILD (
+      echo MINGW_ARCH=%MINGW_ARCH%
+      if /I "%MINGW_ARCH%"=="X64" (
+        set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win64
+      ) else (
+        if /I "%MINGW_ARCH%"=="AARCH64" (
+          set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win64
+        ) else (
+          set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
+        )
+      )
+      set MINGW_ARCH=
     ) else (
-      echo.
-      echo !!! ERROR !!! Cannot find BaseTools Bin Win32!!!
-      echo Please check the directory %EDK_TOOLS_PATH%\Bin\Win32
-      echo Or configure EDK_TOOLS_BIN env to point Win32 directory.
-      echo. 
-      goto end
+      set EDK_TOOLS_BIN=%EDK_TOOLS_PATH%\Bin\Win32
+    )
+    if not defined FORCE_REBUILD (
+      if not defined REBUILD (
+        if not exist "%EDK_TOOLS_BIN%" (
+          echo.
+          echo !!! ERROR !!! Cannot find BaseTools Bin Win32!!!
+          echo Please check the directory %EDK_TOOLS_BIN%
+          echo Or configure EDK_TOOLS_BIN env to point to Bin directory.
+          echo.
+        )
+      )
     )
   )
   set PATH=%EDK_TOOLS_BIN%;%PATH%
@@ -164,6 +308,40 @@ if not defined WORKSPACE (
    goto skip_reconfig
 )
 
+IF NOT exist "%EDK_TOOLS_PATH%\set_vsprefix_envs.bat" (
+  @echo.
+  @echo !!! ERROR !!! The set_vsprefix_envs.bat was not found !!!
+  @echo.
+  goto end
+)
+if defined VS2026 (
+  call %EDK_TOOLS_PATH%\set_vsprefix_envs.bat VS2026
+) else if defined VS2022 (
+  call %EDK_TOOLS_PATH%\set_vsprefix_envs.bat VS2022
+) else if defined VS2019 (
+  call %EDK_TOOLS_PATH%\set_vsprefix_envs.bat VS2019
+) else if not defined BASETOOLS_MINGW_BUILD (
+  call %EDK_TOOLS_PATH%\set_vsprefix_envs.bat
+  call %EDK_TOOLS_PATH%\get_vsvars.bat
+)
+if defined BASETOOLS_MINGW_BUILD (
+  if not defined IASL_PREFIX (
+    REM For VS builds this environment variable is set via set_vsprefix_envs.bat
+    if exist "C:\ASL\" (
+      set IASL_PREFIX=C:\ASL\
+    ) else (
+        @echo.
+        @echo !!! WARNING !!! IASL_PREFIX environment variable is not set
+    )
+  )
+)
+if %SCRIPT_ERROR% NEQ 0 (
+  @echo.
+  @echo !!! ERROR !!! %VSTool% is not installed !!!
+  @echo.
+  goto end
+)
+
 if not defined CONF_PATH (
   set CONF_PATH=%WORKSPACE%\Conf
 )
@@ -178,14 +356,14 @@ if NOT exist %CONF_PATH% (
     )
   )
 )
- 
+
 :CopyConf
 if NOT exist %CONF_PATH% (
   mkdir %CONF_PATH%
 ) else (
   if defined RECONFIG (
     echo.
-    echo  Over-writing the files in the CONF_PATH directory
+    echo  Overwriting the files in the CONF_PATH directory
     echo  using the default template files
     echo.
   )
@@ -198,7 +376,7 @@ if NOT exist %CONF_PATH%\target.txt (
   )
   copy %EDK_TOOLS_PATH%\Conf\target.template %CONF_PATH%\target.txt > nul
 ) else (
-  if defined RECONFIG echo over-write ... target.template to %CONF_PATH%\target.txt
+  if defined RECONFIG echo overwrite ... target.template to %CONF_PATH%\target.txt
   if defined RECONFIG copy /Y %EDK_TOOLS_PATH%\Conf\target.template %CONF_PATH%\target.txt > nul
 )
 
@@ -209,7 +387,7 @@ if NOT exist %CONF_PATH%\tools_def.txt (
   )
   copy %EDK_TOOLS_PATH%\Conf\tools_def.template %CONF_PATH%\tools_def.txt > nul
 ) else (
-  if defined RECONFIG echo over-write ... tools_def.template to %CONF_PATH%\tools_def.txt
+  if defined RECONFIG echo overwrite ... tools_def.template to %CONF_PATH%\tools_def.txt
   if defined RECONFIG copy /Y %EDK_TOOLS_PATH%\Conf\tools_def.template %CONF_PATH%\tools_def.txt > nul
 )
 
@@ -224,24 +402,6 @@ if NOT exist %CONF_PATH%\build_rule.txt (
   if defined RECONFIG copy /Y %EDK_TOOLS_PATH%\Conf\build_rule.template %CONF_PATH%\build_rule.txt > nul
 )
 
-echo           PATH      = %PATH%
-echo.
-if defined WORKSPACE (
-  echo      WORKSPACE      = %WORKSPACE%
-)
-if defined PACKAGES_PATH (
-  echo  PACKAGES_PATH      = %PACKAGES_PATH%
-)
-echo EDK_TOOLS_PATH      = %EDK_TOOLS_PATH%
-if defined BASE_TOOLS_PATH (
-  echo BASE_TOOLS_PATH     = %BASE_TOOLS_PATH%
-)
-if defined EDK_TOOLS_BIN (
-  echo  EDK_TOOLS_BIN      = %EDK_TOOLS_BIN%
-)
-echo      CONF_PATH      = %CONF_PATH%
-echo.
-
 :skip_reconfig
 
 @REM
@@ -250,122 +410,157 @@ echo.
 if defined FORCE_REBUILD goto check_build_environment
 if defined REBUILD goto check_build_environment
 if not exist "%EDK_TOOLS_PATH%" goto check_build_environment
+if not exist "%EDK_TOOLS_BIN%"  goto check_build_environment
 
-IF NOT EXIST "%EDK_TOOLS_BIN%\BootSectImage.exe" goto check_c_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\EfiLdrImage.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\EfiRom.exe" goto check_c_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\GenBootSector.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\GenFfs.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\GenFv.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\GenFw.exe" goto check_c_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\GenPage.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\GenSec.exe" goto check_c_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\GenVtf.exe" goto check_c_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\Split.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\TianoCompress.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\VfrCompile.exe" goto check_c_tools
 IF NOT EXIST "%EDK_TOOLS_BIN%\VolInfo.exe" goto check_c_tools
 
-goto check_python_tools
+goto check_build_environment
 
 :check_c_tools
   echo.
-  echo !!! ERROR !!! Binary C tools are missing. They are requried to be built from BaseTools Source.
+  echo !!! ERROR !!! Binary C tools are missing. They are required to be built from BaseTools Source.
   echo.
-  goto end
-
-:check_python_tools
-IF NOT EXIST "%EDK_TOOLS_BIN%\build.exe" goto check_build_environment
-IF NOT EXIST "%EDK_TOOLS_BIN%\GenFds.exe" goto check_build_environment
-IF NOT EXIST "%EDK_TOOLS_BIN%\TargetTool.exe" goto check_build_environment
-IF NOT EXIST "%EDK_TOOLS_BIN%\Trim.exe" goto check_build_environment
-
-goto end
 
 :check_build_environment
-  if defined BASETOOLS_PYTHON_SOURCE goto VisualStudioAvailable
 
-  if not defined BASE_TOOLS_PATH (
-     if not exist "Source\C\Makefile" (
-       if not exist "%EDK_TOOLS_PATH%\Source\C\Makefile" goto no_source_files
-       set BASE_TOOLS_PATH=%EDK_TOOLS_PATH%
-     ) else (
-       set BASE_TOOLS_PATH=%CD%
-     )
+%PYTHON_COMMAND% %BASE_TOOLS_PATH%\Tests\PythonTest.py %PYTHON_VER_MAJOR% %PYTHON_VER_MINOR% >NUL 2>NUL
+if %ERRORLEVEL% EQU 1 (
+  echo.
+  echo !!! ERROR !!! Python %PYTHON_VER_MAJOR%.%PYTHON_VER_MINOR% or newer is required.
+  echo.
+  goto end
+)
+if %ERRORLEVEL% NEQ 0 (
+  echo.
+  echo !!! ERROR !!!  PYTHON_COMMAND="%PYTHON_COMMAND%" does not exist or is not a Python interpreter.
+  echo.
+  goto end
+)
+
+endlocal
+
+  @echo Using EDK2 in-source Basetools
+  if defined BASETOOLS_PYTHON_SOURCE goto print_python_info
+  set "PATH=%BASE_TOOLS_PATH%\BinWrappers\WindowsLike;%PATH%"
+  set PYTHONPATH=%BASE_TOOLS_PATH%\Source\Python;%PYTHONPATH%
+  goto print_python_info
+
+:print_python_info
+  echo           PATH      = %PATH%
+  echo.
+  if defined WORKSPACE (
+    echo      WORKSPACE      = %WORKSPACE%
   )
-
-  if not defined PYTHON_HOME (
-    if defined PYTHONHOME (
-      set PYTHON_HOME=%PYTHONHOME%
-    ) else (
-      echo.
-      echo  !!! ERROR !!! Binary python tools are missing. PYTHON_HOME environment variable is not set. 
-      echo PYTHON_HOME is required to build or execute the python tools.
-      echo.
-      goto end
-    )
+  if defined PACKAGES_PATH (
+    echo  PACKAGES_PATH      = %PACKAGES_PATH%
   )
-
-  @REM We have Python, now test for FreezePython application
-  if not defined PYTHON_FREEZER_PATH (
-    echo.
-    echo !!! WARNING !!! PYTHON_FREEZER_PATH environment variable is not set.
-    echo Setup environment to run Python scripts directly.
-    echo.
-    set "PATH=%PATH%;%BASE_TOOLS_PATH%\BinWrappers\WindowsLike"
+  echo EDK_TOOLS_PATH      = %EDK_TOOLS_PATH%
+  if defined BASE_TOOLS_PATH (
+    echo BASE_TOOLS_PATH     = %BASE_TOOLS_PATH%
   )
-
-  set BASETOOLS_PYTHON_SOURCE=%BASE_TOOLS_PATH%\Source\Python
-  set PYTHONPATH=%BASETOOLS_PYTHON_SOURCE%;%PYTHONPATH%
-  
-  echo                PATH = %PATH%
-  echo         PYTHON_HOME = %PYTHON_HOME%
+  if defined EDK_TOOLS_BIN (
+    echo  EDK_TOOLS_BIN      = %EDK_TOOLS_BIN%
+  )
+  echo      CONF_PATH      = %CONF_PATH%
+  echo      PYTHON_COMMAND = %PYTHON_COMMAND%
   echo          PYTHONPATH = %PYTHONPATH%
-  if defined PYTHON_FREEZER_PATH (
-    echo PYTHON_FREEZER_PATH = %PYTHON_FREEZER_PATH%
-  )
   echo.
 
-:VisualStudioAvailable
+:CompilerAvailable
+  if not defined BASETOOLS_MINGW_BUILD (
+    if not defined CLANG_HOST_BIN (
+      set CLANG_HOST_BIN=n
+    )
+    if not defined CLANG_BIN (
+        @echo.
+        @echo !!! WARNING !!! CLANG_BIN environment variable is not set
+        @if exist "C:\Program Files\LLVM\bin\clang.exe" (
+            @set "CLANG_BIN=C:\Program Files\LLVM\bin\"
+            @echo   Found LLVM, setting CLANG_BIN environment variable to C:\Program Files\LLVM\bin\
+        )
+    )
+  ) else (
+    if %BASETOOLS_MINGW_PATH:~-1% EQU \ (
+      if exist "%BASETOOLS_MINGW_PATH%bin\clang.exe" (
+        if not defined CLANG_BIN (
+          set "CLANG_BIN=%BASETOOLS_MINGW_PATH%bin\"
+        )
+      )
+    ) else (
+      if exist "%BASETOOLS_MINGW_PATH%\bin\clang.exe" (
+        if not defined CLANG_BIN (
+          set "CLANG_BIN=%BASETOOLS_MINGW_PATH%\bin\"
+        )
+      )
+    )
+    if not defined CLANG_HOST_BIN (
+      set CLANG_HOST_BIN=mingw32-
+    )
+  )
   if not defined FORCE_REBUILD (
     if not defined REBUILD (
       goto end
     )
   )
-  call "%EDK_TOOLS_PATH%\get_vsvars.bat"
-  if not defined VCINSTALLDIR (
-    @echo.
-    @echo !!! ERROR !!!! Cannot find Visual Studio, required to build C tools !!!
-    @echo.
-    goto end
+
+  if not defined BASETOOLS_MINGW_BUILD (
+    if not defined VCINSTALLDIR (
+      @echo.
+      @echo !!! ERROR !!!! Cannot find Visual Studio, required to build C tools !!!
+      @echo.
+      goto end
+    )
+  ) else (
+    REM If the Mingw-w64 environment is Clang based,
+    REM set CC & CXX to use Clang instead of GCC
+    if %BASETOOLS_MINGW_PATH:~-1% EQU \ (
+      if exist "%BASETOOLS_MINGW_PATH%bin\clang.exe" (
+        set CC=clang
+        set CXX=clang++
+      )
+    ) else (
+      if exist "%BASETOOLS_MINGW_PATH%\bin\clang.exe" (
+        set CC=clang
+        set CXX=clang++
+      )
+    )
   )
   if not defined FORCE_REBUILD goto IncrementalBuild
 
 :CleanAndBuild
-  pushd .
-  cd %BASE_TOOLS_PATH%
-  call nmake cleanall
-  del /f /q %BASE_TOOLS_PATH%\Bin\Win32\*.*
-  popd
+  if defined BASETOOLS_MINGW_BUILD (
+    pushd .
+    cd %BASE_TOOLS_PATH%\Source\C
+    call mingw32-make clean
+    popd
+  ) else (
+    pushd .
+    cd %BASE_TOOLS_PATH%
+    call nmake cleanall
+    del /f /q %BASE_TOOLS_PATH%\Bin\Win32\*.*
+    popd
+  )
   @REM Let CleanAndBuild fall through to IncrementalBuild
 
 
 :IncrementalBuild
-  pushd .
-  cd %BASE_TOOLS_PATH%
-  call nmake c
-  popd
-
-  if defined PYTHON_FREEZER_PATH (
-    echo BUILDING PYTHON TOOLS
+  if defined BASETOOLS_MINGW_BUILD (
     pushd .
-    cd %BASE_TOOLS_PATH%
-    call nmake python
+    cd %BASE_TOOLS_PATH%\Source\C
+    call mingw32-make
     popd
   ) else (
-    echo.
-    echo !!! WARNING !!! Cannot make executable from Python code, executing python scripts instead !!!
-    echo.
+    pushd .
+    cd %BASE_TOOLS_PATH%
+    call nmake c
+    popd
   )
   goto end
 
@@ -378,20 +573,29 @@ goto end
 
 :Usage
   @echo.
-  echo  Usage: "%0 [-h | -help | --help | /h | /help | /?] [ Rebuild | ForceRebuild ] [Reconfig] [base_tools_path [edk_tools_path]]"
+  @echo  Usage: "%0 [-h | -help | --help | /h | /help | /?] [ Rebuild | ForceRebuild ] [Reconfig] [Mingw-w64] [base_tools_path [edk_tools_path]] [VS2026] [VS2022] [VS2019]"
   @echo.
-  @echo         base_tools_path   BaseTools project path, BASE_TOOLS_PATH will be set to this path. 
+  @echo         base_tools_path   BaseTools project path, BASE_TOOLS_PATH will be set to this path.
   @echo         edk_tools_path    EDK_TOOLS_PATH will be set to this path.
-  @echo         Rebuild           If sources are available perform an Incremental build, only 
+  @echo         Rebuild           If sources are available perform an Incremental build, only
   @echo                           build those updated tools.
-  @echo         ForceRebuild      If sources are available, rebuild all tools regardless of 
+  @echo         ForceRebuild      If sources are available, rebuild all tools regardless of
   @echo                           whether they have been updated or not.
   @echo         Reconfig          Reinstall target.txt, tools_def.txt and build_rule.txt.
+  @echo         Mingw-w64         Build BaseTools binaries using mingw-w64.
+  @echo         VS2019            Set the env for VS2019 build.
+  @echo         VS2022            Set the env for VS2022 build.
+  @echo         VS2026            Set the env for VS2026 build.
   @echo.
 
 :end
 set REBUILD=
 set FORCE_REBUILD=
 set RECONFIG=
+set VS2026=
+set VS2022=
+set VS2019=
+set VSTool=
+set PYTHON_VER_MAJOR=
+set PYTHON_VER_MINOR=
 popd
-

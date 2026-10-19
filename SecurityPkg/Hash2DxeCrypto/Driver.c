@@ -1,20 +1,14 @@
 /** @file
   This is service binding for Hash driver.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "Driver.h"
 
-EFI_SERVICE_BINDING_PROTOCOL    mHash2ServiceBindingProtocol = {
+EFI_SERVICE_BINDING_PROTOCOL  mHash2ServiceBindingProtocol = {
   Hash2ServiceBindingCreateChild,
   Hash2ServiceBindingDestroyChild
 };
@@ -28,7 +22,7 @@ EFI_SERVICE_BINDING_PROTOCOL    mHash2ServiceBindingProtocol = {
                                      it is not NULL, then the I/O services are added
                                      to the existing child handle.
 
-  @retval EFI_SUCCES                 The protocol was added to ChildHandle.
+  @retval EFI_SUCCESS                The protocol was added to ChildHandle.
   @retval EFI_INVALID_PARAMETER      ChildHandle is NULL.
   @retval EFI_OUT_OF_RESOURCES       There are not enough resources available to
                                      create the child.
@@ -38,14 +32,14 @@ EFI_SERVICE_BINDING_PROTOCOL    mHash2ServiceBindingProtocol = {
 EFI_STATUS
 EFIAPI
 Hash2ServiceBindingCreateChild (
-  IN     EFI_SERVICE_BINDING_PROTOCOL    *This,
-  IN OUT EFI_HANDLE                      *ChildHandle
+  IN     EFI_SERVICE_BINDING_PROTOCOL  *This,
+  IN OUT EFI_HANDLE                    *ChildHandle
   )
 {
-  EFI_STATUS          Status;
-  HASH2_SERVICE_DATA  *Hash2ServiceData;
-  HASH2_INSTANCE_DATA *Instance;
-  EFI_TPL             OldTpl;
+  EFI_STATUS           Status;
+  HASH2_SERVICE_DATA   *Hash2ServiceData;
+  HASH2_INSTANCE_DATA  *Instance;
+  EFI_TPL              OldTpl;
 
   if ((This == NULL) || (ChildHandle == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -93,7 +87,6 @@ Hash2ServiceBindingCreateChild (
   return Status;
 }
 
-
 /**
   Destroys a child handle with a set of I/O services.
 
@@ -105,7 +98,7 @@ Hash2ServiceBindingCreateChild (
                                  instance.
   @param[in]  ChildHandle        Handle of the child to destroy.
 
-  @retval EFI_SUCCES             The protocol was removed from ChildHandle.
+  @retval EFI_SUCCESS            The protocol was removed from ChildHandle.
   @retval EFI_UNSUPPORTED        ChildHandle does not support the protocol that
                                  is being removed.
   @retval EFI_INVALID_PARAMETER  ChildHandle is NULL.
@@ -118,16 +111,16 @@ Hash2ServiceBindingCreateChild (
 EFI_STATUS
 EFIAPI
 Hash2ServiceBindingDestroyChild (
-  IN EFI_SERVICE_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                      ChildHandle
+  IN EFI_SERVICE_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                    ChildHandle
   )
 {
-  EFI_STATUS                     Status;
-  HASH2_SERVICE_DATA             *Hash2ServiceData;
-  EFI_HASH2_PROTOCOL             *Hash2Protocol;
-  HASH2_INSTANCE_DATA            *Instance;
-  EFI_TPL                        OldTpl;
-  LIST_ENTRY                     *Entry;
+  EFI_STATUS           Status;
+  HASH2_SERVICE_DATA   *Hash2ServiceData;
+  EFI_HASH2_PROTOCOL   *Hash2Protocol;
+  HASH2_INSTANCE_DATA  *Instance;
+  EFI_TPL              OldTpl;
+  LIST_ENTRY           *Entry;
 
   if ((This == NULL) || (ChildHandle == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -139,7 +132,7 @@ Hash2ServiceBindingDestroyChild (
   // Check if this ChildHandle is valid
   //
   Instance = NULL;
-  for(Entry = (&Hash2ServiceData->ChildrenList)->ForwardLink; Entry != (&Hash2ServiceData->ChildrenList); Entry = Entry->ForwardLink) {
+  for (Entry = (&Hash2ServiceData->ChildrenList)->ForwardLink; Entry != (&Hash2ServiceData->ChildrenList); Entry = Entry->ForwardLink) {
     Instance = HASH2_INSTANCE_DATA_FROM_LINK (Entry);
     if (Instance->Handle == ChildHandle) {
       break;
@@ -147,8 +140,9 @@ Hash2ServiceBindingDestroyChild (
       Instance = NULL;
     }
   }
+
   if (Instance == NULL) {
-    DEBUG ((EFI_D_ERROR, "Hash2ServiceBindingDestroyChild - Invalid handle\n"));
+    DEBUG ((DEBUG_ERROR, "Hash2ServiceBindingDestroyChild - Invalid handle\n"));
     return EFI_UNSUPPORTED;
   }
 
@@ -199,19 +193,19 @@ Hash2ServiceBindingDestroyChild (
   @param[in]  ImageHandle  The image handle of the driver.
   @param[in]  SystemTable  The system table.
 
-  @retval EFI_SUCCES       The service binding protocols is successfully installed.
+  @retval EFI_SUCCESS      The service binding protocols is successfully installed.
   @retval Others           Other errors as indicated.
 
 **/
 EFI_STATUS
 EFIAPI
 Hash2DriverEntryPoint (
-  IN EFI_HANDLE          ImageHandle,
-  IN EFI_SYSTEM_TABLE    *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS         Status;
-  HASH2_SERVICE_DATA *Hash2ServiceData;
+  EFI_STATUS          Status;
+  HASH2_SERVICE_DATA  *Hash2ServiceData;
 
   //
   // Initialize the Hash Service Data.
@@ -221,7 +215,7 @@ Hash2DriverEntryPoint (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Hash2ServiceData->Signature     = HASH2_SERVICE_DATA_SIGNATURE;
+  Hash2ServiceData->Signature = HASH2_SERVICE_DATA_SIGNATURE;
   CopyMem (&Hash2ServiceData->ServiceBinding, &mHash2ServiceBindingProtocol, sizeof (EFI_SERVICE_BINDING_PROTOCOL));
   InitializeListHead (&Hash2ServiceData->ChildrenList);
 

@@ -2,19 +2,13 @@
   UEFI Miscellaneous boot Services SetWatchdogTimer service implementation
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeMain.h"
 
-#define WATCHDOG_TIMER_CALIBRATE_PER_SECOND 10000000
+#define WATCHDOG_TIMER_CALIBRATE_PER_SECOND  10000000
 
 /**
   Sets the system's watchdog timer.
@@ -41,10 +35,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 CoreSetWatchdogTimer (
-  IN UINTN    Timeout,
-  IN UINT64   WatchdogCode,
-  IN UINTN    DataSize,
-  IN CHAR16   *WatchdogData OPTIONAL
+  IN UINTN   Timeout,
+  IN UINT64  WatchdogCode,
+  IN UINTN   DataSize,
+  IN CHAR16  *WatchdogData OPTIONAL
   )
 {
   EFI_STATUS  Status;

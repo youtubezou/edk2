@@ -1,18 +1,12 @@
 /** @file
   Header file for IDE mode of ATA host controller.
-  
-  Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
 
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-#ifndef __ATA_HC_IDE_MODE_H__
-#define __ATA_HC_IDE_MODE_H__
+
+#pragma once
 
 typedef enum {
   EfiIdePrimary    = 0,
@@ -65,50 +59,50 @@ typedef enum {
 #define BMIS_INTERRUPT  BIT2
 #define BMIS_ERROR      BIT1
 
-#define BMIC_OFFSET    0x00
-#define BMIS_OFFSET    0x02
-#define BMID_OFFSET    0x04
+#define BMIC_OFFSET  0x00
+#define BMIS_OFFSET  0x02
+#define BMID_OFFSET  0x04
 
 //
 // IDE transfer mode
 //
-#define EFI_ATA_MODE_DEFAULT_PIO 0x00
-#define EFI_ATA_MODE_FLOW_PIO    0x01
-#define EFI_ATA_MODE_MDMA        0x04
-#define EFI_ATA_MODE_UDMA        0x08
+#define EFI_ATA_MODE_DEFAULT_PIO  0x00
+#define EFI_ATA_MODE_FLOW_PIO     0x01
+#define EFI_ATA_MODE_MDMA         0x04
+#define EFI_ATA_MODE_UDMA         0x08
 
 typedef struct {
-  UINT32  RegionBaseAddr;
-  UINT16  ByteCount;
-  UINT16  EndOfTable;
+  UINT32    RegionBaseAddr;
+  UINT16    ByteCount;
+  UINT16    EndOfTable;
 } EFI_ATA_DMA_PRD;
 
 typedef struct {
-  UINT8 ModeNumber   : 3;
-  UINT8 ModeCategory : 5;
+  UINT8    ModeNumber   : 3;
+  UINT8    ModeCategory : 5;
 } EFI_ATA_TRANSFER_MODE;
 
 typedef struct {
-  UINT8 Sector;
-  UINT8 Heads;
-  UINT8 MultipleSector;
+  UINT8    Sector;
+  UINT8    Heads;
+  UINT8    MultipleSector;
 } EFI_ATA_DRIVE_PARMS;
 
 //
 // IDE registers set
 //
 typedef struct {
-  UINT16                          Data;
-  UINT16                          ErrOrFeature;
-  UINT16                          SectorCount;
-  UINT16                          SectorNumber;
-  UINT16                          CylinderLsb;
-  UINT16                          CylinderMsb;
-  UINT16                          Head;
-  UINT16                          CmdOrStatus;
-  UINT16                          AltOrDev;
+  UINT16    Data;
+  UINT16    ErrOrFeature;
+  UINT16    SectorCount;
+  UINT16    SectorNumber;
+  UINT16    CylinderLsb;
+  UINT16    CylinderMsb;
+  UINT16    Head;
+  UINT16    CmdOrStatus;
+  UINT16    AltOrDev;
 
-  UINT16                          BusMasterBaseAddr;
+  UINT16    BusMasterBaseAddr;
 } EFI_IDE_REGISTERS;
 
 //
@@ -121,7 +115,7 @@ typedef struct {
 #define IDE_SECONDARY_PROGRAMMABLE_INDICATOR  BIT3
 
 /**
-  Get IDE i/o port registers' base addresses by mode. 
+  Get IDE i/o port registers' base addresses by mode.
 
   In 'Compatibility' mode, use fixed addresses.
   In Native-PCI mode, get base addresses from BARs in the PCI IDE controller's
@@ -144,7 +138,7 @@ typedef struct {
   |___________|_______________|_______________|
 
   Table 1. Compatibility resource mappings
-  
+
   b) In Native-PCI mode, IDE registers are mapped into IO space using the BARs
   in IDE controller's PCI Configuration Space, shown in the Table 2 below.
    ___________________________________________________
@@ -161,21 +155,21 @@ typedef struct {
   @param[in]      PciIo          Pointer to the EFI_PCI_IO_PROTOCOL instance
   @param[in, out] IdeRegisters   Pointer to EFI_IDE_REGISTERS which is used to
                                  store the IDE i/o port registers' base addresses
-           
+
   @retval EFI_UNSUPPORTED        Return this value when the BARs is not IO type
   @retval EFI_SUCCESS            Get the Base address successfully
-  @retval Other                  Read the pci configureation data error
+  @retval Other                  Read the pci configuration data error
 
 **/
 EFI_STATUS
 EFIAPI
 GetIdeRegisterIoAddr (
-  IN     EFI_PCI_IO_PROTOCOL         *PciIo,
-  IN OUT EFI_IDE_REGISTERS           *IdeRegisters
+  IN     EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN OUT EFI_IDE_REGISTERS    *IdeRegisters
   );
 
 /**
-  This function is used to send out ATAPI commands conforms to the Packet Command 
+  This function is used to send out ATAPI commands conforms to the Packet Command
   with PIO Data In Protocol.
 
   @param[in] PciIo          Pointer to the EFI_PCI_IO_PROTOCOL instance
@@ -193,12 +187,9 @@ GetIdeRegisterIoAddr (
 EFI_STATUS
 EFIAPI
 AtaPacketCommandExecute (
-  IN  EFI_PCI_IO_PROTOCOL                           *PciIo,
-  IN  EFI_IDE_REGISTERS                             *IdeRegisters,
-  IN  UINT8                                         Channel,
-  IN  UINT8                                         Device,
-  IN  EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET    *Packet
+  IN  EFI_PCI_IO_PROTOCOL                         *PciIo,
+  IN  EFI_IDE_REGISTERS                           *IdeRegisters,
+  IN  UINT8                                       Channel,
+  IN  UINT8                                       Device,
+  IN  EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET  *Packet
   );
-
-#endif
-

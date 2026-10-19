@@ -1,26 +1,18 @@
 /** @file
 Private Header file for Usb Host Controller PEIM
 
-Copyright (c) 2010, Intel Corporation. All rights reserved.<BR>
-  
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_EHCI_MEM_H_
-#define _EFI_EHCI_MEM_H_
+#pragma once
 
 #include <Uefi.h>
 #include <IndustryStandard/Pci22.h>
 
-#define USB_HC_BIT(a)                  ((UINTN)(1 << (a)))
+#define USB_HC_BIT(a)  ((UINTN)(1 << (a)))
 
 #define USB_HC_BIT_IS_SET(Data, Bit)   \
           ((BOOLEAN)(((Data) & USB_HC_BIT(Bit)) == USB_HC_BIT(Bit)))
@@ -31,30 +23,30 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 typedef struct _USBHC_MEM_BLOCK USBHC_MEM_BLOCK;
 
 struct _USBHC_MEM_BLOCK {
-  UINT8                   *Bits;    // Bit array to record which unit is allocated
-  UINTN                   BitsLen; 
-  UINT8                   *Buf;
-  UINT8                   *BufHost;
-  UINTN                   BufLen;   // Memory size in bytes
-  VOID                    *Mapping;     
-  USBHC_MEM_BLOCK         *Next;
+  UINT8              *Bits;         // Bit array to record which unit is allocated
+  UINTN              BitsLen;
+  UINT8              *Buf;
+  UINT8              *BufHost;
+  UINTN              BufLen;        // Memory size in bytes
+  VOID               *Mapping;
+  USBHC_MEM_BLOCK    *Next;
 };
 
 //
-// USBHC_MEM_POOL is used to manage the memory used by USB 
+// USBHC_MEM_POOL is used to manage the memory used by USB
 // host controller. EHCI requires the control memory and transfer
-// data to be on the same 4G memory. 
+// data to be on the same 4G memory.
 //
 typedef struct _USBHC_MEM_POOL {
-  BOOLEAN                 Check4G;      
-  UINT32                  Which4G;      
-  USBHC_MEM_BLOCK         *Head;
+  BOOLEAN            Check4G;
+  UINT32             Which4G;
+  USBHC_MEM_BLOCK    *Head;
 } USBHC_MEM_POOL;
 
 //
 // Memory allocation unit, must be 2^n, n>4
 //
-#define USBHC_MEM_UNIT           64
+#define USBHC_MEM_UNIT  64
 
 #define USBHC_MEM_UNIT_MASK      (USBHC_MEM_UNIT - 1)
 #define USBHC_MEM_DEFAULT_PAGES  16
@@ -71,7 +63,20 @@ typedef struct _USBHC_MEM_POOL {
               (Byte)++;       \
               (Bit) = 0;      \
             }                 \
-          } while (0)       
+          } while (0)
 
+/**
+  Calculate the corresponding pci bus address according to the Mem parameter.
 
-#endif
+  @param  Pool           The memory pool of the host controller.
+  @param  Mem            The pointer to host memory.
+  @param  Size           The size of the memory region.
+
+  @return the pci memory address
+**/
+EFI_PHYSICAL_ADDRESS
+UsbHcGetPciAddressForHostMem (
+  IN USBHC_MEM_POOL  *Pool,
+  IN VOID            *Mem,
+  IN UINTN           Size
+  );

@@ -3,18 +3,11 @@
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
   Portions copyright (c) 2011, 2012, ARM Ltd. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __SEMIHOSTING_H__
-#define __SEMIHOSTING_H__
+#pragma once
 
 /*
  *
@@ -23,12 +16,12 @@
  *
  */
 
-#define SEMIHOST_FILE_MODE_READ     (0 << 2)
-#define SEMIHOST_FILE_MODE_WRITE    (1 << 2)
-#define SEMIHOST_FILE_MODE_APPEND   (2 << 2)
-#define SEMIHOST_FILE_MODE_UPDATE   (1 << 1)
-#define SEMIHOST_FILE_MODE_BINARY   (1 << 0)
-#define SEMIHOST_FILE_MODE_ASCII    (0 << 0)
+#define SEMIHOST_FILE_MODE_READ    (0 << 2)
+#define SEMIHOST_FILE_MODE_WRITE   (1 << 2)
+#define SEMIHOST_FILE_MODE_APPEND  (2 << 2)
+#define SEMIHOST_FILE_MODE_UPDATE  (1 << 1)
+#define SEMIHOST_FILE_MODE_BINARY  (1 << 0)
+#define SEMIHOST_FILE_MODE_ASCII   (0 << 0)
 
 BOOLEAN
 SemihostConnectionSupported (
@@ -37,9 +30,9 @@ SemihostConnectionSupported (
 
 RETURN_STATUS
 SemihostFileOpen (
-  IN  CHAR8  *FileName,
-  IN  UINT32 Mode,
-  OUT UINTN  *FileHandle
+  IN  CHAR8   *FileName,
+  IN  UINT32  Mode,
+  OUT UINTN   *FileHandle
   );
 
 RETURN_STATUS
@@ -87,7 +80,7 @@ SemihostFileLength (
 
 **/
 RETURN_STATUS
-SemihostFileTmpName(
+SemihostFileTmpName (
   OUT  VOID   *Buffer,
   IN   UINT8  Identifier,
   IN   UINTN  Length
@@ -95,7 +88,7 @@ SemihostFileTmpName(
 
 RETURN_STATUS
 SemihostFileRemove (
-  IN CHAR8 *FileName
+  IN CHAR8  *FileName
   );
 
 /**
@@ -110,7 +103,7 @@ SemihostFileRemove (
 
 **/
 RETURN_STATUS
-SemihostFileRename(
+SemihostFileRename (
   IN  CHAR8  *FileName,
   IN  CHAR8  *NewFileName
   );
@@ -122,17 +115,15 @@ SemihostReadCharacter (
 
 VOID
 SemihostWriteCharacter (
-  IN CHAR8 Character
+  IN CHAR8  Character
   );
 
 VOID
 SemihostWriteString (
-  IN CHAR8 *String
+  IN CHAR8  *String
   );
 
 UINT32
 SemihostSystem (
-  IN CHAR8 *CommandLine
+  IN CHAR8  *CommandLine
   );
-
-#endif // __SEMIHOSTING_H__

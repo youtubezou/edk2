@@ -5,14 +5,9 @@
 # driver.
 #
 # Copyright (C) 2013, 2015, Red Hat, Inc.
+# Copyright (c) 2024 Intel Corporation.
 #
-# This program and the accompanying materials are licensed and made available
-# under the terms and conditions of the BSD License which accompanies this
-# distribution. The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php
-#
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-# WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -28,7 +23,7 @@
 #
 # The following information is for reference only and not required by the build tools.
 #
-#  VALID_ARCHITECTURES           = IA32 X64
+#  VALID_ARCHITECTURES           = X64
 #
 
 [Sources]
@@ -47,12 +42,20 @@
   PciLib
   UefiBootServicesTableLib
   UefiDriverEntryPoint
+  HobLib
 
 [Protocols]
   gEfiSmmAccess2ProtocolGuid   ## PRODUCES
 
 [FeaturePcd]
   gUefiOvmfPkgTokenSpaceGuid.PcdSmmSmramRequire
+
+[Guids]
+  gEfiSmmSmramMemoryGuid             # ALWAYS_CONSUMED
+
+[Pcd]
+  gUefiOvmfPkgTokenSpaceGuid.PcdQ35SmramAtDefaultSmbase
+  gUefiOvmfPkgTokenSpaceGuid.PcdQ35TsegMbytes
 
 [Depex]
   TRUE

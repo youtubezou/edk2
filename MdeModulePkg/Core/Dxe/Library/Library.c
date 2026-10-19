@@ -2,13 +2,7 @@
   DXE Core library services.
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -17,6 +11,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Lock Stuff
 //
+
 /**
   Initialize a basic mutual exclusion lock.   Each lock
   provides mutual exclusion access at it's task priority
@@ -51,8 +46,6 @@ CoreAcquireLockOrFail (
   return EFI_SUCCESS;
 }
 
-
-
 /**
   Raising to the task priority level of the mutual exclusion
   lock, and then acquires ownership of the lock.
@@ -74,8 +67,6 @@ CoreAcquireLock (
   Lock->Lock     = EfiLockAcquired;
 }
 
-
-
 /**
   Releases ownership of the mutual exclusion lock, and
   restores the previous task priority level.
@@ -90,7 +81,7 @@ CoreReleaseLock (
   IN EFI_LOCK  *Lock
   )
 {
-  EFI_TPL Tpl;
+  EFI_TPL  Tpl;
 
   ASSERT (Lock != NULL);
   ASSERT (Lock->Lock == EfiLockAcquired);
@@ -101,6 +92,3 @@ CoreReleaseLock (
 
   CoreRestoreTpl (Tpl);
 }
-
-
-

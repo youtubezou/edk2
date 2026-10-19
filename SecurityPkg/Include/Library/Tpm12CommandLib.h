@@ -1,19 +1,12 @@
 /** @file
   This library is used by other modules to send TPM12 command.
 
-Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _TPM12_COMMAND_LIB_H_
-#define _TPM12_COMMAND_LIB_H_
+#pragma once
 
 #include <IndustryStandard/Tpm12.h>
 
@@ -28,7 +21,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 Tpm12Startup (
-  IN TPM_STARTUP_TYPE          TpmSt
+  IN TPM_STARTUP_TYPE  TpmSt
   );
 
 /**
@@ -58,33 +51,33 @@ Tpm12ForceClear (
 #pragma pack(1)
 
 typedef struct {
-  UINT16                            sizeOfSelect;
-  UINT8                             pcrSelect[3];
+  UINT16    sizeOfSelect;
+  UINT8     pcrSelect[3];
 } TPM12_PCR_SELECTION;
 
 typedef struct {
-  TPM12_PCR_SELECTION               pcrSelection;
-  TPM_LOCALITY_SELECTION            localityAtRelease;
-  TPM_COMPOSITE_HASH                digestAtRelease;
+  TPM12_PCR_SELECTION       pcrSelection;
+  TPM_LOCALITY_SELECTION    localityAtRelease;
+  TPM_COMPOSITE_HASH        digestAtRelease;
 } TPM12_PCR_INFO_SHORT;
 
 typedef struct {
-  TPM_STRUCTURE_TAG               tag;
-  TPM_NV_INDEX                    nvIndex;
-  TPM12_PCR_INFO_SHORT            pcrInfoRead;
-  TPM12_PCR_INFO_SHORT            pcrInfoWrite;
-  TPM_NV_ATTRIBUTES               permission;
-  BOOLEAN                         bReadSTClear;
-  BOOLEAN                         bWriteSTClear;
-  BOOLEAN                         bWriteDefine;
-  UINT32                          dataSize;
+  TPM_STRUCTURE_TAG       tag;
+  TPM_NV_INDEX            nvIndex;
+  TPM12_PCR_INFO_SHORT    pcrInfoRead;
+  TPM12_PCR_INFO_SHORT    pcrInfoWrite;
+  TPM_NV_ATTRIBUTES       permission;
+  BOOLEAN                 bReadSTClear;
+  BOOLEAN                 bWriteSTClear;
+  BOOLEAN                 bWriteDefine;
+  UINT32                  dataSize;
 } TPM12_NV_DATA_PUBLIC;
 
 #pragma pack()
 
 /**
   Send NV DefineSpace command to TPM1.2.
-  
+
   @param PubInfo           The public parameters of the NV area.
   @param EncAuth           The encrypted AuthData, only valid if the attributes require subsequent authorization.
 
@@ -100,7 +93,7 @@ Tpm12NvDefineSpace (
 
 /**
   Send NV ReadValue command to TPM1.2.
-  
+
   @param NvIndex           The index of the area to set.
   @param Offset            The offset into the area.
   @param DataSize          The size of the data area.
@@ -112,15 +105,15 @@ Tpm12NvDefineSpace (
 EFI_STATUS
 EFIAPI
 Tpm12NvReadValue (
-  IN TPM_NV_INDEX   NvIndex,
-  IN UINT32         Offset,
-  IN OUT UINT32     *DataSize,
-  OUT UINT8         *Data
+  IN TPM_NV_INDEX  NvIndex,
+  IN UINT32        Offset,
+  IN OUT UINT32    *DataSize,
+  OUT UINT8        *Data
   );
 
 /**
   Send NV WriteValue command to TPM1.2.
-  
+
   @param NvIndex           The index of the area to set.
   @param Offset            The offset into the NV Area.
   @param DataSize          The size of the data parameter.
@@ -132,10 +125,10 @@ Tpm12NvReadValue (
 EFI_STATUS
 EFIAPI
 Tpm12NvWriteValue (
-  IN TPM_NV_INDEX   NvIndex,
-  IN UINT32         Offset,
-  IN UINT32         DataSize,
-  IN UINT8          *Data
+  IN TPM_NV_INDEX  NvIndex,
+  IN UINT32        Offset,
+  IN UINT32        DataSize,
+  IN UINT8         *Data
   );
 
 /**
@@ -173,7 +166,7 @@ Send TSC_PhysicalPresence command to TPM.
 EFI_STATUS
 EFIAPI
 Tpm12PhysicalPresence (
-  IN      TPM_PHYSICAL_PRESENCE     PhysicalPresence
+  IN      TPM_PHYSICAL_PRESENCE  PhysicalPresence
   );
 
 /**
@@ -220,6 +213,5 @@ Get TPM capability volatile flags.
 EFI_STATUS
 EFIAPI
 Tpm12GetCapabilityFlagVolatile (
-  OUT TPM_STCLEAR_FLAGS                 *VolatileFlags
+  OUT TPM_STCLEAR_FLAGS  *VolatileFlags
   );
-#endif

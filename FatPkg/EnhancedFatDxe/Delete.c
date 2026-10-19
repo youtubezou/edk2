@@ -1,50 +1,29 @@
-/*++
+/** @file
+  Function that deletes a file.
 
 Copyright (c) 2005 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
-Module Name:
-
-  delete.c
-
-Abstract:
-
-  Function that deletes a file
-
-Revision History
-
---*/
+**/
 
 #include "Fat.h"
 
+/**
+
+  Deletes the file & Closes the file handle.
+
+  @param  FHand                    - Handle to the file to delete.
+
+  @retval EFI_SUCCESS              - Delete the file successfully.
+  @retval EFI_WARN_DELETE_FAILURE  - Fail to delete the file.
+
+**/
 EFI_STATUS
 EFIAPI
 FatDelete (
   IN EFI_FILE_PROTOCOL  *FHand
   )
-/*++
-
-Routine Description:
-
-  Deletes the file & Closes the file handle.
-
-Arguments:
-
-  FHand                    - Handle to the file to delete.
-
-Returns:
-
-  EFI_SUCCESS              - Delete the file successfully.
-  EFI_WARN_DELETE_FAILURE  - Fail to delete the file.
-
---*/
 {
   FAT_IFILE   *IFile;
   FAT_OFILE   *OFile;
@@ -69,6 +48,7 @@ Returns:
     Status = EFI_WRITE_PROTECTED;
     goto Done;
   }
+
   //
   // If the file is the root dir, then don't delete it
   //
@@ -76,8 +56,9 @@ Returns:
     Status = EFI_ACCESS_DENIED;
     goto Done;
   }
+
   //
-  // If the file has a permanant error, skip the delete
+  // If the file has a permanent error, skip the delete
   //
   Status = OFile->Error;
   if (!EFI_ERROR (Status)) {
@@ -93,14 +74,16 @@ Returns:
       for (Round = 0; Round < 3; Round++) {
         Status = FatGetNextDirEnt (OFile, &DirEnt);
         if ((EFI_ERROR (Status)) ||
-            ((Round < 2) && (DirEnt == NULL || !FatIsDotDirEnt (DirEnt))) ||
+            ((Round < 2) && ((DirEnt == NULL) || !FatIsDotDirEnt (DirEnt))) ||
             ((Round == 2) && (DirEnt != NULL))
-            ) {
+            )
+        {
           Status = EFI_ACCESS_DENIED;
           goto Done;
         }
       }
     }
+
     //
     // Return the file's space by setting its size to 0
     //
@@ -112,6 +95,7 @@ Returns:
     if (EFI_ERROR (Status)) {
       goto Done;
     }
+
     //
     // Set a permanent error for this OFile in case there
     // are still opened IFiles attached

@@ -6,15 +6,9 @@
   driver.
 
   Copyright (C) 2013, 2015, Red Hat, Inc.<BR>
-  Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2024, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -120,14 +114,16 @@ SmmAccess2DxeGetCapabilities (
   IN OUT EFI_SMRAM_DESCRIPTOR        *SmramMap
   )
 {
-  return SmramAccessGetCapabilities (This->LockState, This->OpenState,
-           SmramMapSize, SmramMap);
+  return SmramAccessGetCapabilities (
+           SmramMapSize,
+           SmramMap
+           );
 }
 
 //
 // LockState and OpenState will be filled in by the entry point.
 //
-STATIC EFI_SMM_ACCESS2_PROTOCOL mAccess2 = {
+STATIC EFI_SMM_ACCESS2_PROTOCOL  mAccess2 = {
   &SmmAccess2DxeOpen,
   &SmmAccess2DxeClose,
   &SmmAccess2DxeLock,
@@ -140,8 +136,8 @@ STATIC EFI_SMM_ACCESS2_PROTOCOL mAccess2 = {
 EFI_STATUS
 EFIAPI
 SmmAccess2DxeEntryPoint (
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   //
@@ -149,8 +145,19 @@ SmmAccess2DxeEntryPoint (
   //
   ASSERT (FeaturePcdGet (PcdSmmSmramRequire));
 
+  InitQ35TsegMbytes ();
   GetStates (&mAccess2.LockState, &mAccess2.OpenState);
-  return gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
-                &gEfiSmmAccess2ProtocolGuid, &mAccess2,
-                NULL);
+
+  //
+  // SmramAccessLock() depends on "mQ35SmramAtDefaultSmbase"; init the latter
+  // just before exposing the former via EFI_SMM_ACCESS2_PROTOCOL.Lock().
+  //
+  InitQ35SmramAtDefaultSmbase ();
+
+  return gBS->InstallMultipleProtocolInterfaces (
+                &ImageHandle,
+                &gEfiSmmAccess2ProtocolGuid,
+                &mAccess2,
+                NULL
+                );
 }

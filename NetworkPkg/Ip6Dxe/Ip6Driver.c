@@ -1,22 +1,16 @@
 /** @file
   The driver binding and service binding protocol for IP6 driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
-
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) Microsoft Corporation
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "Ip6Impl.h"
 
-EFI_DRIVER_BINDING_PROTOCOL gIp6DriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gIp6DriverBinding = {
   Ip6DriverBindingSupported,
   Ip6DriverBindingStart,
   Ip6DriverBindingStop,
@@ -41,14 +35,21 @@ IpSec2InstalledCallback (
   IN VOID       *Context
   )
 {
-  //
-  // Close the event so it does not get called again.
-  //
-  gBS->CloseEvent (Event);
+  EFI_STATUS  Status;
 
-  mIpSec2Installed = TRUE;
+  //
+  // Test if protocol was even found.
+  // Notification function will be called at least once.
+  //
+  Status = gBS->LocateProtocol (&gEfiIpSec2ProtocolGuid, NULL, (VOID **)&mIpSec);
+  if ((Status == EFI_SUCCESS) && (mIpSec != NULL)) {
+    //
+    // Close the event so it does not get called again.
+    //
+    gBS->CloseEvent (Event);
 
-  return;
+    mIpSec2Installed = TRUE;
+  }
 }
 
 /**
@@ -69,11 +70,11 @@ IpSec2InstalledCallback (
 EFI_STATUS
 EFIAPI
 Ip6DriverEntryPoint (
-  IN EFI_HANDLE             ImageHandle,
-  IN EFI_SYSTEM_TABLE       *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  VOID            *Registration;
+  VOID  *Registration;
 
   EfiCreateProtocolNotifyEvent (
     &gEfiIpSec2ProtocolGuid,
@@ -142,14 +143,14 @@ Ip6DriverBindingSupported (
 **/
 EFI_STATUS
 Ip6CleanService (
-  IN IP6_SERVICE            *IpSb
+  IN IP6_SERVICE  *IpSb
   )
 {
-  EFI_STATUS                Status;
-  EFI_IPv6_ADDRESS          AllNodes;
-  IP6_NEIGHBOR_ENTRY        *NeighborCache;
+  EFI_STATUS          Status;
+  EFI_IPv6_ADDRESS    AllNodes;
+  IP6_NEIGHBOR_ENTRY  *NeighborCache;
 
-  IpSb->State     = IP6_SERVICE_DESTROY;
+  IpSb->State = IP6_SERVICE_DESTROY;
 
   if (IpSb->Timer != NULL) {
     gBS->SetTimer (IpSb->Timer, TimerCancel, 0);
@@ -176,7 +177,7 @@ Ip6CleanService (
     Status = Ip6LeaveGroup (IpSb, &AllNodes);
     if (EFI_ERROR (Status)) {
       return Status;
-    }  
+    }
   }
 
   if (IpSb->DefaultInterface != NULL) {
@@ -188,6 +189,14 @@ Ip6CleanService (
 
   Ip6CleanPrefixListTable (IpSb, &IpSb->OnlinkPrefix);
   Ip6CleanPrefixListTable (IpSb, &IpSb->AutonomousPrefix);
+
+  //
+  // Free the Neighbor Discovery resources before MNP teardown.
+  //
+  while (!IsListEmpty (&IpSb->NeighborTable)) {
+    NeighborCache = NET_LIST_HEAD (&IpSb->NeighborTable, IP6_NEIGHBOR_ENTRY, Link);
+    Ip6FreeNeighborEntry (IpSb, NeighborCache, FALSE, TRUE, EFI_SUCCESS, NULL, NULL);
+  }
 
   if (IpSb->RouteTable != NULL) {
     Ip6CleanRouteTable (IpSb->RouteTable);
@@ -207,11 +216,11 @@ Ip6CleanService (
       IpSb->Mnp->Cancel (IpSb->Mnp, NULL);
       IpSb->Mnp->Configure (IpSb->Mnp, NULL);
       gBS->CloseProtocol (
-            IpSb->MnpChildHandle,
-            &gEfiManagedNetworkProtocolGuid,
-            IpSb->Image,
-            IpSb->Controller
-            );
+             IpSb->MnpChildHandle,
+             &gEfiManagedNetworkProtocolGuid,
+             IpSb->Image,
+             IpSb->Controller
+             );
 
       IpSb->Mnp = NULL;
     }
@@ -228,14 +237,6 @@ Ip6CleanService (
 
   if (IpSb->RecvRequest.MnpToken.Event != NULL) {
     gBS->CloseEvent (IpSb->RecvRequest.MnpToken.Event);
-  }
-
-  //
-  // Free the Neighbor Discovery resources
-  //
-  while (!IsListEmpty (&IpSb->NeighborTable)) {
-    NeighborCache = NET_LIST_HEAD (&IpSb->NeighborTable, IP6_NEIGHBOR_ENTRY, Link);
-    Ip6FreeNeighborEntry (IpSb, NeighborCache, FALSE, TRUE, EFI_SUCCESS, NULL, NULL);
   }
 
   return EFI_SUCCESS;
@@ -256,9 +257,9 @@ Ip6CleanService (
 **/
 EFI_STATUS
 Ip6CreateService (
-  IN  EFI_HANDLE            Controller,
-  IN  EFI_HANDLE            ImageHandle,
-  OUT IP6_SERVICE           **Service
+  IN  EFI_HANDLE   Controller,
+  IN  EFI_HANDLE   ImageHandle,
+  OUT IP6_SERVICE  **Service
   )
 {
   IP6_SERVICE                           *IpSb;
@@ -286,60 +287,64 @@ Ip6CreateService (
   IpSb->ServiceBinding.DestroyChild = Ip6ServiceBindingDestroyChild;
   IpSb->State                       = IP6_SERVICE_UNSTARTED;
 
-  IpSb->NumChildren                 = 0;
+  IpSb->NumChildren = 0;
   InitializeListHead (&IpSb->Children);
 
   InitializeListHead (&IpSb->Interfaces);
-  IpSb->DefaultInterface            = NULL;
-  IpSb->RouteTable                  = NULL;
+  IpSb->DefaultInterface = NULL;
+  IpSb->RouteTable       = NULL;
 
-  IpSb->RecvRequest.Signature       = IP6_LINK_RX_SIGNATURE;
-  IpSb->RecvRequest.CallBack        = NULL;
-  IpSb->RecvRequest.Context         = NULL;
-  MnpToken                          = &IpSb->RecvRequest.MnpToken;
-  MnpToken->Event                   = NULL;
-  MnpToken->Status                  = EFI_NOT_READY;
-  MnpToken->Packet.RxData           = NULL;
+  IpSb->RecvRequest.Signature = IP6_LINK_RX_SIGNATURE;
+  IpSb->RecvRequest.CallBack  = NULL;
+  IpSb->RecvRequest.Context   = NULL;
+  MnpToken                    = &IpSb->RecvRequest.MnpToken;
+  MnpToken->Event             = NULL;
+  MnpToken->Status            = EFI_NOT_READY;
+  MnpToken->Packet.RxData     = NULL;
 
   Ip6CreateAssembleTable (&IpSb->Assemble);
 
-  IpSb->MldCtrl.Mldv1QuerySeen      = 0;
+  IpSb->MldCtrl.Mldv1QuerySeen = 0;
   InitializeListHead (&IpSb->MldCtrl.Groups);
 
   ZeroMem (&IpSb->LinkLocalAddr, sizeof (EFI_IPv6_ADDRESS));
-  IpSb->LinkLocalOk                 = FALSE;
-  IpSb->LinkLocalDadFail            = FALSE;
-  IpSb->Dhcp6NeedStart              = FALSE;
-  IpSb->Dhcp6NeedInfoRequest        = FALSE;
+  IpSb->LinkLocalOk          = FALSE;
+  IpSb->LinkLocalDadFail     = FALSE;
+  IpSb->Dhcp6NeedStart       = FALSE;
+  IpSb->Dhcp6NeedInfoRequest = FALSE;
 
-  IpSb->CurHopLimit                 = IP6_HOP_LIMIT;
-  IpSb->LinkMTU                     = IP6_MIN_LINK_MTU;
-  IpSb->BaseReachableTime           = IP6_REACHABLE_TIME;
-  Ip6UpdateReachableTime (IpSb);
+  IpSb->CurHopLimit       = IP6_HOP_LIMIT;
+  IpSb->LinkMTU           = IP6_MIN_LINK_MTU;
+  IpSb->BaseReachableTime = IP6_REACHABLE_TIME;
+  Status                  = Ip6UpdateReachableTime (IpSb);
+  if (EFI_ERROR (Status)) {
+    goto ON_ERROR;
+  }
+
   //
   // RFC4861 RETRANS_TIMER: 1,000 milliseconds
   //
-  IpSb->RetransTimer                = IP6_RETRANS_TIMER;
+  IpSb->RetransTimer = IP6_RETRANS_TIMER;
 
-  IpSb->RoundRobin                  = 0;
+  IpSb->RoundRobin = 0;
 
   InitializeListHead (&IpSb->NeighborTable);
   InitializeListHead (&IpSb->DefaultRouterList);
   InitializeListHead (&IpSb->OnlinkPrefix);
   InitializeListHead (&IpSb->AutonomousPrefix);
 
-  IpSb->InterfaceIdLen              = IP6_IF_ID_LEN;
-  IpSb->InterfaceId                 = NULL;
+  IpSb->InterfaceIdLen = IP6_IF_ID_LEN;
+  IpSb->InterfaceId    = NULL;
 
-  IpSb->RouterAdvertiseReceived     = FALSE;
-  IpSb->SolicitTimer                = IP6_MAX_RTR_SOLICITATIONS;
-  IpSb->Ticks                       = 0;
+  IpSb->RouterAdvertiseReceived = FALSE;
+  IpSb->SolicitTimer            = IP6_MAX_RTR_SOLICITATIONS;
+  IpSb->Ticks                   = 0;
 
-  IpSb->Image                       = ImageHandle;
-  IpSb->Controller                  = Controller;
+  IpSb->Image      = ImageHandle;
+  IpSb->Controller = Controller;
 
-  IpSb->MnpChildHandle              = NULL;
-  IpSb->Mnp                         = NULL;
+  IpSb->MnpChildHandle = NULL;
+  IpSb->Mnp            = NULL;
 
   Config                            = &IpSb->MnpConfigData;
   Config->ReceivedQueueTimeoutValue = 0;
@@ -355,12 +360,12 @@ Ip6CreateService (
 
   ZeroMem (&IpSb->SnpMode, sizeof (EFI_SIMPLE_NETWORK_MODE));
 
-  IpSb->Timer                       = NULL;
-  IpSb->FasterTimer                 = NULL;
+  IpSb->Timer       = NULL;
+  IpSb->FasterTimer = NULL;
 
   ZeroMem (&IpSb->Ip6ConfigInstance, sizeof (IP6_CONFIG_INSTANCE));
 
-  IpSb->MacString                   = NULL;
+  IpSb->MacString = NULL;
 
   //
   // Create various resources. First create the route table, timer
@@ -408,7 +413,7 @@ Ip6CreateService (
   Status = gBS->OpenProtocol (
                   IpSb->MnpChildHandle,
                   &gEfiManagedNetworkProtocolGuid,
-                  (VOID **) (&IpSb->Mnp),
+                  (VOID **)(&IpSb->Mnp),
                   ImageHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -434,6 +439,7 @@ Ip6CreateService (
     //
     IpSb->MaxPacketSize -= NET_VLAN_TAG_LEN;
   }
+
   IpSb->OldMaxPacketSize = IpSb->MaxPacketSize;
 
   //
@@ -489,7 +495,6 @@ ON_ERROR:
   return Status;
 }
 
-
 /**
   Start this driver on ControllerHandle.
 
@@ -498,7 +503,7 @@ ON_ERROR:
   @param[in]  RemainingDevicePath Optional parameter used to pick a specific child
                                   device to start.
 
-  @retval EFI_SUCCES              This driver is added to ControllerHandle.
+  @retval EFI_SUCCESS             This driver is added to ControllerHandle.
   @retval EFI_ALREADY_STARTED     This driver is already running on ControllerHandle.
   @retval other                   This driver does not support this device.
 
@@ -511,14 +516,21 @@ Ip6DriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  IP6_SERVICE               *IpSb;
-  EFI_STATUS                Status;
-  EFI_IP6_CONFIG_PROTOCOL   *Ip6Cfg;
-  IP6_CONFIG_DATA_ITEM      *DataItem;
+  IP6_SERVICE              *IpSb;
+  EFI_STATUS               Status;
+  EFI_IP6_CONFIG_PROTOCOL  *Ip6Cfg;
+  IP6_CONFIG_DATA_ITEM     *DataItem;
+  UINT32                   Random;
 
   IpSb     = NULL;
   Ip6Cfg   = NULL;
   DataItem = NULL;
+
+  Status = PseudoRandomU32 (&Random);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a failed to generate random number: %r\n", __func__, Status));
+    return Status;
+  }
 
   //
   // Test for the Ip6 service binding protocol
@@ -544,10 +556,10 @@ Ip6DriverBindingStart (
 
   ASSERT (IpSb != NULL);
 
-  Ip6Cfg  = &IpSb->Ip6ConfigInstance.Ip6Config;
+  Ip6Cfg = &IpSb->Ip6ConfigInstance.Ip6Config;
 
   //
-  // Install the Ip6ServiceBinding Protocol onto ControlerHandle
+  // Install the Ip6ServiceBinding Protocol onto ControllerHandle
   //
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &ControllerHandle,
@@ -558,18 +570,18 @@ Ip6DriverBindingStart (
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    goto ON_ERROR;
+    goto FREE_SERVICE;
   }
 
   //
-  // Read the config data from NV variable again. 
+  // Read the config data from NV variable again.
   // The default data can be changed by other drivers.
   //
   Status = Ip6ConfigReadConfigData (IpSb->MacString, &IpSb->Ip6ConfigInstance);
   if (EFI_ERROR (Status)) {
-    goto ON_ERROR;
+    goto UNINSTALL_PROTOCOL;
   }
-  
+
   //
   // If there is any default manual address, set it.
   //
@@ -581,8 +593,17 @@ Ip6DriverBindingStart (
                        DataItem->DataSize,
                        DataItem->Data.Ptr
                        );
-    if (EFI_ERROR(Status) && Status != EFI_NOT_READY) {
-      goto ON_ERROR;
+    if ((Status == EFI_INVALID_PARAMETER) || (Status == EFI_BAD_BUFFER_SIZE)) {
+      //
+      // Clean the invalid ManualAddress configuration.
+      //
+      Status = Ip6Cfg->SetData (
+                         Ip6Cfg,
+                         Ip6ConfigDataTypeManualAddress,
+                         0,
+                         NULL
+                         );
+      DEBUG ((DEBUG_WARN, "Ip6DriverBindingStart: Clean the invalid ManualAddress configuration.\n"));
     }
   }
 
@@ -597,8 +618,17 @@ Ip6DriverBindingStart (
                        DataItem->DataSize,
                        DataItem->Data.Ptr
                        );
-    if (EFI_ERROR(Status)) {
-      goto ON_ERROR;
+    if ((Status == EFI_INVALID_PARAMETER) || (Status == EFI_BAD_BUFFER_SIZE)) {
+      //
+      // Clean the invalid Gateway configuration.
+      //
+      Status = Ip6Cfg->SetData (
+                         Ip6Cfg,
+                         Ip6ConfigDataTypeGateway,
+                         0,
+                         NULL
+                         );
+      DEBUG ((DEBUG_WARN, "Ip6DriverBindingStart: Clean the invalid Gateway configuration.\n"));
     }
   }
 
@@ -607,7 +637,7 @@ Ip6DriverBindingStart (
   //
   Status = Ip6ReceiveFrame (Ip6AcceptFrame, IpSb);
   if (EFI_ERROR (Status)) {
-    goto ON_ERROR;
+    goto UNINSTALL_PROTOCOL;
   }
 
   //
@@ -619,7 +649,7 @@ Ip6DriverBindingStart (
                   TICKS_PER_MS * IP6_TIMER_INTERVAL_IN_MS
                   );
   if (EFI_ERROR (Status)) {
-    goto ON_ERROR;
+    goto UNINSTALL_PROTOCOL;
   }
 
   //
@@ -631,17 +661,27 @@ Ip6DriverBindingStart (
                   TICKS_PER_MS * IP6_ONE_SECOND_IN_MS
                   );
   if (EFI_ERROR (Status)) {
-    goto ON_ERROR;
-  }    
+    goto UNINSTALL_PROTOCOL;
+  }
 
   //
   // Initialize the IP6 ID
   //
-  mIp6Id = NET_RANDOM (NetRandomInitSeed ());
+  mIp6Id = Random;
 
   return EFI_SUCCESS;
 
-ON_ERROR:
+UNINSTALL_PROTOCOL:
+  gBS->UninstallMultipleProtocolInterfaces (
+         ControllerHandle,
+         &gEfiIp6ServiceBindingProtocolGuid,
+         &IpSb->ServiceBinding,
+         &gEfiIp6ConfigProtocolGuid,
+         Ip6Cfg,
+         NULL
+         );
+
+FREE_SERVICE:
   Ip6CleanService (IpSb);
   FreePool (IpSb);
   return Status;
@@ -649,7 +689,7 @@ ON_ERROR:
 
 /**
   Callback function which provided by user to remove one node in NetDestroyLinkList process.
-  
+
   @param[in]    Entry           The entry to be removed.
   @param[in]    Context         Pointer to the callback context corresponds to the Context in NetDestroyLinkList.
 
@@ -660,8 +700,8 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 Ip6DestroyChildEntryInHandleBuffer (
-  IN LIST_ENTRY         *Entry,
-  IN VOID               *Context
+  IN LIST_ENTRY  *Entry,
+  IN VOID        *Context
   )
 {
   IP6_PROTOCOL                  *IpInstance;
@@ -669,14 +709,14 @@ Ip6DestroyChildEntryInHandleBuffer (
   UINTN                         NumberOfChildren;
   EFI_HANDLE                    *ChildHandleBuffer;
 
-  if (Entry == NULL || Context == NULL) {
+  if ((Entry == NULL) || (Context == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  IpInstance = NET_LIST_USER_STRUCT_S (Entry, IP6_PROTOCOL, Link, IP6_PROTOCOL_SIGNATURE);
-  ServiceBinding    = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->ServiceBinding;
-  NumberOfChildren  = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->NumberOfChildren;
-  ChildHandleBuffer = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *) Context)->ChildHandleBuffer;
+  IpInstance        = NET_LIST_USER_STRUCT_S (Entry, IP6_PROTOCOL, Link, IP6_PROTOCOL_SIGNATURE);
+  ServiceBinding    = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->ServiceBinding;
+  NumberOfChildren  = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->NumberOfChildren;
+  ChildHandleBuffer = ((IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT *)Context)->ChildHandleBuffer;
 
   if (!NetIsInHandleBuffer (IpInstance->Handle, NumberOfChildren, ChildHandleBuffer)) {
     return EFI_SUCCESS;
@@ -708,14 +748,14 @@ Ip6DriverBindingStop (
   IN  EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
   )
 {
-  EFI_SERVICE_BINDING_PROTOCOL            *ServiceBinding;
-  IP6_SERVICE                             *IpSb;
-  EFI_HANDLE                              NicHandle;
-  EFI_STATUS                              Status;
-  LIST_ENTRY                              *List;
-  INTN                                    State;
-  BOOLEAN                                 IsDhcp6;
-  IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT Context;
+  EFI_SERVICE_BINDING_PROTOCOL             *ServiceBinding;
+  IP6_SERVICE                              *IpSb;
+  EFI_HANDLE                               NicHandle;
+  EFI_STATUS                               Status;
+  LIST_ENTRY                               *List;
+  INTN                                     State;
+  BOOLEAN                                  IsDhcp6;
+  IP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT  Context;
 
   IsDhcp6   = FALSE;
   NicHandle = NetLibGetNicHandle (ControllerHandle, &gEfiManagedNetworkProtocolGuid);
@@ -731,7 +771,7 @@ Ip6DriverBindingStop (
   Status = gBS->OpenProtocol (
                   NicHandle,
                   &gEfiIp6ServiceBindingProtocolGuid,
-                  (VOID **) &ServiceBinding,
+                  (VOID **)&ServiceBinding,
                   This->DriverBindingHandle,
                   NicHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -750,18 +790,18 @@ Ip6DriverBindingStop (
     //
     // NumberOfChildren is not zero, destroy the IP6 children instances in ChildHandleBuffer.
     //
-    List = &IpSb->Children;
+    List                      = &IpSb->Children;
     Context.ServiceBinding    = ServiceBinding;
     Context.NumberOfChildren  = NumberOfChildren;
     Context.ChildHandleBuffer = ChildHandleBuffer;
-    Status = NetDestroyLinkList (
-               List,
-               Ip6DestroyChildEntryInHandleBuffer,
-               &Context,
-               NULL
-               );
+    Status                    = NetDestroyLinkList (
+                                  List,
+                                  Ip6DestroyChildEntryInHandleBuffer,
+                                  &Context,
+                                  NULL
+                                  );
   } else if (IsListEmpty (&IpSb->Children)) {
-    State           = IpSb->State;
+    State  = IpSb->State;
     Status = Ip6CleanService (IpSb);
     if (EFI_ERROR (Status)) {
       IpSb->State = State;
@@ -780,11 +820,10 @@ Ip6DriverBindingStop (
     FreePool (IpSb);
     Status = EFI_SUCCESS;
   }
-  
+
 Exit:
   return Status;
 }
-
 
 /**
   Creates a child handle with a set of I/O services.
@@ -795,7 +834,7 @@ Exit:
                                  is not NULL, then the I/O services are added to
                                  the existing child handle.
 
-  @retval EFI_SUCCES             The child handle was created with the I/O services.
+  @retval EFI_SUCCESS            The child handle was created with the I/O services.
   @retval EFI_OUT_OF_RESOURCES   There are not enough resources available to create
                                  the child.
   @retval other                  The child handle was not created.
@@ -808,17 +847,17 @@ Ip6ServiceBindingCreateChild (
   IN EFI_HANDLE                    *ChildHandle
   )
 {
-  IP6_SERVICE               *IpSb;
-  IP6_PROTOCOL              *IpInstance;
-  EFI_TPL                   OldTpl;
-  EFI_STATUS                Status;
-  VOID                      *Mnp;
+  IP6_SERVICE   *IpSb;
+  IP6_PROTOCOL  *IpInstance;
+  EFI_TPL       OldTpl;
+  EFI_STATUS    Status;
+  VOID          *Mnp;
 
   if ((This == NULL) || (ChildHandle == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  IpSb       = IP6_SERVICE_FROM_PROTOCOL (This);
+  IpSb = IP6_SERVICE_FROM_PROTOCOL (This);
 
   if (IpSb->LinkLocalDadFail) {
     return EFI_DEVICE_ERROR;
@@ -853,14 +892,14 @@ Ip6ServiceBindingCreateChild (
   Status = gBS->OpenProtocol (
                   IpSb->MnpChildHandle,
                   &gEfiManagedNetworkProtocolGuid,
-                  (VOID **) &Mnp,
+                  (VOID **)&Mnp,
                   gIp6DriverBinding.DriverBindingHandle,
                   IpInstance->Handle,
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
                   );
   if (EFI_ERROR (Status)) {
     gBS->UninstallMultipleProtocolInterfaces (
-           ChildHandle,
+           *ChildHandle,
            &gEfiIp6ProtocolGuid,
            &IpInstance->Ip6Proto,
            NULL
@@ -882,7 +921,6 @@ Ip6ServiceBindingCreateChild (
 ON_ERROR:
 
   if (EFI_ERROR (Status)) {
-
     Ip6CleanProtocol (IpInstance);
 
     FreePool (IpInstance);
@@ -897,7 +935,7 @@ ON_ERROR:
   @param[in]  This               Protocol instance pointer.
   @param[in]  ChildHandle        Handle of the child to destroy.
 
-  @retval EFI_SUCCES             The I/O services were removed from the child
+  @retval EFI_SUCCESS            The I/O services were removed from the child
                                  handle.
   @retval EFI_UNSUPPORTED        The child handle does not support the I/O services
                                   that are being removed.
@@ -914,11 +952,11 @@ Ip6ServiceBindingDestroyChild (
   IN EFI_HANDLE                    ChildHandle
   )
 {
-  EFI_STATUS                Status;
-  IP6_SERVICE               *IpSb;
-  IP6_PROTOCOL              *IpInstance;
-  EFI_IP6_PROTOCOL          *Ip6;
-  EFI_TPL                   OldTpl;
+  EFI_STATUS        Status;
+  IP6_SERVICE       *IpSb;
+  IP6_PROTOCOL      *IpInstance;
+  EFI_IP6_PROTOCOL  *Ip6;
+  EFI_TPL           OldTpl;
 
   if ((This == NULL) || (ChildHandle == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -927,12 +965,12 @@ Ip6ServiceBindingDestroyChild (
   //
   // Retrieve the private context data structures
   //
-  IpSb   = IP6_SERVICE_FROM_PROTOCOL (This);
+  IpSb = IP6_SERVICE_FROM_PROTOCOL (This);
 
   Status = gBS->OpenProtocol (
                   ChildHandle,
                   &gEfiIp6ProtocolGuid,
-                  (VOID **) &Ip6,
+                  (VOID **)&Ip6,
                   gIp6DriverBinding.DriverBindingHandle,
                   ChildHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -977,14 +1015,14 @@ Ip6ServiceBindingDestroyChild (
   // Uninstall the IP6 protocol first. Many thing happens during
   // this:
   // 1. The consumer of the IP6 protocol will be stopped if it
-  // opens the protocol BY_DRIVER. For eaxmple, if MNP driver is
+  // opens the protocol BY_DRIVER. For example, if MNP driver is
   // stopped, IP driver's stop function will be called, and uninstall
   // EFI_IP6_PROTOCOL will trigger the UDP's stop function. This
   // makes it possible to create the network stack bottom up, and
   // stop it top down.
   // 2. the upper layer will recycle the received packet. The recycle
   // event's TPL is higher than this function. The recycle events
-  // will be called back before preceeding. If any packets not recycled,
+  // will be called back before preceding. If any packets not recycled,
   // that means there is a resource leak.
   //
   gBS->RestoreTPL (OldTpl);

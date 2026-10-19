@@ -3,18 +3,25 @@
 @REM
 @REM Copyright (c) 2013-2014, ARM Limited. All rights reserved.
 
-@REM This program and the accompanying materials
-@REM are licensed and made available under the terms and conditions of the BSD License
-@REM which accompanies this distribution.  The full text of the license may be found at
-@REM http://opensource.org/licenses/bsd-license.php
-@REM
-@REM THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-@REM WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+@REM SPDX-License-Identifier: BSD-2-Clause-Patent
 @REM
 
 
 @echo off
-goto  :main
+set SCRIPT_ERROR=0
+if "%1"=="" goto main
+if /I "%1"=="VS2019" goto VS2019Vars
+
+:set_vsvars
+if defined VCINSTALLDIR goto :EOF
+  call %* > vswhereInfo
+  for /f "usebackq tokens=1* delims=: " %%i in (vswhereInfo) do (
+    if /i "%%i"=="installationPath" (
+      call "%%j\VC\Auxiliary\Build\vcvars32.bat"
+    )
+  )
+  del vswhereInfo
+goto :EOF
 
 :read_vsvars
 @rem Do nothing if already found, otherwise call vsvars32.bat if there
@@ -26,6 +33,10 @@ if defined VCINSTALLDIR goto :EOF
 goto :EOF
 
 
+:ToolNotInstall
+set SCRIPT_ERROR=1
+goto :EOF
+
 REM NOTE: This file will find the most recent Visual Studio installation
 REM       apparent from the environment.
 REM       To use an older version, modify your environment set up.
@@ -33,13 +44,22 @@ REM       (Or invoke the relevant vsvars32 file beforehand).
 
 :main
 if defined VCINSTALLDIR goto :done
-  if defined VS140COMNTOOLS  call :read_vsvars  "%VS140COMNTOOLS%"
-  if defined VS120COMNTOOLS  call :read_vsvars  "%VS120COMNTOOLS%"
-  if defined VS110COMNTOOLS  call :read_vsvars  "%VS110COMNTOOLS%"
-  if defined VS100COMNTOOLS  call :read_vsvars  "%VS100COMNTOOLS%"
-  if defined VS90COMNTOOLS   call :read_vsvars  "%VS90COMNTOOLS%"
-  if defined VS80COMNTOOLS   call :read_vsvars  "%VS80COMNTOOLS%"
-  if defined VS71COMNTOOLS   call :read_vsvars  "%VS71COMNTOOLS%"
+  :VS2019Vars
+  if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
+    if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\BuildTools" (
+      call :set_vsvars "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -products Microsoft.VisualStudio.Product.BuildTools -version 16,17
+    ) else (
+      call :set_vsvars "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -version 16,17
+    )
+  )
+  if exist "%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe" (
+    if exist "%ProgramFiles%\Microsoft Visual Studio\2019\BuildTools" (
+      call :set_vsvars "%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe" -products Microsoft.VisualStudio.Product.BuildTools -version 16,17
+    ) else (
+      call :set_vsvars "%ProgramFiles%\Microsoft Visual Studio\Installer\vswhere.exe" -version 16,17
+    )
+  )
+  if /I "%1"=="VS2019" goto ToolNotInstall
 
 :done
 set GET_VSVARS_BAT_CHECK_DIR=

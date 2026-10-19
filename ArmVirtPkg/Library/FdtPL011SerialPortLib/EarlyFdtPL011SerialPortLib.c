@@ -6,23 +6,16 @@
   Copyright (c) 2014, Linaro Ltd. All rights reserved.<BR>
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Base.h>
 
 #include <Library/PcdLib.h>
+#include <Library/PL011UartLib.h>
 #include <Library/SerialPortLib.h>
-#include <libfdt.h>
-
-#include <Drivers/PL011Uart.h>
+#include <Library/FdtSerialPortAddressLib.h>
 
 RETURN_STATUS
 EFIAPI
@@ -63,68 +56,50 @@ SerialPortGetBaseAddress (
   UINT8               DataBits;
   EFI_STOP_BITS_TYPE  StopBits;
   VOID                *DeviceTreeBase;
-  INT32               Node, Prev;
-  INT32               Len;
-  CONST CHAR8         *Compatible;
-  CONST CHAR8         *CompatibleItem;
-  CONST UINT64        *RegProperty;
-  UINTN               UartBase;
+  FDT_SERIAL_PORTS    Ports;
+  UINT64              UartBase;
   RETURN_STATUS       Status;
 
   DeviceTreeBase = (VOID *)(UINTN)PcdGet64 (PcdDeviceTreeInitialBaseAddress);
 
-  if ((DeviceTreeBase == NULL) || (fdt_check_header (DeviceTreeBase) != 0)) {
+  if (DeviceTreeBase == NULL) {
+    return 0;
+  }
+
+  Status = FdtSerialGetPorts (DeviceTreeBase, "arm,pl011", &Ports);
+  if (RETURN_ERROR (Status)) {
     return 0;
   }
 
   //
-  // Enumerate all FDT nodes looking for a PL011 and capture its base address
+  // Default to the first port found, but (if there are multiple ports) allow
+  // the "/chosen" node to override it. Note that if FdtSerialGetConsolePort()
+  // fails, it does not modify UartBase.
   //
-  for (Prev = 0;; Prev = Node) {
-    Node = fdt_next_node (DeviceTreeBase, Prev, NULL);
-    if (Node < 0) {
-      break;
-    }
-
-    Compatible = fdt_getprop (DeviceTreeBase, Node, "compatible", &Len);
-    if (Compatible == NULL) {
-      continue;
-    }
-
-    //
-    // Iterate over the NULL-separated items in the compatible string
-    //
-    for (CompatibleItem = Compatible; CompatibleItem < Compatible + Len;
-      CompatibleItem += 1 + AsciiStrLen (CompatibleItem)) {
-
-      if (AsciiStrCmp (CompatibleItem, "arm,pl011") == 0) {
-        RegProperty = fdt_getprop (DeviceTreeBase, Node, "reg", &Len);
-        if (Len != 16) {
-          return 0;
-        }
-        UartBase = (UINTN)fdt64_to_cpu (ReadUnaligned64 (RegProperty));
-
-        BaudRate = (UINTN)FixedPcdGet64 (PcdUartDefaultBaudRate);
-        ReceiveFifoDepth = 0; // Use the default value for Fifo depth
-        Parity = (EFI_PARITY_TYPE)FixedPcdGet8 (PcdUartDefaultParity);
-        DataBits = FixedPcdGet8 (PcdUartDefaultDataBits);
-        StopBits = (EFI_STOP_BITS_TYPE) FixedPcdGet8 (PcdUartDefaultStopBits);
-
-        Status = PL011UartInitializePort (
-                   UartBase,
-                   FixedPcdGet32 (PL011UartClkInHz),
-                   &BaudRate,
-                   &ReceiveFifoDepth,
-                   &Parity,
-                   &DataBits,
-                   &StopBits
-                   );
-        if (!EFI_ERROR (Status)) {
-          return UartBase;
-        }
-      }
-    }
+  UartBase = Ports.BaseAddress[0];
+  if (Ports.NumberOfPorts > 1) {
+    FdtSerialGetConsolePort (DeviceTreeBase, &UartBase);
   }
+
+  BaudRate         = (UINTN)FixedPcdGet64 (PcdUartDefaultBaudRate);
+  ReceiveFifoDepth = 0; // Use the default value for Fifo depth
+  Parity           = (EFI_PARITY_TYPE)FixedPcdGet8 (PcdUartDefaultParity);
+  DataBits         = FixedPcdGet8 (PcdUartDefaultDataBits);
+  StopBits         = (EFI_STOP_BITS_TYPE)FixedPcdGet8 (PcdUartDefaultStopBits);
+
+  Status = PL011UartInitializePort (
+             UartBase,
+             FixedPcdGet32 (PL011UartClkInHz),
+             &BaudRate,
+             &ReceiveFifoDepth,
+             &Parity,
+             &DataBits,
+             &StopBits
+             );
+  if (!RETURN_ERROR (Status)) {
+    return UartBase;
+  }
+
   return 0;
 }
 
@@ -141,16 +116,17 @@ SerialPortGetBaseAddress (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
-  UINT64 SerialRegisterBase;
+  UINT64  SerialRegisterBase;
 
   SerialRegisterBase = SerialPortGetBaseAddress ();
   if (SerialRegisterBase != 0) {
     return PL011UartWrite ((UINTN)SerialRegisterBase, Buffer, NumberOfBytes);
   }
+
   return 0;
 }
 
@@ -167,9 +143,9 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
-)
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
+  )
 {
   return 0;
 }
@@ -203,7 +179,7 @@ SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 SerialPortSetControl (
-  IN UINT32 Control
+  IN UINT32  Control
   )
 {
   return RETURN_UNSUPPORTED;
@@ -222,20 +198,20 @@ SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortGetControl (
-  OUT UINT32 *Control
+  OUT UINT32  *Control
   )
 {
   return RETURN_UNSUPPORTED;
 }
 
 /**
-  Sets the baud rate, receive FIFO depth, transmit/receice time out, parity,
+  Sets the baud rate, receive FIFO depth, transmit/receive time out, parity,
   data bits, and stop bits on a serial device.
 
   @param BaudRate           The requested baud rate. A BaudRate value of 0 will use the
                             device's default interface speed.
                             On output, the value actually set.
-  @param ReveiveFifoDepth   The requested depth of the FIFO on the receive side of the
+  @param ReceiveFifoDepth   The requested depth of the FIFO on the receive side of the
                             serial interface. A ReceiveFifoDepth value of 0 will use
                             the device's default FIFO depth.
                             On output, the value actually set.
@@ -248,7 +224,7 @@ SerialPortGetControl (
                             DefaultParity will use the device's default parity value.
                             On output, the value actually set.
   @param DataBits           The number of data bits to use on the serial device. A DataBits
-                            vaule of 0 will use the device's default data bit setting.
+                            value of 0 will use the device's default data bit setting.
                             On output, the value actually set.
   @param StopBits           The number of stop bits to use on this serial device. A StopBits
                             value of DefaultStopBits will use the device's default number of
@@ -264,14 +240,13 @@ SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortSetAttributes (
-  IN OUT UINT64             *BaudRate,
-  IN OUT UINT32             *ReceiveFifoDepth,
-  IN OUT UINT32             *Timeout,
-  IN OUT EFI_PARITY_TYPE    *Parity,
-  IN OUT UINT8              *DataBits,
-  IN OUT EFI_STOP_BITS_TYPE *StopBits
+  IN OUT UINT64              *BaudRate,
+  IN OUT UINT32              *ReceiveFifoDepth,
+  IN OUT UINT32              *Timeout,
+  IN OUT EFI_PARITY_TYPE     *Parity,
+  IN OUT UINT8               *DataBits,
+  IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
   return RETURN_UNSUPPORTED;
 }
-

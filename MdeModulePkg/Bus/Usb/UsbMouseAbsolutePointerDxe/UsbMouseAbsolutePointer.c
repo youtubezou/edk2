@@ -1,20 +1,14 @@
 /** @file
   USB Mouse Driver that manages USB mouse and produces Absolute Pointer Protocol.
 
-Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "UsbMouseAbsolutePointer.h"
 
-EFI_DRIVER_BINDING_PROTOCOL gUsbMouseAbsolutePointerDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gUsbMouseAbsolutePointerDriverBinding = {
   USBMouseAbsolutePointerDriverBindingSupported,
   USBMouseAbsolutePointerDriverBindingStart,
   USBMouseAbsolutePointerDriverBindingStop,
@@ -38,11 +32,11 @@ EFI_DRIVER_BINDING_PROTOCOL gUsbMouseAbsolutePointerDriverBinding = {
 EFI_STATUS
 EFIAPI
 USBMouseAbsolutePointerDriverBindingEntryPoint (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   Status = EfiLibInstallDriverBindingComponentName2 (
              ImageHandle,
@@ -56,7 +50,6 @@ USBMouseAbsolutePointerDriverBindingEntryPoint (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Check whether USB Mouse Absolute Pointer Driver supports this device.
@@ -72,18 +65,18 @@ USBMouseAbsolutePointerDriverBindingEntryPoint (
 EFI_STATUS
 EFIAPI
 USBMouseAbsolutePointerDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS          Status;
-  EFI_USB_IO_PROTOCOL *UsbIo;
+  EFI_STATUS           Status;
+  EFI_USB_IO_PROTOCOL  *UsbIo;
 
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiUsbIoProtocolGuid,
-                  (VOID **) &UsbIo,
+                  (VOID **)&UsbIo,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -91,7 +84,7 @@ USBMouseAbsolutePointerDriverBindingSupported (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   //
   // Use the USB I/O Protocol interface to check whether Controller is
   // a mouse device that can be managed by this driver.
@@ -100,22 +93,21 @@ USBMouseAbsolutePointerDriverBindingSupported (
   if (!IsUsbMouse (UsbIo)) {
     Status = EFI_UNSUPPORTED;
   }
-  
+
   gBS->CloseProtocol (
-        Controller,
-        &gEfiUsbIoProtocolGuid,
-        This->DriverBindingHandle,
-        Controller
-        );
-        
+         Controller,
+         &gEfiUsbIoProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
+
   return Status;
 }
-
 
 /**
   Starts the mouse device with this driver.
 
-  This function consumes USB I/O Portocol, intializes USB mouse device,
+  This function consumes USB I/O Protocol, initializes USB mouse device,
   installs Absolute Pointer Protocol, and submits Asynchronous Interrupt
   Transfer to manage the USB mouse device.
 
@@ -134,22 +126,22 @@ USBMouseAbsolutePointerDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 USBMouseAbsolutePointerDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                     Status;
-  EFI_USB_IO_PROTOCOL            *UsbIo;
-  USB_MOUSE_ABSOLUTE_POINTER_DEV *UsbMouseAbsolutePointerDevice;
-  UINT8                          EndpointNumber;
-  EFI_USB_ENDPOINT_DESCRIPTOR    EndpointDescriptor;
-  UINT8                          Index;
-  UINT8                          EndpointAddr;
-  UINT8                          PollingInterval;
-  UINT8                          PacketSize;
-  BOOLEAN                        Found;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                      Status;
+  EFI_USB_IO_PROTOCOL             *UsbIo;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDevice;
+  UINT8                           EndpointNumber;
+  EFI_USB_ENDPOINT_DESCRIPTOR     EndpointDescriptor;
+  UINT8                           Index;
+  UINT8                           EndpointAddr;
+  UINT8                           PollingInterval;
+  UINT8                           PacketSize;
+  BOOLEAN                         Found;
+  EFI_TPL                         OldTpl;
 
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
   //
@@ -158,17 +150,21 @@ USBMouseAbsolutePointerDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiUsbIoProtocolGuid,
-                  (VOID **) &UsbIo,
+                  (VOID **)&UsbIo,
                   This->DriverBindingHandle,
                   Controller,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER                  
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   if (EFI_ERROR (Status)) {
     goto ErrorExit1;
   }
-  
+
   UsbMouseAbsolutePointerDevice = AllocateZeroPool (sizeof (USB_MOUSE_ABSOLUTE_POINTER_DEV));
-  ASSERT (UsbMouseAbsolutePointerDevice != NULL);
+  if (UsbMouseAbsolutePointerDevice == NULL) {
+    ASSERT (UsbMouseAbsolutePointerDevice != NULL);
+    Status = EFI_OUT_OF_RESOURCES;
+    goto ErrorExit;
+  }
 
   UsbMouseAbsolutePointerDevice->UsbIo     = UsbIo;
   UsbMouseAbsolutePointerDevice->Signature = USB_MOUSE_ABSOLUTE_POINTER_DEV_SIGNATURE;
@@ -179,7 +175,7 @@ USBMouseAbsolutePointerDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **) &UsbMouseAbsolutePointerDevice->DevicePath,
+                  (VOID **)&UsbMouseAbsolutePointerDevice->DevicePath,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -209,7 +205,7 @@ USBMouseAbsolutePointerDriverBindingStart (
   EndpointNumber = UsbMouseAbsolutePointerDevice->InterfaceDescriptor.NumEndpoints;
 
   //
-  // Traverse endpoints to find interrupt endpoint
+  // Traverse endpoints to find interrupt endpoint IN
   //
   Found = FALSE;
   for (Index = 0; Index < EndpointNumber; Index++) {
@@ -219,11 +215,13 @@ USBMouseAbsolutePointerDriverBindingStart (
              &EndpointDescriptor
              );
 
-    if ((EndpointDescriptor.Attributes & (BIT0 | BIT1)) == USB_ENDPOINT_INTERRUPT) {
+    if (((EndpointDescriptor.Attributes & (BIT0 | BIT1)) == USB_ENDPOINT_INTERRUPT) &&
+        ((EndpointDescriptor.EndpointAddress & USB_ENDPOINT_DIR_IN) != 0))
+    {
       //
       // We only care interrupt endpoint here
       //
-      CopyMem (&UsbMouseAbsolutePointerDevice->IntEndpointDescriptor, &EndpointDescriptor, sizeof(EndpointDescriptor));
+      CopyMem (&UsbMouseAbsolutePointerDevice->IntEndpointDescriptor, &EndpointDescriptor, sizeof (EndpointDescriptor));
       Found = TRUE;
       break;
     }
@@ -271,8 +269,8 @@ USBMouseAbsolutePointerDriverBindingStart (
   // Initialize and install EFI Absolute Pointer Protocol.
   //
   UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.GetState = GetMouseAbsolutePointerState;
-  UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.Reset	  = UsbMouseAbsolutePointerReset;
-  UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.Mode	  = &UsbMouseAbsolutePointerDevice->Mode;
+  UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.Reset    = UsbMouseAbsolutePointerReset;
+  UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.Mode     = &UsbMouseAbsolutePointerDevice->Mode;
 
   Status = gBS->CreateEvent (
                   EVT_NOTIFY_WAIT,
@@ -312,7 +310,7 @@ USBMouseAbsolutePointerDriverBindingStart (
   //
   EndpointAddr    = UsbMouseAbsolutePointerDevice->IntEndpointDescriptor.EndpointAddress;
   PollingInterval = UsbMouseAbsolutePointerDevice->IntEndpointDescriptor.Interval;
-  PacketSize      = (UINT8) (UsbMouseAbsolutePointerDevice->IntEndpointDescriptor.MaxPacketSize);
+  PacketSize      = (UINT8)(UsbMouseAbsolutePointerDevice->IntEndpointDescriptor.MaxPacketSize);
 
   Status = UsbIo->UsbAsyncInterruptTransfer (
                     UsbIo,
@@ -342,8 +340,8 @@ USBMouseAbsolutePointerDriverBindingStart (
     gUsbMouseAbsolutePointerComponentName.SupportedLanguages,
     &UsbMouseAbsolutePointerDevice->ControllerNameTable,
     L"Generic Usb Mouse Absolute Pointer",
-      TRUE
-      );
+    TRUE
+    );
   AddUnicodeString2 (
     "en",
     gUsbMouseAbsolutePointerComponentName2.SupportedLanguages,
@@ -355,17 +353,17 @@ USBMouseAbsolutePointerDriverBindingStart (
   gBS->RestoreTPL (OldTpl);
   return EFI_SUCCESS;
 
-//
-// Error handler
-//
+  //
+  // Error handler
+  //
 ErrorExit:
   if (EFI_ERROR (Status)) {
     gBS->CloseProtocol (
-          Controller,
-          &gEfiUsbIoProtocolGuid,
-          This->DriverBindingHandle,
-          Controller
-          );
+           Controller,
+           &gEfiUsbIoProtocolGuid,
+           This->DriverBindingHandle,
+           Controller
+           );
 
     if (UsbMouseAbsolutePointerDevice != NULL) {
       if ((UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol).WaitForInput != NULL) {
@@ -383,7 +381,6 @@ ErrorExit1:
   return Status;
 }
 
-
 /**
   Stop the USB mouse device handled by this driver.
 
@@ -400,10 +397,10 @@ ErrorExit1:
 EFI_STATUS
 EFIAPI
 USBMouseAbsolutePointerDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN  EFI_HANDLE                    Controller,
-  IN  UINTN                         NumberOfChildren,
-  IN  EFI_HANDLE                    *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
   EFI_STATUS                      Status;
@@ -414,7 +411,7 @@ USBMouseAbsolutePointerDriverBindingStop (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiAbsolutePointerProtocolGuid,
-                  (VOID **) &AbsolutePointerProtocol,
+                  (VOID **)&AbsolutePointerProtocol,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -470,7 +467,7 @@ USBMouseAbsolutePointerDriverBindingStop (
   // Free all resources.
   //
   gBS->CloseEvent (UsbMouseAbsolutePointerDevice->AbsolutePointerProtocol.WaitForInput);
-  
+
   if (UsbMouseAbsolutePointerDevice->DelayedRecoveryEvent != NULL) {
     gBS->CloseEvent (UsbMouseAbsolutePointerDevice->DelayedRecoveryEvent);
     UsbMouseAbsolutePointerDevice->DelayedRecoveryEvent = NULL;
@@ -483,9 +480,7 @@ USBMouseAbsolutePointerDriverBindingStop (
   FreePool (UsbMouseAbsolutePointerDevice);
 
   return EFI_SUCCESS;
-
 }
-
 
 /**
   Uses USB I/O to check whether the device is a USB mouse device.
@@ -498,7 +493,7 @@ USBMouseAbsolutePointerDriverBindingStop (
 **/
 BOOLEAN
 IsUsbMouse (
-  IN  EFI_USB_IO_PROTOCOL     *UsbIo
+  IN  EFI_USB_IO_PROTOCOL  *UsbIo
   )
 {
   EFI_STATUS                    Status;
@@ -519,13 +514,13 @@ IsUsbMouse (
   if ((InterfaceDescriptor.InterfaceClass == CLASS_HID) &&
       (InterfaceDescriptor.InterfaceSubClass == SUBCLASS_BOOT) &&
       (InterfaceDescriptor.InterfaceProtocol == PROTOCOL_MOUSE)
-      ) {
+      )
+  {
     return TRUE;
   }
 
   return FALSE;
 }
-
 
 /**
   Initialize the USB mouse device.
@@ -544,20 +539,20 @@ IsUsbMouse (
 **/
 EFI_STATUS
 InitializeUsbMouseDevice (
-  IN  USB_MOUSE_ABSOLUTE_POINTER_DEV           *UsbMouseAbsolutePointerDev
+  IN  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDev
   )
 {
-  EFI_USB_IO_PROTOCOL       *UsbIo;
-  UINT8                     Protocol;
-  EFI_STATUS                Status;
-  EFI_USB_HID_DESCRIPTOR    *MouseHidDesc;
-  UINT8                     *ReportDesc;
-  EFI_USB_CONFIG_DESCRIPTOR ConfigDesc;
-  VOID                      *Buf;
-  UINT32                    TransferResult;
-  UINT16                    Total;
-  USB_DESC_HEAD             *Head;
-  BOOLEAN                   Start;
+  EFI_USB_IO_PROTOCOL        *UsbIo;
+  UINT8                      Protocol;
+  EFI_STATUS                 Status;
+  EFI_USB_HID_DESCRIPTOR     *MouseHidDesc;
+  UINT8                      *ReportDesc;
+  EFI_USB_CONFIG_DESCRIPTOR  ConfigDesc;
+  VOID                       *Buf;
+  UINT32                     TransferResult;
+  UINT16                     Total;
+  USB_DESC_HEAD              *Head;
+  BOOLEAN                    Start;
 
   UsbIo = UsbMouseAbsolutePointerDev->UsbIo;
 
@@ -594,9 +589,9 @@ InitializeUsbMouseDevice (
     return Status;
   }
 
-  Total = 0;
-  Start = FALSE;
-  Head  = (USB_DESC_HEAD *)Buf;  
+  Total        = 0;
+  Start        = FALSE;
+  Head         = (USB_DESC_HEAD *)Buf;
   MouseHidDesc = NULL;
 
   //
@@ -607,19 +602,23 @@ InitializeUsbMouseDevice (
   while (Total < ConfigDesc.TotalLength) {
     if (Head->Type == USB_DESC_TYPE_INTERFACE) {
       if ((((USB_INTERFACE_DESCRIPTOR *)Head)->InterfaceNumber == UsbMouseAbsolutePointerDev->InterfaceDescriptor.InterfaceNumber) &&
-        (((USB_INTERFACE_DESCRIPTOR *)Head)->AlternateSetting == UsbMouseAbsolutePointerDev->InterfaceDescriptor.AlternateSetting)) {
+          (((USB_INTERFACE_DESCRIPTOR *)Head)->AlternateSetting == UsbMouseAbsolutePointerDev->InterfaceDescriptor.AlternateSetting))
+      {
         Start = TRUE;
       }
     }
+
     if (Start && (Head->Type == USB_DESC_TYPE_ENDPOINT)) {
       break;
     }
+
     if (Start && (Head->Type == USB_DESC_TYPE_HID)) {
       MouseHidDesc = (EFI_USB_HID_DESCRIPTOR *)Head;
       break;
     }
+
     Total = Total + (UINT16)Head->Len;
-    Head  = (USB_DESC_HEAD*)((UINT8 *)Buf + Total);
+    Head  = (USB_DESC_HEAD *)((UINT8 *)Buf + Total);
   }
 
   if (MouseHidDesc == NULL) {
@@ -636,7 +635,11 @@ InitializeUsbMouseDevice (
   }
 
   ReportDesc = AllocateZeroPool (MouseHidDesc->HidClassDesc[0].DescriptorLength);
-  ASSERT (ReportDesc != NULL);
+  if (ReportDesc == NULL) {
+    ASSERT (ReportDesc != NULL);
+    FreePool (Buf);
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   Status = UsbGetReportDescriptor (
              UsbIo,
@@ -668,7 +671,7 @@ InitializeUsbMouseDevice (
 
   UsbMouseAbsolutePointerDev->Mode.AbsoluteMaxX = 1024;
   UsbMouseAbsolutePointerDev->Mode.AbsoluteMaxY = 1024;
-  UsbMouseAbsolutePointerDev->Mode.AbsoluteMaxZ = 0;
+  UsbMouseAbsolutePointerDev->Mode.AbsoluteMaxZ = 1024;
   UsbMouseAbsolutePointerDev->Mode.AbsoluteMinX = 0;
   UsbMouseAbsolutePointerDev->Mode.AbsoluteMinY = 0;
   UsbMouseAbsolutePointerDev->Mode.AbsoluteMinZ = 0;
@@ -727,7 +730,6 @@ InitializeUsbMouseDevice (
   return EFI_SUCCESS;
 }
 
-
 /**
   Handler function for USB mouse's asynchronous interrupt transfer.
 
@@ -748,19 +750,19 @@ InitializeUsbMouseDevice (
 EFI_STATUS
 EFIAPI
 OnMouseInterruptComplete (
-  IN  VOID        *Data,
-  IN  UINTN       DataLength,
-  IN  VOID        *Context,
-  IN  UINT32      Result
+  IN  VOID    *Data,
+  IN  UINTN   DataLength,
+  IN  VOID    *Context,
+  IN  UINT32  Result
   )
 {
-  USB_MOUSE_ABSOLUTE_POINTER_DEV   *UsbMouseAbsolutePointerDevice;
-  EFI_USB_IO_PROTOCOL              *UsbIo;
-  UINT8                            EndpointAddr;
-  UINT32                           UsbResult;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDevice;
+  EFI_USB_IO_PROTOCOL             *UsbIo;
+  UINT8                           EndpointAddr;
+  UINT32                          UsbResult;
 
-  UsbMouseAbsolutePointerDevice  = (USB_MOUSE_ABSOLUTE_POINTER_DEV *) Context;
-  UsbIo                          = UsbMouseAbsolutePointerDevice->UsbIo;
+  UsbMouseAbsolutePointerDevice = (USB_MOUSE_ABSOLUTE_POINTER_DEV *)Context;
+  UsbIo                         = UsbMouseAbsolutePointerDevice->UsbIo;
 
   if (Result != EFI_USB_NOERROR) {
     //
@@ -784,7 +786,7 @@ OnMouseInterruptComplete (
 
     //
     // Delete & Submit this interrupt again
-    // Handler of DelayedRecoveryEvent triggered by timer will re-submit the interrupt. 
+    // Handler of DelayedRecoveryEvent triggered by timer will re-submit the interrupt.
     //
     UsbIo->UsbAsyncInterruptTransfer (
              UsbIo,
@@ -809,11 +811,9 @@ OnMouseInterruptComplete (
   //
   // If no error and no data, just return EFI_SUCCESS.
   //
-  if (DataLength == 0 || Data == NULL) {
+  if ((DataLength == 0) || (Data == NULL)) {
     return EFI_SUCCESS;
   }
-
-  UsbMouseAbsolutePointerDevice->StateChanged = TRUE;
 
   //
   // Check mouse Data
@@ -827,26 +827,38 @@ OnMouseInterruptComplete (
   // 2       0 to 7  Y displacement
   // 3 to n  0 to 7  Device specific (optional)
   //
-  UsbMouseAbsolutePointerDevice->State.ActiveButtons = *(UINT8 *) Data & (BIT0 | BIT1 | BIT2);
+  if (DataLength < 3) {
+    return EFI_DEVICE_ERROR;
+  }
+
+  UsbMouseAbsolutePointerDevice->StateChanged = TRUE;
+
+  UsbMouseAbsolutePointerDevice->State.ActiveButtons = *(UINT8 *)Data & (BIT0 | BIT1 | BIT2);
 
   UsbMouseAbsolutePointerDevice->State.CurrentX =
     MIN (
-      MAX ((INT64) UsbMouseAbsolutePointerDevice->State.CurrentX + *((INT8 *) Data + 1),
-           (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinX),
-      (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxX
+      MAX (
+        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentX + *((INT8 *)Data + 1),
+        (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinX
+        ),
+      (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxX
       );
   UsbMouseAbsolutePointerDevice->State.CurrentY =
     MIN (
-      MAX ((INT64) UsbMouseAbsolutePointerDevice->State.CurrentY + *((INT8 *) Data + 2),
-           (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinY),
-      (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxY
+      MAX (
+        (INT64)UsbMouseAbsolutePointerDevice->State.CurrentY + *((INT8 *)Data + 2),
+        (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinY
+        ),
+      (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxY
       );
   if (DataLength > 3) {
     UsbMouseAbsolutePointerDevice->State.CurrentZ =
       MIN (
-        MAX ((INT64) UsbMouseAbsolutePointerDevice->State.CurrentZ + *((INT8 *) Data + 1),
-             (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinZ),
-        (INT64) UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxZ
+        MAX (
+          (INT64)UsbMouseAbsolutePointerDevice->State.CurrentZ + *((INT8 *)Data + 3),
+          (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMinZ
+          ),
+        (INT64)UsbMouseAbsolutePointerDevice->Mode.AbsoluteMaxZ
         );
   }
 
@@ -856,15 +868,15 @@ OnMouseInterruptComplete (
 /**
   Retrieves the current state of a pointer device.
 
-  @param  This                  A pointer to the EFI_ABSOLUTE_POINTER_PROTOCOL instance.                                   
+  @param  This                  A pointer to the EFI_ABSOLUTE_POINTER_PROTOCOL instance.
   @param  MouseState            A pointer to the state information on the pointer device.
 
   @retval EFI_SUCCESS           The state of the pointer device was returned in State.
   @retval EFI_NOT_READY         The state of the pointer device has not changed since the last call to
-                                GetState().                                                           
+                                GetState().
   @retval EFI_DEVICE_ERROR      A device error occurred while attempting to retrieve the pointer device's
-                                current state.                                                           
-  @retval EFI_INVALID_PARAMETER State is NULL.                                                           
+                                current state.
+  @retval EFI_INVALID_PARAMETER State is NULL.
 
 **/
 EFI_STATUS
@@ -874,7 +886,7 @@ GetMouseAbsolutePointerState (
   OUT  EFI_ABSOLUTE_POINTER_STATE     *State
   )
 {
-  USB_MOUSE_ABSOLUTE_POINTER_DEV *MouseAbsolutePointerDev;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *MouseAbsolutePointerDev;
 
   if (State == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -901,7 +913,6 @@ GetMouseAbsolutePointerState (
   return EFI_SUCCESS;
 }
 
-
 /**
   Resets the pointer device hardware.
 
@@ -920,9 +931,9 @@ UsbMouseAbsolutePointerReset (
   IN BOOLEAN                        ExtendedVerification
   )
 {
-  USB_MOUSE_ABSOLUTE_POINTER_DEV       *UsbMouseAbsolutePointerDevice;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDevice;
 
-  UsbMouseAbsolutePointerDevice  = USB_MOUSE_ABSOLUTE_POINTER_DEV_FROM_MOUSE_PROTOCOL (This);
+  UsbMouseAbsolutePointerDevice = USB_MOUSE_ABSOLUTE_POINTER_DEV_FROM_MOUSE_PROTOCOL (This);
 
   REPORT_STATUS_CODE_WITH_DEVICE_PATH (
     EFI_PROGRESS_CODE,
@@ -961,13 +972,13 @@ UsbMouseAbsolutePointerReset (
 VOID
 EFIAPI
 UsbMouseAbsolutePointerWaitForInput (
-  IN  EFI_EVENT               Event,
-  IN  VOID                    *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
-  USB_MOUSE_ABSOLUTE_POINTER_DEV *UsbMouseAbsolutePointerDev;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDev;
 
-  UsbMouseAbsolutePointerDev = (USB_MOUSE_ABSOLUTE_POINTER_DEV *) Context;
+  UsbMouseAbsolutePointerDev = (USB_MOUSE_ABSOLUTE_POINTER_DEV *)Context;
 
   //
   // If there's input from mouse, signal the event.
@@ -993,16 +1004,16 @@ UsbMouseAbsolutePointerWaitForInput (
 VOID
 EFIAPI
 USBMouseRecoveryHandler (
-  IN    EFI_EVENT    Event,
-  IN    VOID         *Context
+  IN    EFI_EVENT  Event,
+  IN    VOID       *Context
   )
 {
-  USB_MOUSE_ABSOLUTE_POINTER_DEV       *UsbMouseAbsolutePointerDev;
-  EFI_USB_IO_PROTOCOL                  *UsbIo;
+  USB_MOUSE_ABSOLUTE_POINTER_DEV  *UsbMouseAbsolutePointerDev;
+  EFI_USB_IO_PROTOCOL             *UsbIo;
 
-  UsbMouseAbsolutePointerDev = (USB_MOUSE_ABSOLUTE_POINTER_DEV *) Context;
+  UsbMouseAbsolutePointerDev = (USB_MOUSE_ABSOLUTE_POINTER_DEV *)Context;
 
-  UsbIo       = UsbMouseAbsolutePointerDev->UsbIo;
+  UsbIo = UsbMouseAbsolutePointerDev->UsbIo;
 
   //
   // Re-submit Asynchronous Interrupt Transfer for recovery.

@@ -1,24 +1,16 @@
 /** @file
   Function prototype for USB Keyboard Driver.
 
-Copyright (c) 2004 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_KEYBOARD_H_
-#define _EFI_KEYBOARD_H_
-
+#pragma once
 
 #include "EfiKey.h"
 
-#define USB_KEYBOARD_KEY_COUNT            105
+#define USB_KEYBOARD_KEY_COUNT  105
 
 #define USB_KEYBOARD_LANGUAGE_STR_LEN     5         // RFC4646 Language Code: "en-US"
 #define USB_KEYBOARD_DESCRIPTION_STR_LEN  (16 + 1)  // Description: "English Keyboard"
@@ -28,28 +20,29 @@ typedef struct {
   //
   // This 4-bytes total array length is required by PreparePackageList()
   //
-  UINT32                 Length;
+  UINT32                    Length;
 
   //
   // Keyboard Layout package definition
   //
-  EFI_HII_PACKAGE_HEADER PackageHeader;
-  UINT16                 LayoutCount;
+  EFI_HII_PACKAGE_HEADER    PackageHeader;
+  UINT16                    LayoutCount;
 
   //
   // EFI_HII_KEYBOARD_LAYOUT
   //
-  UINT16                 LayoutLength;
-  EFI_GUID               Guid;
-  UINT32                 LayoutDescriptorStringOffset;
-  UINT8                  DescriptorCount;
-  EFI_KEY_DESCRIPTOR     KeyDescriptor[USB_KEYBOARD_KEY_COUNT];
-  UINT16                 DescriptionCount;
-  CHAR16                 Language[USB_KEYBOARD_LANGUAGE_STR_LEN];
-  CHAR16                 Space;
-  CHAR16                 DescriptionString[USB_KEYBOARD_DESCRIPTION_STR_LEN];
+  UINT16                    LayoutLength;
+  EFI_GUID                  Guid;
+  UINT32                    LayoutDescriptorStringOffset;
+  UINT8                     DescriptorCount;
+  EFI_KEY_DESCRIPTOR        KeyDescriptor[USB_KEYBOARD_KEY_COUNT];
+  UINT16                    DescriptionCount;
+  CHAR16                    Language[USB_KEYBOARD_LANGUAGE_STR_LEN];
+  CHAR16                    Space;
+  CHAR16                    DescriptionString[USB_KEYBOARD_DESCRIPTION_STR_LEN];
 } USB_KEYBOARD_LAYOUT_PACK_BIN;
 #pragma pack()
+
 /**
   Uses USB I/O to check whether the device is a USB keyboard device.
 
@@ -61,7 +54,7 @@ typedef struct {
 **/
 BOOLEAN
 IsUSBKeyboard (
-  IN  EFI_USB_IO_PROTOCOL       *UsbIo
+  IN  EFI_USB_IO_PROTOCOL  *UsbIo
   );
 
 /**
@@ -75,7 +68,7 @@ IsUSBKeyboard (
 **/
 EFI_STATUS
 InitUSBKeyboard (
-  IN OUT USB_KB_DEV   *UsbKeyboardDevice
+  IN OUT USB_KB_DEV  *UsbKeyboardDevice
   );
 
 /**
@@ -95,7 +88,7 @@ InitUSBKeyboard (
 **/
 EFI_STATUS
 InitKeyboardLayout (
-  OUT USB_KB_DEV   *UsbKeyboardDevice
+  OUT USB_KB_DEV  *UsbKeyboardDevice
   );
 
 /**
@@ -106,7 +99,7 @@ InitKeyboardLayout (
 **/
 VOID
 ReleaseKeyboardLayoutResources (
-  IN OUT USB_KB_DEV              *UsbKeyboardDevice
+  IN OUT USB_KB_DEV  *UsbKeyboardDevice
   );
 
 /**
@@ -114,7 +107,7 @@ ReleaseKeyboardLayoutResources (
 
   This function is the handler function for USB keyboard's asynchronous interrupt transfer
   to manage the keyboard. It parses the USB keyboard input report, and inserts data to
-  keyboard buffer according to state of modifer keys and normal keys. Timer for repeat key
+  keyboard buffer according to state of modifier keys and normal keys. Timer for repeat key
   is also set accordingly.
 
   @param  Data             A pointer to a buffer that is filled with key data which is
@@ -130,10 +123,10 @@ ReleaseKeyboardLayoutResources (
 EFI_STATUS
 EFIAPI
 KeyboardHandler (
-  IN  VOID          *Data,
-  IN  UINTN         DataLength,
-  IN  VOID          *Context,
-  IN  UINT32        Result
+  IN  VOID    *Data,
+  IN  UINTN   DataLength,
+  IN  VOID    *Context,
+  IN  UINT32  Result
   );
 
 /**
@@ -152,8 +145,8 @@ KeyboardHandler (
 VOID
 EFIAPI
 USBKeyboardRecoveryHandler (
-  IN    EFI_EVENT    Event,
-  IN    VOID         *Context
+  IN    EFI_EVENT  Event,
+  IN    VOID       *Context
   );
 
 /**
@@ -193,11 +186,10 @@ USBParseKey (
 **/
 EFI_STATUS
 UsbKeyCodeToEfiInputKey (
-  IN  USB_KB_DEV      *UsbKeyboardDevice,
-  IN  UINT8           KeyCode,
-  OUT EFI_KEY_DATA    *KeyData
+  IN  USB_KB_DEV    *UsbKeyboardDevice,
+  IN  UINT8         KeyCode,
+  OUT EFI_KEY_DATA  *KeyData
   );
-
 
 /**
   Create the queue.
@@ -208,8 +200,8 @@ UsbKeyCodeToEfiInputKey (
 **/
 VOID
 InitQueue (
-  IN OUT  USB_SIMPLE_QUEUE   *Queue,
-  IN      UINTN              ItemSize
+  IN OUT  USB_SIMPLE_QUEUE  *Queue,
+  IN      UINTN             ItemSize
   );
 
 /**
@@ -219,9 +211,8 @@ InitQueue (
 **/
 VOID
 DestroyQueue (
-  IN OUT USB_SIMPLE_QUEUE   *Queue
+  IN OUT USB_SIMPLE_QUEUE  *Queue
   );
-
 
 /**
   Check whether the queue is empty.
@@ -234,9 +225,8 @@ DestroyQueue (
 **/
 BOOLEAN
 IsQueueEmpty (
-  IN  USB_SIMPLE_QUEUE   *Queue
+  IN  USB_SIMPLE_QUEUE  *Queue
   );
-
 
 /**
   Check whether the queue is full.
@@ -249,9 +239,8 @@ IsQueueEmpty (
 **/
 BOOLEAN
 IsQueueFull (
-  IN  USB_SIMPLE_QUEUE   *Queue
+  IN  USB_SIMPLE_QUEUE  *Queue
   );
-
 
 /**
   Enqueue the item to the queue.
@@ -262,11 +251,10 @@ IsQueueFull (
 **/
 VOID
 Enqueue (
-  IN OUT  USB_SIMPLE_QUEUE *Queue,
-  IN      VOID             *Item,
-  IN      UINTN            ItemSize
+  IN OUT  USB_SIMPLE_QUEUE  *Queue,
+  IN      VOID              *Item,
+  IN      UINTN             ItemSize
   );
-
 
 /**
   Dequeue a item from the queue.
@@ -281,9 +269,9 @@ Enqueue (
 **/
 EFI_STATUS
 Dequeue (
-  IN OUT  USB_SIMPLE_QUEUE *Queue,
-     OUT  VOID             *Item,
-  IN      UINTN            ItemSize
+  IN OUT  USB_SIMPLE_QUEUE  *Queue,
+  OUT  VOID                 *Item,
+  IN      UINTN             ItemSize
   );
 
 /**
@@ -302,8 +290,8 @@ Dequeue (
 VOID
 EFIAPI
 USBKeyboardRepeatHandler (
-  IN    EFI_EVENT    Event,
-  IN    VOID         *Context
+  IN    EFI_EVENT  Event,
+  IN    VOID       *Context
   );
 
 /**
@@ -314,7 +302,17 @@ USBKeyboardRepeatHandler (
 **/
 VOID
 SetKeyLED (
-  IN  USB_KB_DEV    *UsbKeyboardDevice
+  IN  USB_KB_DEV  *UsbKeyboardDevice
   );
 
-#endif
+/**
+  Initialize the key state.
+
+  @param  UsbKeyboardDevice     The USB_KB_DEV instance.
+  @param  KeyState              A pointer to receive the key state information.
+**/
+VOID
+InitializeKeyState (
+  IN  USB_KB_DEV     *UsbKeyboardDevice,
+  OUT EFI_KEY_STATE  *KeyState
+  );

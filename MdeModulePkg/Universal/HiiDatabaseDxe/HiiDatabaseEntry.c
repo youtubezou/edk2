@@ -2,35 +2,28 @@
 This file contains the entry code to the HII database, which is defined by
 UEFI 2.1 specification.
 
-Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include "HiiDatabase.h"
 
 //
 // Global variables
 //
-EFI_EVENT gHiiKeyboardLayoutChanged;
-BOOLEAN   gExportAfterReadyToBoot = FALSE;
+EFI_EVENT  gHiiKeyboardLayoutChanged;
+BOOLEAN    gExportAfterReadyToBoot = FALSE;
 
-HII_DATABASE_PRIVATE_DATA mPrivate = {
+HII_DATABASE_PRIVATE_DATA  mPrivate = {
   HII_DATABASE_PRIVATE_DATA_SIGNATURE,
   {
-    (LIST_ENTRY *) NULL,
-    (LIST_ENTRY *) NULL
+    (LIST_ENTRY *)NULL,
+    (LIST_ENTRY *)NULL
   },
   {
-    (LIST_ENTRY *) NULL,
-    (LIST_ENTRY *) NULL
+    (LIST_ENTRY *)NULL,
+    (LIST_ENTRY *)NULL
   },
   {
     HiiStringToImage,
@@ -86,20 +79,20 @@ HII_DATABASE_PRIVATE_DATA mPrivate = {
     EfiConfigKeywordHandlerGetData
   },
   {
-    (LIST_ENTRY *) NULL,
-    (LIST_ENTRY *) NULL
+    (LIST_ENTRY *)NULL,
+    (LIST_ENTRY *)NULL
   },
   0,
   {
-    (LIST_ENTRY *) NULL,
-    (LIST_ENTRY *) NULL
+    (LIST_ENTRY *)NULL,
+    (LIST_ENTRY *)NULL
   },
-  EFI_TEXT_ATTR (EFI_LIGHTGRAY, EFI_BLACK),
+  EFI_TEXT_ATTR (EFI_LIGHTGRAY,       EFI_BLACK),
   {
     0x00000000,
     0x0000,
     0x0000,
-    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+    { 0x00,                           0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00 }
   },
   NULL
 };
@@ -117,8 +110,8 @@ HII_DATABASE_PRIVATE_DATA mPrivate = {
 VOID
 EFIAPI
 KeyboardLayoutChangeNullEvent (
-  IN EFI_EVENT                Event,
-  IN VOID                     *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   return;
@@ -136,15 +129,16 @@ KeyboardLayoutChangeNullEvent (
 VOID
 EFIAPI
 OnReadyToBoot (
-  IN      EFI_EVENT                         Event,
-  IN      VOID                              *Context
+  IN      EFI_EVENT  Event,
+  IN      VOID       *Context
   )
 {
   //
   // When ready to boot, we begin to export the HiiDatabase date.
   // And hook all the possible HiiDatabase change actions to export data.
   //
-  HiiGetConfigurationSetting(&mPrivate.HiiDatabase);
+  HiiGetDatabaseInfo (&mPrivate.HiiDatabase);
+  HiiGetConfigRespInfo (&mPrivate.HiiDatabase);
   gExportAfterReadyToBoot = TRUE;
 
   gBS->CloseEvent (Event);
@@ -169,13 +163,13 @@ OnReadyToBoot (
 EFI_STATUS
 EFIAPI
 InitializeHiiDatabase (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                             Status;
-  EFI_HANDLE                             Handle;
-  EFI_EVENT                              ReadyToBootEvent;
+  EFI_STATUS  Status;
+  EFI_HANDLE  Handle;
+  EFI_EVENT   ReadyToBootEvent;
 
   //
   // There will be only one HII Database in the system
@@ -188,7 +182,7 @@ InitializeHiiDatabase (
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiHiiStringProtocolGuid);
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiHiiConfigRoutingProtocolGuid);
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiConfigKeywordHandlerProtocolGuid);
-  
+
   InitializeListHead (&mPrivate.DatabaseList);
   InitializeListHead (&mPrivate.DatabaseNotifyList);
   InitializeListHead (&mPrivate.HiiHandleList);
@@ -232,14 +226,15 @@ InitializeHiiDatabase (
   if (FeaturePcdGet (PcdSupportHiiImageProtocol)) {
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &Handle,
-                    &gEfiHiiImageProtocolGuid, &mPrivate.HiiImage,
-                    &gEfiHiiImageExProtocolGuid, &mPrivate.HiiImageEx,
+                    &gEfiHiiImageProtocolGuid,
+                    &mPrivate.HiiImage,
+                    &gEfiHiiImageExProtocolGuid,
+                    &mPrivate.HiiImageEx,
                     NULL
                     );
-
   }
 
-  if (FeaturePcdGet(PcdHiiOsRuntimeSupport)) {
+  if (FeaturePcdGet (PcdHiiOsRuntimeSupport)) {
     Status = EfiCreateEventReadyToBootEx (
                TPL_CALLBACK,
                OnReadyToBoot,
@@ -253,4 +248,3 @@ InitializeHiiDatabase (
 
   return Status;
 }
-

@@ -1,19 +1,12 @@
 /** @file
 DnsDxe support functions implementation.
-   
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_DNS_IMPL_H_
-#define __EFI_DNS_IMPL_H_
+#pragma once
 
 #include <Uefi.h>
 
@@ -76,108 +69,108 @@ extern EFI_DNS6_PROTOCOL             mDns6Protocol;
 //
 // DNS related
 //
-#define DNS_SERVER_PORT   53
+#define DNS_SERVER_PORT  53
 
-#define DNS_PROTOCOL_UDP   EFI_IP_PROTO_UDP
-#define DNS_PROTOCOL_TCP   EFI_IP_PROTO_TCP
+#define DNS_PROTOCOL_UDP  EFI_IP_PROTO_UDP
+#define DNS_PROTOCOL_TCP  EFI_IP_PROTO_TCP
 
-#define DNS_STATE_UNCONFIGED     0
-#define DNS_STATE_CONFIGED       1
-#define DNS_STATE_DESTROY        2
+#define DNS_STATE_UNCONFIGED  0
+#define DNS_STATE_CONFIGED    1
+#define DNS_STATE_DESTROY     2
 
-#define DNS_DEFAULT_TIMEOUT      2
-#define DNS_DEFAULT_RETRY        3
+#define DNS_DEFAULT_TIMEOUT  2
 
-#define DNS_TIME_TO_GETMAP       5
+#define DNS_TIME_TO_GETMAP  5
 
 #pragma pack(1)
 
-typedef union _DNS_FLAGS  DNS_FLAGS;
+typedef union _DNS_FLAGS DNS_FLAGS;
 
 typedef struct {
-  LIST_ENTRY             AllCacheLink;
-  EFI_DNS4_CACHE_ENTRY   DnsCache;     
+  LIST_ENTRY              AllCacheLink;
+  EFI_DNS4_CACHE_ENTRY    DnsCache;
 } DNS4_CACHE;
 
 typedef struct {
-  LIST_ENTRY             AllCacheLink;
-  EFI_DNS6_CACHE_ENTRY   DnsCache;     
+  LIST_ENTRY              AllCacheLink;
+  EFI_DNS6_CACHE_ENTRY    DnsCache;
 } DNS6_CACHE;
 
 typedef struct {
-  LIST_ENTRY             AllServerLink;
-  EFI_IPv4_ADDRESS       Dns4ServerIp;     
+  LIST_ENTRY          AllServerLink;
+  EFI_IPv4_ADDRESS    Dns4ServerIp;
 } DNS4_SERVER_IP;
 
 typedef struct {
-  LIST_ENTRY             AllServerLink;
-  EFI_IPv6_ADDRESS       Dns6ServerIp;       
+  LIST_ENTRY          AllServerLink;
+  EFI_IPv6_ADDRESS    Dns6ServerIp;
 } DNS6_SERVER_IP;
 
 typedef struct {
-  UINT32                     PacketToLive;
-  CHAR16                     *QueryHostName;
-  EFI_IPv4_ADDRESS           QueryIpAddress;
-  BOOLEAN                    GeneralLookUp;
-  EFI_DNS4_COMPLETION_TOKEN  *Token;
+  UINT32                       RetryCounting;
+  UINT32                       PacketToLive;
+  CHAR16                       *QueryHostName;
+  EFI_IPv4_ADDRESS             QueryIpAddress;
+  BOOLEAN                      GeneralLookUp;
+  EFI_DNS4_COMPLETION_TOKEN    *Token;
 } DNS4_TOKEN_ENTRY;
 
 typedef struct {
-  UINT32                     PacketToLive;
-  CHAR16                     *QueryHostName;
-  EFI_IPv6_ADDRESS           QueryIpAddress;
-  BOOLEAN                    GeneralLookUp;
-  EFI_DNS6_COMPLETION_TOKEN  *Token;
+  UINT32                       RetryCounting;
+  UINT32                       PacketToLive;
+  CHAR16                       *QueryHostName;
+  EFI_IPv6_ADDRESS             QueryIpAddress;
+  BOOLEAN                      GeneralLookUp;
+  EFI_DNS6_COMPLETION_TOKEN    *Token;
 } DNS6_TOKEN_ENTRY;
 
-union _DNS_FLAGS{
+union _DNS_FLAGS {
   struct {
-    UINT16     RCode:4;
-    UINT16     Zero:3;
-    UINT16     RA:1;
-    UINT16     RD:1;
-    UINT16     TC:1;
-    UINT16     AA:1;
-    UINT16     OpCode:4;
-    UINT16     QR:1;
+    UINT16    RCode  : 4;
+    UINT16    Zero   : 3;
+    UINT16    RA     : 1;
+    UINT16    RD     : 1;
+    UINT16    TC     : 1;
+    UINT16    AA     : 1;
+    UINT16    OpCode : 4;
+    UINT16    QR     : 1;
   } Bits;
-  UINT16  Uint16;
+  UINT16    Uint16;
 };
 
 #define DNS_FLAGS_QR_QUERY     0
 #define DNS_FLAGS_QR_RESPONSE  1
 
-#define DNS_FLAGS_OPCODE_STANDARD     0
-#define DNS_FLAGS_OPCODE_INVERSE      1
-#define DNS_FLAGS_OPCODE_SERVER_STATE 2
+#define DNS_FLAGS_OPCODE_STANDARD      0
+#define DNS_FLAGS_OPCODE_INVERSE       1
+#define DNS_FLAGS_OPCODE_SERVER_STATE  2
 
 #define DNS_FLAGS_RCODE_NO_ERROR    0
 #define DNS_FLAGS_RCODE_NAME_ERROR  3
 
 typedef struct {
-  UINT16      Identification;
-  DNS_FLAGS   Flags;
-  UINT16      QuestionsNum;
-  UINT16      AnswersNum;
-  UINT16      AuthorityNum;
-  UINT16      AditionalNum;
+  UINT16       Identification;
+  DNS_FLAGS    Flags;
+  UINT16       QuestionsNum;
+  UINT16       AnswersNum;
+  UINT16       AuthorityNum;
+  UINT16       AditionalNum;
 } DNS_HEADER;
 
 typedef struct {
-  UINT16      Type;
-  UINT16      Class;
+  UINT16    Type;
+  UINT16    Class;
 } DNS_QUERY_SECTION;
 
 typedef struct {
-  UINT16      Type;
-  UINT16      Class;
-  UINT32      Ttl;
-  UINT16      DataLength;
+  UINT16    Type;
+  UINT16    Class;
+  UINT32    Ttl;
+  UINT16    DataLength;
 } DNS_ANSWER_SECTION;
 
 #define DNS4_DOMAIN  L"in-addr.arpa"
 #define DNS6_DOMAIN  L"IP6.ARPA"
-
 
 #pragma pack()
 
@@ -187,14 +180,14 @@ typedef struct {
   @param[in] TokenMap          All DNSv4 Token entrys.
   @param[in] TokenEntry        TokenEntry need to be removed.
 
-  @retval EFI_SUCCESS          Remove TokenEntry from TokenMap sucessfully.
+  @retval EFI_SUCCESS          Remove TokenEntry from TokenMap successfully.
   @retval EFI_NOT_FOUND        TokenEntry is not found in TokenMap.
 
 **/
 EFI_STATUS
 Dns4RemoveTokenEntry (
-  IN NET_MAP                    *TokenMap,
-  IN DNS4_TOKEN_ENTRY           *TokenEntry
+  IN NET_MAP           *TokenMap,
+  IN DNS4_TOKEN_ENTRY  *TokenEntry
   );
 
 /**
@@ -203,18 +196,18 @@ Dns4RemoveTokenEntry (
   @param[in] TokenMap           All DNSv6 Token entrys.
   @param[in] TokenEntry         TokenEntry need to be removed.
 
-  @retval EFI_SUCCESS           Remove TokenEntry from TokenMap sucessfully.
+  @retval EFI_SUCCESS           Remove TokenEntry from TokenMap successfully.
   @retval EFI_NOT_FOUND         TokenEntry is not found in TokenMap.
-  
+
 **/
 EFI_STATUS
 Dns6RemoveTokenEntry (
-  IN NET_MAP                    *TokenMap,
-  IN DNS6_TOKEN_ENTRY           *TokenEntry
+  IN NET_MAP           *TokenMap,
+  IN DNS6_TOKEN_ENTRY  *TokenEntry
   );
 
 /**
-  This function cancle the token specified by Arg in the Map.
+  This function cancel the token specified by Arg in the Map.
 
   @param[in]  Map             Pointer to the NET_MAP.
   @param[in]  Item            Pointer to the NET_MAP_ITEM.
@@ -238,7 +231,7 @@ Dns4CancelTokens (
   );
 
 /**
-  This function cancle the token specified by Arg in the Map.
+  This function cancel the token specified by Arg in the Map.
 
   @param[in]  Map             Pointer to the NET_MAP.
   @param[in]  Item            Pointer to the NET_MAP_ITEM.
@@ -268,16 +261,16 @@ Dns6CancelTokens (
   @param[in]  Token               Pointer to the token to be get.
   @param[out] TokenEntry          Pointer to TokenEntry corresponding Token.
 
-  @retval EFI_SUCCESS             Get the TokenEntry from the TokensMap sucessfully.
+  @retval EFI_SUCCESS             Get the TokenEntry from the TokensMap successfully.
   @retval EFI_NOT_FOUND           TokenEntry is not found in TokenMap.
 
 **/
 EFI_STATUS
 EFIAPI
 GetDns4TokenEntry (
-  IN     NET_MAP                   *TokensMap,
-  IN     EFI_DNS4_COMPLETION_TOKEN *Token, 
-     OUT DNS4_TOKEN_ENTRY          **TokenEntry
+  IN     NET_MAP                    *TokensMap,
+  IN     EFI_DNS4_COMPLETION_TOKEN  *Token,
+  OUT DNS4_TOKEN_ENTRY              **TokenEntry
   );
 
 /**
@@ -287,16 +280,16 @@ GetDns4TokenEntry (
   @param[in]  Token               Pointer to the token to be get.
   @param[out] TokenEntry          Pointer to TokenEntry corresponding Token.
 
-  @retval EFI_SUCCESS             Get the TokenEntry from the TokensMap sucessfully.
+  @retval EFI_SUCCESS             Get the TokenEntry from the TokensMap successfully.
   @retval EFI_NOT_FOUND           TokenEntry is not found in TokenMap.
 
 **/
 EFI_STATUS
 EFIAPI
 GetDns6TokenEntry (
-  IN     NET_MAP                   *TokensMap,
-  IN     EFI_DNS6_COMPLETION_TOKEN *Token, 
-     OUT DNS6_TOKEN_ENTRY          **TokenEntry
+  IN     NET_MAP                    *TokensMap,
+  IN     EFI_DNS6_COMPLETION_TOKEN  *Token,
+  OUT DNS6_TOKEN_ENTRY              **TokenEntry
   );
 
 /**
@@ -400,14 +393,14 @@ Dns6CopyConfigure (
 VOID
 EFIAPI
 DnsDummyExtFree (
-  IN VOID                   *Arg
+  IN VOID  *Arg
   );
 
 /**
   Poll the UDP to get the IP4 default address, which may be retrieved
-  by DHCP. 
-  
-  The default time out value is 5 seconds. If IP has retrieved the default address, 
+  by DHCP.
+
+  The default time out value is 5 seconds. If IP has retrieved the default address,
   the UDP is reconfigured.
 
   @param  Instance               The DNS instance
@@ -415,14 +408,14 @@ DnsDummyExtFree (
   @param  UdpCfgData             The UDP configure data to reconfigure the UDP_IO
 
   @retval TRUE                   The default address is retrieved and UDP is reconfigured.
-  @retval FALSE                  Some error occured.
+  @retval FALSE                  Some error occurred.
 
 **/
 BOOLEAN
 Dns4GetMapping (
-  IN DNS_INSTANCE           *Instance,
-  IN UDP_IO                 *UdpIo,
-  IN EFI_UDP4_CONFIG_DATA   *UdpCfgData
+  IN DNS_INSTANCE          *Instance,
+  IN UDP_IO                *UdpIo,
+  IN EFI_UDP4_CONFIG_DATA  *UdpCfgData
   );
 
 /**
@@ -434,35 +427,35 @@ Dns4GetMapping (
   @param  UdpCfgData             The UDP configure data to reconfigure the UDP_IO
 
   @retval TRUE                   Configure the Udp6 instance successfully.
-  @retval FALSE                  Some error occured.
+  @retval FALSE                  Some error occurred.
 
 **/
 BOOLEAN
 Dns6GetMapping (
-  IN DNS_INSTANCE           *Instance,
-  IN UDP_IO                 *UdpIo,
-  IN EFI_UDP6_CONFIG_DATA   *UdpCfgData
+  IN DNS_INSTANCE          *Instance,
+  IN UDP_IO                *UdpIo,
+  IN EFI_UDP6_CONFIG_DATA  *UdpCfgData
   );
 
 /**
   Configure the UDP.
-  
+
   @param  Instance               The DNS session
   @param  UdpIo                  The UDP_IO instance
-  
+
   @retval EFI_SUCCESS            The UDP is successfully configured for the
                                  session.
 
 **/
 EFI_STATUS
 Dns4ConfigUdp (
-  IN DNS_INSTANCE           *Instance,
-  IN UDP_IO                 *UdpIo
+  IN DNS_INSTANCE  *Instance,
+  IN UDP_IO        *UdpIo
   );
 
 /**
   Configure the UDP.
-  
+
   @param  Instance               The DNS session
   @param  UdpIo                  The UDP_IO instance
 
@@ -472,109 +465,109 @@ Dns4ConfigUdp (
 **/
 EFI_STATUS
 Dns6ConfigUdp (
-  IN DNS_INSTANCE           *Instance,
-  IN UDP_IO                 *UdpIo
+  IN DNS_INSTANCE  *Instance,
+  IN UDP_IO        *UdpIo
   );
 
 /**
   Update Dns4 cache to shared list of caches of all DNSv4 instances.
-  
+
   @param  Dns4CacheList      All Dns4 cache list.
-  @param  DeleteFlag         If FALSE, this function is to add one entry to the DNS Cache. 
-                             If TRUE, this function will delete matching DNS Cache entry. 
-  @param  Override           If TRUE, the matching DNS cache entry will be overwritten with the supplied parameter. 
+  @param  DeleteFlag         If FALSE, this function is to add one entry to the DNS Cache.
+                             If TRUE, this function will delete matching DNS Cache entry.
+  @param  Override           If TRUE, the matching DNS cache entry will be overwritten with the supplied parameter.
                              If FALSE, EFI_ACCESS_DENIED will be returned if the entry to be added is already exists.
   @param  DnsCacheEntry      Entry Pointer to DNS Cache entry.
 
   @retval EFI_SUCCESS        Update Dns4 cache successfully.
-  @retval Others             Failed to update Dns4 cache.   
-  
+  @retval Others             Failed to update Dns4 cache.
+
 **/
 EFI_STATUS
 EFIAPI
 UpdateDns4Cache (
-  IN LIST_ENTRY             *Dns4CacheList,
-  IN BOOLEAN                DeleteFlag,
-  IN BOOLEAN                Override,
-  IN EFI_DNS4_CACHE_ENTRY   DnsCacheEntry
+  IN LIST_ENTRY            *Dns4CacheList,
+  IN BOOLEAN               DeleteFlag,
+  IN BOOLEAN               Override,
+  IN EFI_DNS4_CACHE_ENTRY  DnsCacheEntry
   );
 
 /**
-  Update Dns6 cache to shared list of caches of all DNSv6 instances. 
+  Update Dns6 cache to shared list of caches of all DNSv6 instances.
 
   @param  Dns6CacheList      All Dns6 cache list.
-  @param  DeleteFlag         If FALSE, this function is to add one entry to the DNS Cache. 
-                             If TRUE, this function will delete matching DNS Cache entry. 
-  @param  Override           If TRUE, the matching DNS cache entry will be overwritten with the supplied parameter. 
+  @param  DeleteFlag         If FALSE, this function is to add one entry to the DNS Cache.
+                             If TRUE, this function will delete matching DNS Cache entry.
+  @param  Override           If TRUE, the matching DNS cache entry will be overwritten with the supplied parameter.
                              If FALSE, EFI_ACCESS_DENIED will be returned if the entry to be added is already exists.
   @param  DnsCacheEntry      Entry Pointer to DNS Cache entry.
-  
+
   @retval EFI_SUCCESS        Update Dns6 cache successfully.
   @retval Others             Failed to update Dns6 cache.
-**/ 
+**/
 EFI_STATUS
 EFIAPI
 UpdateDns6Cache (
-  IN LIST_ENTRY             *Dns6CacheList,
-  IN BOOLEAN                DeleteFlag,
-  IN BOOLEAN                Override,
-  IN EFI_DNS6_CACHE_ENTRY   DnsCacheEntry
+  IN LIST_ENTRY            *Dns6CacheList,
+  IN BOOLEAN               DeleteFlag,
+  IN BOOLEAN               Override,
+  IN EFI_DNS6_CACHE_ENTRY  DnsCacheEntry
   );
 
 /**
-  Add Dns4 ServerIp to common list of addresses of all configured DNSv4 server. 
+  Add Dns4 ServerIp to common list of addresses of all configured DNSv4 server.
 
-  @param  Dns4ServerList    Common list of addresses of all configured DNSv4 server.  
-  @param  ServerIp          DNS server Ip.  
+  @param  Dns4ServerList    Common list of addresses of all configured DNSv4 server.
+  @param  ServerIp          DNS server Ip.
 
   @retval EFI_SUCCESS       Add Dns4 ServerIp to common list successfully.
   @retval Others            Failed to add Dns4 ServerIp to common list.
-  
+
 **/
 EFI_STATUS
 EFIAPI
 AddDns4ServerIp (
-  IN LIST_ENTRY                *Dns4ServerList,
-  IN EFI_IPv4_ADDRESS           ServerIp
+  IN LIST_ENTRY        *Dns4ServerList,
+  IN EFI_IPv4_ADDRESS  ServerIp
   );
 
 /**
-  Add Dns6 ServerIp to common list of addresses of all configured DNSv6 server. 
+  Add Dns6 ServerIp to common list of addresses of all configured DNSv6 server.
 
-  @param  Dns6ServerList    Common list of addresses of all configured DNSv6 server.  
-  @param  ServerIp          DNS server Ip.  
+  @param  Dns6ServerList    Common list of addresses of all configured DNSv6 server.
+  @param  ServerIp          DNS server Ip.
 
   @retval EFI_SUCCESS       Add Dns6 ServerIp to common list successfully.
   @retval Others            Failed to add Dns6 ServerIp to common list.
-  
-**/ 
+
+**/
 EFI_STATUS
 EFIAPI
 AddDns6ServerIp (
-  IN LIST_ENTRY                *Dns6ServerList,
-  IN EFI_IPv6_ADDRESS           ServerIp
+  IN LIST_ENTRY        *Dns6ServerList,
+  IN EFI_IPv6_ADDRESS  ServerIp
   );
 
 /**
   Find out whether the response is valid or invalid.
 
-  @param  TokensMap       All DNS transmittal Tokens entry.  
-  @param  Identification  Identification for queried packet.  
+  @param  TokensMap       All DNS transmittal Tokens entry.
+  @param  Identification  Identification for queried packet.
   @param  Type            Type for queried packet.
   @param  Class           Class for queried packet.
   @param  Item            Return corresponding Token entry.
 
   @retval TRUE            The response is valid.
   @retval FALSE           The response is invalid.
-  
-**/ 
+
+**/
 BOOLEAN
 IsValidDnsResponse (
-  IN     NET_MAP      *TokensMap,
-  IN     UINT16       Identification,
-  IN     UINT16       Type,
-  IN     UINT16       Class,
-     OUT NET_MAP_ITEM **Item
+  IN     NET_MAP    *TokensMap,
+  IN     UINT16     Identification,
+  IN     UINT16     Type,
+  IN     UINT16     Class,
+  OUT NET_MAP_ITEM  **Item
   );
 
 /**
@@ -582,17 +575,19 @@ IsValidDnsResponse (
 
   @param  Instance              The DNS instance
   @param  RxString              Received buffer.
-  @param  Completed             Flag to indicate that Dns response is valid. 
-  
+  @param  Length                Received buffer length.
+  @param  Completed             Flag to indicate that Dns response is valid.
+
   @retval EFI_SUCCESS           Parse Dns Response successfully.
   @retval Others                Failed to parse Dns Response.
-  
-**/ 
+
+**/
 EFI_STATUS
 ParseDnsResponse (
-  IN OUT DNS_INSTANCE              *Instance,
-  IN     UINT8                     *RxString,
-     OUT BOOLEAN                   *Completed
+  IN OUT DNS_INSTANCE  *Instance,
+  IN     UINT8         *RxString,
+  IN     UINT32        Length,
+  OUT BOOLEAN          *Completed
   );
 
 /**
@@ -603,14 +598,14 @@ ParseDnsResponse (
   @param  IoStatus              The status of the UDP receive
   @param  Context               The opaque parameter to the function.
 
-**/  
+**/
 VOID
 EFIAPI
 DnsOnPacketReceived (
-  NET_BUF                   *Packet,
-  UDP_END_POINT             *EndPoint,
-  EFI_STATUS                IoStatus,
-  VOID                      *Context
+  NET_BUF        *Packet,
+  UDP_END_POINT  *EndPoint,
+  EFI_STATUS     IoStatus,
+  VOID           *Context
   );
 
 /**
@@ -625,10 +620,10 @@ DnsOnPacketReceived (
 VOID
 EFIAPI
 DnsOnPacketSent (
-  NET_BUF                   *Packet,
-  UDP_END_POINT             *EndPoint,
-  EFI_STATUS                IoStatus,
-  VOID                      *Context
+  NET_BUF        *Packet,
+  UDP_END_POINT  *EndPoint,
+  EFI_STATUS     IoStatus,
+  VOID           *Context
   );
 
 /**
@@ -643,17 +638,17 @@ DnsOnPacketSent (
 **/
 EFI_STATUS
 DoDnsQuery (
-  IN  DNS_INSTANCE              *Instance,
-  IN  NET_BUF                   *Packet
+  IN  DNS_INSTANCE  *Instance,
+  IN  NET_BUF       *Packet
   );
 
 /**
   Construct the Packet according query section.
 
   @param  Instance              The DNS instance
-  @param  QueryName             Queried Name  
-  @param  Type                  Queried Type 
-  @param  Class                 Queried Class 
+  @param  QueryName             Queried Name
+  @param  Type                  Queried Type
+  @param  Class                 Queried Class
   @param  Packet                The packet for query
 
   @retval EFI_SUCCESS           The packet is constructed.
@@ -662,18 +657,18 @@ DoDnsQuery (
 **/
 EFI_STATUS
 ConstructDNSQuery (
-  IN  DNS_INSTANCE              *Instance,
-  IN  CHAR8                     *QueryName,
-  IN  UINT16                    Type,
-  IN  UINT16                    Class,
-  OUT NET_BUF                   **Packet
+  IN  DNS_INSTANCE  *Instance,
+  IN  CHAR8         *QueryName,
+  IN  UINT16        Type,
+  IN  UINT16        Class,
+  OUT NET_BUF       **Packet
   );
 
 /**
   Retransmit the packet.
 
   @param  Instance              The DNS instance
-  @param  Packet                Retransmit the packet 
+  @param  Packet                Retransmit the packet
 
   @retval EFI_SUCCESS           The packet is retransmitted.
   @retval Others                Failed to retransmit.
@@ -681,8 +676,8 @@ ConstructDNSQuery (
 **/
 EFI_STATUS
 DnsRetransmit (
-  IN DNS_INSTANCE        *Instance,
-  IN NET_BUF             *Packet
+  IN DNS_INSTANCE  *Instance,
+  IN NET_BUF       *Packet
   );
 
 /**
@@ -695,8 +690,8 @@ DnsRetransmit (
 VOID
 EFIAPI
 DnsOnTimerRetransmit (
-  IN EFI_EVENT              Event,
-  IN VOID                   *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
 
 /**
@@ -709,10 +704,9 @@ DnsOnTimerRetransmit (
 VOID
 EFIAPI
 DnsOnTimerUpdate (
-  IN EFI_EVENT              Event,
-  IN VOID                   *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
-
 
 /**
   Retrieve mode data of this DNS instance.
@@ -732,8 +726,8 @@ DnsOnTimerUpdate (
 EFI_STATUS
 EFIAPI
 Dns4GetModeData (
-  IN  EFI_DNS4_PROTOCOL          *This,
-  OUT EFI_DNS4_MODE_DATA         *DnsModeData
+  IN  EFI_DNS4_PROTOCOL   *This,
+  OUT EFI_DNS4_MODE_DATA  *DnsModeData
   );
 
 /**
@@ -746,8 +740,8 @@ Dns4GetModeData (
 
   @retval EFI_SUCCESS             The operation completed successfully.
   @retval EFI_UNSUPPORTED         The designated protocol is not supported.
-  @retval EFI_INVALID_PARAMTER    Thisis NULL.
-                                  The StationIp address provided in DnsConfigData is not a 
+  @retval EFI_INVALID_PARAMETER   This is NULL.
+                                  The StationIp address provided in DnsConfigData is not a
                                   valid unicast.
                                   DnsServerList is NULL while DnsServerListCount
                                   is not ZERO.
@@ -757,15 +751,15 @@ Dns4GetModeData (
                                   allocated.
   @retval EFI_DEVICE_ERROR        An unexpected system or network error occurred. The
                                   EFI DNSv4 Protocol instance is not configured.
-  @retval EFI_ALREADY_STARTED     Second call to Configure() with DnsConfigData. To 
-                                  reconfigure the instance the caller must call Configure() 
+  @retval EFI_ALREADY_STARTED     Second call to Configure() with DnsConfigData. To
+                                  reconfigure the instance the caller must call Configure()
                                   with NULL first to return driver to unconfigured state.
 **/
 EFI_STATUS
 EFIAPI
 Dns4Configure (
-  IN EFI_DNS4_PROTOCOL           *This,
-  IN EFI_DNS4_CONFIG_DATA        *DnsConfigData
+  IN EFI_DNS4_PROTOCOL     *This,
+  IN EFI_DNS4_CONFIG_DATA  *DnsConfigData
   );
 
 /**
@@ -792,14 +786,14 @@ EFI_STATUS
 EFIAPI
 Dns4HostNameToIp (
   IN  EFI_DNS4_PROTOCOL          *This,
-  IN  CHAR16                    *HostName,
+  IN  CHAR16                     *HostName,
   IN  EFI_DNS4_COMPLETION_TOKEN  *Token
   );
 
 /**
   IPv4 address to host name translation also known as Reverse DNS lookup.
 
-  The IpToHostName() function is used to translate the host address to host name. A type PTR 
+  The IpToHostName() function is used to translate the host address to host name. A type PTR
   query is used to get the primary name of the host. Support of this function is optional.
 
   @param[in]  This                Pointer to EFI_DNS4_PROTOCOL instance.
@@ -821,13 +815,13 @@ Dns4HostNameToIp (
 EFI_STATUS
 EFIAPI
 Dns4IpToHostName (
-  IN  EFI_DNS4_PROTOCOL             *This,
-  IN  EFI_IPv4_ADDRESS              IpAddress,
-  IN  EFI_DNS4_COMPLETION_TOKEN     *Token
+  IN  EFI_DNS4_PROTOCOL          *This,
+  IN  EFI_IPv4_ADDRESS           IpAddress,
+  IN  EFI_DNS4_COMPLETION_TOKEN  *Token
   );
 
 /**
-  Retrieve arbitrary information from the DNS server. 
+  Retrieve arbitrary information from the DNS server.
 
   This GeneralLookup() function retrieves arbitrary information from the DNS. The caller
   supplies a QNAME, QTYPE, and QCLASS, and all of the matching RRs are returned. All
@@ -856,11 +850,11 @@ Dns4IpToHostName (
 EFI_STATUS
 EFIAPI
 Dns4GeneralLookUp (
-  IN  EFI_DNS4_PROTOCOL                *This,
-  IN  CHAR8                            *QName,
-  IN  UINT16                           QType, 
-  IN  UINT16                           QClass,
-  IN  EFI_DNS4_COMPLETION_TOKEN        *Token
+  IN  EFI_DNS4_PROTOCOL          *This,
+  IN  CHAR8                      *QName,
+  IN  UINT16                     QType,
+  IN  UINT16                     QClass,
+  IN  EFI_DNS4_COMPLETION_TOKEN  *Token
   );
 
 /**
@@ -872,9 +866,9 @@ Dns4GeneralLookUp (
 
   @param[in]  This                Pointer to EFI_DNS4_PROTOCOL instance.
   @param[in]  DeleteFlag          If FALSE, this function is to add one entry to the
-                                  DNS Cahce. If TRUE, this function will delete
+                                  DNS Cache. If TRUE, this function will delete
                                   matching DNS Cache entry.
-  @param[in]  Override            If TRUE, the maching DNS cache entry will be
+  @param[in]  Override            If TRUE, the matching DNS cache entry will be
                                   overwritten with the supplied parameter. If FALSE,
                                   EFI_ACCESS_DENIED will be returned if the entry to
                                   be added is already existed.
@@ -892,10 +886,10 @@ Dns4GeneralLookUp (
 EFI_STATUS
 EFIAPI
 Dns4UpdateDnsCache (
-  IN EFI_DNS4_PROTOCOL      *This,
+  IN EFI_DNS4_PROTOCOL     *This,
   IN BOOLEAN               DeleteFlag,
   IN BOOLEAN               Override,
-  IN EFI_DNS4_CACHE_ENTRY   DnsCacheEntry
+  IN EFI_DNS4_CACHE_ENTRY  DnsCacheEntry
   );
 
 /**
@@ -922,7 +916,7 @@ Dns4UpdateDnsCache (
 EFI_STATUS
 EFIAPI
 Dns4Poll (
-  IN EFI_DNS4_PROTOCOL    *This
+  IN EFI_DNS4_PROTOCOL  *This
   );
 
 /**
@@ -957,14 +951,13 @@ Dns4Cancel (
   IN  EFI_DNS4_COMPLETION_TOKEN  *Token
   );
 
-
 /**
   Retrieve mode data of this DNS instance.
 
   This function is used to retrieve DNS mode data for this DNS instance.
 
   @param[in]   This                Pointer to EFI_DNS6_PROTOCOL instance.
-  @param[out]  DnsModeData         Pointer to the caller-allocated storage for the 
+  @param[out]  DnsModeData         Pointer to the caller-allocated storage for the
                                    EFI_DNS6_MODE_DATA data.
 
   @retval EFI_SUCCESS             The operation completed successfully.
@@ -977,8 +970,8 @@ Dns4Cancel (
 EFI_STATUS
 EFIAPI
 Dns6GetModeData (
-  IN  EFI_DNS6_PROTOCOL          *This,
-  OUT EFI_DNS6_MODE_DATA         *DnsModeData
+  IN  EFI_DNS6_PROTOCOL   *This,
+  OUT EFI_DNS6_MODE_DATA  *DnsModeData
   );
 
 /**
@@ -988,11 +981,11 @@ Dns6GetModeData (
   EFI DNSv6 Protocol driver instance. Reset the DNS instance if DnsConfigData is NULL.
 
   @param[in]  This                Pointer to EFI_DNS6_PROTOCOL instance.
-  @param[in]  DnsConfigData       Pointer to the configuration data structure. All associated 
+  @param[in]  DnsConfigData       Pointer to the configuration data structure. All associated
                                   storage to be allocated and released by caller.
 
   @retval EFI_SUCCESS             The operation completed successfully.
-  @retval EFI_INVALID_PARAMTER    This is NULL.
+  @retval EFI_INVALID_PARAMETER    This is NULL.
                                   The StationIp address provided in DnsConfigData is not zero and not a valid unicast.
                                   DnsServerList is NULL while DnsServerList Count is not ZERO.
                                   DnsServerList Count is ZERO while DnsServerList is not NULL.
@@ -1000,15 +993,15 @@ Dns6GetModeData (
   @retval EFI_DEVICE_ERROR        An unexpected system or network error occurred. The
                                   EFI DNSv6 Protocol instance is not configured.
   @retval EFI_UNSUPPORTED         The designated protocol is not supported.
-  @retval EFI_ALREADY_STARTED     Second call to Configure() with DnsConfigData. To 
-                                  reconfigure the instance the caller must call Configure() with 
+  @retval EFI_ALREADY_STARTED     Second call to Configure() with DnsConfigData. To
+                                  reconfigure the instance the caller must call Configure() with
                                   NULL first to return driver to unconfigured state.
 **/
 EFI_STATUS
 EFIAPI
 Dns6Configure (
-  IN EFI_DNS6_PROTOCOL           *This,
-  IN EFI_DNS6_CONFIG_DATA        *DnsConfigData
+  IN EFI_DNS6_PROTOCOL     *This,
+  IN EFI_DNS6_CONFIG_DATA  *DnsConfigData
   );
 
 /**
@@ -1067,9 +1060,9 @@ Dns6HostNameToIp (
 EFI_STATUS
 EFIAPI
 Dns6IpToHostName (
-  IN  EFI_DNS6_PROTOCOL             *This,
-  IN  EFI_IPv6_ADDRESS              IpAddress,
-  IN  EFI_DNS6_COMPLETION_TOKEN     *Token
+  IN  EFI_DNS6_PROTOCOL          *This,
+  IN  EFI_IPv6_ADDRESS           IpAddress,
+  IN  EFI_DNS6_COMPLETION_TOKEN  *Token
   );
 
 /**
@@ -1104,11 +1097,11 @@ Dns6IpToHostName (
 EFI_STATUS
 EFIAPI
 Dns6GeneralLookUp (
-  IN  EFI_DNS6_PROTOCOL                *This,
-  IN  CHAR8                            *QName,
-  IN  UINT16                           QType, 
-  IN  UINT16                           QClass,
-  IN  EFI_DNS6_COMPLETION_TOKEN        *Token
+  IN  EFI_DNS6_PROTOCOL          *This,
+  IN  CHAR8                      *QName,
+  IN  UINT16                     QType,
+  IN  UINT16                     QClass,
+  IN  EFI_DNS6_COMPLETION_TOKEN  *Token
   );
 
 /**
@@ -1120,9 +1113,9 @@ Dns6GeneralLookUp (
 
   @param[in]  This                Pointer to EFI_DNS6_PROTOCOL instance.
   @param[in]  DeleteFlag          If FALSE, this function is to add one entry to the
-                                  DNS Cahce. If TRUE, this function will delete
+                                  DNS Cache. If TRUE, this function will delete
                                   matching DNS Cache entry.
-  @param[in]  Override            If TRUE, the maching DNS cache entry will be
+  @param[in]  Override            If TRUE, the matching DNS cache entry will be
                                   overwritten with the supplied parameter. If FALSE,
                                   EFI_ACCESS_DENIED will be returned if the entry to
                                   be added is already existed.
@@ -1141,10 +1134,10 @@ Dns6GeneralLookUp (
 EFI_STATUS
 EFIAPI
 Dns6UpdateDnsCache (
-  IN EFI_DNS6_PROTOCOL      *This,
+  IN EFI_DNS6_PROTOCOL     *This,
   IN BOOLEAN               DeleteFlag,
   IN BOOLEAN               Override,
-  IN EFI_DNS6_CACHE_ENTRY   DnsCacheEntry
+  IN EFI_DNS6_CACHE_ENTRY  DnsCacheEntry
   );
 
 /**
@@ -1173,7 +1166,7 @@ Dns6UpdateDnsCache (
 EFI_STATUS
 EFIAPI
 Dns6Poll (
-  IN EFI_DNS6_PROTOCOL    *This
+  IN EFI_DNS6_PROTOCOL  *This
   );
 
 /**
@@ -1208,5 +1201,3 @@ Dns6Cancel (
   IN  EFI_DNS6_PROTOCOL          *This,
   IN  EFI_DNS6_COMPLETION_TOKEN  *Token
   );
-
-#endif

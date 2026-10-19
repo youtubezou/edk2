@@ -3,20 +3,13 @@
 
   Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_IP6_OUTPUT_H__
-#define __EFI_IP6_OUTPUT_H__
+#pragma once
 
-extern UINT32 mIp6Id;
+extern UINT32  mIp6Id;
 
 /**
   Output all the available source addresses to the list entry head SourceList. The
@@ -34,9 +27,9 @@ extern UINT32 mIp6Id;
 **/
 EFI_STATUS
 Ip6SelectSourceAddress (
-  IN IP6_SERVICE            *IpSb,
-  IN EFI_IPv6_ADDRESS       *Destination,
-  OUT EFI_IPv6_ADDRESS      *Source
+  IN IP6_SERVICE        *IpSb,
+  IN EFI_IPv6_ADDRESS   *Destination,
+  OUT EFI_IPv6_ADDRESS  *Source
   );
 
 /**
@@ -52,10 +45,10 @@ Ip6SelectSourceAddress (
 **/
 VOID
 Ip6SysPacketSent (
-  NET_BUF                   *Packet,
-  EFI_STATUS                IoStatus,
-  UINT32                    LinkFlag,
-  VOID                      *Context
+  NET_BUF     *Packet,
+  EFI_STATUS  IoStatus,
+  UINT32      LinkFlag,
+  VOID        *Context
   );
 
 /**
@@ -92,15 +85,15 @@ Ip6SysPacketSent (
 **/
 EFI_STATUS
 Ip6Output (
-  IN IP6_SERVICE            *IpSb,
-  IN IP6_INTERFACE          *Interface   OPTIONAL,
-  IN IP6_PROTOCOL           *IpInstance  OPTIONAL,
-  IN NET_BUF                *Packet,
-  IN EFI_IP6_HEADER         *Head,
-  IN UINT8                  *ExtHdrs,
-  IN UINT32                 ExtHdrsLen,
-  IN IP6_FRAME_CALLBACK     Callback,
-  IN VOID                   *Context
+  IN IP6_SERVICE         *IpSb,
+  IN IP6_INTERFACE       *Interface   OPTIONAL,
+  IN IP6_PROTOCOL        *IpInstance  OPTIONAL,
+  IN NET_BUF             *Packet,
+  IN EFI_IP6_HEADER      *Head,
+  IN UINT8               *ExtHdrs,
+  IN UINT32              ExtHdrsLen,
+  IN IP6_FRAME_CALLBACK  Callback,
+  IN VOID                *Context
   );
 
 /**
@@ -117,10 +110,10 @@ Ip6Output (
 **/
 VOID
 Ip6CancelFrames (
-  IN IP6_INTERFACE          *Interface,
-  IN EFI_STATUS             IoStatus,
-  IN IP6_FRAME_TO_CANCEL    FrameToCancel   OPTIONAL,
-  IN VOID                   *Context        OPTIONAL
+  IN IP6_INTERFACE        *Interface,
+  IN EFI_STATUS           IoStatus,
+  IN IP6_FRAME_TO_CANCEL  FrameToCancel   OPTIONAL,
+  IN VOID                 *Context        OPTIONAL
   );
 
 /**
@@ -133,9 +126,7 @@ Ip6CancelFrames (
 **/
 VOID
 Ip6CancelPacket (
-  IN IP6_INTERFACE    *IpIf,
-  IN NET_BUF          *Packet,
-  IN EFI_STATUS       IoStatus
+  IN IP6_INTERFACE  *IpIf,
+  IN NET_BUF        *Packet,
+  IN EFI_STATUS     IoStatus
   );
-
-#endif

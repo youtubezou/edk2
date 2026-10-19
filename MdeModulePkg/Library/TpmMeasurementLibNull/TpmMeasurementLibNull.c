@@ -2,15 +2,12 @@
   This library is used by other modules to measure data to TPM.
 
 Copyright (c) 2015, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
+#include <Uefi/UefiBaseType.h>
+#include <Library/TpmMeasurementLib.h>
 
 /**
   Tpm measure and log data, and extend the measurement result into a specific PCR.
@@ -30,12 +27,12 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 TpmMeasureAndLogData (
-  IN UINT32             PcrIndex,
-  IN UINT32             EventType,
-  IN VOID               *EventLog,
-  IN UINT32             LogLen,
-  IN VOID               *HashData,
-  IN UINT64             HashDataLen
+  IN UINT32  PcrIndex,
+  IN UINT32  EventType,
+  IN VOID    *EventLog,
+  IN UINT32  LogLen,
+  IN VOID    *HashData,
+  IN UINT64  HashDataLen
   )
 {
   //

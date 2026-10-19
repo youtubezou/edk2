@@ -2,20 +2,12 @@
 
   EDKII Universal Flash Storage Host Controller Protocol.
 
-Copyright (c) 2014 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
-#ifndef __EDKII_UFS_HC_PROTOCOL_H__
-#define __EDKII_UFS_HC_PROTOCOL_H__
+#pragma once
 
 //
 // UFS Host Controller Protocol GUID value
@@ -28,8 +20,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Forward reference for pure ANSI compatability
 //
-typedef struct _EDKII_UFS_HOST_CONTROLLER_PROTOCOL  EDKII_UFS_HOST_CONTROLLER_PROTOCOL;
-
+typedef struct _EDKII_UFS_HOST_CONTROLLER_PROTOCOL EDKII_UFS_HOST_CONTROLLER_PROTOCOL;
 
 /**
   Get the MMIO base address of UFS host controller.
@@ -45,7 +36,7 @@ typedef
 EFI_STATUS
 (EFIAPI *EDKII_UFS_HC_GET_MMIO_BAR)(
   IN     EDKII_UFS_HOST_CONTROLLER_PROTOCOL     *This,
-     OUT UINTN                                  *MmioBar
+  OUT UINTN                                  *MmioBar
   );
 
 ///
@@ -70,24 +61,24 @@ typedef enum {
   EdkiiUfsHcOperationMaximum
 } EDKII_UFS_HOST_CONTROLLER_OPERATION;
 
-/**                                                                 
+/**
   Provides the UFS controller-specific addresses needed to access system memory.
-            
+
   @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Operation             Indicates if the bus master is going to read or write to system memory.
   @param  HostAddress           The system memory address to map to the UFS controller.
   @param  NumberOfBytes         On input the number of bytes to map. On output the number of bytes
-                                that were mapped.                                                 
+                                that were mapped.
   @param  DeviceAddress         The resulting map address for the bus master UFS controller to use to
-                                access the hosts HostAddress.                                        
+                                access the hosts HostAddress.
   @param  Mapping               A resulting value to pass to Unmap().
-                                  
+
   @retval EFI_SUCCESS           The range was mapped for the returned NumberOfBytes.
-  @retval EFI_UNSUPPORTED       The HostAddress cannot be mapped as a common buffer.                                
+  @retval EFI_UNSUPPORTED       The HostAddress cannot be mapped as a common buffer.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
   @retval EFI_OUT_OF_RESOURCES  The request could not be completed due to a lack of resources.
   @retval EFI_DEVICE_ERROR      The system hardware could not map the requested address.
-                                   
+
 **/
 typedef
 EFI_STATUS
@@ -96,19 +87,19 @@ EFI_STATUS
   IN     EDKII_UFS_HOST_CONTROLLER_OPERATION  Operation,
   IN     VOID                                 *HostAddress,
   IN OUT UINTN                                *NumberOfBytes,
-     OUT EFI_PHYSICAL_ADDRESS                 *DeviceAddress,
-     OUT VOID                                 **Mapping
+  OUT EFI_PHYSICAL_ADDRESS                 *DeviceAddress,
+  OUT VOID                                 **Mapping
   );
 
-/**                                                                 
+/**
   Completes the Map() operation and releases any corresponding resources.
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.                                      
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Mapping               The mapping value returned from Map().
-                                  
+
   @retval EFI_SUCCESS           The range was unmapped.
   @retval EFI_DEVICE_ERROR      The data was not committed to the target system memory.
-                                   
+
 **/
 typedef
 EFI_STATUS
@@ -117,25 +108,25 @@ EFI_STATUS
   IN  VOID                                   *Mapping
   );
 
-/**                                                                 
+/**
   Allocates pages that are suitable for an EfiUfsHcOperationBusMasterCommonBuffer
-  mapping.                                                                       
-            
+  mapping.
+
   @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Type                  This parameter is not used and must be ignored.
   @param  MemoryType            The type of memory to allocate, EfiBootServicesData or
-                                EfiRuntimeServicesData.                               
-  @param  Pages                 The number of pages to allocate.                                
+                                EfiRuntimeServicesData.
+  @param  Pages                 The number of pages to allocate.
   @param  HostAddress           A pointer to store the base system memory address of the
-                                allocated range.                                        
+                                allocated range.
   @param  Attributes            The requested bit mask of attributes for the allocated range.
-                                  
+
   @retval EFI_SUCCESS           The requested memory pages were allocated.
   @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
-                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.                     
+                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
-  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.  
-                                   
+  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
+
 **/
 typedef
 EFI_STATUS
@@ -144,21 +135,21 @@ EFI_STATUS
   IN     EFI_ALLOCATE_TYPE                    Type,
   IN     EFI_MEMORY_TYPE                      MemoryType,
   IN     UINTN                                Pages,
-     OUT VOID                                 **HostAddress,
+  OUT VOID                                 **HostAddress,
   IN     UINT64                               Attributes
   );
 
-/**                                                                 
+/**
   Frees memory that was allocated with AllocateBuffer().
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.  
-  @param  Pages                 The number of pages to free.                                
-  @param  HostAddress           The base system memory address of the allocated range.                                    
-                                  
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
+  @param  Pages                 The number of pages to free.
+  @param  HostAddress           The base system memory address of the allocated range.
+
   @retval EFI_SUCCESS           The requested memory pages were freed.
   @retval EFI_INVALID_PARAMETER The memory range specified by HostAddress and Pages
                                 was not allocated with AllocateBuffer().
-                                     
+
 **/
 typedef
 EFI_STATUS
@@ -168,16 +159,16 @@ EFI_STATUS
   IN  VOID                                 *HostAddress
   );
 
-/**                                                                 
+/**
   Flushes all posted write transactions from the UFS bus to attached UFS device.
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.  
-                                  
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
+
   @retval EFI_SUCCESS           The posted write transactions were flushed from the UFS bus
-                                to attached UFS device.                                      
+                                to attached UFS device.
   @retval EFI_DEVICE_ERROR      The posted write transactions were not flushed from the UFS
-                                bus to attached UFS device due to a hardware error.                           
-                                     
+                                bus to attached UFS device due to a hardware error.
+
 **/
 typedef
 EFI_STATUS
@@ -186,7 +177,7 @@ EFI_STATUS
   );
 
 typedef enum {
-  EfiUfsHcWidthUint8      = 0,
+  EfiUfsHcWidthUint8 = 0,
   EfiUfsHcWidthUint16,
   EfiUfsHcWidthUint32,
   EfiUfsHcWidthUint64,
@@ -225,19 +216,17 @@ EFI_STATUS
 ///  UFS Host Controller Protocol structure.
 ///
 struct _EDKII_UFS_HOST_CONTROLLER_PROTOCOL {
-  EDKII_UFS_HC_GET_MMIO_BAR           GetUfsHcMmioBar;
-  EDKII_UFS_HC_ALLOCATE_BUFFER        AllocateBuffer;
-  EDKII_UFS_HC_FREE_BUFFER            FreeBuffer;
-  EDKII_UFS_HC_MAP                    Map;
-  EDKII_UFS_HC_UNMAP                  Unmap;
-  EDKII_UFS_HC_FLUSH                  Flush;
-  EDKII_UFS_HC_MMIO_READ_WRITE        Read;
-  EDKII_UFS_HC_MMIO_READ_WRITE        Write;
+  EDKII_UFS_HC_GET_MMIO_BAR       GetUfsHcMmioBar;
+  EDKII_UFS_HC_ALLOCATE_BUFFER    AllocateBuffer;
+  EDKII_UFS_HC_FREE_BUFFER        FreeBuffer;
+  EDKII_UFS_HC_MAP                Map;
+  EDKII_UFS_HC_UNMAP              Unmap;
+  EDKII_UFS_HC_FLUSH              Flush;
+  EDKII_UFS_HC_MMIO_READ_WRITE    Read;
+  EDKII_UFS_HC_MMIO_READ_WRITE    Write;
 };
 
 ///
 ///  UFS Host Controller Protocol GUID variable.
 ///
-extern EFI_GUID gEdkiiUfsHostControllerProtocolGuid;
-
-#endif
+extern EFI_GUID  gEdkiiUfsHostControllerProtocolGuid;

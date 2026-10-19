@@ -1,50 +1,46 @@
 /** @file
   HII Library implementation that uses DXE protocols and services.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "InternalHiiLib.h"
 
-#define GUID_CONFIG_STRING_TYPE 0x00
-#define NAME_CONFIG_STRING_TYPE 0x01
-#define PATH_CONFIG_STRING_TYPE 0x02
+#include <Library/SafeIntLib.h>
 
-#define ACTION_SET_DEFAUTL_VALUE 0x01
-#define ACTION_VALIDATE_SETTING  0x02
+#define GUID_CONFIG_STRING_TYPE  0x00
+#define NAME_CONFIG_STRING_TYPE  0x01
+#define PATH_CONFIG_STRING_TYPE  0x02
+
+#define ACTION_SET_DEFAUTL_VALUE  0x01
+#define ACTION_VALIDATE_SETTING   0x02
 
 #define HII_LIB_DEFAULT_VARSTORE_SIZE  0x200
 
 typedef struct {
-  LIST_ENTRY          Entry;      // Link to Block array
-  UINT16              Offset;
-  UINT16              Width;
-  UINT8               OpCode;
-  UINT8               Scope;
+  LIST_ENTRY    Entry;            // Link to Block array
+  UINT16        Offset;
+  UINT16        Width;
+  UINT8         OpCode;
+  UINT8         Scope;
 } IFR_BLOCK_DATA;
 
 typedef struct {
-  EFI_VARSTORE_ID     VarStoreId;
-  UINT16              Size;
+  EFI_VARSTORE_ID    VarStoreId;
+  UINT16             Size;
 } IFR_VARSTORAGE_DATA;
 
 //
 // <ConfigHdr> Template
 //
-GLOBAL_REMOVE_IF_UNREFERENCED CONST CHAR16 mConfigHdrTemplate[] = L"GUID=00000000000000000000000000000000&NAME=0000&PATH=00";
+GLOBAL_REMOVE_IF_UNREFERENCED CONST CHAR16  mConfigHdrTemplate[] = L"GUID=00000000000000000000000000000000&NAME=0000&PATH=00";
 
 EFI_FORM_BROWSER2_PROTOCOL  *mUefiFormBrowser2 = NULL;
 
 //
-// Template used to mark the end of a list of packages 
+// Template used to mark the end of a list of packages
 //
 GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_HII_PACKAGE_HEADER  mEndOfPakageList = {
   sizeof (EFI_HII_PACKAGE_HEADER),
@@ -57,41 +53,50 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_HII_PACKAGE_HEADER  mEndOfPakageList = {
   If HiiHandle could not be found in the HII database, then ASSERT.
   If Guid is NULL, then ASSERT.
 
-  @param  Handle              Hii handle
-  @param  Guid                Package list GUID
+  @param  Handle                Hii handle
+  @param  Guid                  Package list GUID
 
-  @retval EFI_SUCCESS         Successfully extract GUID from Hii database.
+  @retval EFI_SUCCESS           Successfully extract GUID from Hii database.
+  @retval EFI_INVALID_PARAMETER Invalid inputs received.
+  @retval EFI_OUT_OF_RESOURCES  Insufficient memory resources to perform a necessary memory allocation.
 
 **/
 EFI_STATUS
 EFIAPI
 InternalHiiExtractGuidFromHiiHandle (
-  IN      EFI_HII_HANDLE      Handle,
-  OUT     EFI_GUID            *Guid
+  IN      EFI_HII_HANDLE  Handle,
+  OUT     EFI_GUID        *Guid
   )
 {
   EFI_STATUS                   Status;
   UINTN                        BufferSize;
   EFI_HII_PACKAGE_LIST_HEADER  *HiiPackageList;
 
-  ASSERT (Guid != NULL);
-  ASSERT (Handle != NULL);
+  if ((Handle == NULL) || (Guid == NULL)) {
+    ASSERT (Guid != NULL);
+    ASSERT (Handle != NULL);
+    return EFI_INVALID_PARAMETER;
+  }
 
   //
   // Get HII PackageList
   //
-  BufferSize = 0;
+  BufferSize     = 0;
   HiiPackageList = NULL;
 
   Status = gHiiDatabase->ExportPackageLists (gHiiDatabase, Handle, &BufferSize, HiiPackageList);
   ASSERT (Status != EFI_NOT_FOUND);
-  
+
   if (Status == EFI_BUFFER_TOO_SMALL) {
     HiiPackageList = AllocatePool (BufferSize);
-    ASSERT (HiiPackageList != NULL);
+    if (HiiPackageList == NULL) {
+      ASSERT (HiiPackageList != NULL);
+      return EFI_OUT_OF_RESOURCES;
+    }
 
     Status = gHiiDatabase->ExportPackageLists (gHiiDatabase, Handle, &BufferSize, HiiPackageList);
   }
+
   if (EFI_ERROR (Status)) {
     FreePool (HiiPackageList);
     return Status;
@@ -115,7 +120,7 @@ InternalHiiExtractGuidFromHiiHandle (
   If an empty list of packages is passed in, then NULL is returned.  If the size of
   the list of package is 0, then NULL is returned.
 
-  The variable arguments are pointers which point to package header that defined 
+  The variable arguments are pointers which point to package header that defined
   by UEFI VFR compiler and StringGather tool.
 
   #pragma pack (push, 1)
@@ -124,13 +129,13 @@ InternalHiiExtractGuidFromHiiHandle (
     EFI_HII_PACKAGE_HEADER  PackageHeader;
   } EDKII_AUTOGEN_PACKAGES_HEADER;
   #pragma pack (pop)
-  
+
   @param[in]  PackageListGuid  The GUID of the package list.
-  @param[in]  DeviceHandle     If not NULL, the Device Handle on which 
+  @param[in]  DeviceHandle     If not NULL, the Device Handle on which
                                an instance of DEVICE_PATH_PROTOCOL is installed.
-                               This Device Handle uniquely defines the device that 
+                               This Device Handle uniquely defines the device that
                                the added packages are associated with.
-  @param[in]  ...              The variable argument list that contains pointers 
+  @param[in]  ...              The variable argument list that contains pointers
                                to packages terminated by a NULL.
 
   @retval NULL   A HII Handle has already been registered in the HII Database with
@@ -165,10 +170,11 @@ HiiAddPackages (
   for (Length = 0, VA_START (Args, DeviceHandle); (Package = VA_ARG (Args, UINT32 *)) != NULL; ) {
     Length += (ReadUnaligned32 (Package) - sizeof (UINT32));
   }
+
   VA_END (Args);
 
   //
-  // If there are no packages in the variable argument list or all the packages 
+  // If there are no packages in the variable argument list or all the packages
   // are empty, then return a NULL HII Handle
   //
   if (Length == 0) {
@@ -176,7 +182,7 @@ HiiAddPackages (
   }
 
   //
-  // Add the length of the Package List Header and the terminating Package Header 
+  // Add the length of the Package List Header and the terminating Package Header
   //
   Length += sizeof (EFI_HII_PACKAGE_LIST_HEADER) + sizeof (EFI_HII_PACKAGE_HEADER);
 
@@ -211,6 +217,7 @@ HiiAddPackages (
     CopyMem (Data, Package + 1, Length);
     Data += Length;
   }
+
   VA_END (Args);
 
   //
@@ -222,9 +229,9 @@ HiiAddPackages (
   // Register the package list with the HII Database
   //
   Status = gHiiDatabase->NewPackageList (
-                           gHiiDatabase, 
-                           PackageListHeader, 
-                           DeviceHandle, 
+                           gHiiDatabase,
+                           PackageListHeader,
+                           DeviceHandle,
                            &HiiHandle
                            );
   if (EFI_ERROR (Status)) {
@@ -254,16 +261,15 @@ HiiAddPackages (
 VOID
 EFIAPI
 HiiRemovePackages (
-  IN      EFI_HII_HANDLE      HiiHandle
+  IN      EFI_HII_HANDLE  HiiHandle
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT (HiiHandle != NULL);
   Status = gHiiDatabase->RemovePackageList (gHiiDatabase, HiiHandle);
   ASSERT_EFI_ERROR (Status);
 }
-
 
 /**
   Retrieves the array of all the HII Handles or the HII handles of a specific
@@ -272,12 +278,12 @@ HiiRemovePackages (
   This function allocates the returned array using AllocatePool().
   The caller is responsible for freeing the array with FreePool().
 
-  @param[in]  PackageListGuid  An optional parameter that is used to request 
+  @param[in]  PackageListGuid  An optional parameter that is used to request
                                HII Handles associated with a specific
                                Package List GUID.  If this parameter is NULL,
                                then all the HII Handles in the HII Database
                                are returned.  If this parameter is not NULL,
-                               then zero or more HII Handles associated with 
+                               then zero or more HII Handles associated with
                                PackageListGuid are returned.
 
   @retval NULL   No HII handles were found in the HII database
@@ -303,23 +309,23 @@ HiiGetHiiHandles (
   // Retrieve the size required for the buffer of all HII handles.
   //
   HandleBufferLength = 0;
-  Status = gHiiDatabase->ListPackageLists (
-                           gHiiDatabase,
-                           EFI_HII_PACKAGE_TYPE_ALL,
-                           NULL,
-                           &HandleBufferLength,
-                           &TempHiiHandleBuffer
-                           );
+  Status             = gHiiDatabase->ListPackageLists (
+                                       gHiiDatabase,
+                                       EFI_HII_PACKAGE_TYPE_ALL,
+                                       NULL,
+                                       &HandleBufferLength,
+                                       &TempHiiHandleBuffer
+                                       );
 
   //
-  // If ListPackageLists() returns EFI_SUCCESS for a zero size, 
-  // then there are no HII handles in the HII database.  If ListPackageLists() 
-  // returns an error other than EFI_BUFFER_TOO_SMALL, then there are no HII 
+  // If ListPackageLists() returns EFI_SUCCESS for a zero size,
+  // then there are no HII handles in the HII database.  If ListPackageLists()
+  // returns an error other than EFI_BUFFER_TOO_SMALL, then there are no HII
   // handles in the HII database.
   //
   if (Status != EFI_BUFFER_TOO_SMALL) {
     //
-    // Return NULL if the size can not be retrieved, or if there are no HII 
+    // Return NULL if the size can not be retrieved, or if there are no HII
     // handles in the HII Database
     //
     return NULL;
@@ -364,9 +370,10 @@ HiiGetHiiHandles (
       Status = InternalHiiExtractGuidFromHiiHandle (HiiHandleBuffer[Index1], &Guid);
       ASSERT_EFI_ERROR (Status);
       if (CompareGuid (&Guid, PackageListGuid)) {
-        HiiHandleBuffer[Index2++] = HiiHandleBuffer[Index1];       
+        HiiHandleBuffer[Index2++] = HiiHandleBuffer[Index1];
       }
     }
+
     if (Index2 > 0) {
       HiiHandleBuffer[Index2] = NULL;
       return HiiHandleBuffer;
@@ -379,7 +386,7 @@ HiiGetHiiHandles (
 
 /**
   This function allows a caller to extract the form set opcode form the Hii Handle.
-  The returned buffer is allocated using AllocatePool().The caller is responsible 
+  The returned buffer is allocated using AllocatePool().The caller is responsible
   for freeing the allocated buffer using FreePool().
 
   @param Handle            The HII handle.
@@ -394,10 +401,10 @@ HiiGetHiiHandles (
 **/
 EFI_STATUS
 EFIAPI
-HiiGetFormSetFromHiiHandle(
-  IN  EFI_HII_HANDLE     Handle,
-  OUT EFI_IFR_FORM_SET   **Buffer,
-  OUT UINTN              *BufferSize
+HiiGetFormSetFromHiiHandle (
+  IN  EFI_HII_HANDLE    Handle,
+  OUT EFI_IFR_FORM_SET  **Buffer,
+  OUT UINTN             *BufferSize
   )
 {
   EFI_STATUS                   Status;
@@ -413,7 +420,7 @@ HiiGetFormSetFromHiiHandle(
   UINT32                       PackageListLength;
   EFI_HII_PACKAGE_HEADER       PackageHeader;
 
-  TempSize = 0;
+  TempSize      = 0;
   FormSetBuffer = NULL;
   TempBuffer    = NULL;
 
@@ -421,8 +428,8 @@ HiiGetFormSetFromHiiHandle(
   // Get HII PackageList
   //
   PackageListSize = 0;
-  HiiPackageList = NULL;
-  Status = gHiiDatabase->ExportPackageLists (gHiiDatabase, Handle, &PackageListSize, HiiPackageList);
+  HiiPackageList  = NULL;
+  Status          = gHiiDatabase->ExportPackageLists (gHiiDatabase, Handle, &PackageListSize, HiiPackageList);
   if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
     return Status;
   }
@@ -438,12 +445,12 @@ HiiGetFormSetFromHiiHandle(
   //
   // Get Form package from this HII package List
   //
-  Status = EFI_NOT_FOUND;
-  Offset = sizeof (EFI_HII_PACKAGE_LIST_HEADER);
+  Status            = EFI_NOT_FOUND;
+  Offset            = sizeof (EFI_HII_PACKAGE_LIST_HEADER);
   PackageListLength = ReadUnaligned32 (&HiiPackageList->PackageLength);
 
   while (Offset < PackageListLength) {
-    Package = ((UINT8 *) HiiPackageList) + Offset;
+    Package = ((UINT8 *)HiiPackageList) + Offset;
     CopyMem (&PackageHeader, Package, sizeof (EFI_HII_PACKAGE_HEADER));
     Offset += PackageHeader.Length;
 
@@ -457,49 +464,57 @@ HiiGetFormSetFromHiiHandle(
     Offset2 = sizeof (EFI_HII_PACKAGE_HEADER);
     while (Offset2 < PackageHeader.Length) {
       OpCodeData = Package + Offset2;
-      Offset2 += ((EFI_IFR_OP_HEADER *) OpCodeData)->Length;
+      Offset2   += ((EFI_IFR_OP_HEADER *)OpCodeData)->Length;
 
-      if (((EFI_IFR_OP_HEADER *) OpCodeData)->OpCode != EFI_IFR_FORM_SET_OP) {
+      if (((EFI_IFR_OP_HEADER *)OpCodeData)->OpCode != EFI_IFR_FORM_SET_OP) {
         continue;
       }
 
-      if (FormSetBuffer != NULL){
-        TempBuffer = AllocateCopyPool (TempSize + ((EFI_IFR_OP_HEADER *) OpCodeData)->Length, FormSetBuffer);
-        FreePool(FormSetBuffer);
+      if (FormSetBuffer != NULL) {
+        TempBuffer = ReallocatePool (
+                       TempSize,
+                       TempSize + ((EFI_IFR_OP_HEADER *)OpCodeData)->Length,
+                       FormSetBuffer
+                       );
+        if (TempBuffer == NULL) {
+          Status = EFI_OUT_OF_RESOURCES;
+          goto Done;
+        }
+
+        CopyMem (TempBuffer + TempSize, OpCodeData, ((EFI_IFR_OP_HEADER *)OpCodeData)->Length);
         FormSetBuffer = NULL;
-        if (TempBuffer == NULL) {
-          Status = EFI_OUT_OF_RESOURCES;
-          goto Done;
-        }
-        CopyMem (TempBuffer + TempSize,  OpCodeData, ((EFI_IFR_OP_HEADER *) OpCodeData)->Length);
       } else {
-        TempBuffer = AllocateCopyPool (TempSize + ((EFI_IFR_OP_HEADER *) OpCodeData)->Length, OpCodeData);
+        TempBuffer = AllocatePool (TempSize + ((EFI_IFR_OP_HEADER *)OpCodeData)->Length);
         if (TempBuffer == NULL) {
           Status = EFI_OUT_OF_RESOURCES;
           goto Done;
         }
+
+        CopyMem (TempBuffer, OpCodeData, ((EFI_IFR_OP_HEADER *)OpCodeData)->Length);
       }
-      TempSize += ((EFI_IFR_OP_HEADER *) OpCodeData)->Length;
+
+      TempSize     += ((EFI_IFR_OP_HEADER *)OpCodeData)->Length;
       FormSetBuffer = TempBuffer;
 
       Status = EFI_SUCCESS;
       //
-      //One form package has one formset, exit current form package to search other form package in the packagelist.
+      // One form package has one formset, exit current form package to search other form package in the packagelist.
       //
       break;
     }
   }
+
 Done:
   FreePool (HiiPackageList);
 
   *BufferSize = TempSize;
-  *Buffer = (EFI_IFR_FORM_SET *)FormSetBuffer;
+  *Buffer     = (EFI_IFR_FORM_SET *)FormSetBuffer;
 
   return Status;
 }
 
 /**
-  Converts all hex dtring characters in range ['A'..'F'] to ['a'..'f'] for 
+  Converts all hex dtring characters in range ['A'..'F'] to ['a'..'f'] for
   hex digits that appear between a '=' and a '&' in a config string.
 
   If ConfigString is NULL, then ASSERT().
@@ -528,8 +543,8 @@ InternalHiiLowerConfigString (
       Lower = TRUE;
     } else if (*String == L'&') {
       Lower = FALSE;
-    } else if (Lower && *String >= L'A' && *String <= L'F') {
-      *String = (CHAR16) (*String - L'A' + L'a');
+    } else if (Lower && (*String >= L'A') && (*String <= L'F')) {
+      *String = (CHAR16)(*String - L'A' + L'a');
     }
   }
 
@@ -537,7 +552,7 @@ InternalHiiLowerConfigString (
 }
 
 /**
-  Uses the BlockToConfig() service of the Config Routing Protocol to 
+  Uses the BlockToConfig() service of the Config Routing Protocol to
   convert <ConfigRequest> and a buffer to a <ConfigResp>
 
   If ConfigRequest is NULL, then ASSERT().
@@ -580,18 +595,19 @@ InternalHiiBlockToConfig (
   if (EFI_ERROR (Status)) {
     return NULL;
   }
+
   return ConfigResp;
 }
 
 /**
-  Uses the BrowserCallback() service of the Form Browser Protocol to retrieve 
-  or set uncommitted data.  If sata i being retrieved, then the buffer is 
-  allocated using AllocatePool().  The caller is then responsible for freeing 
+  Uses the BrowserCallback() service of the Form Browser Protocol to retrieve
+  or set uncommitted data.  If sata i being retrieved, then the buffer is
+  allocated using AllocatePool().  The caller is then responsible for freeing
   the buffer using FreePool().
 
-  @param[in]  VariableGuid    Pointer to an EFI_GUID structure.  This is an optional 
+  @param[in]  VariableGuid    Pointer to an EFI_GUID structure.  This is an optional
                               parameter that may be NULL.
-  @param[in]  VariableName    Pointer to a Null-terminated Unicode string.  This 
+  @param[in]  VariableName    Pointer to a Null-terminated Unicode string.  This
                               is an optional parameter that may be NULL.
   @param[in]  SetResultsData  If not NULL, then this parameter specified the buffer
                               of uncommited data to set.  If this parameter is NULL,
@@ -605,8 +621,8 @@ InternalHiiBlockToConfig (
 EFI_STRING
 EFIAPI
 InternalHiiBrowserCallback (
-  IN CONST EFI_GUID    *VariableGuid,  OPTIONAL
-  IN CONST CHAR16      *VariableName,  OPTIONAL
+  IN CONST EFI_GUID    *VariableGuid   OPTIONAL,
+  IN CONST CHAR16      *VariableName   OPTIONAL,
   IN CONST EFI_STRING  SetResultsData  OPTIONAL
   )
 {
@@ -619,8 +635,8 @@ InternalHiiBrowserCallback (
   // Locate protocols
   //
   if (mUefiFormBrowser2 == NULL) {
-    Status = gBS->LocateProtocol (&gEfiFormBrowser2ProtocolGuid, NULL, (VOID **) &mUefiFormBrowser2);
-    if (EFI_ERROR (Status) || mUefiFormBrowser2 == NULL) {
+    Status = gBS->LocateProtocol (&gEfiFormBrowser2ProtocolGuid, NULL, (VOID **)&mUefiFormBrowser2);
+    if (EFI_ERROR (Status) || (mUefiFormBrowser2 == NULL)) {
       return NULL;
     }
   }
@@ -637,14 +653,14 @@ InternalHiiBrowserCallback (
     // Retrieve the length of the buffer required ResultsData from the Browser Callback
     //
     Status = mUefiFormBrowser2->BrowserCallback (
-                              mUefiFormBrowser2,
-                              &ResultsDataSize,
-                              &TempResultsData,
-                              TRUE,
-                              VariableGuid,
-                              VariableName
-                              );
-    
+                                  mUefiFormBrowser2,
+                                  &ResultsDataSize,
+                                  &TempResultsData,
+                                  TRUE,
+                                  VariableGuid,
+                                  VariableName
+                                  );
+
     if (!EFI_ERROR (Status)) {
       //
       // No Resluts Data, only allocate one char for '\0'
@@ -670,13 +686,13 @@ InternalHiiBrowserCallback (
   // Retrieve or set the ResultsData from the Browser Callback
   //
   Status = mUefiFormBrowser2->BrowserCallback (
-                            mUefiFormBrowser2,
-                            &ResultsDataSize,
-                            ResultsData,
-                            (BOOLEAN)(SetResultsData == NULL),
-                            VariableGuid,
-                            VariableName
-                            );
+                                mUefiFormBrowser2,
+                                &ResultsDataSize,
+                                ResultsData,
+                                (BOOLEAN)(SetResultsData == NULL),
+                                VariableGuid,
+                                VariableName
+                                );
   if (EFI_ERROR (Status)) {
     return NULL;
   }
@@ -685,23 +701,23 @@ InternalHiiBrowserCallback (
 }
 
 /**
-  Allocates and returns a Null-terminated Unicode <ConfigHdr> string using routing 
+  Allocates and returns a Null-terminated Unicode <ConfigHdr> string using routing
   information that includes a GUID, an optional Unicode string name, and a device
-  path.  The string returned is allocated with AllocatePool().  The caller is 
+  path.  The string returned is allocated with AllocatePool().  The caller is
   responsible for freeing the allocated string with FreePool().
-  
+
   The format of a <ConfigHdr> is as follows:
 
     GUID=<HexCh>32&NAME=<Char>NameLength&PATH=<HexChar>DevicePathSize<Null>
 
   @param[in]  Guid          Pointer to an EFI_GUID that is the routing information
-                            GUID.  Each of the 16 bytes in Guid is converted to 
+                            GUID.  Each of the 16 bytes in Guid is converted to
                             a 2 Unicode character hexadecimal string.  This is
                             an optional parameter that may be NULL.
-  @param[in]  Name          Pointer to a Null-terminated Unicode string that is 
-                            the routing information NAME.  This is an optional 
-                            parameter that may be NULL.  Each 16-bit Unicode 
-                            character in Name is converted to a 4 character Unicode 
+  @param[in]  Name          Pointer to a Null-terminated Unicode string that is
+                            the routing information NAME.  This is an optional
+                            parameter that may be NULL.  Each 16-bit Unicode
+                            character in Name is converted to a 4 character Unicode
                             hexadecimal string.
   @param[in]  DriverHandle  The driver handle which supports a Device Path Protocol
                             that is the routing information PATH.  Each byte of
@@ -715,8 +731,8 @@ InternalHiiBrowserCallback (
 EFI_STRING
 EFIAPI
 HiiConstructConfigHdr (
-  IN CONST EFI_GUID  *Guid,  OPTIONAL
-  IN CONST CHAR16    *Name,  OPTIONAL
+  IN CONST EFI_GUID  *Guid   OPTIONAL,
+  IN CONST CHAR16    *Name   OPTIONAL,
   IN EFI_HANDLE      DriverHandle
   )
 {
@@ -730,7 +746,7 @@ HiiConstructConfigHdr (
   UINTN                     MaxLen;
 
   //
-  // Compute the length of Name in Unicode characters.  
+  // Compute the length of Name in Unicode characters.
   // If Name is NULL, then the length is 0.
   //
   NameLength = 0;
@@ -738,7 +754,7 @@ HiiConstructConfigHdr (
     NameLength = StrLen (Name);
   }
 
-  DevicePath = NULL;
+  DevicePath     = NULL;
   DevicePathSize = 0;
   //
   // Retrieve DevicePath Protocol associated with DriverHandle
@@ -748,6 +764,7 @@ HiiConstructConfigHdr (
     if (DevicePath == NULL) {
       return NULL;
     }
+
     //
     // Compute the size of the device path in bytes
     //
@@ -769,17 +786,24 @@ HiiConstructConfigHdr (
   //
   StrCpyS (String, MaxLen, L"GUID=");
   ReturnString = String;
-  String += StrLen (String);
+  String      += StrLen (String);
 
   if (Guid != NULL) {
     //
     // Append Guid converted to <HexCh>32
     //
     for (Index = 0, Buffer = (UINT8 *)Guid; Index < sizeof (EFI_GUID); Index++) {
-      String += UnicodeValueToString (String, PREFIX_ZERO | RADIX_HEX, *(Buffer++), 2);
+      UnicodeValueToStringS (
+        String,
+        MaxLen * sizeof (CHAR16) - ((UINTN)String - (UINTN)ReturnString),
+        PREFIX_ZERO | RADIX_HEX,
+        *(Buffer++),
+        2
+        );
+      String += StrnLenS (String, MaxLen - ((UINTN)String - (UINTN)ReturnString) / sizeof (CHAR16));
     }
   }
-  
+
   //
   // Append L"&NAME="
   //
@@ -790,8 +814,15 @@ HiiConstructConfigHdr (
     //
     // Append Name converted to <Char>NameLength
     //
-    for (; *Name != L'\0'; Name++) {
-      String += UnicodeValueToString (String, PREFIX_ZERO | RADIX_HEX, *Name, 4);
+    for ( ; *Name != L'\0'; Name++) {
+      UnicodeValueToStringS (
+        String,
+        sizeof (CHAR16) * MaxLen - ((UINTN)String - (UINTN)ReturnString),
+        PREFIX_ZERO | RADIX_HEX,
+        *Name,
+        4
+        );
+      String += StrnLenS (String, MaxLen - ((UINTN)String - (UINTN)ReturnString) / sizeof (CHAR16));
     }
   }
 
@@ -805,7 +836,14 @@ HiiConstructConfigHdr (
   // Append the device path associated with DriverHandle converted to <HexChar>DevicePathSize
   //
   for (Index = 0, Buffer = (UINT8 *)DevicePath; Index < DevicePathSize; Index++) {
-    String += UnicodeValueToString (String, PREFIX_ZERO | RADIX_HEX, *(Buffer++), 2);
+    UnicodeValueToStringS (
+      String,
+      sizeof (CHAR16) * MaxLen - ((UINTN)String - (UINTN)ReturnString),
+      PREFIX_ZERO | RADIX_HEX,
+      *(Buffer++),
+      2
+      );
+    String += StrnLenS (String, MaxLen - ((UINTN)String - (UINTN)ReturnString) / sizeof (CHAR16));
   }
 
   //
@@ -820,7 +858,7 @@ HiiConstructConfigHdr (
 }
 
 /**
-  Convert the hex UNICODE encoding string of UEFI GUID, NAME or device path 
+  Convert the hex UNICODE encoding string of UEFI GUID, NAME or device path
   to binary buffer from <ConfigHdr>.
 
   This is a internal function.
@@ -837,23 +875,23 @@ HiiConstructConfigHdr (
 **/
 EFI_STATUS
 InternalHiiGetBufferFromString (
-  IN  EFI_STRING                 String,
-  IN  UINT8                      Flag,
-  OUT UINT8                      **Buffer
+  IN  EFI_STRING  String,
+  IN  UINT8       Flag,
+  OUT UINT8       **Buffer
   )
 {
-  UINTN      Length;
-  EFI_STRING ConfigHdr;
-  CHAR16     *StringPtr;
-  UINT8      *DataBuffer;
-  CHAR16     TemStr[5];
-  UINTN      Index;
-  UINT8      DigitUint8;
+  UINTN       Length;
+  EFI_STRING  ConfigHdr;
+  CHAR16      *StringPtr;
+  UINT8       *DataBuffer;
+  CHAR16      TemStr[5];
+  UINTN       Index;
+  UINT8       DigitUint8;
 
-  if (String == NULL || Buffer == NULL) {
+  if ((String == NULL) || (Buffer == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
-  
+
   DataBuffer = NULL;
   StringPtr  = NULL;
   ConfigHdr  = String;
@@ -861,68 +899,72 @@ InternalHiiGetBufferFromString (
   // The content between 'GUID', 'NAME', 'PATH' of <ConfigHdr> and '&' of next element
   // or '\0' (end of configuration string) is the UNICODE %02x bytes encoding string.
   //
-  for (Length = 0; *String != 0 && *String != L'&'; String++, Length++);
+  for (Length = 0; *String != 0 && *String != L'&'; String++, Length++) {
+  }
 
   switch (Flag) {
-  case GUID_CONFIG_STRING_TYPE:
-  case PATH_CONFIG_STRING_TYPE:
-    //
-    // The data in <ConfigHdr> is encoded as hex UNICODE %02x bytes in the same order
-    // as the device path and Guid resides in RAM memory.
-    // Translate the data into binary.
-    //
-    DataBuffer = (UINT8 *) AllocateZeroPool ((Length + 1) / 2);
-    if (DataBuffer == NULL) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-    //
-    // Convert binary byte one by one
-    //
-    ZeroMem (TemStr, sizeof (TemStr));
-    for (Index = 0; Index < Length; Index ++) {
-      TemStr[0] = ConfigHdr[Index];
-      DigitUint8 = (UINT8) StrHexToUint64 (TemStr);
-      if ((Index & 1) == 0) {
-        DataBuffer [Index/2] = DigitUint8;
-      } else {
-        DataBuffer [Index/2] = (UINT8) ((DataBuffer [Index/2] << 4) + DigitUint8);
+    case GUID_CONFIG_STRING_TYPE:
+    case PATH_CONFIG_STRING_TYPE:
+      //
+      // The data in <ConfigHdr> is encoded as hex UNICODE %02x bytes in the same order
+      // as the device path and Guid resides in RAM memory.
+      // Translate the data into binary.
+      //
+      DataBuffer = (UINT8 *)AllocateZeroPool ((Length + 1) / 2);
+      if (DataBuffer == NULL) {
+        return EFI_OUT_OF_RESOURCES;
       }
-    }
-    
-    *Buffer = DataBuffer;
-    break;
 
-  case NAME_CONFIG_STRING_TYPE:
-    //
-    // Convert Config String to Unicode String, e.g. "0041004200430044" => "ABCD"
-    // 
+      //
+      // Convert binary byte one by one
+      //
+      ZeroMem (TemStr, sizeof (TemStr));
+      for (Index = 0; Index < Length; Index++) {
+        TemStr[0]  = ConfigHdr[Index];
+        DigitUint8 = (UINT8)StrHexToUint64 (TemStr);
+        if ((Index & 1) == 0) {
+          DataBuffer[Index/2] = DigitUint8;
+        } else {
+          DataBuffer[Index/2] = (UINT8)((DataBuffer[Index/2] << 4) + DigitUint8);
+        }
+      }
 
-    //
-    // Add the tailling char L'\0'
-    //
-    DataBuffer = (UINT8 *) AllocateZeroPool ((Length/4 + 1) * sizeof (CHAR16));
-    if (DataBuffer == NULL) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-    //
-    // Convert character one by one
-    //
-    StringPtr = (CHAR16 *) DataBuffer;
-    ZeroMem (TemStr, sizeof (TemStr));
-    for (Index = 0; Index < Length; Index += 4) {
-      StrnCpyS (TemStr, sizeof (TemStr) / sizeof (CHAR16), ConfigHdr + Index, 4);
-      StringPtr[Index/4] = (CHAR16) StrHexToUint64 (TemStr);
-    }
-    //
-    // Add tailing L'\0' character
-    //
-    StringPtr[Index/4] = L'\0';
+      *Buffer = DataBuffer;
+      break;
 
-    *Buffer = DataBuffer;
-    break;
+    case NAME_CONFIG_STRING_TYPE:
+      //
+      // Convert Config String to Unicode String, e.g. "0041004200430044" => "ABCD"
+      //
 
-  default:
-    return EFI_INVALID_PARAMETER;
+      //
+      // Add the tailling char L'\0'
+      //
+      DataBuffer = (UINT8 *)AllocateZeroPool ((Length/4 + 1) * sizeof (CHAR16));
+      if (DataBuffer == NULL) {
+        return EFI_OUT_OF_RESOURCES;
+      }
+
+      //
+      // Convert character one by one
+      //
+      StringPtr = (CHAR16 *)DataBuffer;
+      ZeroMem (TemStr, sizeof (TemStr));
+      for (Index = 0; Index < Length; Index += 4) {
+        StrnCpyS (TemStr, sizeof (TemStr) / sizeof (CHAR16), ConfigHdr + Index, 4);
+        StringPtr[Index/4] = (CHAR16)StrHexToUint64 (TemStr);
+      }
+
+      //
+      // Add tailing L'\0' character
+      //
+      StringPtr[Index/4] = L'\0';
+
+      *Buffer = DataBuffer;
+      break;
+
+    default:
+      return EFI_INVALID_PARAMETER;
   }
 
   return EFI_SUCCESS;
@@ -931,10 +973,10 @@ InternalHiiGetBufferFromString (
 /**
   This function checks VarOffset and VarWidth is in the block range.
 
-  @param  BlockArray         The block array is to be checked. 
+  @param  BlockArray         The block array is to be checked.
   @param  VarOffset          Offset of var to the structure
   @param  VarWidth           Width of var.
-  
+
   @retval TRUE   This Var is in the block range.
   @retval FALSE  This Var is not in the block range.
 **/
@@ -945,16 +987,16 @@ BlockArrayCheck (
   IN UINT16          VarWidth
   )
 {
-  LIST_ENTRY          *Link;
-  IFR_BLOCK_DATA      *BlockData;
-  
+  LIST_ENTRY      *Link;
+  IFR_BLOCK_DATA  *BlockData;
+
   //
   // No Request Block array, all vars are got.
   //
   if (BlockArray == NULL) {
     return TRUE;
   }
-  
+
   //
   // Check the input var is in the request block range.
   //
@@ -988,17 +1030,17 @@ BlockArrayCheck (
 EFI_STATUS
 EFIAPI
 InternalHiiGetValueOfNumber (
-  IN  EFI_STRING           ValueString,
-  OUT UINT8                **ValueData,
-  OUT UINTN                *ValueLength
+  IN  EFI_STRING  ValueString,
+  OUT UINT8       **ValueData,
+  OUT UINTN       *ValueLength
   )
 {
-  EFI_STRING               StringPtr;
-  UINTN                    Length;
-  UINT8                    *Buf;
-  UINT8                    DigitUint8;
-  UINTN                    Index;
-  CHAR16                   TemStr[2];
+  EFI_STRING  StringPtr;
+  UINTN       Length;
+  UINT8       *Buf;
+  UINT8       DigitUint8;
+  UINTN       Index;
+  CHAR16      TemStr[2];
 
   ASSERT (ValueString != NULL && ValueData != NULL && ValueLength != NULL);
   ASSERT (*ValueString != L'\0');
@@ -1010,35 +1052,36 @@ InternalHiiGetValueOfNumber (
   while (*StringPtr != L'\0' && *StringPtr != L'&') {
     StringPtr++;
   }
+
   Length = StringPtr - ValueString;
-  
+
   //
   // Allocate buffer to store the value
   //
-  Buf = (UINT8 *) AllocateZeroPool ((Length + 1) / 2);
+  Buf = (UINT8 *)AllocateZeroPool ((Length + 1) / 2);
   if (Buf == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-  
+
   //
   // Convert character one by one to the value buffer
   //
   ZeroMem (TemStr, sizeof (TemStr));
-  for (Index = 0; Index < Length; Index ++) {
-    TemStr[0] = ValueString[Length - Index - 1];
-    DigitUint8 = (UINT8) StrHexToUint64 (TemStr);
+  for (Index = 0; Index < Length; Index++) {
+    TemStr[0]  = ValueString[Length - Index - 1];
+    DigitUint8 = (UINT8)StrHexToUint64 (TemStr);
     if ((Index & 1) == 0) {
-      Buf [Index/2] = DigitUint8;
+      Buf[Index/2] = DigitUint8;
     } else {
-      Buf [Index/2] = (UINT8) ((DigitUint8 << 4) + Buf [Index/2]);
+      Buf[Index/2] = (UINT8)((DigitUint8 << 4) + Buf[Index/2]);
     }
   }
-  
+
   //
   // Set the converted value and string length.
   //
-  *ValueData    = Buf;
-  *ValueLength  = Length;
+  *ValueData   = Buf;
+  *ValueLength = Length;
   return EFI_SUCCESS;
 }
 
@@ -1048,21 +1091,21 @@ InternalHiiGetValueOfNumber (
   @param ConfigElement           ConfigResp string contains the current setting.
   @param VarName                 The variable name which need to get value.
   @param VarValue                The return value.
-  
+
   @retval EFI_SUCCESS            Get the value for the VarName
   @retval EFI_OUT_OF_RESOURCES   The memory is not enough.
 **/
 EFI_STATUS
 GetValueFromRequest (
-  IN CHAR16                       *ConfigElement,
-  IN CHAR16                       *VarName,
-  OUT UINT64                      *VarValue
+  IN CHAR16   *ConfigElement,
+  IN CHAR16   *VarName,
+  OUT UINT64  *VarValue
   )
 {
-  UINT8                        *TmpBuffer;
-  CHAR16                       *StringPtr;
-  UINTN                        Length;
-  EFI_STATUS                   Status;
+  UINT8       *TmpBuffer;
+  CHAR16      *StringPtr;
+  UINTN       Length;
+  EFI_STATUS  Status;
 
   //
   // Find VarName related string.
@@ -1106,22 +1149,22 @@ GetValueFromRequest (
   @param RequestElement     The config string for this storage.
   @param HiiHandle          The HiiHandle for this formset.
   @param NameValueType      Whether current storage is name/value varstore or not.
-  
+
   @retval EFI_SUCCESS            The current setting is valid.
   @retval EFI_OUT_OF_RESOURCES   The memory is not enough.
   @retval EFI_INVALID_PARAMETER  The config string or the Hii package is invalid.
 **/
 EFI_STATUS
 ValidateQuestionFromVfr (
-  IN EFI_HII_PACKAGE_LIST_HEADER   *HiiPackageList,
-  IN UINTN                         PackageListLength,
-  IN EFI_GUID                      *VarGuid,
-  IN CHAR16                        *VarName,
-  IN UINT8                         *VarBuffer,
-  IN IFR_BLOCK_DATA                *CurrentBlockArray,
-  IN CHAR16                        *RequestElement,
-  IN EFI_HII_HANDLE                HiiHandle,
-  IN BOOLEAN                       NameValueType
+  IN EFI_HII_PACKAGE_LIST_HEADER  *HiiPackageList,
+  IN UINTN                        PackageListLength,
+  IN EFI_GUID                     *VarGuid,
+  IN CHAR16                       *VarName,
+  IN UINT8                        *VarBuffer,
+  IN IFR_BLOCK_DATA               *CurrentBlockArray,
+  IN CHAR16                       *RequestElement,
+  IN EFI_HII_HANDLE               HiiHandle,
+  IN BOOLEAN                      NameValueType
   )
 {
   IFR_BLOCK_DATA               VarBlockData;
@@ -1131,7 +1174,7 @@ ValidateQuestionFromVfr (
   EFI_IFR_TYPE_VALUE           TmpValue;
   EFI_STATUS                   Status;
   EFI_HII_PACKAGE_HEADER       PackageHeader;
-  UINT32                       PackageOffset;
+  UINTN                        PackageOffset;
   UINT8                        *PackageData;
   UINTN                        IfrOffset;
   EFI_IFR_OP_HEADER            *IfrOpHdr;
@@ -1148,6 +1191,13 @@ ValidateQuestionFromVfr (
   UINTN                        Index;
   CHAR16                       *QuestionName;
   CHAR16                       *StringPtr;
+  UINT16                       BitOffset;
+  UINT16                       BitWidth;
+  UINT16                       TotalBits;
+  UINTN                        StartBit;
+  UINTN                        EndBit;
+  BOOLEAN                      QuestionReferBitField;
+  UINT32                       BufferValue;
 
   //
   // Initialize the local variables.
@@ -1161,546 +1211,708 @@ ValidateQuestionFromVfr (
   IfrEfiVarStore    = NULL;
   ZeroMem (&VarStoreData, sizeof (IFR_VARSTORAGE_DATA));
   ZeroMem (&VarBlockData, sizeof (VarBlockData));
+  BitOffset             = 0;
+  BitWidth              = 0;
+  QuestionReferBitField = FALSE;
 
   //
   // Check IFR value is in block data, then Validate Value
   //
   PackageOffset = sizeof (EFI_HII_PACKAGE_LIST_HEADER);
   while (PackageOffset < PackageListLength) {
-    CopyMem (&PackageHeader, (UINT8 *) HiiPackageList + PackageOffset, sizeof (PackageHeader));
+    CopyMem (&PackageHeader, (UINT8 *)HiiPackageList + PackageOffset, sizeof (PackageHeader));
 
     //
     // Parse IFR opcode from the form package.
     //
     if (PackageHeader.Type == EFI_HII_PACKAGE_FORMS) {
       IfrOffset   = sizeof (PackageHeader);
-      PackageData = (UINT8 *) HiiPackageList + PackageOffset;
+      PackageData = (UINT8 *)HiiPackageList + PackageOffset;
       while (IfrOffset < PackageHeader.Length) {
-        IfrOpHdr = (EFI_IFR_OP_HEADER *) (PackageData + IfrOffset);
+        IfrOpHdr = (EFI_IFR_OP_HEADER *)(PackageData + IfrOffset);
         //
         // Validate current setting to the value built in IFR opcode
         //
         switch (IfrOpHdr->OpCode) {
-        case EFI_IFR_VARSTORE_OP:
-          //
-          // VarStoreId has been found. No further found.
-          //
-          if (VarStoreData.VarStoreId != 0) {
-            break;
-          }
-          //
-          // Find the matched VarStoreId to the input VarGuid and VarName
-          //
-          IfrVarStore = (EFI_IFR_VARSTORE *) IfrOpHdr;
-          if (CompareGuid ((EFI_GUID *) (VOID *) &IfrVarStore->Guid, VarGuid)) {
-            VarStoreName = (CHAR8 *) IfrVarStore->Name;
-            for (Index = 0; VarStoreName[Index] != 0; Index ++) {
-              if ((CHAR16) VarStoreName[Index] != VarName[Index]) {
-                break;
-              }
+          case EFI_IFR_VARSTORE_OP:
+            //
+            // VarStoreId has been found. No further found.
+            //
+            if (VarStoreData.VarStoreId != 0) {
+              break;
             }
+
             //
-            // The matched VarStore is found.
+            // Find the matched VarStoreId to the input VarGuid and VarName
             //
-            if ((VarStoreName[Index] != 0) || (VarName[Index] != 0)) {
+            IfrVarStore = (EFI_IFR_VARSTORE *)IfrOpHdr;
+            if (CompareGuid ((EFI_GUID *)(VOID *)&IfrVarStore->Guid, VarGuid)) {
+              VarStoreName = (CHAR8 *)IfrVarStore->Name;
+              for (Index = 0; VarStoreName[Index] != 0; Index++) {
+                if ((CHAR16)VarStoreName[Index] != VarName[Index]) {
+                  break;
+                }
+              }
+
+              //
+              // The matched VarStore is found.
+              //
+              if ((VarStoreName[Index] != 0) || (VarName[Index] != 0)) {
+                IfrVarStore = NULL;
+              }
+            } else {
               IfrVarStore = NULL;
             }
-          } else {
-            IfrVarStore = NULL;
-          }
 
-          if (IfrVarStore != NULL) {
-            VarStoreData.VarStoreId = IfrVarStore->VarStoreId;
-            VarStoreData.Size       = IfrVarStore->Size;
-          }
-          break;
-        case EFI_IFR_VARSTORE_NAME_VALUE_OP:
-          //
-          // VarStoreId has been found. No further found.
-          //
-          if (VarStoreData.VarStoreId != 0) {
-            break;
-          }
-          //
-          // Find the matched VarStoreId to the input VarGuid
-          //
-          IfrNameValueStore = (EFI_IFR_VARSTORE_NAME_VALUE *) IfrOpHdr;
-          if (!CompareGuid ((EFI_GUID *) (VOID *) &IfrNameValueStore->Guid, VarGuid)) {
-            IfrNameValueStore = NULL;
-          }
-
-          if (IfrNameValueStore != NULL) {
-            VarStoreData.VarStoreId = IfrNameValueStore->VarStoreId;
-          }
-          break;
-        case EFI_IFR_VARSTORE_EFI_OP:
-          //
-          // VarStore is found. Don't need to search any more.
-          //
-          if (VarStoreData.VarStoreId != 0) {
-            break;
-          }
-
-          IfrEfiVarStore = (EFI_IFR_VARSTORE_EFI *) IfrOpHdr;
-
-          //
-          // If the length is small than the structure, this is from old efi 
-          // varstore definition. Old efi varstore get config directly from 
-          // GetVariable function.
-          //
-          if (IfrOpHdr->Length < sizeof (EFI_IFR_VARSTORE_EFI)) {
-            break;
-          }
-
-          if (CompareGuid ((EFI_GUID *) (VOID *) &IfrEfiVarStore->Guid, VarGuid)) {
-            VarStoreName = (CHAR8 *) IfrEfiVarStore->Name;
-            for (Index = 0; VarStoreName[Index] != 0; Index ++) {
-              if ((CHAR16) VarStoreName[Index] != VarName[Index]) {
-                break;
-              }
+            if (IfrVarStore != NULL) {
+              VarStoreData.VarStoreId = IfrVarStore->VarStoreId;
+              VarStoreData.Size       = IfrVarStore->Size;
             }
+
+            break;
+          case EFI_IFR_VARSTORE_NAME_VALUE_OP:
             //
-            // The matched VarStore is found.
+            // VarStoreId has been found. No further found.
             //
-            if ((VarStoreName[Index] != 0) || (VarName[Index] != 0)) {
+            if (VarStoreData.VarStoreId != 0) {
+              break;
+            }
+
+            //
+            // Find the matched VarStoreId to the input VarGuid
+            //
+            IfrNameValueStore = (EFI_IFR_VARSTORE_NAME_VALUE *)IfrOpHdr;
+            if (!CompareGuid ((EFI_GUID *)(VOID *)&IfrNameValueStore->Guid, VarGuid)) {
+              IfrNameValueStore = NULL;
+            }
+
+            if (IfrNameValueStore != NULL) {
+              VarStoreData.VarStoreId = IfrNameValueStore->VarStoreId;
+            }
+
+            break;
+          case EFI_IFR_VARSTORE_EFI_OP:
+            //
+            // VarStore is found. Don't need to search any more.
+            //
+            if (VarStoreData.VarStoreId != 0) {
+              break;
+            }
+
+            IfrEfiVarStore = (EFI_IFR_VARSTORE_EFI *)IfrOpHdr;
+
+            //
+            // If the length is small than the structure, this is from old efi
+            // varstore definition. Old efi varstore get config directly from
+            // GetVariable function.
+            //
+            if (IfrOpHdr->Length < sizeof (EFI_IFR_VARSTORE_EFI)) {
+              break;
+            }
+
+            if (CompareGuid ((EFI_GUID *)(VOID *)&IfrEfiVarStore->Guid, VarGuid)) {
+              VarStoreName = (CHAR8 *)IfrEfiVarStore->Name;
+              for (Index = 0; VarStoreName[Index] != 0; Index++) {
+                if ((CHAR16)VarStoreName[Index] != VarName[Index]) {
+                  break;
+                }
+              }
+
+              //
+              // The matched VarStore is found.
+              //
+              if ((VarStoreName[Index] != 0) || (VarName[Index] != 0)) {
+                IfrEfiVarStore = NULL;
+              }
+            } else {
               IfrEfiVarStore = NULL;
             }
-          } else {
-            IfrEfiVarStore = NULL;
-          }
 
-          if (IfrEfiVarStore != NULL) {
-            //
-            // Find the matched VarStore
-            //
-            VarStoreData.VarStoreId = IfrEfiVarStore->VarStoreId;
-            VarStoreData.Size       = IfrEfiVarStore->Size;
-          }
-          break;
-        case EFI_IFR_FORM_OP:
-        case EFI_IFR_FORM_MAP_OP:
-          //
-          // Check the matched VarStoreId is found.
-          //
-          if (VarStoreData.VarStoreId == 0) {
-            return EFI_SUCCESS;
-          }
-          break;
-        case EFI_IFR_ONE_OF_OP:
-          //
-          // Check whether current value is the one of option.
-          //
+            if (IfrEfiVarStore != NULL) {
+              //
+              // Find the matched VarStore
+              //
+              VarStoreData.VarStoreId = IfrEfiVarStore->VarStoreId;
+              VarStoreData.Size       = IfrEfiVarStore->Size;
+            }
 
-          //
-          // OneOf question is not in IFR Form. This IFR form is not valid. 
-          //
-          if (VarStoreData.VarStoreId == 0) {
-            return EFI_INVALID_PARAMETER;
-          }
-          // 
-          // Check whether this question is for the requested varstore.
-          //
-          IfrOneOf = (EFI_IFR_ONE_OF *) IfrOpHdr;
-          if (IfrOneOf->Question.VarStoreId != VarStoreData.VarStoreId) {
             break;
-          }
-
-          if (NameValueType) {
-            QuestionName = HiiGetString (HiiHandle, IfrOneOf->Question.VarStoreInfo.VarName, NULL);
-            ASSERT (QuestionName != NULL);
-
-            if (StrStr (RequestElement, QuestionName) == NULL) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
+          case EFI_IFR_FORM_OP:
+          case EFI_IFR_FORM_MAP_OP:
+            //
+            // Check the matched VarStoreId is found.
+            //
+            if (VarStoreData.VarStoreId == 0) {
+              return EFI_SUCCESS;
             }
 
-            Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
-            if (EFI_ERROR (Status)) {
-              return Status;
-            }
-          } else {
+            break;
+          case EFI_IFR_ONE_OF_OP:
             //
-            // Get Offset by Question header and Width by DataType Flags
+            // Check whether current value is the one of option.
             //
-            Offset = IfrOneOf->Question.VarStoreInfo.VarOffset;
-            Width  = (UINT16) (1 << (IfrOneOf->Flags & EFI_IFR_NUMERIC_SIZE));
+
             //
-            // Check whether this question is in current block array.
+            // OneOf question is not in IFR Form. This IFR form is not valid.
             //
-            if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
-            }
-            //
-            // Check this var question is in the var storage 
-            //
-            if ((Offset + Width) > VarStoreData.Size) {
-              //
-              // This question exceeds the var store size. 
-              //
+            if (VarStoreData.VarStoreId == 0) {
               return EFI_INVALID_PARAMETER;
             }
 
             //
-            // Get the current value for oneof opcode
+            // Check whether this question is for the requested varstore.
             //
-            VarValue = 0;
-            CopyMem (&VarValue, VarBuffer +  Offset, Width);
-          }
-          //
-          // Set Block Data, to be checked in the following Oneof option opcode.
-          //
-          VarBlockData.OpCode     = IfrOpHdr->OpCode;
-          VarBlockData.Scope      = IfrOpHdr->Scope;
-          break;
-        case EFI_IFR_NUMERIC_OP:
-          //
-          // Check the current value is in the numeric range.
-          //
+            IfrOneOf = (EFI_IFR_ONE_OF *)IfrOpHdr;
+            if (IfrOneOf->Question.VarStoreId != VarStoreData.VarStoreId) {
+              break;
+            }
 
-          //
-          // Numeric question is not in IFR Form. This IFR form is not valid. 
-          //
-          if (VarStoreData.VarStoreId == 0) {
-            return EFI_INVALID_PARAMETER;
-          }
-          //
-          // Check whether this question is for the requested varstore.
-          //
-          IfrNumeric = (EFI_IFR_NUMERIC *) IfrOpHdr;
-          if (IfrNumeric->Question.VarStoreId != VarStoreData.VarStoreId) {
+            if (NameValueType) {
+              QuestionName = HiiGetString (HiiHandle, IfrOneOf->Question.VarStoreInfo.VarName, NULL);
+              if (QuestionName == NULL) {
+                ASSERT (QuestionName != NULL);
+                return EFI_INVALID_PARAMETER;
+              }
+
+              if (StrStr (RequestElement, QuestionName) == NULL) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                FreePool (QuestionName);
+                break;
+              }
+
+              Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
+              FreePool (QuestionName);
+              if (EFI_ERROR (Status)) {
+                return Status;
+              }
+            } else {
+              //
+              // Get Offset by Question header and Width by DataType Flags
+              //
+              if (QuestionReferBitField) {
+                //
+                // Get the byte offset/width for bit field.
+                //
+                BitOffset = IfrOneOf->Question.VarStoreInfo.VarOffset;
+                BitWidth  = IfrOneOf->Flags & EDKII_IFR_NUMERIC_SIZE_BIT;
+                Offset    = BitOffset / 8;
+                TotalBits = BitOffset % 8 + BitWidth;
+                Width     = (TotalBits % 8 == 0 ? TotalBits / 8 : TotalBits / 8 + 1);
+              } else {
+                Offset = IfrOneOf->Question.VarStoreInfo.VarOffset;
+                Width  = (UINT16)(1 << (IfrOneOf->Flags & EFI_IFR_NUMERIC_SIZE));
+              }
+
+              //
+              // Check whether this question is in current block array.
+              //
+              if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                break;
+              }
+
+              //
+              // Check this var question is in the var storage
+              //
+              if ((Offset + Width) > VarStoreData.Size) {
+                //
+                // This question exceeds the var store size.
+                //
+                return EFI_INVALID_PARAMETER;
+              }
+
+              //
+              // Get the current value for oneof opcode
+              //
+              VarValue = 0;
+              if (QuestionReferBitField) {
+                //
+                // Get the value in bit fields.
+                //
+                StartBit = BitOffset % 8;
+                EndBit   = StartBit + BitWidth - 1;
+                CopyMem ((UINT8 *)&BufferValue, VarBuffer + Offset, Width);
+                VarValue = BitFieldRead32 (BufferValue, StartBit, EndBit);
+              } else {
+                CopyMem (&VarValue, VarBuffer +  Offset, Width);
+              }
+            }
+
+            //
+            // Set Block Data, to be checked in the following Oneof option opcode.
+            //
+            VarBlockData.OpCode = IfrOpHdr->OpCode;
+            VarBlockData.Scope  = IfrOpHdr->Scope;
             break;
-          }
-
-          if (NameValueType) {
-            QuestionName = HiiGetString (HiiHandle, IfrNumeric->Question.VarStoreInfo.VarName, NULL);
-            ASSERT (QuestionName != NULL);
-
-            if (StrStr (RequestElement, QuestionName) == NULL) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
-            }
-            
-            Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
-            if (EFI_ERROR (Status)) {
-              return Status;
-            }
-          } else {
-            //
-            // Get Offset by Question header and Width by DataType Flags
-            //
-            Offset = IfrNumeric->Question.VarStoreInfo.VarOffset;
-            Width  = (UINT16) (1 << (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE));
-            //
-            // Check whether this question is in current block array.
-            //
-            if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
-            }
-            //
-            // Check this var question is in the var storage 
-            //
-            if ((Offset + Width) > VarStoreData.Size) {
-              //
-              // This question exceeds the var store size. 
-              //
-              return EFI_INVALID_PARAMETER;
-            }
-
+          case EFI_IFR_NUMERIC_OP:
             //
             // Check the current value is in the numeric range.
             //
-            VarValue = 0;
-            CopyMem (&VarValue, VarBuffer +  Offset, Width);
-          }
-          if ((IfrNumeric->Flags & EFI_IFR_DISPLAY) == 0) {
-            switch (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE) {
-            case EFI_IFR_NUMERIC_SIZE_1:
-              if ((INT8) VarValue < (INT8) IfrNumeric->data.u8.MinValue || (INT8) VarValue > (INT8) IfrNumeric->data.u8.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_2:
-              if ((INT16) VarValue < (INT16) IfrNumeric->data.u16.MinValue || (INT16) VarValue > (INT16) IfrNumeric->data.u16.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_4:
-              if ((INT32) VarValue < (INT32) IfrNumeric->data.u32.MinValue || (INT32) VarValue > (INT32) IfrNumeric->data.u32.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_8:
-              if ((INT64) VarValue < (INT64) IfrNumeric->data.u64.MinValue || (INT64) VarValue > (INT64) IfrNumeric->data.u64.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            }
-          } else {
-            switch (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE) {
-            case EFI_IFR_NUMERIC_SIZE_1:
-              if ((UINT8) VarValue < IfrNumeric->data.u8.MinValue || (UINT8) VarValue > IfrNumeric->data.u8.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_2:
-              if ((UINT16) VarValue < IfrNumeric->data.u16.MinValue || (UINT16) VarValue > IfrNumeric->data.u16.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_4:
-              if ((UINT32) VarValue < IfrNumeric->data.u32.MinValue || (UINT32) VarValue > IfrNumeric->data.u32.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            case EFI_IFR_NUMERIC_SIZE_8:
-              if ((UINT64) VarValue < IfrNumeric->data.u64.MinValue || (UINT64) VarValue > IfrNumeric->data.u64.MaxValue) {
-                //
-                // Not in the valid range.
-                //
-                return EFI_INVALID_PARAMETER;
-              }
-              break;
-            }
-          }
-          break;
-        case EFI_IFR_CHECKBOX_OP:
-          //
-          // Check value is BOOLEAN type, only 0 and 1 is valid.
-          //
 
-          //
-          // CheckBox question is not in IFR Form. This IFR form is not valid. 
-          //
-          if (VarStoreData.VarStoreId == 0) {
-            return EFI_INVALID_PARAMETER;
-          }
-
-          //
-          // Check whether this question is for the requested varstore.
-          //
-          IfrCheckBox = (EFI_IFR_CHECKBOX *) IfrOpHdr;
-          if (IfrCheckBox->Question.VarStoreId != VarStoreData.VarStoreId) {
-            break;
-          }
-
-          if (NameValueType) {
-            QuestionName = HiiGetString (HiiHandle, IfrCheckBox->Question.VarStoreInfo.VarName, NULL);
-            ASSERT (QuestionName != NULL);
-
-            if (StrStr (RequestElement, QuestionName) == NULL) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
-            }
-            
-            Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
-            if (EFI_ERROR (Status)) {
-              return Status;
-            }
-          } else {
             //
-            // Get Offset by Question header
+            // Numeric question is not in IFR Form. This IFR form is not valid.
             //
-            Offset = IfrCheckBox->Question.VarStoreInfo.VarOffset;
-            Width  = (UINT16) sizeof (BOOLEAN);
-            //
-            // Check whether this question is in current block array.
-            //
-            if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
-              break;
-            }
-            //
-            // Check this var question is in the var storage 
-            //
-            if ((Offset + Width) > VarStoreData.Size) {
-              //
-              // This question exceeds the var store size. 
-              //
+            if (VarStoreData.VarStoreId == 0) {
               return EFI_INVALID_PARAMETER;
             }
+
             //
-            // Check the current value is in the numeric range.
+            // Check whether this question is for the requested varstore.
             //
-            VarValue = 0;
-            CopyMem (&VarValue, VarBuffer +  Offset, Width);
-          }
-          //
-          // Boolean type, only 1 and 0 is valid.
-          //
-          if (VarValue > 1) {
-            return EFI_INVALID_PARAMETER;
-          }
-          break;
-        case EFI_IFR_STRING_OP:
-          //
-          // Check current string length is less than maxsize
-          //
-
-          //
-          // CheckBox question is not in IFR Form. This IFR form is not valid. 
-          //
-          if (VarStoreData.VarStoreId == 0) {
-            return EFI_INVALID_PARAMETER;
-          }
-
-          //
-          // Check whether this question is for the requested varstore.
-          //
-          IfrString = (EFI_IFR_STRING *) IfrOpHdr;
-          if (IfrString->Question.VarStoreId != VarStoreData.VarStoreId) {
-            break;
-          }
-          //
-          // Get Width by OneOf Flags
-          //
-          Width  = (UINT16) (IfrString->MaxSize * sizeof (UINT16));
-          if (NameValueType) {
-            QuestionName = HiiGetString (HiiHandle, IfrString->Question.VarStoreInfo.VarName, NULL);
-            ASSERT (QuestionName != NULL);
-
-            StringPtr = StrStr (RequestElement, QuestionName);
-            if (StringPtr == NULL) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
+            IfrNumeric = (EFI_IFR_NUMERIC *)IfrOpHdr;
+            if (IfrNumeric->Question.VarStoreId != VarStoreData.VarStoreId) {
               break;
             }
 
+            if (NameValueType) {
+              QuestionName = HiiGetString (HiiHandle, IfrNumeric->Question.VarStoreInfo.VarName, NULL);
+              if (QuestionName == NULL) {
+                ASSERT (QuestionName != NULL);
+                return EFI_INVALID_PARAMETER;
+              }
+
+              if (StrStr (RequestElement, QuestionName) == NULL) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                FreePool (QuestionName);
+                break;
+              }
+
+              Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
+              FreePool (QuestionName);
+              if (EFI_ERROR (Status)) {
+                return Status;
+              }
+            } else {
+              //
+              // Get Offset by Question header and Width by DataType Flags
+              //
+              if (QuestionReferBitField) {
+                //
+                // Get the byte offset/width for bit field.
+                //
+                BitOffset = IfrNumeric->Question.VarStoreInfo.VarOffset;
+                BitWidth  = IfrNumeric->Flags & EDKII_IFR_NUMERIC_SIZE_BIT;
+                Offset    = BitOffset / 8;
+                TotalBits = BitOffset % 8 + BitWidth;
+                Width     = (TotalBits % 8 == 0 ? TotalBits / 8 : TotalBits / 8 + 1);
+              } else {
+                Offset = IfrNumeric->Question.VarStoreInfo.VarOffset;
+                Width  = (UINT16)(1 << (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE));
+              }
+
+              //
+              // Check whether this question is in current block array.
+              //
+              if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                break;
+              }
+
+              //
+              // Check this var question is in the var storage
+              //
+              if ((Offset + Width) > VarStoreData.Size) {
+                //
+                // This question exceeds the var store size.
+                //
+                return EFI_INVALID_PARAMETER;
+              }
+
+              //
+              // Check the current value is in the numeric range.
+              //
+              VarValue = 0;
+              if (QuestionReferBitField) {
+                //
+                // Get the value in the bit fields.
+                //
+                StartBit = BitOffset % 8;
+                EndBit   = StartBit + BitWidth - 1;
+                CopyMem ((UINT8 *)&BufferValue, VarBuffer + Offset, Width);
+                VarValue = BitFieldRead32 (BufferValue, StartBit, EndBit);
+              } else {
+                CopyMem (&VarValue, VarBuffer +  Offset, Width);
+              }
+            }
+
+            if ( QuestionReferBitField) {
+              //
+              // Value in bit fields was stored as UINt32 type.
+              //
+              if ((IfrNumeric->Flags & EDKII_IFR_DISPLAY_BIT) == 0) {
+                if (((INT32)VarValue < (INT32)IfrNumeric->data.u32.MinValue) || ((INT32)VarValue > (INT32)IfrNumeric->data.u32.MaxValue)) {
+                  //
+                  // Not in the valid range.
+                  //
+                  return EFI_INVALID_PARAMETER;
+                }
+              } else {
+                if ((VarValue < IfrNumeric->data.u32.MinValue) || (VarValue > IfrNumeric->data.u32.MaxValue)) {
+                  //
+                  // Not in the valid range.
+                  //
+                  return EFI_INVALID_PARAMETER;
+                }
+              }
+            } else {
+              if ((IfrNumeric->Flags & EFI_IFR_DISPLAY) == 0) {
+                switch (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE) {
+                  case EFI_IFR_NUMERIC_SIZE_1:
+                    if (((INT8)VarValue < (INT8)IfrNumeric->data.u8.MinValue) || ((INT8)VarValue > (INT8)IfrNumeric->data.u8.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_2:
+                    if (((INT16)VarValue < (INT16)IfrNumeric->data.u16.MinValue) || ((INT16)VarValue > (INT16)IfrNumeric->data.u16.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_4:
+                    if (((INT32)VarValue < (INT32)IfrNumeric->data.u32.MinValue) || ((INT32)VarValue > (INT32)IfrNumeric->data.u32.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_8:
+                    if (((INT64)VarValue < (INT64)IfrNumeric->data.u64.MinValue) || ((INT64)VarValue > (INT64)IfrNumeric->data.u64.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                }
+              } else {
+                switch (IfrNumeric->Flags & EFI_IFR_NUMERIC_SIZE) {
+                  case EFI_IFR_NUMERIC_SIZE_1:
+                    if (((UINT8)VarValue < IfrNumeric->data.u8.MinValue) || ((UINT8)VarValue > IfrNumeric->data.u8.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_2:
+                    if (((UINT16)VarValue < IfrNumeric->data.u16.MinValue) || ((UINT16)VarValue > IfrNumeric->data.u16.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_4:
+                    if (((UINT32)VarValue < IfrNumeric->data.u32.MinValue) || ((UINT32)VarValue > IfrNumeric->data.u32.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                  case EFI_IFR_NUMERIC_SIZE_8:
+                    if (((UINT64)VarValue < IfrNumeric->data.u64.MinValue) || ((UINT64)VarValue > IfrNumeric->data.u64.MaxValue)) {
+                      //
+                      // Not in the valid range.
+                      //
+                      return EFI_INVALID_PARAMETER;
+                    }
+
+                    break;
+                }
+              }
+            }
+
+            break;
+          case EFI_IFR_CHECKBOX_OP:
             //
-            // Skip the "=".
-            // 
-            StringPtr += 1;
-            
+            // Check value is BOOLEAN type, only 0 and 1 is valid.
+            //
+
+            //
+            // CheckBox question is not in IFR Form. This IFR form is not valid.
+            //
+            if (VarStoreData.VarStoreId == 0) {
+              return EFI_INVALID_PARAMETER;
+            }
+
+            //
+            // Check whether this question is for the requested varstore.
+            //
+            IfrCheckBox = (EFI_IFR_CHECKBOX *)IfrOpHdr;
+            if (IfrCheckBox->Question.VarStoreId != VarStoreData.VarStoreId) {
+              break;
+            }
+
+            if (NameValueType) {
+              QuestionName = HiiGetString (HiiHandle, IfrCheckBox->Question.VarStoreInfo.VarName, NULL);
+              if (QuestionName == NULL) {
+                ASSERT (QuestionName != NULL);
+                return EFI_INVALID_PARAMETER;
+              }
+
+              if (StrStr (RequestElement, QuestionName) == NULL) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                FreePool (QuestionName);
+                break;
+              }
+
+              Status = GetValueFromRequest (RequestElement, QuestionName, &VarValue);
+              FreePool (QuestionName);
+              if (EFI_ERROR (Status)) {
+                return Status;
+              }
+            } else {
+              //
+              // Get Offset by Question header
+              //
+              if (QuestionReferBitField) {
+                //
+                // Get the byte offset/width for bit field.
+                //
+                BitOffset = IfrCheckBox->Question.VarStoreInfo.VarOffset;
+                BitWidth  = 1;
+                Offset    = BitOffset / 8;
+                TotalBits = BitOffset % 8 + BitWidth;
+                Width     = (TotalBits % 8 == 0 ? TotalBits / 8 : TotalBits / 8 + 1);
+              } else {
+                Offset = IfrCheckBox->Question.VarStoreInfo.VarOffset;
+                Width  = (UINT16)sizeof (BOOLEAN);
+              }
+
+              //
+              // Check whether this question is in current block array.
+              //
+              if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                break;
+              }
+
+              //
+              // Check this var question is in the var storage
+              //
+              if ((Offset + Width) > VarStoreData.Size) {
+                //
+                // This question exceeds the var store size.
+                //
+                return EFI_INVALID_PARAMETER;
+              }
+
+              //
+              // Check the current value is in the numeric range.
+              //
+              VarValue = 0;
+              if (QuestionReferBitField) {
+                //
+                // Get the value in bit fields.
+                //
+                StartBit = BitOffset % 8;
+                EndBit   = StartBit + BitWidth - 1;
+                CopyMem ((UINT8 *)&BufferValue, VarBuffer + Offset, Width);
+                VarValue = BitFieldRead32 (BufferValue, StartBit, EndBit);
+              } else {
+                CopyMem (&VarValue, VarBuffer +  Offset, Width);
+              }
+            }
+
+            //
+            // Boolean type, only 1 and 0 is valid.
+            //
+            if (VarValue > 1) {
+              return EFI_INVALID_PARAMETER;
+            }
+
+            break;
+          case EFI_IFR_STRING_OP:
             //
             // Check current string length is less than maxsize
             //
-            if (StrSize (StringPtr) > Width) {
+
+            //
+            // CheckBox question is not in IFR Form. This IFR form is not valid.
+            //
+            if (VarStoreData.VarStoreId == 0) {
               return EFI_INVALID_PARAMETER;
             }
-          } else {
+
             //
-            // Get Offset/Width by Question header and OneOf Flags
+            // Check whether this question is for the requested varstore.
             //
-            Offset = IfrString->Question.VarStoreInfo.VarOffset;
-            //
-            // Check whether this question is in current block array.
-            //
-            if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
-              //
-              // This question is not in the current configuration string. Skip it.
-              //
+            IfrString = (EFI_IFR_STRING *)IfrOpHdr;
+            if (IfrString->Question.VarStoreId != VarStoreData.VarStoreId) {
               break;
             }
-            //
-            // Check this var question is in the var storage 
-            //
-            if ((Offset + Width) > VarStoreData.Size) {
-              //
-              // This question exceeds the var store size. 
-              //
-              return EFI_INVALID_PARAMETER;
-            }
 
             //
-            // Check current string length is less than maxsize
+            // Get the Max size of the string.
             //
-            if (StrSize ((CHAR16 *) (VarBuffer + Offset)) > Width) {
-              return EFI_INVALID_PARAMETER;
+            Width = (UINT16)(IfrString->MaxSize * sizeof (UINT16));
+            if (NameValueType) {
+              QuestionName = HiiGetString (HiiHandle, IfrString->Question.VarStoreInfo.VarName, NULL);
+              if (QuestionName == NULL) {
+                ASSERT (QuestionName != NULL);
+                return EFI_INVALID_PARAMETER;
+              }
+
+              StringPtr = StrStr (RequestElement, QuestionName);
+              if (StringPtr == NULL) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                FreePool (QuestionName);
+                break;
+              }
+
+              //
+              // Skip the VarName.
+              //
+              StringPtr += StrLen (QuestionName);
+              FreePool (QuestionName);
+
+              //
+              // Skip the "=".
+              //
+              StringPtr += 1;
+
+              //
+              // Check current string length is less than maxsize
+              // e.g Config String: "0041004200430044", Unicode String: "ABCD". Unicode String length = Config String length / 4.
+              // Config string format in UEFI spec.
+              // <NvConfig> ::= <Label>'='<String>
+              // <String> ::= [<Char>]+
+              // <Char> ::= <HexCh>4
+              //
+              if (StrLen (StringPtr) / 4 > IfrString->MaxSize) {
+                return EFI_INVALID_PARAMETER;
+              }
+            } else {
+              //
+              // Get Offset/Width by Question header and OneOf Flags
+              //
+              Offset = IfrString->Question.VarStoreInfo.VarOffset;
+              //
+              // Check whether this question is in current block array.
+              //
+              if (!BlockArrayCheck (CurrentBlockArray, Offset, Width)) {
+                //
+                // This question is not in the current configuration string. Skip it.
+                //
+                break;
+              }
+
+              //
+              // Check this var question is in the var storage
+              //
+              if ((Offset + Width) > VarStoreData.Size) {
+                //
+                // This question exceeds the var store size.
+                //
+                return EFI_INVALID_PARAMETER;
+              }
+
+              //
+              // Check current string length is less than maxsize
+              //
+              if (StrLen ((CHAR16 *)(VarBuffer + Offset)) > IfrString->MaxSize) {
+                return EFI_INVALID_PARAMETER;
+              }
             }
-          }
-          break;
-        case EFI_IFR_ONE_OF_OPTION_OP:
-          //
-          // Opcode Scope is zero. This one of option is not to be checked. 
-          //
-          if (VarBlockData.Scope == 0) {
+
             break;
-          }
-
-          //
-          // Only check for OneOf and OrderList opcode
-          //
-          IfrOneOfOption = (EFI_IFR_ONE_OF_OPTION *) IfrOpHdr;
-          if (VarBlockData.OpCode == EFI_IFR_ONE_OF_OP) {
+          case EFI_IFR_ONE_OF_OPTION_OP:
             //
-            // Check current value is the value of one of option.
+            // Opcode Scope is zero. This one of option is not to be checked.
             //
-            ASSERT (IfrOneOfOption->Type <= EFI_IFR_TYPE_NUM_SIZE_64);
-            ZeroMem (&TmpValue, sizeof (EFI_IFR_TYPE_VALUE));
-            CopyMem (&TmpValue, &IfrOneOfOption->Value, IfrOneOfOption->Header.Length - OFFSET_OF (EFI_IFR_ONE_OF_OPTION, Value));
-            if (VarValue == TmpValue.u64) {
-              //
-              // The value is one of option value.
-              // Set OpCode to Zero, don't need check again.
-              //
-              VarBlockData.OpCode = 0;
+            if (VarBlockData.Scope == 0) {
+              break;
             }
-          }
-          break;
-        case EFI_IFR_END_OP:
-          //
-          // Decrease opcode scope for the validated opcode
-          //
-          if (VarBlockData.Scope > 0) {
-            VarBlockData.Scope --;
-          }
 
-          //
-          // OneOf value doesn't belong to one of option value. 
-          //
-          if ((VarBlockData.Scope == 0) && (VarBlockData.OpCode == EFI_IFR_ONE_OF_OP)) {
-            return EFI_INVALID_PARAMETER;
-          }
-          break;
-        default:
-          //
-          // Increase Scope for the validated opcode
-          //
-          if (VarBlockData.Scope > 0) {
-            VarBlockData.Scope = (UINT8) (VarBlockData.Scope + IfrOpHdr->Scope);
-          }
-          break;
+            //
+            // Only check for OneOf and OrderList opcode
+            //
+            IfrOneOfOption = (EFI_IFR_ONE_OF_OPTION *)IfrOpHdr;
+            if (VarBlockData.OpCode == EFI_IFR_ONE_OF_OP) {
+              //
+              // Check current value is the value of one of option.
+              //
+              ASSERT (IfrOneOfOption->Type <= EFI_IFR_TYPE_NUM_SIZE_64);
+              ZeroMem (&TmpValue, sizeof (EFI_IFR_TYPE_VALUE));
+              CopyMem (&TmpValue, &IfrOneOfOption->Value, IfrOneOfOption->Header.Length - OFFSET_OF (EFI_IFR_ONE_OF_OPTION, Value));
+              if (VarValue == TmpValue.u64) {
+                //
+                // The value is one of option value.
+                // Set OpCode to Zero, don't need check again.
+                //
+                VarBlockData.OpCode = 0;
+              }
+            }
+
+            break;
+          case EFI_IFR_END_OP:
+            QuestionReferBitField = FALSE;
+            //
+            // Decrease opcode scope for the validated opcode
+            //
+            if (VarBlockData.Scope > 0) {
+              VarBlockData.Scope--;
+            }
+
+            //
+            // OneOf value doesn't belong to one of option value.
+            //
+            if ((VarBlockData.Scope == 0) && (VarBlockData.OpCode == EFI_IFR_ONE_OF_OP)) {
+              return EFI_INVALID_PARAMETER;
+            }
+
+            break;
+          case EFI_IFR_GUID_OP:
+            if (CompareGuid ((EFI_GUID *)((UINT8 *)IfrOpHdr + sizeof (EFI_IFR_OP_HEADER)), &gEdkiiIfrBitVarstoreGuid)) {
+              QuestionReferBitField = TRUE;
+            }
+
+            break;
+          default:
+            //
+            // Increase Scope for the validated opcode
+            //
+            if (VarBlockData.Scope > 0) {
+              VarBlockData.Scope = (UINT8)(VarBlockData.Scope + IfrOpHdr->Scope);
+            }
+
+            break;
         }
+
         //
         // Go to the next opcode
         //
         IfrOffset += IfrOpHdr->Length;
       }
+
       //
       // Only one form is in a package list.
       //
@@ -1722,31 +1934,33 @@ ValidateQuestionFromVfr (
   @param ConfigElement         ConfigResp element string contains the current setting.
   @param CurrentBlockArray     Current block array.
   @param VarBuffer             Data buffer for this varstore.
-  
+
   @retval EFI_SUCCESS            The current setting is valid.
   @retval EFI_OUT_OF_RESOURCES   The memory is not enough.
   @retval EFI_INVALID_PARAMETER  The config string or the Hii package is invalid.
 **/
 EFI_STATUS
 GetBlockDataInfo (
-  IN  CHAR16                        *ConfigElement,
-  OUT IFR_BLOCK_DATA                **CurrentBlockArray,
-  OUT UINT8                         **VarBuffer
+  IN  CHAR16          *ConfigElement,
+  OUT IFR_BLOCK_DATA  **CurrentBlockArray,
+  OUT UINT8           **VarBuffer
   )
 {
-  IFR_BLOCK_DATA               *BlockData;
-  IFR_BLOCK_DATA               *NewBlockData;
-  EFI_STRING                   StringPtr;
-  UINTN                        Length;
-  UINT8                        *TmpBuffer;
-  UINT16                       Offset;
-  UINT16                       Width;
-  LIST_ENTRY                   *Link;
-  UINTN                        MaxBufferSize;
-  EFI_STATUS                   Status;
-  IFR_BLOCK_DATA               *BlockArray;
-  UINT8                        *DataBuffer;
-  
+  IFR_BLOCK_DATA  *BlockData;
+  IFR_BLOCK_DATA  *NewBlockData;
+  EFI_STRING      StringPtr;
+  UINTN           Length;
+  UINT8           *TmpBuffer;
+  UINT16          Offset;
+  UINT16          Width;
+  LIST_ENTRY      *Link;
+  UINTN           MaxBufferSize;
+  EFI_STATUS      Status;
+  IFR_BLOCK_DATA  *BlockArray;
+  UINT8           *DataBuffer;
+  UINT16          Sum1;
+  UINT16          Sum2;
+
   //
   // Initialize the local variables.
   //
@@ -1756,7 +1970,7 @@ GetBlockDataInfo (
   TmpBuffer     = NULL;
   BlockArray    = NULL;
   MaxBufferSize = HII_LIB_DEFAULT_VARSTORE_SIZE;
-  DataBuffer     = AllocateZeroPool (MaxBufferSize);
+  DataBuffer    = AllocateZeroPool (MaxBufferSize);
   if (DataBuffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -1764,15 +1978,20 @@ GetBlockDataInfo (
   //
   // Init BlockArray
   //
-  BlockArray = (IFR_BLOCK_DATA *) AllocateZeroPool (sizeof (IFR_BLOCK_DATA));
+  BlockArray = (IFR_BLOCK_DATA *)AllocateZeroPool (sizeof (IFR_BLOCK_DATA));
   if (BlockArray == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
   }
-  InitializeListHead (&BlockArray->Entry);
 
   StringPtr = StrStr (ConfigElement, L"&OFFSET=");
-  ASSERT (StringPtr != NULL);
+  if (StringPtr == NULL) {
+    ASSERT (StringPtr != NULL);
+    Status = EFI_OUT_OF_RESOURCES;
+    goto Done;
+  }
+
+  InitializeListHead (&BlockArray->Entry);
 
   //
   // Parse each <RequestElement> if exists
@@ -1782,7 +2001,7 @@ GetBlockDataInfo (
   while (*StringPtr != 0 && StrnCmp (StringPtr, L"&OFFSET=", StrLen (L"&OFFSET=")) == 0) {
     //
     // Skip the &OFFSET= string
-    // 
+    //
     StringPtr += StrLen (L"&OFFSET=");
 
     //
@@ -1792,6 +2011,7 @@ GetBlockDataInfo (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
+
     Offset = 0;
     CopyMem (
       &Offset,
@@ -1806,6 +2026,7 @@ GetBlockDataInfo (
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
+
     StringPtr += StrLen (L"&WIDTH=");
 
     //
@@ -1815,6 +2036,7 @@ GetBlockDataInfo (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
+
     Width = 0;
     CopyMem (
       &Width,
@@ -1825,7 +2047,7 @@ GetBlockDataInfo (
     TmpBuffer = NULL;
 
     StringPtr += Length;
-    if (*StringPtr != 0 && *StringPtr != L'&') {
+    if ((*StringPtr != 0) && (*StringPtr != L'&')) {
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
@@ -1834,6 +2056,7 @@ GetBlockDataInfo (
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
+
     StringPtr += StrLen (L"&VALUE=");
 
     //
@@ -1845,7 +2068,7 @@ GetBlockDataInfo (
     }
 
     StringPtr += Length;
-    if (*StringPtr != 0 && *StringPtr != L'&') {
+    if ((*StringPtr != 0) && (*StringPtr != L'&')) {
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
@@ -1853,16 +2076,17 @@ GetBlockDataInfo (
     //
     // Check whether VarBuffer is enough
     //
-    if ((UINTN) (Offset + Width) > MaxBufferSize) {
+    if ((UINT32)Offset + Width > MaxBufferSize) {
       DataBuffer = ReallocatePool (
-                    MaxBufferSize,
-                    Offset + Width + HII_LIB_DEFAULT_VARSTORE_SIZE,
-                    DataBuffer
-                    );
+                     MaxBufferSize,
+                     Offset + Width + HII_LIB_DEFAULT_VARSTORE_SIZE,
+                     DataBuffer
+                     );
       if (DataBuffer == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         goto Done;
       }
+
       MaxBufferSize = Offset + Width + HII_LIB_DEFAULT_VARSTORE_SIZE;
     }
 
@@ -1876,11 +2100,12 @@ GetBlockDataInfo (
     //
     // Set new Block Data
     //
-    NewBlockData = (IFR_BLOCK_DATA *) AllocateZeroPool (sizeof (IFR_BLOCK_DATA));
+    NewBlockData = (IFR_BLOCK_DATA *)AllocateZeroPool (sizeof (IFR_BLOCK_DATA));
     if (NewBlockData == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto Done;
     }
+
     NewBlockData->Offset = Offset;
     NewBlockData->Width  = Width;
 
@@ -1893,6 +2118,7 @@ GetBlockDataInfo (
         if (NewBlockData->Width > BlockData->Width) {
           BlockData->Width = NewBlockData->Width;
         }
+
         FreePool (NewBlockData);
         break;
       } else if (NewBlockData->Offset < BlockData->Offset) {
@@ -1912,13 +2138,14 @@ GetBlockDataInfo (
     }
 
     //
-    // If '\0', parsing is finished. 
+    // If '\0', parsing is finished.
     //
     if (*StringPtr == 0) {
       break;
     }
+
     //
-    // Go to next ConfigBlock 
+    // Go to next ConfigBlock
     //
   }
 
@@ -1927,16 +2154,24 @@ GetBlockDataInfo (
   //
   Link = BlockArray->Entry.ForwardLink;
   while ((Link != &BlockArray->Entry) && (Link->ForwardLink != &BlockArray->Entry)) {
-    BlockData = BASE_CR (Link, IFR_BLOCK_DATA, Entry);
+    BlockData    = BASE_CR (Link, IFR_BLOCK_DATA, Entry);
     NewBlockData = BASE_CR (Link->ForwardLink, IFR_BLOCK_DATA, Entry);
-    if ((NewBlockData->Offset >= BlockData->Offset) && (NewBlockData->Offset <= (BlockData->Offset + BlockData->Width))) {
-      if ((NewBlockData->Offset + NewBlockData->Width) > (BlockData->Offset + BlockData->Width)) {
-        BlockData->Width = (UINT16) (NewBlockData->Offset + NewBlockData->Width - BlockData->Offset);
+    if ((!EFI_ERROR (SafeUint16Add (BlockData->Offset, BlockData->Width, &Sum1))) &&
+        (!EFI_ERROR (SafeUint16Add (NewBlockData->Offset, NewBlockData->Width, &Sum2))) &&
+        (NewBlockData->Offset >= BlockData->Offset) &&
+        (NewBlockData->Offset <= Sum1) &&
+        (Sum2 > Sum1))
+    {
+      Sum1 = BlockData->Width;
+      if (!EFI_ERROR (SafeUint16Sub (Sum2, BlockData->Offset, &BlockData->Width))) {
+        RemoveEntryList (Link->ForwardLink);
+        FreePool (NewBlockData);
+        continue;
+      } else {
+        BlockData->Width = Sum1;
       }
-      RemoveEntryList (Link->ForwardLink);
-      FreePool (NewBlockData);
-      continue;
     }
+
     Link = Link->ForwardLink;
   }
 
@@ -1948,7 +2183,7 @@ Done:
   if (DataBuffer != NULL) {
     FreePool (DataBuffer);
   }
-  
+
   if (BlockArray != NULL) {
     //
     // Free Link Array CurrentBlockArray
@@ -1958,6 +2193,7 @@ Done:
       RemoveEntryList (&BlockData->Entry);
       FreePool (BlockData);
     }
+
     FreePool (BlockArray);
   }
 
@@ -1973,7 +2209,7 @@ Done:
   @param VarGuid            Guid of the buffer storage.
   @param VarName            Name of the buffer storage.
   @param HiiHandle          The HiiHandle for this package.
-  
+
   @retval EFI_SUCCESS            The current setting is valid.
   @retval EFI_OUT_OF_RESOURCES   The memory is not enough.
   @retval EFI_INVALID_PARAMETER  The config string or the Hii package is invalid.
@@ -1981,20 +2217,20 @@ Done:
 EFI_STATUS
 EFIAPI
 InternalHiiValidateCurrentSetting (
-  IN EFI_STRING                    ConfigResp,
-  IN EFI_HII_PACKAGE_LIST_HEADER   *HiiPackageList,
-  IN UINTN                         PackageListLength,
-  IN EFI_GUID                      *VarGuid,
-  IN CHAR16                        *VarName,
-  IN EFI_HII_HANDLE                HiiHandle
+  IN EFI_STRING                   ConfigResp,
+  IN EFI_HII_PACKAGE_LIST_HEADER  *HiiPackageList,
+  IN UINTN                        PackageListLength,
+  IN EFI_GUID                     *VarGuid,
+  IN CHAR16                       *VarName,
+  IN EFI_HII_HANDLE               HiiHandle
   )
 {
-  CHAR16              *StringPtr;
-  EFI_STATUS          Status;
-  IFR_BLOCK_DATA      *CurrentBlockArray;
-  IFR_BLOCK_DATA      *BlockData;
-  UINT8               *VarBuffer;
-  BOOLEAN             NameValueType;
+  CHAR16          *StringPtr;
+  EFI_STATUS      Status;
+  IFR_BLOCK_DATA  *CurrentBlockArray;
+  IFR_BLOCK_DATA  *BlockData;
+  UINT8           *VarBuffer;
+  BOOLEAN         NameValueType;
 
   CurrentBlockArray = NULL;
   VarBuffer         = NULL;
@@ -2005,17 +2241,21 @@ InternalHiiValidateCurrentSetting (
   // If StringPtr != NULL, get the request elements.
   //
   if (StrStr (ConfigResp, L"&OFFSET=") != NULL) {
-    Status = GetBlockDataInfo(ConfigResp, &CurrentBlockArray, &VarBuffer);
+    Status = GetBlockDataInfo (ConfigResp, &CurrentBlockArray, &VarBuffer);
     if (EFI_ERROR (Status)) {
       return Status;
     }
+
     NameValueType = FALSE;
   } else {
     //
     // Skip header part.
     //
     StringPtr = StrStr (ConfigResp, L"PATH=");
-    ASSERT (StringPtr != NULL);
+    if (StringPtr == NULL) {
+      ASSERT (StringPtr != NULL);
+      return EFI_INVALID_PARAMETER;
+    }
 
     if (StrStr (StringPtr, L"&") != NULL) {
       NameValueType = TRUE;
@@ -2027,22 +2267,22 @@ InternalHiiValidateCurrentSetting (
     }
   }
 
-  Status = ValidateQuestionFromVfr(
-                          HiiPackageList,
-                          PackageListLength,
-                          VarGuid,
-                          VarName,
-                          VarBuffer,
-                          CurrentBlockArray,
-                          ConfigResp,
-                          HiiHandle,
-                          NameValueType
-                          );
+  Status = ValidateQuestionFromVfr (
+             HiiPackageList,
+             PackageListLength,
+             VarGuid,
+             VarName,
+             VarBuffer,
+             CurrentBlockArray,
+             ConfigResp,
+             HiiHandle,
+             NameValueType
+             );
 
   if (VarBuffer != NULL) {
     FreePool (VarBuffer);
   }
-  
+
   if (CurrentBlockArray != NULL) {
     //
     // Free Link Array CurrentBlockArray
@@ -2052,6 +2292,7 @@ InternalHiiValidateCurrentSetting (
       RemoveEntryList (&BlockData->Entry);
       FreePool (BlockData);
     }
+
     FreePool (CurrentBlockArray);
   }
 
@@ -2067,17 +2308,20 @@ InternalHiiValidateCurrentSetting (
 
   @retval  TRUE              The input include config request elements.
   @retval  FALSE             The input string not includes.
-                                 
+
 **/
 BOOLEAN
 GetElementsFromRequest (
-  IN EFI_STRING    ConfigRequest
+  IN EFI_STRING  ConfigRequest
   )
 {
-  EFI_STRING   TmpRequest;
+  EFI_STRING  TmpRequest;
 
   TmpRequest = StrStr (ConfigRequest, L"PATH=");
-  ASSERT (TmpRequest != NULL);
+  if (TmpRequest == NULL) {
+    ASSERT (TmpRequest != NULL);
+    return FALSE;
+  }
 
   if ((StrStr (TmpRequest, L"&OFFSET=") != NULL) || (StrStr (TmpRequest, L"&") != NULL)) {
     return TRUE;
@@ -2090,15 +2334,15 @@ GetElementsFromRequest (
   This function parses the input ConfigRequest string and its matched IFR code
   string for setting default value and validating current setting.
 
-  1. For setting default action, Reset the default value specified by DefaultId 
+  1. For setting default action, Reset the default value specified by DefaultId
   to the driver configuration got by Request string.
-  2. For validating current setting, Validate the current configuration 
+  2. For validating current setting, Validate the current configuration
   by parsing HII form IFR opcode.
 
   NULL request string support depends on the ExportConfig interface of
   HiiConfigRouting protocol in UEFI specification.
-  
-  @param Request    A null-terminated Unicode string in 
+
+  @param Request    A null-terminated Unicode string in
                     <MultiConfigRequest> format. It can be NULL.
                     If it is NULL, all current configuration for the
                     entirety of the current HII database will be validated.
@@ -2106,32 +2350,32 @@ GetElementsFromRequest (
                     entirety of the current HII database will be reset.
   @param DefaultId  Specifies the type of defaults to retrieve only for setting default action.
   @param ActionType Action supports setting defaults and validate current setting.
-  
+
   @retval TRUE    Action runs successfully.
   @retval FALSE   Action is not valid or Action can't be executed successfully..
 **/
 BOOLEAN
 EFIAPI
 InternalHiiIfrValueAction (
-  IN CONST EFI_STRING Request,  OPTIONAL
-  IN UINT16           DefaultId,
-  IN UINT8            ActionType
+  IN CONST EFI_STRING  Request   OPTIONAL,
+  IN UINT16            DefaultId,
+  IN UINT8             ActionType
   )
 {
-  EFI_STRING     ConfigAltResp;
-  EFI_STRING     ConfigAltHdr;
-  EFI_STRING     ConfigResp;
-  EFI_STRING     Progress;
-  EFI_STRING     StringPtr;
-  EFI_STRING     StringHdr;
-  EFI_STATUS     Status;
-  EFI_HANDLE     DriverHandle;
-  EFI_HANDLE     TempDriverHandle;
-  EFI_HII_HANDLE *HiiHandleBuffer;
-  EFI_HII_HANDLE HiiHandle;
-  UINT32         Index;
-  EFI_GUID       *VarGuid;
-  EFI_STRING     VarName;
+  EFI_STRING      ConfigAltResp;
+  EFI_STRING      ConfigAltHdr;
+  EFI_STRING      ConfigResp;
+  EFI_STRING      Progress;
+  EFI_STRING      StringPtr;
+  EFI_STRING      StringHdr;
+  EFI_STATUS      Status;
+  EFI_HANDLE      DriverHandle;
+  EFI_HANDLE      TempDriverHandle;
+  EFI_HII_HANDLE  *HiiHandleBuffer;
+  EFI_HII_HANDLE  HiiHandle;
+  UINT32          Index;
+  EFI_GUID        *VarGuid;
+  EFI_STRING      VarName;
 
   EFI_HII_PACKAGE_LIST_HEADER  *HiiPackageList;
   UINTN                        PackageListLength;
@@ -2139,18 +2383,18 @@ InternalHiiIfrValueAction (
   EFI_DEVICE_PATH_PROTOCOL     *DevicePath;
   EFI_DEVICE_PATH_PROTOCOL     *TempDevicePath;
 
-  ConfigAltResp = NULL;
-  ConfigResp    = NULL;
-  VarGuid       = NULL;
-  VarName       = NULL;
-  DevicePath    = NULL;
-  ConfigAltHdr  = NULL;
+  ConfigAltResp    = NULL;
+  ConfigResp       = NULL;
+  VarGuid          = NULL;
+  VarName          = NULL;
+  DevicePath       = NULL;
+  ConfigAltHdr     = NULL;
   HiiHandleBuffer  = NULL;
   Index            = 0;
   TempDriverHandle = NULL;
   HiiHandle        = NULL;
   HiiPackageList   = NULL;
-  
+
   //
   // Only support set default and validate setting action.
   //
@@ -2167,21 +2411,22 @@ InternalHiiIfrValueAction (
                                   Request,
                                   &Progress,
                                   &ConfigAltResp
-                                );
+                                  );
   } else {
     Status = gHiiConfigRouting->ExportConfig (
                                   gHiiConfigRouting,
                                   &ConfigAltResp
-                                );
+                                  );
   }
-  
+
   if (EFI_ERROR (Status)) {
     return FALSE;
   }
-  
+
   StringPtr = ConfigAltResp;
-  
-  while (StringPtr != L'\0') {
+  ASSERT (StringPtr != NULL);
+
+  while (*StringPtr != L'\0') {
     //
     // 1. Find <ConfigHdr> GUID=...&NAME=...&PATH=...
     //
@@ -2194,8 +2439,9 @@ InternalHiiIfrValueAction (
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
+
     StringPtr += StrLen (L"GUID=");
-    Status = InternalHiiGetBufferFromString (StringPtr, GUID_CONFIG_STRING_TYPE, (UINT8 **) &VarGuid);
+    Status     = InternalHiiGetBufferFromString (StringPtr, GUID_CONFIG_STRING_TYPE, (UINT8 **)&VarGuid);
     if (EFI_ERROR (Status)) {
       goto Done;
     }
@@ -2206,28 +2452,32 @@ InternalHiiIfrValueAction (
     while (*StringPtr != L'\0' && StrnCmp (StringPtr, L"&NAME=", StrLen (L"&NAME=")) != 0) {
       StringPtr++;
     }
+
     if (*StringPtr == L'\0') {
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
+
     StringPtr += StrLen (L"&NAME=");
-    Status = InternalHiiGetBufferFromString (StringPtr, NAME_CONFIG_STRING_TYPE, (UINT8 **) &VarName);
+    Status     = InternalHiiGetBufferFromString (StringPtr, NAME_CONFIG_STRING_TYPE, (UINT8 **)&VarName);
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-    
+
     //
     // Get Path value DevicePath
     //
     while (*StringPtr != L'\0' && StrnCmp (StringPtr, L"&PATH=", StrLen (L"&PATH=")) != 0) {
       StringPtr++;
     }
+
     if (*StringPtr == L'\0') {
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
+
     StringPtr += StrLen (L"&PATH=");
-    Status = InternalHiiGetBufferFromString (StringPtr, PATH_CONFIG_STRING_TYPE, (UINT8 **) &DevicePath);
+    Status     = InternalHiiGetBufferFromString (StringPtr, PATH_CONFIG_STRING_TYPE, (UINT8 **)&DevicePath);
     if (EFI_ERROR (Status)) {
       goto Done;
     }
@@ -2236,11 +2486,11 @@ InternalHiiIfrValueAction (
     // Get the Driver handle by the got device path.
     //
     TempDevicePath = DevicePath;
-    Status = gBS->LocateDevicePath (&gEfiDevicePathProtocolGuid, &TempDevicePath, &DriverHandle);
+    Status         = gBS->LocateDevicePath (&gEfiDevicePathProtocolGuid, &TempDevicePath, &DriverHandle);
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-    
+
     //
     // Find the matched Hii Handle for the found Driver handle
     //
@@ -2250,7 +2500,7 @@ InternalHiiIfrValueAction (
       goto Done;
     }
 
-    for (Index = 0; HiiHandleBuffer[Index] != NULL; Index ++) {
+    for (Index = 0; HiiHandleBuffer[Index] != NULL; Index++) {
       gHiiDatabase->GetPackageListHandle (gHiiDatabase, HiiHandleBuffer[Index], &TempDriverHandle);
       if (TempDriverHandle == DriverHandle) {
         break;
@@ -2264,7 +2514,7 @@ InternalHiiIfrValueAction (
       //
       // This request string has no its Hii package.
       // Its default value and validating can't execute by parsing IFR data.
-      // Directly jump into the next ConfigAltResp string for another pair Guid, Name, and Path.   
+      // Directly jump into the next ConfigAltResp string for another pair Guid, Name, and Path.
       //
       Status = EFI_SUCCESS;
       goto NextConfigAltResp;
@@ -2273,10 +2523,10 @@ InternalHiiIfrValueAction (
     //
     // 2. Get HiiPackage by HiiHandle
     //
-    PackageListLength  = 0;
-    HiiPackageList     = NULL;
-    Status = gHiiDatabase->ExportPackageLists (gHiiDatabase, HiiHandle, &PackageListLength, HiiPackageList);
-  
+    PackageListLength = 0;
+    HiiPackageList    = NULL;
+    Status            = gHiiDatabase->ExportPackageLists (gHiiDatabase, HiiHandle, &PackageListLength, HiiPackageList);
+
     //
     // The return status should always be EFI_BUFFER_TOO_SMALL as input buffer's size is 0.
     //
@@ -2284,13 +2534,13 @@ InternalHiiIfrValueAction (
       Status = EFI_INVALID_PARAMETER;
       goto Done;
     }
-  
+
     HiiPackageList = AllocatePool (PackageListLength);
     if (HiiPackageList == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto Done;
     }
-  
+
     //
     // Get PackageList on HiiHandle
     //
@@ -2298,7 +2548,7 @@ InternalHiiIfrValueAction (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-    
+
     //
     // 3. Call ConfigRouting GetAltCfg(ConfigRoute, <ConfigResponse>, Guid, Name, DevicePath, AltCfgId, AltCfgResp)
     //    Get the default configuration string according to the default ID.
@@ -2309,10 +2559,10 @@ InternalHiiIfrValueAction (
                                   VarGuid,
                                   VarName,
                                   DevicePath,
-                                  (ActionType == ACTION_SET_DEFAUTL_VALUE) ? &DefaultId:NULL,  // it can be NULL to get the current setting.
+                                  (ActionType == ACTION_SET_DEFAUTL_VALUE) ? &DefaultId : NULL,  // it can be NULL to get the current setting.
                                   &ConfigResp
-                                );
-    
+                                  );
+
     //
     // The required setting can't be found. So, it is not required to be validated and set.
     //
@@ -2320,13 +2570,14 @@ InternalHiiIfrValueAction (
       Status = EFI_SUCCESS;
       goto NextConfigAltResp;
     }
+
     //
     // Only the ConfigHdr is found. Not any block data is found. No data is required to be validated and set.
     //
     if (!GetElementsFromRequest (ConfigResp)) {
       goto NextConfigAltResp;
     }
-    
+
     //
     // 4. Set the default configuration information or Validate current setting by parse IFR code.
     //    Current Setting is in ConfigResp, will be set into buffer, then check it again.
@@ -2355,7 +2606,7 @@ NextConfigAltResp:
       FreePool (HiiPackageList);
       HiiPackageList = NULL;
     }
-    
+
     if (ConfigResp != NULL) {
       FreePool (ConfigResp);
       ConfigResp = NULL;
@@ -2366,10 +2617,10 @@ NextConfigAltResp:
     //
     FreePool (VarGuid);
     VarGuid = NULL;
-  
+
     FreePool (VarName);
     VarName = NULL;
-  
+
     FreePool (DevicePath);
     DevicePath = NULL;
 
@@ -2383,24 +2634,26 @@ NextConfigAltResp:
     while (*StringPtr != L'\0' && *StringPtr != L'&') {
       StringPtr++;
     }
+
     if (*StringPtr == L'\0') {
       break;
     }
-        
+
     //
-    // Construct ConfigAltHdr string  "&<ConfigHdr>&ALTCFG=\0" 
+    // Construct ConfigAltHdr string  "&<ConfigHdr>&ALTCFG=\0"
     //                               | 1 | StrLen (ConfigHdr) | 8 | 1 |
     //
-    MaxLen = 1 + StringPtr - StringHdr + 8 + 1;
-    ConfigAltHdr = AllocateZeroPool ( MaxLen * sizeof (CHAR16));
+    MaxLen       = 1 + StringPtr - StringHdr + 8 + 1;
+    ConfigAltHdr = AllocateZeroPool (MaxLen * sizeof (CHAR16));
     if (ConfigAltHdr == NULL) {
       Status = EFI_OUT_OF_RESOURCES;
       goto Done;
     }
+
     StrCpyS (ConfigAltHdr, MaxLen, L"&");
     StrnCatS (ConfigAltHdr, MaxLen, StringHdr, StringPtr - StringHdr);
     StrCatS (ConfigAltHdr, MaxLen, L"&ALTCFG=");
-    
+
     //
     // Skip all AltResp (AltConfigHdr ConfigBody) for the same ConfigHdr
     //
@@ -2410,7 +2663,7 @@ NextConfigAltResp:
         break;
       }
     }
-    
+
     //
     // Free the allocated ConfigAltHdr string
     //
@@ -2418,7 +2671,7 @@ NextConfigAltResp:
     if (*StringPtr == L'\0') {
       break;
     }
-    
+
     //
     // Find &GUID as the next ConfigHdr
     //
@@ -2430,9 +2683,9 @@ NextConfigAltResp:
     //
     // Skip char '&'
     //
-    StringPtr ++;
+    StringPtr++;
   }
-  
+
 Done:
   if (VarGuid != NULL) {
     FreePool (VarGuid);
@@ -2453,11 +2706,11 @@ Done:
   if (ConfigAltResp != NULL) {
     FreePool (ConfigAltResp);
   }
- 
+
   if (HiiPackageList != NULL) {
     FreePool (HiiPackageList);
   }
-  
+
   if (EFI_ERROR (Status)) {
     return FALSE;
   }
@@ -2470,19 +2723,19 @@ Done:
 
   NULL request string support depends on the ExportConfig interface of
   HiiConfigRouting protocol in UEFI specification.
-  
-  @param  Request   A null-terminated Unicode string in 
+
+  @param  Request   A null-terminated Unicode string in
                     <MultiConfigRequest> format. It can be NULL.
                     If it is NULL, all current configuration for the
                     entirety of the current HII database will be validated.
-  
+
   @retval TRUE    Current configuration is valid.
   @retval FALSE   Current configuration is invalid.
 **/
 BOOLEAN
-EFIAPI                               
+EFIAPI
 HiiValidateSettings (
-  IN CONST EFI_STRING Request  OPTIONAL
+  IN CONST EFI_STRING  Request  OPTIONAL
   )
 {
   return InternalHiiIfrValueAction (Request, 0, ACTION_VALIDATE_SETTING);
@@ -2490,25 +2743,25 @@ HiiValidateSettings (
 
 /**
   Reset the default value specified by DefaultId to the driver
-  configuration got by Request string. 
+  configuration got by Request string.
 
   NULL request string support depends on the ExportConfig interface of
   HiiConfigRouting protocol in UEFI specification.
-  
-  @param Request    A null-terminated Unicode string in 
+
+  @param Request    A null-terminated Unicode string in
                     <MultiConfigRequest> format. It can be NULL.
                     If it is NULL, all configuration for the
                     entirety of the current HII database will be reset.
   @param DefaultId  Specifies the type of defaults to retrieve.
-  
+
   @retval TRUE    The default value is set successfully.
   @retval FALSE   The default value can't be found and set.
 **/
 BOOLEAN
 EFIAPI
 HiiSetToDefaults (
-  IN CONST EFI_STRING Request,  OPTIONAL
-  IN UINT16        DefaultId
+  IN CONST EFI_STRING  Request   OPTIONAL,
+  IN UINT16            DefaultId
   )
 {
   return InternalHiiIfrValueAction (Request, DefaultId, ACTION_SET_DEFAUTL_VALUE);
@@ -2517,8 +2770,8 @@ HiiSetToDefaults (
 /**
   Determines if two values in config strings match.
 
-  Compares the substring between StartSearchString and StopSearchString in 
-  FirstString to the substring between StartSearchString and StopSearchString 
+  Compares the substring between StartSearchString and StopSearchString in
+  FirstString to the substring between StartSearchString and StopSearchString
   in SecondString.  If the two substrings match, then TRUE is returned.  If the
   two substrings do not match, then FALSE is returned.
 
@@ -2529,20 +2782,20 @@ HiiSetToDefaults (
 
   @param FirstString        Pointer to the first Null-terminated Unicode string.
   @param SecondString       Pointer to the second Null-terminated Unicode string.
-  @param StartSearchString  Pointer to the Null-terminated Unicode string that 
+  @param StartSearchString  Pointer to the Null-terminated Unicode string that
                             marks the start of the value string to compare.
-  @param StopSearchString   Pointer to the Null-terminated Unicode string that 
+  @param StopSearchString   Pointer to the Null-terminated Unicode string that
                             marks the end of the value string to compare.
 
-  @retval FALSE             StartSearchString is not present in FirstString. 
+  @retval FALSE             StartSearchString is not present in FirstString.
   @retval FALSE             StartSearchString is not present in SecondString.
-  @retval FALSE             StopSearchString is not present in FirstString. 
+  @retval FALSE             StopSearchString is not present in FirstString.
   @retval FALSE             StopSearchString is not present in SecondString.
-  @retval FALSE             The length of the substring in FirstString is not the 
+  @retval FALSE             The length of the substring in FirstString is not the
                             same length as the substring in SecondString.
-  @retval FALSE             The value string in FirstString does not matche the 
+  @retval FALSE             The value string in FirstString does not matche the
                             value string in SecondString.
-  @retval TRUE              The value string in FirstString matches the value 
+  @retval TRUE              The value string in FirstString matches the value
                             string in SecondString.
 
 **/
@@ -2607,7 +2860,7 @@ BOOLEAN
 EFIAPI
 HiiIsConfigHdrMatch (
   IN CONST EFI_STRING  ConfigHdr,
-  IN CONST EFI_GUID    *Guid,     OPTIONAL
+  IN CONST EFI_GUID    *Guid      OPTIONAL,
   IN CONST CHAR16      *Name      OPTIONAL
   )
 {
@@ -2632,7 +2885,7 @@ HiiIsConfigHdrMatch (
     Result = InternalHiiCompareSubString (ConfigHdr, CompareConfigHdr, L"GUID=", L"&NAME=");
   }
 
-  if (Result && Name != NULL) {
+  if (Result && (Name != NULL)) {
     //
     // Compare NAME value strings
     //
@@ -2651,11 +2904,11 @@ HiiIsConfigHdrMatch (
   Retrieves uncommitted data from the Form Browser and converts it to a binary
   buffer.
 
-  @param[in]  VariableGuid  Pointer to an EFI_GUID structure.  This is an optional 
+  @param[in]  VariableGuid  Pointer to an EFI_GUID structure.  This is an optional
                             parameter that may be NULL.
-  @param[in]  VariableName  Pointer to a Null-terminated Unicode string.  This 
+  @param[in]  VariableName  Pointer to a Null-terminated Unicode string.  This
                             is an optional parameter that may be NULL.
-  @param[in]  BufferSize    Length in bytes of buffer to hold retrieved data. 
+  @param[in]  BufferSize    Length in bytes of buffer to hold retrieved data.
   @param[out] Buffer        Buffer of data to be updated.
 
   @retval FALSE  The uncommitted data could not be retrieved.
@@ -2665,8 +2918,8 @@ HiiIsConfigHdrMatch (
 BOOLEAN
 EFIAPI
 HiiGetBrowserData (
-  IN CONST EFI_GUID  *VariableGuid,  OPTIONAL
-  IN CONST CHAR16    *VariableName,  OPTIONAL
+  IN CONST EFI_GUID  *VariableGuid   OPTIONAL,
+  IN CONST CHAR16    *VariableName   OPTIONAL,
   IN UINTN           BufferSize,
   OUT UINT8          *Buffer
   )
@@ -2688,11 +2941,17 @@ HiiGetBrowserData (
   //
   // Construct <ConfigResp> mConfigHdrTemplate L'&' ResultsData L'\0'
   //
-  Size = (StrLen (mConfigHdrTemplate) + 1) * sizeof (CHAR16);
-  Size = Size + (StrLen (ResultsData) + 1) * sizeof (CHAR16);
+  Size       = (StrLen (mConfigHdrTemplate) + 1) * sizeof (CHAR16);
+  Size       = Size + (StrLen (ResultsData) + 1) * sizeof (CHAR16);
   ConfigResp = AllocateZeroPool (Size);
+  if (ConfigResp == NULL) {
+    FreePool (ResultsData);
+    ASSERT (ConfigResp != NULL);
+    return FALSE;
+  }
+
   UnicodeSPrint (ConfigResp, Size, L"%s&%s", mConfigHdrTemplate, ResultsData);
-  
+
   //
   // Free the allocated buffer
   //
@@ -2737,7 +2996,7 @@ HiiGetBrowserData (
   @param[in]  RequestElement  An optional field to specify which part of the
                               buffer data will be send back to Browser. If NULL,
                               the whole buffer of data will be committed to
-                              Browser. 
+                              Browser.
                               <RequestElement> ::= &OFFSET=<Number>&WIDTH=<Number>*
 
   @retval FALSE  The uncommitted data could not be updated.
@@ -2747,8 +3006,8 @@ HiiGetBrowserData (
 BOOLEAN
 EFIAPI
 HiiSetBrowserData (
-  IN CONST EFI_GUID  *VariableGuid, OPTIONAL
-  IN CONST CHAR16    *VariableName, OPTIONAL
+  IN CONST EFI_GUID  *VariableGuid  OPTIONAL,
+  IN CONST CHAR16    *VariableName  OPTIONAL,
   IN UINTN           BufferSize,
   IN CONST UINT8     *Buffer,
   IN CONST CHAR16    *RequestElement  OPTIONAL
@@ -2766,22 +3025,33 @@ HiiSetBrowserData (
   //
   if (RequestElement == NULL) {
     //
-    // Allocate and fill a buffer large enough to hold the <ConfigHdr> template 
+    // Allocate and fill a buffer large enough to hold the <ConfigHdr> template
     // followed by "&OFFSET=0&WIDTH=WWWWWWWWWWWWWWWW" followed by a Null-terminator
     //
-    Size = (StrLen (mConfigHdrTemplate) + 32 + 1) * sizeof (CHAR16);
+    Size          = (StrLen (mConfigHdrTemplate) + 32 + 1) * sizeof (CHAR16);
     ConfigRequest = AllocateZeroPool (Size);
+    if (ConfigRequest == NULL) {
+      ASSERT (ConfigRequest != NULL);
+      return FALSE;
+    }
+
     UnicodeSPrint (ConfigRequest, Size, L"%s&OFFSET=0&WIDTH=%016LX", mConfigHdrTemplate, (UINT64)BufferSize);
   } else {
     //
-    // Allocate and fill a buffer large enough to hold the <ConfigHdr> template 
+    // Allocate and fill a buffer large enough to hold the <ConfigHdr> template
     // followed by <RequestElement> followed by a Null-terminator
     //
-    Size = StrLen (mConfigHdrTemplate) * sizeof (CHAR16);
-    Size = Size + (StrLen (RequestElement) + 1) * sizeof (CHAR16);
+    Size          = StrLen (mConfigHdrTemplate) * sizeof (CHAR16);
+    Size          = Size + (StrLen (RequestElement) + 1) * sizeof (CHAR16);
     ConfigRequest = AllocateZeroPool (Size);
+    if (ConfigRequest == NULL) {
+      ASSERT (ConfigRequest != NULL);
+      return FALSE;
+    }
+
     UnicodeSPrint (ConfigRequest, Size, L"%s%s", mConfigHdrTemplate, RequestElement);
   }
+
   if (ConfigRequest == NULL) {
     return FALSE;
   }
@@ -2798,7 +3068,7 @@ HiiSetBrowserData (
   //
   // Set data in the uncommitted browser state information
   //
-  ResultsData = InternalHiiBrowserCallback (VariableGuid, VariableName, ConfigResp + StrLen(mConfigHdrTemplate) + 1);
+  ResultsData = InternalHiiBrowserCallback (VariableGuid, VariableName, ConfigResp + StrLen (mConfigHdrTemplate) + 1);
   FreePool (ConfigResp);
 
   return (BOOLEAN)(ResultsData != NULL);
@@ -2813,15 +3083,15 @@ HiiSetBrowserData (
 #define HII_LIB_OPCODE_ALLOCATION_SIZE  0x200
 
 typedef struct {
-  UINT8  *Buffer;
-  UINTN  BufferSize;
-  UINTN  Position;
+  UINT8    *Buffer;
+  UINTN    BufferSize;
+  UINTN    Position;
 } HII_LIB_OPCODE_BUFFER;
 
 ///
 /// Lookup table that converts EFI_IFR_TYPE_X enum values to a width in bytes
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED CONST UINT8 mHiiDefaultTypeToWidth[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST UINT8  mHiiDefaultTypeToWidth[] = {
   1, // EFI_IFR_TYPE_NUM_SIZE_8
   2, // EFI_IFR_TYPE_NUM_SIZE_16
   4, // EFI_IFR_TYPE_NUM_SIZE_32
@@ -2833,7 +3103,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST UINT8 mHiiDefaultTypeToWidth[] = {
 };
 
 /**
-  Allocates and returns a new OpCode Handle.  OpCode Handles must be freed with 
+  Allocates and returns a new OpCode Handle.  OpCode Handles must be freed with
   HiiFreeOpCodeHandle().
 
   @retval NULL   There are not enough resources to allocate a new OpCode Handle.
@@ -2852,13 +3122,15 @@ HiiAllocateOpCodeHandle (
   if (OpCodeBuffer == NULL) {
     return NULL;
   }
+
   OpCodeBuffer->Buffer = (UINT8 *)AllocatePool (HII_LIB_OPCODE_ALLOCATION_SIZE);
   if (OpCodeBuffer->Buffer == NULL) {
     FreePool (OpCodeBuffer);
     return NULL;
   }
+
   OpCodeBuffer->BufferSize = HII_LIB_OPCODE_ALLOCATION_SIZE;
-  OpCodeBuffer->Position = 0;
+  OpCodeBuffer->Position   = 0;
   return (VOID *)OpCodeBuffer;
 }
 
@@ -2886,12 +3158,13 @@ HiiFreeOpCodeHandle (
   if (OpCodeBuffer->Buffer != NULL) {
     FreePool (OpCodeBuffer->Buffer);
   }
+
   FreePool (OpCodeBuffer);
 }
 
 /**
   Internal function gets the current position of opcode buffer.
-  
+
   @param[in]  OpCodeHandle   Handle to the buffer of opcodes.
 
   @return Current position of opcode buffer.
@@ -2907,7 +3180,7 @@ InternalHiiOpCodeHandlePosition (
 
 /**
   Internal function gets the start pointer of opcode buffer.
-  
+
   @param[in]  OpCodeHandle   Handle to the buffer of opcodes.
 
   @return Pointer to the opcode buffer base.
@@ -2924,7 +3197,7 @@ InternalHiiOpCodeHandleBuffer (
 /**
   Internal function reserves the enough buffer for current opcode.
   When the buffer is not enough, Opcode buffer will be extended.
-  
+
   @param[in]  OpCodeHandle   Handle to the buffer of opcodes.
   @param[in]  Size           Size of current opcode.
 
@@ -2945,22 +3218,23 @@ InternalHiiGrowOpCodeHandle (
   OpCodeBuffer = (HII_LIB_OPCODE_BUFFER *)OpCodeHandle;
   if (OpCodeBuffer->Position + Size > OpCodeBuffer->BufferSize) {
     Buffer = ReallocatePool (
-              OpCodeBuffer->BufferSize, 
-              OpCodeBuffer->BufferSize + (Size + HII_LIB_OPCODE_ALLOCATION_SIZE),
-              OpCodeBuffer->Buffer
-              );
+               OpCodeBuffer->BufferSize,
+               OpCodeBuffer->BufferSize + (Size + HII_LIB_OPCODE_ALLOCATION_SIZE),
+               OpCodeBuffer->Buffer
+               );
     ASSERT (Buffer != NULL);
-    OpCodeBuffer->Buffer = Buffer;
+    OpCodeBuffer->Buffer      = Buffer;
     OpCodeBuffer->BufferSize += (Size + HII_LIB_OPCODE_ALLOCATION_SIZE);
   }
-  Buffer = OpCodeBuffer->Buffer + OpCodeBuffer->Position;
+
+  Buffer                  = OpCodeBuffer->Buffer + OpCodeBuffer->Position;
   OpCodeBuffer->Position += Size;
   return Buffer;
 }
 
 /**
   Internal function creates opcode based on the template opcode.
-  
+
   @param[in]  OpCodeHandle    Handle to the buffer of opcodes.
   @param[in]  OpCodeTemplate  Pointer to the template buffer of opcode.
   @param[in]  OpCode          OpCode IFR value.
@@ -2987,17 +3261,17 @@ InternalHiiCreateOpCodeExtended (
   ASSERT (OpCodeTemplate != NULL);
   ASSERT ((OpCodeSize + ExtensionSize) <= 0x7F);
 
-  Header = (EFI_IFR_OP_HEADER *)OpCodeTemplate;
+  Header         = (EFI_IFR_OP_HEADER *)OpCodeTemplate;
   Header->OpCode = OpCode;
   Header->Scope  = Scope;
   Header->Length = (UINT8)(OpCodeSize + ExtensionSize);
-  Buffer = InternalHiiGrowOpCodeHandle (OpCodeHandle, Header->Length);
+  Buffer         = InternalHiiGrowOpCodeHandle (OpCodeHandle, Header->Length);
   return (UINT8 *)CopyMem (Buffer, Header, OpCodeSize);
 }
 
 /**
   Internal function creates opcode based on the template opcode for the normal opcode.
-  
+
   @param[in]  OpCodeHandle    Handle to the buffer of opcodes.
   @param[in]  OpCodeTemplate  Pointer to the template buffer of opcode.
   @param[in]  OpCode          OpCode IFR value.
@@ -3130,11 +3404,11 @@ HiiCreateOneOfOptionOpCode (
 
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Option = StringId;
-  OpCode.Flags  = (UINT8) (Flags & (EFI_IFR_OPTION_DEFAULT | EFI_IFR_OPTION_DEFAULT_MFG));
+  OpCode.Flags  = (UINT8)(Flags & (EFI_IFR_OPTION_DEFAULT | EFI_IFR_OPTION_DEFAULT_MFG));
   OpCode.Type   = Type;
   CopyMem (&OpCode.Value, &Value, mHiiDefaultTypeToWidth[Type]);
 
-  return InternalHiiCreateOpCode (OpCodeHandle, &OpCode, EFI_IFR_ONE_OF_OPTION_OP, OFFSET_OF(EFI_IFR_ONE_OF_OPTION, Value) + mHiiDefaultTypeToWidth[Type]);
+  return InternalHiiCreateOpCode (OpCodeHandle, &OpCode, EFI_IFR_ONE_OF_OPTION_OP, OFFSET_OF (EFI_IFR_ONE_OF_OPTION, Value) + mHiiDefaultTypeToWidth[Type]);
 }
 
 /**
@@ -3170,7 +3444,7 @@ HiiCreateDefaultOpCode (
   OpCode.DefaultId = DefaultId;
   CopyMem (&OpCode.Value, &Value, mHiiDefaultTypeToWidth[Type]);
 
-  return InternalHiiCreateOpCode (OpCodeHandle, &OpCode, EFI_IFR_DEFAULT_OP, OFFSET_OF(EFI_IFR_DEFAULT, Value) + mHiiDefaultTypeToWidth[Type]);
+  return InternalHiiCreateOpCode (OpCodeHandle, &OpCode, EFI_IFR_DEFAULT_OP, OFFSET_OF (EFI_IFR_DEFAULT, Value) + mHiiDefaultTypeToWidth[Type]);
 }
 
 /**
@@ -3182,14 +3456,14 @@ HiiCreateDefaultOpCode (
 
   @param[in]  OpCodeHandle  Handle to the buffer of opcodes.
   @param[in]  Guid          Pointer to EFI_GUID of this guided opcode.
-  @param[in]  GuidOpCode    Pointer to an EFI_IFR_GUID opcode.  This is an 
+  @param[in]  GuidOpCode    Pointer to an EFI_IFR_GUID opcode.  This is an
                             optional parameter that may be NULL.  If this
-                            parameter is NULL, then the GUID extension 
+                            parameter is NULL, then the GUID extension
                             region of the created opcode is filled with zeros.
-                            If this parameter is not NULL, then the GUID 
-                            extension region of GuidData will be copied to 
+                            If this parameter is not NULL, then the GUID
+                            extension region of GuidData will be copied to
                             the GUID extension region of the created opcode.
-  @param[in]  OpCodeSize    The size, in bytes, of created opcode.  This value 
+  @param[in]  OpCodeSize    The size, in bytes, of created opcode.  This value
                             must be >= sizeof(EFI_IFR_GUID).
 
   @retval NULL   There is not enough space left in Buffer to add the opcode.
@@ -3201,7 +3475,7 @@ EFIAPI
 HiiCreateGuidOpCode (
   IN VOID            *OpCodeHandle,
   IN CONST EFI_GUID  *Guid,
-  IN CONST VOID      *GuidOpCode,    OPTIONAL
+  IN CONST VOID      *GuidOpCode     OPTIONAL,
   IN UINTN           OpCodeSize
   )
 {
@@ -3215,16 +3489,17 @@ HiiCreateGuidOpCode (
   CopyGuid ((EFI_GUID *)(VOID *)&OpCode.Guid, Guid);
 
   OpCodePointer = (EFI_IFR_GUID *)InternalHiiCreateOpCodeExtended (
-                                    OpCodeHandle, 
+                                    OpCodeHandle,
                                     &OpCode,
                                     EFI_IFR_GUID_OP,
                                     sizeof (OpCode),
                                     OpCodeSize - sizeof (OpCode),
                                     0
                                     );
-  if (OpCodePointer != NULL && GuidOpCode != NULL) {
+  if ((OpCodePointer != NULL) && (GuidOpCode != NULL)) {
     CopyMem (OpCodePointer + 1, (EFI_IFR_GUID *)GuidOpCode + 1, OpCodeSize - sizeof (OpCode));
   }
+
   return (UINT8 *)OpCodePointer;
 }
 
@@ -3309,11 +3584,11 @@ HiiCreateSubTitleOpCode (
   OpCode.Flags            = Flags;
 
   return InternalHiiCreateOpCodeExtended (
-           OpCodeHandle, 
+           OpCodeHandle,
            &OpCode,
-           EFI_IFR_SUBTITLE_OP, 
-           sizeof (OpCode), 
-           0, 
+           EFI_IFR_SUBTITLE_OP,
+           sizeof (OpCode),
+           0,
            Scope
            );
 }
@@ -3363,7 +3638,7 @@ HiiCreateGotoOpCode (
 /**
   Create EFI_IFR_REF_OP, EFI_IFR_REF2_OP, EFI_IFR_REF3_OP and EFI_IFR_REF4_OP opcode.
 
-  When RefDevicePath is not zero, EFI_IFR_REF4 opcode will be created. 
+  When RefDevicePath is not zero, EFI_IFR_REF4 opcode will be created.
   When RefDevicePath is zero and RefFormSetId is not NULL, EFI_IFR_REF3 opcode will be created.
   When RefDevicePath is zero, RefFormSetId is NULL and RefQuestionId is not zero, EFI_IFR_REF2 opcode will be created.
   When RefDevicePath is zero, RefFormSetId is NULL and RefQuestionId is zero, EFI_IFR_REF opcode will be created.
@@ -3377,11 +3652,11 @@ HiiCreateGotoOpCode (
   @param[in]  Help           The string ID for Help.
   @param[in]  QuestionFlags  The flags in Question Header
   @param[in]  QuestionId     Question ID.
-  @param[in]  RefQuestionId  The question on the form to which this link is referring. 
+  @param[in]  RefQuestionId  The question on the form to which this link is referring.
                              If its value is zero, then the link refers to the top of the form.
-  @param[in]  RefFormSetId   The form set to which this link is referring. If its value is NULL, and RefDevicePath is 
+  @param[in]  RefFormSetId   The form set to which this link is referring. If its value is NULL, and RefDevicePath is
                              zero, then the link is to the current form set.
-  @param[in]  RefDevicePath  The string identifier that specifies the string containing the text representation of 
+  @param[in]  RefDevicePath  The string identifier that specifies the string containing the text representation of
                              the device path to which the form set containing the form specified by FormId.
                              If its value is zero, then the link refers to the current page.
 
@@ -3399,7 +3674,7 @@ HiiCreateGotoExOpCode (
   IN UINT8            QuestionFlags,
   IN EFI_QUESTION_ID  QuestionId,
   IN EFI_QUESTION_ID  RefQuestionId,
-  IN EFI_GUID         *RefFormSetId,    OPTIONAL
+  IN EFI_GUID         *RefFormSetId     OPTIONAL,
   IN EFI_STRING_ID    RefDevicePath
   )
 {
@@ -3476,7 +3751,7 @@ HiiCreateCheckBoxOpCode (
   EFI_IFR_CHECKBOX  OpCode;
   UINTN             Position;
 
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Question.QuestionId             = QuestionId;
@@ -3545,9 +3820,9 @@ HiiCreateNumericOpCode (
   UINTN            Position;
   UINTN            Length;
 
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE))) == 0);
 
-  Length  = 0;
+  Length = 0;
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Question.QuestionId             = QuestionId;
   OpCode.Question.VarStoreId             = VarStoreId;
@@ -3558,33 +3833,33 @@ HiiCreateNumericOpCode (
   OpCode.Flags                           = NumericFlags;
 
   switch (NumericFlags & EFI_IFR_NUMERIC_SIZE) {
-  case EFI_IFR_NUMERIC_SIZE_1:
-    OpCode.data.u8.MinValue = (UINT8)Minimum;
-    OpCode.data.u8.MaxValue = (UINT8)Maximum;
-    OpCode.data.u8.Step     = (UINT8)Step;
-    Length                  = 3;
-    break;
+    case EFI_IFR_NUMERIC_SIZE_1:
+      OpCode.data.u8.MinValue = (UINT8)Minimum;
+      OpCode.data.u8.MaxValue = (UINT8)Maximum;
+      OpCode.data.u8.Step     = (UINT8)Step;
+      Length                  = 3;
+      break;
 
-  case EFI_IFR_NUMERIC_SIZE_2:
-    OpCode.data.u16.MinValue = (UINT16)Minimum;
-    OpCode.data.u16.MaxValue = (UINT16)Maximum;
-    OpCode.data.u16.Step     = (UINT16)Step;
-    Length                   = 6;
-    break;
+    case EFI_IFR_NUMERIC_SIZE_2:
+      OpCode.data.u16.MinValue = (UINT16)Minimum;
+      OpCode.data.u16.MaxValue = (UINT16)Maximum;
+      OpCode.data.u16.Step     = (UINT16)Step;
+      Length                   = 6;
+      break;
 
-  case EFI_IFR_NUMERIC_SIZE_4:
-    OpCode.data.u32.MinValue = (UINT32)Minimum;
-    OpCode.data.u32.MaxValue = (UINT32)Maximum;
-    OpCode.data.u32.Step     = (UINT32)Step;
-    Length                   = 12;
-    break;
+    case EFI_IFR_NUMERIC_SIZE_4:
+      OpCode.data.u32.MinValue = (UINT32)Minimum;
+      OpCode.data.u32.MaxValue = (UINT32)Maximum;
+      OpCode.data.u32.Step     = (UINT32)Step;
+      Length                   = 12;
+      break;
 
-  case EFI_IFR_NUMERIC_SIZE_8:
-    OpCode.data.u64.MinValue = Minimum;
-    OpCode.data.u64.MaxValue = Maximum;
-    OpCode.data.u64.Step     = Step;
-    Length                   = 24;
-    break;
+    case EFI_IFR_NUMERIC_SIZE_8:
+      OpCode.data.u64.MinValue = Minimum;
+      OpCode.data.u64.MaxValue = Maximum;
+      OpCode.data.u64.Step     = Step;
+      Length                   = 24;
+      break;
   }
 
   Length += OFFSET_OF (EFI_IFR_NUMERIC, data);
@@ -3644,7 +3919,7 @@ HiiCreateStringOpCode (
   EFI_IFR_STRING  OpCode;
   UINTN           Position;
 
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Question.Header.Prompt          = Prompt;
@@ -3655,7 +3930,7 @@ HiiCreateStringOpCode (
   OpCode.Question.Flags                  = QuestionFlags;
   OpCode.MinSize                         = MinSize;
   OpCode.MaxSize                         = MaxSize;
-  OpCode.Flags                           = (UINT8) (StringFlags & EFI_IFR_STRING_MULTI_LINE);
+  OpCode.Flags                           = (UINT8)(StringFlags & EFI_IFR_STRING_MULTI_LINE);
 
   if (DefaultsOpCodeHandle == NULL) {
     return InternalHiiCreateOpCode (OpCodeHandle, &OpCode, EFI_IFR_STRING_OP, sizeof (OpCode));
@@ -3712,7 +3987,7 @@ HiiCreateOneOfOpCode (
   UINTN           Length;
 
   ASSERT (OptionsOpCodeHandle != NULL);
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_OPTIONS_ONLY))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE | EFI_IFR_FLAG_OPTIONS_ONLY))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Question.Header.Prompt          = Prompt;
@@ -3732,6 +4007,7 @@ HiiCreateOneOfOpCode (
   if (DefaultsOpCodeHandle != NULL) {
     InternalHiiAppendOpCodes (OpCodeHandle, DefaultsOpCodeHandle);
   }
+
   HiiCreateEndOpCode (OpCodeHandle);
   return InternalHiiOpCodeHandleBuffer (OpCodeHandle) + Position;
 }
@@ -3783,7 +4059,7 @@ HiiCreateOrderedListOpCode (
   UINTN                 Position;
 
   ASSERT (OptionsOpCodeHandle != NULL);
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_OPTIONS_ONLY))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE | EFI_IFR_FLAG_OPTIONS_ONLY))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
   OpCode.Question.Header.Prompt          = Prompt;
@@ -3801,6 +4077,7 @@ HiiCreateOrderedListOpCode (
   if (DefaultsOpCodeHandle != NULL) {
     InternalHiiAppendOpCodes (OpCodeHandle, DefaultsOpCodeHandle);
   }
+
   HiiCreateEndOpCode (OpCodeHandle);
   return InternalHiiOpCodeHandleBuffer (OpCodeHandle) + Position;
 }
@@ -3868,8 +4145,8 @@ EFIAPI
 HiiCreateDateOpCode (
   IN VOID             *OpCodeHandle,
   IN EFI_QUESTION_ID  QuestionId,
-  IN EFI_VARSTORE_ID  VarStoreId,   OPTIONAL
-  IN UINT16           VarOffset,    OPTIONAL
+  IN EFI_VARSTORE_ID  VarStoreId    OPTIONAL,
+  IN UINT16           VarOffset     OPTIONAL,
   IN EFI_STRING_ID    Prompt,
   IN EFI_STRING_ID    Help,
   IN UINT8            QuestionFlags,
@@ -3877,10 +4154,10 @@ HiiCreateDateOpCode (
   IN VOID             *DefaultsOpCodeHandle  OPTIONAL
   )
 {
-  EFI_IFR_DATE    OpCode;
-  UINTN           Position;
+  EFI_IFR_DATE  OpCode;
+  UINTN         Position;
 
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE))) == 0);
   ASSERT ((DateFlags & (~(EFI_QF_DATE_YEAR_SUPPRESS | EFI_QF_DATE_MONTH_SUPPRESS | EFI_QF_DATE_DAY_SUPPRESS | EFI_QF_DATE_STORAGE))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
@@ -3933,8 +4210,8 @@ EFIAPI
 HiiCreateTimeOpCode (
   IN VOID             *OpCodeHandle,
   IN EFI_QUESTION_ID  QuestionId,
-  IN EFI_VARSTORE_ID  VarStoreId,   OPTIONAL
-  IN UINT16           VarOffset,    OPTIONAL
+  IN EFI_VARSTORE_ID  VarStoreId    OPTIONAL,
+  IN UINT16           VarOffset     OPTIONAL,
   IN EFI_STRING_ID    Prompt,
   IN EFI_STRING_ID    Help,
   IN UINT8            QuestionFlags,
@@ -3942,10 +4219,10 @@ HiiCreateTimeOpCode (
   IN VOID             *DefaultsOpCodeHandle  OPTIONAL
   )
 {
-  EFI_IFR_TIME    OpCode;
-  UINTN           Position;
+  EFI_IFR_TIME  OpCode;
+  UINTN         Position;
 
-  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED))) == 0);
+  ASSERT ((QuestionFlags & (~(EFI_IFR_FLAG_READ_ONLY | EFI_IFR_FLAG_CALLBACK | EFI_IFR_FLAG_RESET_REQUIRED | EFI_IFR_FLAG_REST_STYLE))) == 0);
   ASSERT ((TimeFlags & (~(QF_TIME_HOUR_SUPPRESS | QF_TIME_MINUTE_SUPPRESS | QF_TIME_SECOND_SUPPRESS | QF_TIME_STORAGE))) == 0);
 
   ZeroMem (&OpCode, sizeof (OpCode));
@@ -3975,7 +4252,7 @@ HiiCreateTimeOpCode (
   @param[in] FormSetGuid       The optional Formset GUID.
   @param[in] FormId            The Form ID.
   @param[in] Package           The package header.
-  @param[in] OpCodeBufferStart An OpCode buffer that contains the set of IFR 
+  @param[in] OpCodeBufferStart An OpCode buffer that contains the set of IFR
                                opcodes to be inserted or replaced in the form.
   @param[in] OpCodeBufferEnd   An OpCcode buffer that contains the IFR opcode
                                that marks the end of a replace operation in the form.
@@ -3988,33 +4265,33 @@ HiiCreateTimeOpCode (
 EFI_STATUS
 EFIAPI
 InternalHiiUpdateFormPackageData (
-  IN  EFI_GUID               *FormSetGuid, OPTIONAL
-  IN  EFI_FORM_ID            FormId,
-  IN  EFI_HII_PACKAGE_HEADER *Package,
-  IN  HII_LIB_OPCODE_BUFFER  *OpCodeBufferStart,
-  IN  HII_LIB_OPCODE_BUFFER  *OpCodeBufferEnd,    OPTIONAL
-  OUT EFI_HII_PACKAGE_HEADER *TempPackage
+  IN  EFI_GUID                *FormSetGuid  OPTIONAL,
+  IN  EFI_FORM_ID             FormId,
+  IN  EFI_HII_PACKAGE_HEADER  *Package,
+  IN  HII_LIB_OPCODE_BUFFER   *OpCodeBufferStart,
+  IN  HII_LIB_OPCODE_BUFFER   *OpCodeBufferEnd     OPTIONAL,
+  OUT EFI_HII_PACKAGE_HEADER  *TempPackage
   )
 {
-  UINTN                     AddSize;
-  UINT8                     *BufferPos;
-  EFI_HII_PACKAGE_HEADER    PackageHeader;
-  UINTN                     Offset;
-  EFI_IFR_OP_HEADER         *IfrOpHdr;
-  EFI_IFR_OP_HEADER         *UpdateIfrOpHdr;
-  BOOLEAN                   GetFormSet;
-  BOOLEAN                   GetForm;
-  BOOLEAN                   Updated;
-  UINTN                     UpdatePackageLength;
+  UINTN                   AddSize;
+  UINT8                   *BufferPos;
+  EFI_HII_PACKAGE_HEADER  PackageHeader;
+  UINTN                   Offset;
+  EFI_IFR_OP_HEADER       *IfrOpHdr;
+  EFI_IFR_OP_HEADER       *UpdateIfrOpHdr;
+  BOOLEAN                 GetFormSet;
+  BOOLEAN                 GetForm;
+  BOOLEAN                 Updated;
+  UINTN                   UpdatePackageLength;
 
   CopyMem (TempPackage, Package, sizeof (EFI_HII_PACKAGE_HEADER));
   UpdatePackageLength = sizeof (EFI_HII_PACKAGE_HEADER);
-  BufferPos           = (UINT8 *) (TempPackage + 1);
+  BufferPos           = (UINT8 *)(TempPackage + 1);
 
   CopyMem (&PackageHeader, Package, sizeof (EFI_HII_PACKAGE_HEADER));
-  IfrOpHdr   = (EFI_IFR_OP_HEADER *)((UINT8 *) Package + sizeof (EFI_HII_PACKAGE_HEADER));
+  IfrOpHdr   = (EFI_IFR_OP_HEADER *)((UINT8 *)Package + sizeof (EFI_HII_PACKAGE_HEADER));
   Offset     = sizeof (EFI_HII_PACKAGE_HEADER);
-  GetFormSet = (BOOLEAN) ((FormSetGuid == NULL) ? TRUE : FALSE);
+  GetFormSet = (BOOLEAN)((FormSetGuid == NULL) ? TRUE : FALSE);
   GetForm    = FALSE;
   Updated    = FALSE;
 
@@ -4022,53 +4299,56 @@ InternalHiiUpdateFormPackageData (
     CopyMem (BufferPos, IfrOpHdr, IfrOpHdr->Length);
     BufferPos           += IfrOpHdr->Length;
     UpdatePackageLength += IfrOpHdr->Length;
-    
+
     //
     // Find the matched FormSet and Form
     //
     if ((IfrOpHdr->OpCode == EFI_IFR_FORM_SET_OP) && (FormSetGuid != NULL)) {
-      if (CompareGuid((GUID *)(VOID *)&((EFI_IFR_FORM_SET *) IfrOpHdr)->Guid, FormSetGuid)) {
+      if (CompareGuid ((GUID *)(VOID *)&((EFI_IFR_FORM_SET *)IfrOpHdr)->Guid, FormSetGuid)) {
         GetFormSet = TRUE;
       } else {
         GetFormSet = FALSE;
       }
-    } else if (IfrOpHdr->OpCode == EFI_IFR_FORM_OP || IfrOpHdr->OpCode == EFI_IFR_FORM_MAP_OP) {
-      if (CompareMem (&((EFI_IFR_FORM *) IfrOpHdr)->FormId, &FormId, sizeof (EFI_FORM_ID)) == 0) {
+    } else if ((IfrOpHdr->OpCode == EFI_IFR_FORM_OP) || (IfrOpHdr->OpCode == EFI_IFR_FORM_MAP_OP)) {
+      if (CompareMem (&((EFI_IFR_FORM *)IfrOpHdr)->FormId, &FormId, sizeof (EFI_FORM_ID)) == 0) {
         GetForm = TRUE;
       } else {
         GetForm = FALSE;
       }
     }
-    
+
     //
     // The matched Form is found, and Update data in this form
     //
     if (GetFormSet && GetForm) {
-      UpdateIfrOpHdr = (EFI_IFR_OP_HEADER *) OpCodeBufferStart->Buffer;
+      UpdateIfrOpHdr = (EFI_IFR_OP_HEADER *)OpCodeBufferStart->Buffer;
       if ((UpdateIfrOpHdr->Length == IfrOpHdr->Length) && \
-          (CompareMem (IfrOpHdr, UpdateIfrOpHdr, UpdateIfrOpHdr->Length) == 0)) {
+          (CompareMem (IfrOpHdr, UpdateIfrOpHdr, UpdateIfrOpHdr->Length) == 0))
+      {
         //
         // Remove the original data when End OpCode buffer exist.
         //
         if (OpCodeBufferEnd != NULL) {
           Offset        += IfrOpHdr->Length;
-          IfrOpHdr       = (EFI_IFR_OP_HEADER *) ((UINT8 *) (IfrOpHdr) + IfrOpHdr->Length);
-          UpdateIfrOpHdr = (EFI_IFR_OP_HEADER *) OpCodeBufferEnd->Buffer;
+          IfrOpHdr       = (EFI_IFR_OP_HEADER *)((UINT8 *)(IfrOpHdr) + IfrOpHdr->Length);
+          UpdateIfrOpHdr = (EFI_IFR_OP_HEADER *)OpCodeBufferEnd->Buffer;
           while (Offset < PackageHeader.Length) {
             //
             // Search the matched end opcode
             //
             if ((UpdateIfrOpHdr->Length == IfrOpHdr->Length) && \
-                (CompareMem (IfrOpHdr, UpdateIfrOpHdr, UpdateIfrOpHdr->Length) == 0)) {
+                (CompareMem (IfrOpHdr, UpdateIfrOpHdr, UpdateIfrOpHdr->Length) == 0))
+            {
               break;
             }
+
             //
             // Go to the next Op-Code
             //
-            Offset        += IfrOpHdr->Length;
-            IfrOpHdr       = (EFI_IFR_OP_HEADER *) ((UINT8 *) (IfrOpHdr) + IfrOpHdr->Length);
+            Offset  += IfrOpHdr->Length;
+            IfrOpHdr = (EFI_IFR_OP_HEADER *)((UINT8 *)(IfrOpHdr) + IfrOpHdr->Length);
           }
-          
+
           if (Offset >= PackageHeader.Length) {
             //
             // The end opcode is not found.
@@ -4080,7 +4360,7 @@ InternalHiiUpdateFormPackageData (
         //
         // Insert the updated data
         //
-        AddSize = ((EFI_IFR_OP_HEADER *) OpCodeBufferStart->Buffer)->Length;
+        AddSize = ((EFI_IFR_OP_HEADER *)OpCodeBufferStart->Buffer)->Length;
         CopyMem (BufferPos, OpCodeBufferStart->Buffer + AddSize, OpCodeBufferStart->Position - AddSize);
         BufferPos           += OpCodeBufferStart->Position - AddSize;
         UpdatePackageLength += OpCodeBufferStart->Position - AddSize;
@@ -4098,7 +4378,7 @@ InternalHiiUpdateFormPackageData (
         // Copy the left package data.
         //
         Offset += IfrOpHdr->Length;
-        CopyMem (BufferPos, (UINT8 *) Package + Offset, PackageHeader.Length - Offset);
+        CopyMem (BufferPos, (UINT8 *)Package + Offset, PackageHeader.Length - Offset);
         UpdatePackageLength += PackageHeader.Length - Offset;
 
         //
@@ -4112,46 +4392,47 @@ InternalHiiUpdateFormPackageData (
     //
     // Go to the next Op-Code
     //
-    Offset   += IfrOpHdr->Length;
-    IfrOpHdr = (EFI_IFR_OP_HEADER *) ((CHAR8 *) (IfrOpHdr) + IfrOpHdr->Length);
+    Offset  += IfrOpHdr->Length;
+    IfrOpHdr = (EFI_IFR_OP_HEADER *)((CHAR8 *)(IfrOpHdr) + IfrOpHdr->Length);
   }
-  
+
   if (!Updated) {
     //
     // The updated opcode buffer is not found.
     //
     return EFI_NOT_FOUND;
   }
+
   //
   // Update the package length.
   //
-  PackageHeader.Length = (UINT32) UpdatePackageLength;
+  PackageHeader.Length = (UINT32)UpdatePackageLength;
   CopyMem (TempPackage, &PackageHeader, sizeof (EFI_HII_PACKAGE_HEADER));
 
   return EFI_SUCCESS;
 }
 
 /**
-  This function updates a form that has previously been registered with the HII 
+  This function updates a form that has previously been registered with the HII
   Database.  This function will perform at most one update operation.
-    
-  The form to update is specified by Handle, FormSetGuid, and FormId.  Binary 
-  comparisons of IFR opcodes are performed from the beginning of the form being 
-  updated until an IFR opcode is found that exactly matches the first IFR opcode 
+
+  The form to update is specified by Handle, FormSetGuid, and FormId.  Binary
+  comparisons of IFR opcodes are performed from the beginning of the form being
+  updated until an IFR opcode is found that exactly matches the first IFR opcode
   specified by StartOpCodeHandle.  The following rules are used to determine if
   an insert, replace, or delete operation is performed.
-  
-  1) If no matches are found, then NULL is returned.  
+
+  1) If no matches are found, then NULL is returned.
   2) If a match is found, and EndOpCodeHandle is NULL, then all of the IFR opcodes
-     from StartOpCodeHandle except the first opcode are inserted immediately after 
+     from StartOpCodeHandle except the first opcode are inserted immediately after
      the matching IFR opcode in the form to be updated.
-  3) If a match is found, and EndOpCodeHandle is not NULL, then a search is made 
-     from the matching IFR opcode until an IFR opcode exactly matches the first 
+  3) If a match is found, and EndOpCodeHandle is not NULL, then a search is made
+     from the matching IFR opcode until an IFR opcode exactly matches the first
      IFR opcode specified by EndOpCodeHandle.  If no match is found for the first
      IFR opcode specified by EndOpCodeHandle, then NULL is returned.  If a match
-     is found, then all of the IFR opcodes between the start match and the end 
+     is found, then all of the IFR opcodes between the start match and the end
      match are deleted from the form being updated and all of the IFR opcodes
-     from StartOpCodeHandle except the first opcode are inserted immediately after 
+     from StartOpCodeHandle except the first opcode are inserted immediately after
      the matching start IFR opcode.  If StartOpCcodeHandle only contains one
      IFR instruction, then the result of this operation will delete all of the IFR
      opcodes between the start end matches.
@@ -4164,26 +4445,26 @@ InternalHiiUpdateFormPackageData (
                                  is an optional parameter that may be NULL.
                                  If it is NULL, all FormSet will be updated.
   @param[in]  FormId             The ID of the form to update.
-  @param[in]  StartOpCodeHandle  An OpCode Handle that contains the set of IFR 
+  @param[in]  StartOpCodeHandle  An OpCode Handle that contains the set of IFR
                                  opcodes to be inserted or replaced in the form.
-                                 The first IFR instruction in StartOpCodeHandle 
-                                 is used to find matching IFR opcode in the 
-                                 form. 
+                                 The first IFR instruction in StartOpCodeHandle
+                                 is used to find matching IFR opcode in the
+                                 form.
   @param[in]  EndOpCodeHandle    An OpCcode Handle that contains the IFR opcode
                                  that marks the end of a replace operation in
                                  the form.  This is an optional parameter that
                                  may be NULL.  If it is NULL, then an the IFR
-                                 opcodes specified by StartOpCodeHandle are 
+                                 opcodes specified by StartOpCodeHandle are
                                  inserted into the form.
-  
+
   @retval EFI_OUT_OF_RESOURCES   No enough memory resource is allocated.
   @retval EFI_NOT_FOUND          The following cases will return EFI_NOT_FOUND.
-                                 1) The form specified by HiiHandle, FormSetGuid, 
+                                 1) The form specified by HiiHandle, FormSetGuid,
                                  and FormId could not be found in the HII Database.
                                  2) No IFR opcodes in the target form match the first
                                  IFR opcode in StartOpCodeHandle.
-                                 3) EndOpCOde is not NULL, and no IFR opcodes in the 
-                                 target form following a matching start opcode match 
+                                 3) EndOpCOde is not NULL, and no IFR opcodes in the
+                                 target form following a matching start opcode match
                                  the first IFR opcode in EndOpCodeHandle.
   @retval EFI_SUCCESS            The matched form is updated by StartOpcode.
 
@@ -4191,8 +4472,8 @@ InternalHiiUpdateFormPackageData (
 EFI_STATUS
 EFIAPI
 HiiUpdateForm (
-  IN EFI_HII_HANDLE  HiiHandle,           
-  IN EFI_GUID        *FormSetGuid,        OPTIONAL
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN EFI_GUID        *FormSetGuid         OPTIONAL,
   IN EFI_FORM_ID     FormId,
   IN VOID            *StartOpCodeHandle,
   IN VOID            *EndOpCodeHandle     OPTIONAL
@@ -4200,7 +4481,7 @@ HiiUpdateForm (
 {
   EFI_STATUS                   Status;
   EFI_HII_PACKAGE_LIST_HEADER  *HiiPackageList;
-  UINT32                       PackageListLength;  
+  UINT32                       PackageListLength;
   UINT32                       Offset;
   EFI_HII_PACKAGE_LIST_HEADER  *UpdatePackageList;
   UINTN                        BufferSize;
@@ -4211,7 +4492,7 @@ HiiUpdateForm (
   BOOLEAN                      Updated;
   HII_LIB_OPCODE_BUFFER        *OpCodeBufferStart;
   HII_LIB_OPCODE_BUFFER        *OpCodeBufferEnd;
-  
+
   //
   // Input update data can't be NULL.
   //
@@ -4220,19 +4501,19 @@ HiiUpdateForm (
   UpdatePackageList = NULL;
   TempPackage       = NULL;
   HiiPackageList    = NULL;
-  
+
   //
   // Retrieve buffer data from Opcode Handle
   //
-  OpCodeBufferStart = (HII_LIB_OPCODE_BUFFER *) StartOpCodeHandle;
-  OpCodeBufferEnd   = (HII_LIB_OPCODE_BUFFER *) EndOpCodeHandle;
-  
+  OpCodeBufferStart = (HII_LIB_OPCODE_BUFFER *)StartOpCodeHandle;
+  OpCodeBufferEnd   = (HII_LIB_OPCODE_BUFFER *)EndOpCodeHandle;
+
   //
   // Get the original package list
   //
-  BufferSize = 0;
-  HiiPackageList   = NULL;
-  Status = gHiiDatabase->ExportPackageLists (gHiiDatabase, HiiHandle, &BufferSize, HiiPackageList);
+  BufferSize     = 0;
+  HiiPackageList = NULL;
+  Status         = gHiiDatabase->ExportPackageLists (gHiiDatabase, HiiHandle, &BufferSize, HiiPackageList);
   //
   // The return status should always be EFI_BUFFER_TOO_SMALL as input buffer's size is 0.
   //
@@ -4254,13 +4535,13 @@ HiiUpdateForm (
   //
   // Calculate and allocate space for retrieval of IFR data
   //
-  BufferSize += OpCodeBufferStart->Position;
+  BufferSize       += OpCodeBufferStart->Position;
   UpdatePackageList = AllocateZeroPool (BufferSize);
   if (UpdatePackageList == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Finish;
   }
-  
+
   //
   // Allocate temp buffer to store the temp updated package buffer
   //
@@ -4270,22 +4551,22 @@ HiiUpdateForm (
     goto Finish;
   }
 
-  UpdateBufferPos = (UINT8 *) UpdatePackageList;
+  UpdateBufferPos = (UINT8 *)UpdatePackageList;
 
   //
   // Copy the package list header
   //
   CopyMem (UpdateBufferPos, HiiPackageList, sizeof (EFI_HII_PACKAGE_LIST_HEADER));
   UpdateBufferPos += sizeof (EFI_HII_PACKAGE_LIST_HEADER);
-  
+
   //
   // Go through each package to find the matched package and update one by one
   //
-  Updated = FALSE;
-  Offset  = sizeof (EFI_HII_PACKAGE_LIST_HEADER);
+  Updated           = FALSE;
+  Offset            = sizeof (EFI_HII_PACKAGE_LIST_HEADER);
   PackageListLength = ReadUnaligned32 (&HiiPackageList->PackageLength);
   while (Offset < PackageListLength) {
-    Package = (EFI_HII_PACKAGE_HEADER *) (((UINT8 *) HiiPackageList) + Offset);
+    Package = (EFI_HII_PACKAGE_HEADER *)(((UINT8 *)HiiPackageList) + Offset);
     CopyMem (&PackageHeader, Package, sizeof (EFI_HII_PACKAGE_HEADER));
     Offset += Package->Length;
 
@@ -4297,10 +4578,10 @@ HiiUpdateForm (
       //
       // The matched package is found. Its package buffer will be updated by the input new data.
       //
-      if (!EFI_ERROR(Status)) {
+      if (!EFI_ERROR (Status)) {
         //
         // Set Update Flag
-        //        
+        //
         Updated = TRUE;
         //
         // Add updated package buffer
@@ -4316,14 +4597,14 @@ HiiUpdateForm (
     CopyMem (UpdateBufferPos, Package, PackageHeader.Length);
     UpdateBufferPos += PackageHeader.Length;
   }
-  
+
   if (Updated) {
     //
     // Update package list length
     //
-    BufferSize = UpdateBufferPos - (UINT8 *) UpdatePackageList;
-    WriteUnaligned32 (&UpdatePackageList->PackageLength, (UINT32) BufferSize);
-    
+    BufferSize = UpdateBufferPos - (UINT8 *)UpdatePackageList;
+    WriteUnaligned32 (&UpdatePackageList->PackageLength, (UINT32)BufferSize);
+
     //
     // Update Package to show form
     //
@@ -4339,14 +4620,14 @@ Finish:
   if (HiiPackageList != NULL) {
     FreePool (HiiPackageList);
   }
-  
+
   if (UpdatePackageList != NULL) {
     FreePool (UpdatePackageList);
   }
-  
+
   if (TempPackage != NULL) {
     FreePool (TempPackage);
   }
 
-  return Status; 
+  return Status;
 }

@@ -1,19 +1,12 @@
 /** @file
    TCG MOR (Memory Overwrite Request) Lock Control Driver header file.
-   
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials 
-are licensed and made available under the terms and conditions of the BSD License 
-which accompanies this distribution.  The full text of the license may be found at 
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, 
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_TCG_MOR_LOCK_H_
-#define _EFI_TCG_MOR_LOCK_H_
+#pragma once
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetVariable().
@@ -40,11 +33,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 InternalGetVariable (
-  IN      CHAR16                   *VariableName,
-  IN      EFI_GUID                 *VendorGuid,
-  OUT     UINT32                   *Attributes OPTIONAL,
-  IN OUT  UINTN                    *DataSize,
-  OUT     VOID                     *Data
+  IN      CHAR16    *VariableName,
+  IN      EFI_GUID  *VendorGuid,
+  OUT     UINT32    *Attributes OPTIONAL,
+  IN OUT  UINTN     *DataSize,
+  OUT     VOID      *Data
   );
 
 /**
@@ -67,7 +60,7 @@ InternalGetVariable (
   @retval  EFI_DEVICE_ERROR       The variable could not be saved due to a hardware failure.
   @retval  EFI_WRITE_PROTECTED    The variable in question is read-only.
   @retval  EFI_WRITE_PROTECTED    The variable in question cannot be deleted.
-  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS
+  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS
                                   set but the AuthInfo does NOT pass the validation check carried
                                   out by the firmware.
   @retval  EFI_NOT_FOUND          The variable trying to be updated or deleted was not found.
@@ -76,11 +69,11 @@ InternalGetVariable (
 EFI_STATUS
 EFIAPI
 InternalSetVariable (
-  IN CHAR16                       *VariableName,
-  IN EFI_GUID                     *VendorGuid,
-  IN UINT32                       Attributes,
-  IN UINTN                        DataSize,
-  IN VOID                         *Data
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN UINT32    Attributes,
+  IN UINTN     DataSize,
+  IN VOID      *Data
   );
 
 /**
@@ -103,7 +96,7 @@ InternalSetVariable (
   @retval  EFI_DEVICE_ERROR       The variable could not be saved due to a hardware failure.
   @retval  EFI_WRITE_PROTECTED    The variable in question is read-only.
   @retval  EFI_WRITE_PROTECTED    The variable in question cannot be deleted.
-  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS
+  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS
                                   set but the AuthInfo does NOT pass the validation check carried
                                   out by the firmware.
   @retval  EFI_NOT_FOUND          The variable trying to be updated or deleted was not found.
@@ -112,11 +105,11 @@ InternalSetVariable (
 EFI_STATUS
 EFIAPI
 SetVariableCheckHandlerMor (
-  IN CHAR16     *VariableName,
-  IN EFI_GUID   *VendorGuid,
-  IN UINT32     Attributes,
-  IN UINTN      DataSize,
-  IN VOID       *Data
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN UINT32    Attributes,
+  IN UINTN     DataSize,
+  IN VOID      *Data
   );
 
 /**
@@ -125,7 +118,7 @@ SetVariableCheckHandlerMor (
   @param[in] ImageHandle  Image handle of this driver.
   @param[in] SystemTable  A Pointer to the EFI System Table.
 
-  @retval EFI_SUCEESS     
+  @retval EFI_SUCCESS
   @return Others          Some error occurs.
 **/
 EFI_STATUS
@@ -133,5 +126,3 @@ EFIAPI
 MorLockDriverInit (
   VOID
   );
-
-#endif

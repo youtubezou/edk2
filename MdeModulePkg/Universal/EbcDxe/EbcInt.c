@@ -4,18 +4,13 @@
   that are not particularly related to VM execution of EBC instructions.
 
 Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "EbcInt.h"
 #include "EbcExecute.h"
+#include "EbcDebuggerHook.h"
 
 //
 // We'll keep track of all thunks we create in a linked list. Each
@@ -25,15 +20,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 typedef struct _EBC_THUNK_LIST EBC_THUNK_LIST;
 struct _EBC_THUNK_LIST {
-  VOID            *ThunkBuffer;
-  EBC_THUNK_LIST  *Next;
+  VOID              *ThunkBuffer;
+  EBC_THUNK_LIST    *Next;
 };
 
 typedef struct _EBC_IMAGE_LIST EBC_IMAGE_LIST;
 struct _EBC_IMAGE_LIST {
-  EBC_IMAGE_LIST  *Next;
-  EFI_HANDLE      ImageHandle;
-  EBC_THUNK_LIST  *ThunkList;
+  EBC_IMAGE_LIST    *Next;
+  EFI_HANDLE        ImageHandle;
+  EBC_THUNK_LIST    *ThunkList;
 };
 
 /**
@@ -53,8 +48,8 @@ struct _EBC_IMAGE_LIST {
 EFI_STATUS
 EFIAPI
 EbcUnloadImage (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EFI_HANDLE         ImageHandle
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EFI_HANDLE        ImageHandle
   );
 
 /**
@@ -79,10 +74,10 @@ EbcUnloadImage (
 EFI_STATUS
 EFIAPI
 EbcCreateThunk (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EFI_HANDLE         ImageHandle,
-  IN VOID               *EbcEntryPoint,
-  OUT VOID              **Thunk
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EFI_HANDLE        ImageHandle,
+  IN VOID              *EbcEntryPoint,
+  OUT VOID             **Thunk
   );
 
 /**
@@ -99,8 +94,8 @@ EbcCreateThunk (
 EFI_STATUS
 EFIAPI
 EbcGetVersion (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN OUT UINT64         *Version
+  IN EFI_EBC_PROTOCOL  *This,
+  IN OUT UINT64        *Version
   );
 
 /**
@@ -131,8 +126,8 @@ InitializeEbcCallback (
 VOID
 EFIAPI
 CommonEbcExceptionHandler (
-  IN EFI_EXCEPTION_TYPE   InterruptType,
-  IN EFI_SYSTEM_CONTEXT   SystemContext
+  IN EFI_EXCEPTION_TYPE  InterruptType,
+  IN EFI_SYSTEM_CONTEXT  SystemContext
   );
 
 /**
@@ -146,8 +141,8 @@ CommonEbcExceptionHandler (
 VOID
 EFIAPI
 EbcPeriodicNotifyFunction (
-  IN EFI_EVENT     Event,
-  IN VOID          *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
 
 /**
@@ -163,13 +158,14 @@ EbcPeriodicNotifyFunction (
 EFI_STATUS
 EFIAPI
 EbcDebugPeriodic (
-  IN VM_CONTEXT *VmPtr
+  IN VM_CONTEXT  *VmPtr
   );
 
 //
 // These two functions and the  GUID are used to produce an EBC test protocol.
 // This functionality is definitely not required for execution.
 //
+
 /**
   Produces an EBC VM test protocol that can be used for regression tests.
 
@@ -181,7 +177,7 @@ EbcDebugPeriodic (
 **/
 EFI_STATUS
 InitEbcVmTestProtocol (
-  IN EFI_HANDLE     *IHandle
+  IN EFI_HANDLE  *IHandle
   );
 
 /**
@@ -209,8 +205,8 @@ EbcVmTestUnsupported (
 EFI_STATUS
 EFIAPI
 EbcRegisterICacheFlush (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EBC_ICACHE_FLUSH   Flush
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EBC_ICACHE_FLUSH  Flush
   );
 
 /**
@@ -227,8 +223,8 @@ EbcRegisterICacheFlush (
 EFI_STATUS
 EFIAPI
 EbcDebugGetMaximumProcessorIndex (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL          *This,
-  OUT UINTN                              *MaxProcessorIndex
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  OUT UINTN                      *MaxProcessorIndex
   );
 
 /**
@@ -313,10 +309,10 @@ EbcDebugRegisterExceptionCallback (
 EFI_STATUS
 EFIAPI
 EbcDebugInvalidateInstructionCache (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL          *This,
-  IN UINTN                               ProcessorIndex,
-  IN VOID                                *Start,
-  IN UINT64                              Length
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  IN UINTN                       ProcessorIndex,
+  IN VOID                        *Start,
+  IN UINT64                      Length
   );
 
 //
@@ -325,29 +321,152 @@ EbcDebugInvalidateInstructionCache (
 // also be global since the execution of an EBC image does not provide
 // a This pointer.
 //
-EBC_IMAGE_LIST         *mEbcImageList = NULL;
+EBC_IMAGE_LIST  *mEbcImageList = NULL;
 
 //
 // Callback function to flush the icache after thunk creation
 //
-EBC_ICACHE_FLUSH       mEbcICacheFlush;
+EBC_ICACHE_FLUSH  mEbcICacheFlush;
 
 //
 // These get set via calls by the debug agent
 //
-EFI_PERIODIC_CALLBACK  mDebugPeriodicCallback = NULL;
-EFI_EXCEPTION_CALLBACK mDebugExceptionCallback[MAX_EBC_EXCEPTION + 1] = {NULL};
+EFI_PERIODIC_CALLBACK   mDebugPeriodicCallback                         = NULL;
+EFI_EXCEPTION_CALLBACK  mDebugExceptionCallback[MAX_EBC_EXCEPTION + 1] = { NULL };
 
-VOID                   *mStackBuffer[MAX_STACK_NUM];
-EFI_HANDLE             mStackBufferIndex[MAX_STACK_NUM];
-UINTN                  mStackNum = 0;
+VOID        *mStackBuffer[MAX_STACK_NUM];
+EFI_HANDLE  mStackBufferIndex[MAX_STACK_NUM];
+UINTN       mStackNum = 0;
 
 //
 // Event for Periodic callback
 //
-EFI_EVENT              mEbcPeriodicEvent;
-VM_CONTEXT             *mVmPtr = NULL;
+EFI_EVENT   mEbcPeriodicEvent;
+VM_CONTEXT  *mVmPtr = NULL;
 
+/**
+  Check whether the emulator supports executing a certain PE/COFF image
+
+  @param[in] This         This pointer for EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL
+                          structure
+  @param[in] ImageType    Whether the image is an application, a boot time
+                          driver or a runtime driver.
+  @param[in] DevicePath   Path to device where the image originated
+                          (e.g., a PCI option ROM)
+
+  @retval TRUE            The image is supported by the emulator
+  @retval FALSE           The image is not supported by the emulator.
+**/
+BOOLEAN
+EFIAPI
+EbcIsImageSupported (
+  IN  EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL  *This,
+  IN  UINT16                                ImageType,
+  IN  EFI_DEVICE_PATH_PROTOCOL              *DevicePath   OPTIONAL
+  )
+{
+  if ((ImageType != EFI_IMAGE_SUBSYSTEM_EFI_APPLICATION) &&
+      (ImageType != EFI_IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER))
+  {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+  Register a supported PE/COFF image with the emulator. After this call
+  completes successfully, the PE/COFF image may be started as usual, and
+  it is the responsibility of the emulator implementation that any branch
+  into the code section of the image (including returns from functions called
+  from the foreign code) is executed as if it were running on the machine
+  type it was built for.
+
+  @param[in]      This          This pointer for
+                                EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL structure
+  @param[in]      ImageBase     The base address in memory of the PE/COFF image
+  @param[in]      ImageSize     The size in memory of the PE/COFF image
+  @param[in,out]  EntryPoint    The entry point of the PE/COFF image. Passed by
+                                reference so that the emulator may modify it.
+
+  @retval EFI_SUCCESS           The image was registered with the emulator and
+                                can be started as usual.
+  @retval other                 The image could not be registered.
+
+  If the PE/COFF machine type or image type are not supported by the emulator,
+  then ASSERT().
+**/
+EFI_STATUS
+EFIAPI
+EbcRegisterImage (
+  IN      EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL  *This,
+  IN      EFI_PHYSICAL_ADDRESS                  ImageBase,
+  IN      UINT64                                ImageSize,
+  IN  OUT EFI_IMAGE_ENTRY_POINT                 *EntryPoint
+  )
+{
+  DEBUG_CODE_BEGIN ();
+  PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext;
+  EFI_STATUS                    Status;
+
+  ZeroMem (&ImageContext, sizeof (ImageContext));
+
+  ImageContext.Handle    = (VOID *)(UINTN)ImageBase;
+  ImageContext.ImageRead = PeCoffLoaderImageReadFromMemory;
+
+  Status = PeCoffLoaderGetImageInfo (&ImageContext);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  ASSERT (ImageContext.Machine == EFI_IMAGE_MACHINE_EBC);
+  ASSERT (
+    ImageContext.ImageType == EFI_IMAGE_SUBSYSTEM_EFI_APPLICATION ||
+    ImageContext.ImageType == EFI_IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
+    );
+  DEBUG_CODE_END ();
+
+  EbcRegisterICacheFlush (
+    NULL,
+    (EBC_ICACHE_FLUSH)InvalidateInstructionCacheRange
+    );
+
+  return EbcCreateThunk (
+           NULL,
+           (VOID *)(UINTN)ImageBase,
+           (VOID *)(UINTN)*EntryPoint,
+           (VOID **)EntryPoint
+           );
+}
+
+/**
+  Unregister a PE/COFF image that has been registered with the emulator.
+  This should be done before the image is unloaded from memory.
+
+  @param[in] This         This pointer for EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL
+                          structure
+  @param[in] ImageBase    The base address in memory of the PE/COFF image
+
+  @retval EFI_SUCCESS     The image was unregistered with the emulator.
+  @retval other           Image could not be unloaded.
+**/
+EFI_STATUS
+EFIAPI
+EbcUnregisterImage (
+  IN  EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL  *This,
+  IN  EFI_PHYSICAL_ADDRESS                  ImageBase
+  )
+{
+  return EbcUnloadImage (NULL, (VOID *)(UINTN)ImageBase);
+}
+
+STATIC EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL  mPeCoffEmuProtocol = {
+  EbcIsImageSupported,
+  EbcRegisterImage,
+  EbcUnregisterImage,
+  EDKII_PECOFF_IMAGE_EMULATOR_VERSION,
+  EFI_IMAGE_MACHINE_EBC
+};
 
 /**
   Initializes the VM EFI interface.  Allocates memory for the VM interface
@@ -362,8 +481,8 @@ VM_CONTEXT             *mVmPtr = NULL;
 EFI_STATUS
 EFIAPI
 InitializeEbcDriver (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_EBC_PROTOCOL            *EbcProtocol;
@@ -387,24 +506,24 @@ InitializeEbcDriver (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  EbcProtocol->CreateThunk          = EbcCreateThunk;
-  EbcProtocol->UnloadImage          = EbcUnloadImage;
-  EbcProtocol->RegisterICacheFlush  = EbcRegisterICacheFlush;
-  EbcProtocol->GetVersion           = EbcGetVersion;
-  mEbcICacheFlush                   = NULL;
+  EbcProtocol->CreateThunk         = EbcCreateThunk;
+  EbcProtocol->UnloadImage         = EbcUnloadImage;
+  EbcProtocol->RegisterICacheFlush = EbcRegisterICacheFlush;
+  EbcProtocol->GetVersion          = EbcGetVersion;
+  mEbcICacheFlush                  = NULL;
 
   //
   // Find any already-installed EBC protocols and uninstall them
   //
-  Installed     = FALSE;
-  HandleBuffer  = NULL;
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiEbcProtocolGuid,
-                  NULL,
-                  &NumHandles,
-                  &HandleBuffer
-                  );
+  Installed    = FALSE;
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiEbcProtocolGuid,
+                        NULL,
+                        &NumHandles,
+                        &HandleBuffer
+                        );
   if (Status == EFI_SUCCESS) {
     //
     // Loop through the handles
@@ -413,15 +532,16 @@ InitializeEbcDriver (
       Status = gBS->HandleProtocol (
                       HandleBuffer[Index],
                       &gEfiEbcProtocolGuid,
-                      (VOID **) &OldEbcProtocol
+                      (VOID **)&OldEbcProtocol
                       );
       if (Status == EFI_SUCCESS) {
         if (gBS->ReinstallProtocolInterface (
-                  HandleBuffer[Index],
-                  &gEfiEbcProtocolGuid,
-                  OldEbcProtocol,
-                  EbcProtocol
-                  ) == EFI_SUCCESS) {
+                   HandleBuffer[Index],
+                   &gEfiEbcProtocolGuid,
+                   OldEbcProtocol,
+                   EbcProtocol
+                   ) == EFI_SUCCESS)
+        {
           Installed = TRUE;
         }
       }
@@ -432,15 +552,18 @@ InitializeEbcDriver (
     FreePool (HandleBuffer);
     HandleBuffer = NULL;
   }
+
   //
   // Add the protocol so someone can locate us if we haven't already.
   //
   if (!Installed) {
-    Status = gBS->InstallProtocolInterface (
+    Status = gBS->InstallMultipleProtocolInterfaces (
                     &ImageHandle,
                     &gEfiEbcProtocolGuid,
-                    EFI_NATIVE_INTERFACE,
-                    EbcProtocol
+                    EbcProtocol,
+                    &gEdkiiPeCoffImageEmulatorProtocolGuid,
+                    &mPeCoffEmuProtocol,
+                    NULL
                     );
     if (EFI_ERROR (Status)) {
       FreePool (EbcProtocol);
@@ -448,8 +571,8 @@ InitializeEbcDriver (
     }
   }
 
-  Status = InitEBCStack();
-  if (EFI_ERROR(Status)) {
+  Status = InitEBCStack ();
+  if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }
 
@@ -462,11 +585,11 @@ InitializeEbcDriver (
     goto ErrorExit;
   }
 
-  EbcDebugProtocol->Isa                         = IsaEbc;
-  EbcDebugProtocol->GetMaximumProcessorIndex    = EbcDebugGetMaximumProcessorIndex;
-  EbcDebugProtocol->RegisterPeriodicCallback    = EbcDebugRegisterPeriodicCallback;
-  EbcDebugProtocol->RegisterExceptionCallback   = EbcDebugRegisterExceptionCallback;
-  EbcDebugProtocol->InvalidateInstructionCache  = EbcDebugInvalidateInstructionCache;
+  EbcDebugProtocol->Isa                        = IsaEbc;
+  EbcDebugProtocol->GetMaximumProcessorIndex   = EbcDebugGetMaximumProcessorIndex;
+  EbcDebugProtocol->RegisterPeriodicCallback   = EbcDebugRegisterPeriodicCallback;
+  EbcDebugProtocol->RegisterExceptionCallback  = EbcDebugRegisterExceptionCallback;
+  EbcDebugProtocol->InvalidateInstructionCache = EbcDebugInvalidateInstructionCache;
 
   //
   // Add the protocol so the debug agent can find us
@@ -484,6 +607,7 @@ InitializeEbcDriver (
     FreePool (EbcDebugProtocol);
     goto ErrorExit;
   }
+
   //
   // Install EbcDebugSupport Protocol Successfully
   // Now we need to initialize the Ebc default Callback
@@ -494,21 +618,23 @@ InitializeEbcDriver (
   // Produce a VM test interface protocol. Not required for execution.
   //
   DEBUG_CODE_BEGIN ();
-    InitEbcVmTestProtocol (&ImageHandle);
+  InitEbcVmTestProtocol (&ImageHandle);
   DEBUG_CODE_END ();
+
+  EbcDebuggerHookInit (ImageHandle, EbcDebugProtocol);
 
   return EFI_SUCCESS;
 
 ErrorExit:
-  FreeEBCStack();
-  HandleBuffer  = NULL;
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiEbcProtocolGuid,
-                  NULL,
-                  &NumHandles,
-                  &HandleBuffer
-                  );
+  FreeEBCStack ();
+  HandleBuffer = NULL;
+  Status       = gBS->LocateHandleBuffer (
+                        ByProtocol,
+                        &gEfiEbcProtocolGuid,
+                        NULL,
+                        &NumHandles,
+                        &HandleBuffer
+                        );
   if (Status == EFI_SUCCESS) {
     //
     // Loop through the handles
@@ -517,7 +643,7 @@ ErrorExit:
       Status = gBS->HandleProtocol (
                       HandleBuffer[Index],
                       &gEfiEbcProtocolGuid,
-                      (VOID **) &OldEbcProtocol
+                      (VOID **)&OldEbcProtocol
                       );
       if (Status == EFI_SUCCESS) {
         gBS->UninstallProtocolInterface (
@@ -538,7 +664,6 @@ ErrorExit:
 
   return Status;
 }
-
 
 /**
   This is the top-level routine plugged into the EBC protocol. Since thunks
@@ -562,23 +687,22 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 EbcCreateThunk (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EFI_HANDLE         ImageHandle,
-  IN VOID               *EbcEntryPoint,
-  OUT VOID              **Thunk
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EFI_HANDLE        ImageHandle,
+  IN VOID              *EbcEntryPoint,
+  OUT VOID             **Thunk
   )
 {
   EFI_STATUS  Status;
 
   Status = EbcCreateThunks (
-            ImageHandle,
-            EbcEntryPoint,
-            Thunk,
-            FLAG_THUNK_ENTRY_POINT
-            );
+             ImageHandle,
+             EbcEntryPoint,
+             Thunk,
+             FLAG_THUNK_ENTRY_POINT
+             );
   return Status;
 }
-
 
 /**
   This EBC debugger protocol service is called by the debug agent
@@ -594,14 +718,13 @@ EbcCreateThunk (
 EFI_STATUS
 EFIAPI
 EbcDebugGetMaximumProcessorIndex (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL          *This,
-  OUT UINTN                              *MaxProcessorIndex
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  OUT UINTN                      *MaxProcessorIndex
   )
 {
   *MaxProcessorIndex = 0;
   return EFI_SUCCESS;
 }
-
 
 /**
   This protocol service is called by the debug agent to register a function
@@ -635,6 +758,7 @@ EbcDebugRegisterPeriodicCallback (
   if ((mDebugPeriodicCallback == NULL) && (PeriodicCallback == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
+
   if ((mDebugPeriodicCallback != NULL) && (PeriodicCallback != NULL)) {
     return EFI_ALREADY_STARTED;
   }
@@ -642,7 +766,6 @@ EbcDebugRegisterPeriodicCallback (
   mDebugPeriodicCallback = PeriodicCallback;
   return EFI_SUCCESS;
 }
-
 
 /**
   This protocol service is called by the debug agent to register a function
@@ -681,16 +804,18 @@ EbcDebugRegisterExceptionCallback (
   if ((ExceptionType < 0) || (ExceptionType > MAX_EBC_EXCEPTION)) {
     return EFI_INVALID_PARAMETER;
   }
+
   if ((mDebugExceptionCallback[ExceptionType] == NULL) && (ExceptionCallback == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
+
   if ((mDebugExceptionCallback[ExceptionType] != NULL) && (ExceptionCallback != NULL)) {
     return EFI_ALREADY_STARTED;
   }
+
   mDebugExceptionCallback[ExceptionType] = ExceptionCallback;
   return EFI_SUCCESS;
 }
-
 
 /**
   This EBC debugger protocol service is called by the debug agent.  Required
@@ -711,15 +836,14 @@ EbcDebugRegisterExceptionCallback (
 EFI_STATUS
 EFIAPI
 EbcDebugInvalidateInstructionCache (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL          *This,
-  IN UINTN                               ProcessorIndex,
-  IN VOID                                *Start,
-  IN UINT64                              Length
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  IN UINTN                       ProcessorIndex,
+  IN VOID                        *Start,
+  IN UINT64                      Length
   )
 {
   return EFI_SUCCESS;
 }
-
 
 /**
   The VM interpreter calls this function when an exception is detected.
@@ -734,9 +858,9 @@ EbcDebugInvalidateInstructionCache (
 **/
 EFI_STATUS
 EbcDebugSignalException (
-  IN EFI_EXCEPTION_TYPE                   ExceptionType,
-  IN EXCEPTION_FLAGS                      ExceptionFlags,
-  IN VM_CONTEXT                           *VmPtr
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  IN EXCEPTION_FLAGS     ExceptionFlags,
+  IN VM_CONTEXT          *VmPtr
   )
 {
   EFI_SYSTEM_CONTEXT_EBC  EbcContext;
@@ -747,7 +871,7 @@ EbcDebugSignalException (
   // Save the exception in the context passed in
   //
   VmPtr->ExceptionFlags |= ExceptionFlags;
-  VmPtr->LastException = (UINTN) ExceptionType;
+  VmPtr->LastException   = (UINTN)ExceptionType;
   //
   // If it's a fatal exception, then flag it in the VM context in case an
   // attached debugger tries to return from it.
@@ -763,42 +887,40 @@ EbcDebugSignalException (
   // status code via the status code API
   //
   if (mDebugExceptionCallback[ExceptionType] != NULL) {
-
     //
     // Initialize the context structure
     //
-    EbcContext.R0                   = (UINT64) VmPtr->Gpr[0];
-    EbcContext.R1                   = (UINT64) VmPtr->Gpr[1];
-    EbcContext.R2                   = (UINT64) VmPtr->Gpr[2];
-    EbcContext.R3                   = (UINT64) VmPtr->Gpr[3];
-    EbcContext.R4                   = (UINT64) VmPtr->Gpr[4];
-    EbcContext.R5                   = (UINT64) VmPtr->Gpr[5];
-    EbcContext.R6                   = (UINT64) VmPtr->Gpr[6];
-    EbcContext.R7                   = (UINT64) VmPtr->Gpr[7];
-    EbcContext.Ip                   = (UINT64)(UINTN)VmPtr->Ip;
-    EbcContext.Flags                = VmPtr->Flags;
-    EbcContext.ControlFlags         = 0;
-    SystemContext.SystemContextEbc  = &EbcContext;
+    EbcContext.R0                  = (UINT64)VmPtr->Gpr[0];
+    EbcContext.R1                  = (UINT64)VmPtr->Gpr[1];
+    EbcContext.R2                  = (UINT64)VmPtr->Gpr[2];
+    EbcContext.R3                  = (UINT64)VmPtr->Gpr[3];
+    EbcContext.R4                  = (UINT64)VmPtr->Gpr[4];
+    EbcContext.R5                  = (UINT64)VmPtr->Gpr[5];
+    EbcContext.R6                  = (UINT64)VmPtr->Gpr[6];
+    EbcContext.R7                  = (UINT64)VmPtr->Gpr[7];
+    EbcContext.Ip                  = (UINT64)(UINTN)VmPtr->Ip;
+    EbcContext.Flags               = VmPtr->Flags;
+    EbcContext.ControlFlags        = 0;
+    SystemContext.SystemContextEbc = &EbcContext;
 
-    mDebugExceptionCallback[ExceptionType] (ExceptionType, SystemContext);
+    mDebugExceptionCallback[ExceptionType](ExceptionType, SystemContext);
     //
     // Restore the context structure and continue to execute
     //
-    VmPtr->Gpr[0]  = EbcContext.R0;
-    VmPtr->Gpr[1]  = EbcContext.R1;
-    VmPtr->Gpr[2]  = EbcContext.R2;
-    VmPtr->Gpr[3]  = EbcContext.R3;
-    VmPtr->Gpr[4]  = EbcContext.R4;
-    VmPtr->Gpr[5]  = EbcContext.R5;
-    VmPtr->Gpr[6]  = EbcContext.R6;
-    VmPtr->Gpr[7]  = EbcContext.R7;
-    VmPtr->Ip    = (VMIP)(UINTN)EbcContext.Ip;
-    VmPtr->Flags = EbcContext.Flags;
+    VmPtr->Gpr[0] = EbcContext.R0;
+    VmPtr->Gpr[1] = EbcContext.R1;
+    VmPtr->Gpr[2] = EbcContext.R2;
+    VmPtr->Gpr[3] = EbcContext.R3;
+    VmPtr->Gpr[4] = EbcContext.R4;
+    VmPtr->Gpr[5] = EbcContext.R5;
+    VmPtr->Gpr[6] = EbcContext.R6;
+    VmPtr->Gpr[7] = EbcContext.R7;
+    VmPtr->Ip     = (VMIP)(UINTN)EbcContext.Ip;
+    VmPtr->Flags  = EbcContext.Flags;
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
   To install default Callback function for the VM interpreter.
@@ -816,8 +938,8 @@ InitializeEbcCallback (
   IN EFI_DEBUG_SUPPORT_PROTOCOL  *This
   )
 {
-  INTN       Index;
-  EFI_STATUS Status;
+  INTN        Index;
+  EFI_STATUS  Status;
 
   //
   // For ExceptionCallback
@@ -841,7 +963,7 @@ InitializeEbcCallback (
                   &mVmPtr,
                   &mEbcPeriodicEvent
                   );
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -850,13 +972,12 @@ InitializeEbcCallback (
                   TimerPeriodic,
                   EBC_VM_PERIODIC_CALLBACK_RATE
                   );
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
   The default Exception Callback for the VM interpreter.
@@ -870,59 +991,59 @@ InitializeEbcCallback (
 VOID
 EFIAPI
 CommonEbcExceptionHandler (
-  IN EFI_EXCEPTION_TYPE   InterruptType,
-  IN EFI_SYSTEM_CONTEXT   SystemContext
+  IN EFI_EXCEPTION_TYPE  InterruptType,
+  IN EFI_SYSTEM_CONTEXT  SystemContext
   )
 {
   //
   // We print debug information to let user know what happen.
   //
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "EBC Interrupter Version - 0x%016lx\n",
-    (UINT64) (((VM_MAJOR_VERSION & 0xFFFF) << 16) | ((VM_MINOR_VERSION & 0xFFFF)))
+    (UINT64)(((VM_MAJOR_VERSION & 0xFFFF) << 16) | ((VM_MINOR_VERSION & 0xFFFF)))
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "Exception Type - 0x%016lx\n",
     (UINT64)(UINTN)InterruptType
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  R0 - 0x%016lx, R1 - 0x%016lx\n",
     SystemContext.SystemContextEbc->R0,
     SystemContext.SystemContextEbc->R1
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  R2 - 0x%016lx, R3 - 0x%016lx\n",
     SystemContext.SystemContextEbc->R2,
     SystemContext.SystemContextEbc->R3
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  R4 - 0x%016lx, R5 - 0x%016lx\n",
     SystemContext.SystemContextEbc->R4,
     SystemContext.SystemContextEbc->R5
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  R6 - 0x%016lx, R7 - 0x%016lx\n",
     SystemContext.SystemContextEbc->R6,
     SystemContext.SystemContextEbc->R7
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  Flags - 0x%016lx\n",
     SystemContext.SystemContextEbc->Flags
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  ControlFlags - 0x%016lx\n",
     SystemContext.SystemContextEbc->ControlFlags
     ));
   DEBUG ((
-    EFI_D_ERROR,
+    DEBUG_ERROR,
     "  Ip - 0x%016lx\n\n",
     SystemContext.SystemContextEbc->Ip
     ));
@@ -932,9 +1053,8 @@ CommonEbcExceptionHandler (
   //
   CpuDeadLoop ();
 
-  return ;
+  return;
 }
-
 
 /**
   The periodic callback function for EBC VM interpreter, which is used
@@ -947,11 +1067,11 @@ CommonEbcExceptionHandler (
 VOID
 EFIAPI
 EbcPeriodicNotifyFunction (
-  IN EFI_EVENT     Event,
-  IN VOID          *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  VM_CONTEXT *VmPtr;
+  VM_CONTEXT  *VmPtr;
 
   VmPtr = *(VM_CONTEXT **)Context;
 
@@ -959,9 +1079,8 @@ EbcPeriodicNotifyFunction (
     EbcDebugPeriodic (VmPtr);
   }
 
-  return ;
+  return;
 }
-
 
 /**
   The VM interpreter calls this function on a periodic basis to support
@@ -976,53 +1095,51 @@ EbcPeriodicNotifyFunction (
 EFI_STATUS
 EFIAPI
 EbcDebugPeriodic (
-  IN VM_CONTEXT *VmPtr
+  IN VM_CONTEXT  *VmPtr
   )
 {
-  EFI_SYSTEM_CONTEXT_EBC   EbcContext;
-  EFI_SYSTEM_CONTEXT       SystemContext;
+  EFI_SYSTEM_CONTEXT_EBC  EbcContext;
+  EFI_SYSTEM_CONTEXT      SystemContext;
 
   //
   // If someone's registered for periodic callbacks, then call them.
   //
   if (mDebugPeriodicCallback != NULL) {
-
     //
     // Initialize the context structure
     //
-    EbcContext.R0                   = (UINT64) VmPtr->Gpr[0];
-    EbcContext.R1                   = (UINT64) VmPtr->Gpr[1];
-    EbcContext.R2                   = (UINT64) VmPtr->Gpr[2];
-    EbcContext.R3                   = (UINT64) VmPtr->Gpr[3];
-    EbcContext.R4                   = (UINT64) VmPtr->Gpr[4];
-    EbcContext.R5                   = (UINT64) VmPtr->Gpr[5];
-    EbcContext.R6                   = (UINT64) VmPtr->Gpr[6];
-    EbcContext.R7                   = (UINT64) VmPtr->Gpr[7];
-    EbcContext.Ip                   = (UINT64)(UINTN)VmPtr->Ip;
-    EbcContext.Flags                = VmPtr->Flags;
-    EbcContext.ControlFlags         = 0;
-    SystemContext.SystemContextEbc  = &EbcContext;
+    EbcContext.R0                  = (UINT64)VmPtr->Gpr[0];
+    EbcContext.R1                  = (UINT64)VmPtr->Gpr[1];
+    EbcContext.R2                  = (UINT64)VmPtr->Gpr[2];
+    EbcContext.R3                  = (UINT64)VmPtr->Gpr[3];
+    EbcContext.R4                  = (UINT64)VmPtr->Gpr[4];
+    EbcContext.R5                  = (UINT64)VmPtr->Gpr[5];
+    EbcContext.R6                  = (UINT64)VmPtr->Gpr[6];
+    EbcContext.R7                  = (UINT64)VmPtr->Gpr[7];
+    EbcContext.Ip                  = (UINT64)(UINTN)VmPtr->Ip;
+    EbcContext.Flags               = VmPtr->Flags;
+    EbcContext.ControlFlags        = 0;
+    SystemContext.SystemContextEbc = &EbcContext;
 
     mDebugPeriodicCallback (SystemContext);
 
     //
     // Restore the context structure and continue to execute
     //
-    VmPtr->Gpr[0]  = EbcContext.R0;
-    VmPtr->Gpr[1]  = EbcContext.R1;
-    VmPtr->Gpr[2]  = EbcContext.R2;
-    VmPtr->Gpr[3]  = EbcContext.R3;
-    VmPtr->Gpr[4]  = EbcContext.R4;
-    VmPtr->Gpr[5]  = EbcContext.R5;
-    VmPtr->Gpr[6]  = EbcContext.R6;
-    VmPtr->Gpr[7]  = EbcContext.R7;
-    VmPtr->Ip    = (VMIP)(UINTN)EbcContext.Ip;
-    VmPtr->Flags = EbcContext.Flags;
+    VmPtr->Gpr[0] = EbcContext.R0;
+    VmPtr->Gpr[1] = EbcContext.R1;
+    VmPtr->Gpr[2] = EbcContext.R2;
+    VmPtr->Gpr[3] = EbcContext.R3;
+    VmPtr->Gpr[4] = EbcContext.R4;
+    VmPtr->Gpr[5] = EbcContext.R5;
+    VmPtr->Gpr[6] = EbcContext.R6;
+    VmPtr->Gpr[7] = EbcContext.R7;
+    VmPtr->Ip     = (VMIP)(UINTN)EbcContext.Ip;
+    VmPtr->Flags  = EbcContext.Flags;
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
   This routine is called by the core when an image is being unloaded from
@@ -1041,24 +1158,26 @@ EbcDebugPeriodic (
 EFI_STATUS
 EFIAPI
 EbcUnloadImage (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EFI_HANDLE         ImageHandle
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EFI_HANDLE        ImageHandle
   )
 {
   EBC_THUNK_LIST  *ThunkList;
   EBC_THUNK_LIST  *NextThunkList;
   EBC_IMAGE_LIST  *ImageList;
   EBC_IMAGE_LIST  *PrevImageList;
+
   //
   // First go through our list of known image handles and see if we've already
   // created an image list element for this image handle.
   //
-  ReturnEBCStackByHandle(ImageHandle);
+  ReturnEBCStackByHandle (ImageHandle);
   PrevImageList = NULL;
   for (ImageList = mEbcImageList; ImageList != NULL; ImageList = ImageList->Next) {
     if (ImageList->ImageHandle == ImageHandle) {
       break;
     }
+
     //
     // Save the previous so we can connect the lists when we remove this one
     //
@@ -1068,6 +1187,7 @@ EbcUnloadImage (
   if (ImageList == NULL) {
     return EFI_INVALID_PARAMETER;
   }
+
   //
   // Free up all the thunk buffers and thunks list elements for this image
   // handle.
@@ -1079,6 +1199,7 @@ EbcUnloadImage (
     FreePool (ThunkList);
     ThunkList = NextThunkList;
   }
+
   //
   // Now remove this image list element from the chain
   //
@@ -1090,13 +1211,16 @@ EbcUnloadImage (
   } else {
     PrevImageList->Next = ImageList->Next;
   }
+
   //
   // Now free up the image list element
   //
   FreePool (ImageList);
+
+  EbcDebuggerHookEbcUnloadImage (ImageHandle);
+
   return EFI_SUCCESS;
 }
-
 
 /**
   Add a thunk to our list of thunks for a given image handle.
@@ -1113,9 +1237,9 @@ EbcUnloadImage (
 **/
 EFI_STATUS
 EbcAddImageThunk (
-  IN EFI_HANDLE      ImageHandle,
-  IN VOID            *ThunkBuffer,
-  IN UINT32          ThunkSize
+  IN EFI_HANDLE  ImageHandle,
+  IN VOID        *ThunkBuffer,
+  IN UINT32      ThunkSize
   )
 {
   EBC_THUNK_LIST  *ThunkList;
@@ -1126,11 +1250,12 @@ EbcAddImageThunk (
   // It so far so good, then flush the instruction cache
   //
   if (mEbcICacheFlush != NULL) {
-    Status = mEbcICacheFlush ((EFI_PHYSICAL_ADDRESS) (UINTN) ThunkBuffer, ThunkSize);
+    Status = mEbcICacheFlush ((EFI_PHYSICAL_ADDRESS)(UINTN)ThunkBuffer, ThunkSize);
     if (EFI_ERROR (Status)) {
       return Status;
     }
   }
+
   //
   // Go through our list of known image handles and see if we've already
   // created a image list element for this image handle.
@@ -1151,11 +1276,12 @@ EbcAddImageThunk (
       return EFI_OUT_OF_RESOURCES;
     }
 
-    ImageList->ThunkList    = NULL;
-    ImageList->ImageHandle  = ImageHandle;
-    ImageList->Next         = mEbcImageList;
-    mEbcImageList           = ImageList;
+    ImageList->ThunkList   = NULL;
+    ImageList->ImageHandle = ImageHandle;
+    ImageList->Next        = mEbcImageList;
+    mEbcImageList          = ImageList;
   }
+
   //
   // Ok, now create a new thunk element to add to the list
   //
@@ -1164,12 +1290,13 @@ EbcAddImageThunk (
   if (ThunkList == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // Add it to the head of the list
   //
-  ThunkList->Next         = ImageList->ThunkList;
-  ThunkList->ThunkBuffer  = ThunkBuffer;
-  ImageList->ThunkList    = ThunkList;
+  ThunkList->Next        = ImageList->ThunkList;
+  ThunkList->ThunkBuffer = ThunkBuffer;
+  ImageList->ThunkList   = ThunkList;
   return EFI_SUCCESS;
 }
 
@@ -1186,8 +1313,8 @@ EbcAddImageThunk (
 EFI_STATUS
 EFIAPI
 EbcRegisterICacheFlush (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN EBC_ICACHE_FLUSH   Flush
+  IN EFI_EBC_PROTOCOL  *This,
+  IN EBC_ICACHE_FLUSH  Flush
   )
 {
   mEbcICacheFlush = Flush;
@@ -1208,8 +1335,8 @@ EbcRegisterICacheFlush (
 EFI_STATUS
 EFIAPI
 EbcGetVersion (
-  IN EFI_EBC_PROTOCOL   *This,
-  IN OUT UINT64         *Version
+  IN EFI_EBC_PROTOCOL  *This,
+  IN OUT UINT64        *Version
   )
 {
   if (Version == NULL) {
@@ -1234,25 +1361,28 @@ EbcGetVersion (
 
 **/
 EFI_STATUS
-GetEBCStack(
-  IN  EFI_HANDLE Handle,
-  OUT VOID       **StackBuffer,
-  OUT UINTN      *BufferIndex
+GetEBCStack (
+  IN  EFI_HANDLE  Handle,
+  OUT VOID        **StackBuffer,
+  OUT UINTN       *BufferIndex
   )
 {
-  UINTN   Index;
-  EFI_TPL OldTpl;
-  OldTpl = gBS->RaiseTPL(TPL_HIGH_LEVEL);
-  for (Index = 0; Index < mStackNum; Index ++) {
+  UINTN    Index;
+  EFI_TPL  OldTpl;
+
+  OldTpl = gBS->RaiseTPL (TPL_HIGH_LEVEL);
+  for (Index = 0; Index < mStackNum; Index++) {
     if (mStackBufferIndex[Index] == NULL) {
       mStackBufferIndex[Index] = Handle;
       break;
     }
   }
-  gBS->RestoreTPL(OldTpl);
+
+  gBS->RestoreTPL (OldTpl);
   if (Index == mStackNum) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   *BufferIndex = Index;
   *StackBuffer = mStackBuffer[Index];
   return EFI_SUCCESS;
@@ -1267,8 +1397,8 @@ GetEBCStack(
 
 **/
 EFI_STATUS
-ReturnEBCStack(
-  IN UINTN Index
+ReturnEBCStack (
+  IN UINTN  Index
   )
 {
   mStackBufferIndex[Index] = NULL;
@@ -1284,19 +1414,22 @@ ReturnEBCStack(
 
 **/
 EFI_STATUS
-ReturnEBCStackByHandle(
-  IN EFI_HANDLE Handle
+ReturnEBCStackByHandle (
+  IN EFI_HANDLE  Handle
   )
 {
-  UINTN Index;
-  for (Index = 0; Index < mStackNum; Index ++) {
+  UINTN  Index;
+
+  for (Index = 0; Index < mStackNum; Index++) {
     if (mStackBufferIndex[Index] == Handle) {
       break;
     }
   }
+
   if (Index == mStackNum) {
     return EFI_NOT_FOUND;
   }
+
   mStackBufferIndex[Index] = NULL;
   return EFI_SUCCESS;
 }
@@ -1313,19 +1446,20 @@ InitEBCStack (
   VOID
   )
 {
-  for (mStackNum = 0; mStackNum < MAX_STACK_NUM; mStackNum ++) {
-    mStackBuffer[mStackNum] = AllocatePool(STACK_POOL_SIZE);
+  for (mStackNum = 0; mStackNum < MAX_STACK_NUM; mStackNum++) {
+    mStackBuffer[mStackNum]      = AllocatePool (STACK_POOL_SIZE);
     mStackBufferIndex[mStackNum] = NULL;
     if (mStackBuffer[mStackNum] == NULL) {
       break;
     }
   }
+
   if (mStackNum == 0) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   return EFI_SUCCESS;
 }
-
 
 /**
   Free all EBC stacks allocated before.
@@ -1334,14 +1468,16 @@ InitEBCStack (
 
 **/
 EFI_STATUS
-FreeEBCStack(
+FreeEBCStack (
   VOID
   )
 {
-  UINTN Index;
-  for (Index = 0; Index < mStackNum; Index ++) {
-    FreePool(mStackBuffer[Index]);
+  UINTN  Index;
+
+  for (Index = 0; Index < mStackNum; Index++) {
+    FreePool (mStackBuffer[Index]);
   }
+
   return EFI_SUCCESS;
 }
 
@@ -1356,12 +1492,12 @@ FreeEBCStack(
 **/
 EFI_STATUS
 InitEbcVmTestProtocol (
-  IN EFI_HANDLE     *IHandle
+  IN EFI_HANDLE  *IHandle
   )
 {
-  EFI_HANDLE Handle;
-  EFI_STATUS Status;
-  EFI_EBC_VM_TEST_PROTOCOL *EbcVmTestProtocol;
+  EFI_HANDLE                Handle;
+  EFI_STATUS                Status;
+  EFI_EBC_VM_TEST_PROTOCOL  *EbcVmTestProtocol;
 
   //
   // Allocate memory for the protocol, then fill in the fields
@@ -1370,24 +1506,25 @@ InitEbcVmTestProtocol (
   if (EbcVmTestProtocol == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-  EbcVmTestProtocol->Execute      = (EBC_VM_TEST_EXECUTE) EbcExecuteInstructions;
+
+  EbcVmTestProtocol->Execute = (EBC_VM_TEST_EXECUTE)EbcExecuteInstructions;
 
   DEBUG_CODE_BEGIN ();
-    EbcVmTestProtocol->Assemble     = (EBC_VM_TEST_ASM) EbcVmTestUnsupported;
-    EbcVmTestProtocol->Disassemble  = (EBC_VM_TEST_DASM) EbcVmTestUnsupported;
+  EbcVmTestProtocol->Assemble    = (EBC_VM_TEST_ASM)EbcVmTestUnsupported;
+  EbcVmTestProtocol->Disassemble = (EBC_VM_TEST_DASM)EbcVmTestUnsupported;
   DEBUG_CODE_END ();
 
   //
   // Publish the protocol
   //
-  Handle  = NULL;
-  Status  = gBS->InstallProtocolInterface (&Handle, &gEfiEbcVmTestProtocolGuid, EFI_NATIVE_INTERFACE, EbcVmTestProtocol);
+  Handle = NULL;
+  Status = gBS->InstallProtocolInterface (&Handle, &gEfiEbcVmTestProtocolGuid, EFI_NATIVE_INTERFACE, EbcVmTestProtocol);
   if (EFI_ERROR (Status)) {
     FreePool (EbcVmTestProtocol);
   }
+
   return Status;
 }
-
 
 /**
   Returns the EFI_UNSUPPORTED Status.
@@ -1404,3 +1541,27 @@ EbcVmTestUnsupported (
   return EFI_UNSUPPORTED;
 }
 
+/**
+  Allocates a buffer of type EfiBootServicesCode.
+
+  @param  AllocationSize        The number of bytes to allocate.
+
+  @return A pointer to the allocated buffer or NULL if allocation fails.
+
+**/
+VOID *
+EFIAPI
+EbcAllocatePoolForThunk (
+  IN UINTN  AllocationSize
+  )
+{
+  VOID        *Buffer;
+  EFI_STATUS  Status;
+
+  Status = gBS->AllocatePool (EfiBootServicesCode, AllocationSize, &Buffer);
+  if (EFI_ERROR (Status)) {
+    return NULL;
+  }
+
+  return Buffer;
+}

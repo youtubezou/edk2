@@ -2,14 +2,9 @@
 
   Copyright (c) 2011 - 2013, Intel Corporation. All rights reserved.<BR>
   Copyright (C) 2013, Red Hat, Inc.
+  Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,63 +17,11 @@
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-
-/**
-  Reads an 8-bit I/O port fifo into a block of memory.
-
-  Reads the 8-bit I/O fifo port specified by Port.
-
-  The port is read Count times, and the read data is
-  stored in the provided Buffer.
-
-  This function must guarantee that all I/O read and write operations are
-  serialized.
-
-  If 8-bit I/O port operations are not supported, then ASSERT().
-
-  @param  Port    The I/O port to read.
-  @param  Count   The number of times to read I/O port.
-  @param  Buffer  The buffer to store the read data into.
-
-**/
-VOID
-EFIAPI
-IoReadFifo8 (
-  IN      UINTN                     Port,
-  IN      UINTN                     Count,
-  OUT     VOID                      *Buffer
-  );
-
-/**
-  Writes an 8-bit I/O port fifo from a block of memory.
-
-  Writes the 8-bit I/O fifo port specified by Port.
-
-  The port is written Count times, and the data are obtained
-  from the provided Buffer.
-
-  This function must guarantee that all I/O read and write operations are
-  serialized.
-
-  If 8-bit I/O port operations are not supported, then ASSERT().
-
-  @param  Port    The I/O port to read.
-  @param  Count   The number of times to read I/O port.
-  @param  Buffer  The buffer to store the read data into.
-
-**/
-VOID
-EFIAPI
-IoWriteFifo8 (
-  IN      UINTN                     Port,
-  IN      UINTN                     Count,
-  OUT     VOID                      *Buffer
-  );
-
+#include "QemuFwCfgLibInternal.h"
 
 /**
   Selects a firmware configuration item for reading.
-  
+
   Following this call, any data read from this item will start from
   the beginning of the configuration item's data.
 
@@ -88,13 +31,19 @@ IoWriteFifo8 (
 VOID
 EFIAPI
 QemuFwCfgSelectItem (
-  IN FIRMWARE_CONFIG_ITEM   QemuFwCfgItem
+  IN FIRMWARE_CONFIG_ITEM  QemuFwCfgItem
   )
 {
-  DEBUG ((EFI_D_INFO, "Select Item: 0x%x\n", (UINT16)(UINTN) QemuFwCfgItem));
-  IoWrite16 (0x510, (UINT16)(UINTN) QemuFwCfgItem);
-}
+  DEBUG ((DEBUG_INFO, "Select Item: 0x%x\n", (UINT16)(UINTN)QemuFwCfgItem));
 
+  if (InternalQemuFwCfgCacheSelectItem (QemuFwCfgItem)) {
+    return;
+  } else {
+    InternalQemuFwCfgCacheResetWorkArea ();
+  }
+
+  IoWrite16 (FW_CFG_IO_SELECTOR, (UINT16)(UINTN)QemuFwCfgItem);
+}
 
 /**
   Reads firmware configuration bytes into a buffer
@@ -106,13 +55,22 @@ QemuFwCfgSelectItem (
 VOID
 EFIAPI
 InternalQemuFwCfgReadBytes (
-  IN UINTN                  Size,
-  IN VOID                   *Buffer  OPTIONAL
+  IN UINTN  Size,
+  IN VOID   *Buffer  OPTIONAL
   )
 {
-  IoReadFifo8 (0x511, Size, Buffer);
-}
+  if ( InternalQemuFwCfgCacheReading ()) {
+    InternalQemuFwCfgCacheReadBytes (Size, Buffer);
+    return;
+  }
 
+  if (InternalQemuFwCfgDmaIsAvailable () && (Size <= MAX_UINT32)) {
+    InternalQemuFwCfgDmaBytes ((UINT32)Size, Buffer, FW_CFG_DMA_CTL_READ);
+    return;
+  }
+
+  IoReadFifo8 (FW_CFG_IO_DATA, Size, Buffer);
+}
 
 /**
   Reads firmware configuration bytes into a buffer
@@ -128,8 +86,8 @@ InternalQemuFwCfgReadBytes (
 VOID
 EFIAPI
 QemuFwCfgReadBytes (
-  IN UINTN                  Size,
-  IN VOID                   *Buffer
+  IN UINTN  Size,
+  IN VOID   *Buffer
   )
 {
   if (InternalQemuFwCfgIsAvailable ()) {
@@ -153,15 +111,93 @@ QemuFwCfgReadBytes (
 VOID
 EFIAPI
 QemuFwCfgWriteBytes (
-  IN UINTN                  Size,
-  IN VOID                   *Buffer
+  IN UINTN  Size,
+  IN VOID   *Buffer
   )
 {
   if (InternalQemuFwCfgIsAvailable ()) {
-    IoWriteFifo8 (0x511, Size, Buffer);
+    if (InternalQemuFwCfgDmaIsAvailable () && (Size <= MAX_UINT32)) {
+      InternalQemuFwCfgDmaBytes ((UINT32)Size, Buffer, FW_CFG_DMA_CTL_WRITE);
+      return;
+    }
+
+    IoWriteFifo8 (FW_CFG_IO_DATA, Size, Buffer);
   }
 }
 
+/**
+  Skip bytes in FwCfg cache info Hob.
+  @param[in] Size  Number of bytes to skip.
+**/
+STATIC
+VOID
+InternalQemuFwCfgCacheSkipBytes (
+  IN UINT32  Size
+  )
+{
+  QEMU_FW_CFG_WORK_AREA  *QemuFwCfgWorkArea;
+
+  if (Size == 0) {
+    return;
+  }
+
+  QemuFwCfgWorkArea = InternalQemuFwCfgCacheGetWorkArea ();
+  if ((QemuFwCfgWorkArea->Offset + Size) > MAX_UINT32) {
+    DEBUG ((DEBUG_ERROR, "%a: Integer overflow with invalid offset size\n", __func__));
+    ASSERT (FALSE);
+    QemuFwCfgWorkArea->Offset = MAX_UINT32;
+  } else {
+    QemuFwCfgWorkArea->Offset += Size;
+  }
+}
+
+/**
+  Skip bytes in the firmware configuration item.
+
+  Increase the offset of the firmware configuration item without transferring
+  bytes between the item and a caller-provided buffer. Subsequent read, write
+  or skip operations will commence at the increased offset.
+
+  @param[in] Size  Number of bytes to skip.
+**/
+VOID
+EFIAPI
+QemuFwCfgSkipBytes (
+  IN UINTN  Size
+  )
+{
+  UINTN  ChunkSize;
+  UINT8  SkipBuffer[256];
+
+  if (!InternalQemuFwCfgIsAvailable ()) {
+    return;
+  }
+
+  if ( InternalQemuFwCfgCacheReading () && (Size <= MAX_UINT32)) {
+    InternalQemuFwCfgCacheSkipBytes ((UINT32)Size);
+    return;
+  }
+
+  if (InternalQemuFwCfgDmaIsAvailable () && (Size <= MAX_UINT32)) {
+    InternalQemuFwCfgDmaBytes ((UINT32)Size, NULL, FW_CFG_DMA_CTL_SKIP);
+    return;
+  }
+
+  //
+  // Emulate the skip by reading data in chunks, and throwing it away. The
+  // implementation below is suitable even for phases where RAM or dynamic
+  // allocation is not available or appropriate. It also doesn't affect the
+  // static data footprint for client modules. Large skips are not expected,
+  // therefore this fallback is not performance critical. The size of
+  // SkipBuffer is thought not to exert a large pressure on the stack in any
+  // phase.
+  //
+  while (Size > 0) {
+    ChunkSize = MIN (Size, sizeof SkipBuffer);
+    IoReadFifo8 (FW_CFG_IO_DATA, ChunkSize, SkipBuffer);
+    Size -= ChunkSize;
+  }
+}
 
 /**
   Reads a UINT8 firmware configuration value
@@ -175,13 +211,12 @@ QemuFwCfgRead8 (
   VOID
   )
 {
-  UINT8 Result;
+  UINT8  Result;
 
   QemuFwCfgReadBytes (sizeof (Result), &Result);
 
   return Result;
 }
-
 
 /**
   Reads a UINT16 firmware configuration value
@@ -195,13 +230,12 @@ QemuFwCfgRead16 (
   VOID
   )
 {
-  UINT16 Result;
+  UINT16  Result;
 
   QemuFwCfgReadBytes (sizeof (Result), &Result);
 
   return Result;
 }
-
 
 /**
   Reads a UINT32 firmware configuration value
@@ -215,13 +249,12 @@ QemuFwCfgRead32 (
   VOID
   )
 {
-  UINT32 Result;
+  UINT32  Result;
 
   QemuFwCfgReadBytes (sizeof (Result), &Result);
 
   return Result;
 }
-
 
 /**
   Reads a UINT64 firmware configuration value
@@ -235,13 +268,12 @@ QemuFwCfgRead64 (
   VOID
   )
 {
-  UINT64 Result;
+  UINT64  Result;
 
   QemuFwCfgReadBytes (sizeof (Result), &Result);
 
   return Result;
 }
-
 
 /**
   Find the configuration item corresponding to the firmware configuration file.
@@ -264,8 +296,8 @@ QemuFwCfgFindFile (
   OUT  UINTN                 *Size
   )
 {
-  UINT32 Count;
-  UINT32 Idx;
+  UINT32  Count;
+  UINT32  Idx;
 
   if (!InternalQemuFwCfgIsAvailable ()) {
     return RETURN_UNSUPPORTED;
@@ -275,15 +307,15 @@ QemuFwCfgFindFile (
   Count = SwapBytes32 (QemuFwCfgRead32 ());
 
   for (Idx = 0; Idx < Count; ++Idx) {
-    UINT32 FileSize;
-    UINT16 FileSelect;
-    UINT16 FileReserved;
-    CHAR8  FName[QEMU_FW_CFG_FNAME_SIZE];
+    UINT32  FileSize;
+    UINT16  FileSelect;
+    UINT16  FileReserved;
+    CHAR8   FName[QEMU_FW_CFG_FNAME_SIZE];
 
     FileSize     = QemuFwCfgRead32 ();
     FileSelect   = QemuFwCfgRead16 ();
     FileReserved = QemuFwCfgRead16 ();
-    (VOID) FileReserved; /* Force a do-nothing reference. */
+    (VOID)FileReserved;  /* Force a do-nothing reference. */
     InternalQemuFwCfgReadBytes (sizeof (FName), FName);
 
     if (AsciiStrCmp (Name, FName) == 0) {
@@ -294,32 +326,4 @@ QemuFwCfgFindFile (
   }
 
   return RETURN_NOT_FOUND;
-}
-
-
-/**
-  Determine if S3 support is explicitly enabled.
-
-  @retval  TRUE   if S3 support is explicitly enabled.
-           FALSE  otherwise. This includes unavailability of the firmware
-                  configuration interface.
-**/
-BOOLEAN
-EFIAPI
-QemuFwCfgS3Enabled (
-  VOID
-  )
-{
-  RETURN_STATUS        Status;
-  FIRMWARE_CONFIG_ITEM FwCfgItem;
-  UINTN                FwCfgSize;
-  UINT8                SystemStates[6];
-
-  Status = QemuFwCfgFindFile ("etc/system-states", &FwCfgItem, &FwCfgSize);
-  if (Status != RETURN_SUCCESS || FwCfgSize != sizeof SystemStates) {
-    return FALSE;
-  }
-  QemuFwCfgSelectItem (FwCfgItem);
-  QemuFwCfgReadBytes (sizeof SystemStates, SystemStates);
-  return (BOOLEAN) (SystemStates[3] & BIT7);
 }

@@ -3,30 +3,23 @@
   manipulation, and initialization of EFI_SHELL_PROTOCOL.
 
   (C) Copyright 2014 Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _SHELL_PROTOCOL_HEADER_
-#define _SHELL_PROTOCOL_HEADER_
+#pragma once
 
 #include "Shell.h"
 
 typedef struct {
-  LIST_ENTRY                Link;
-  EFI_SHELL_PROTOCOL        *Interface;
-  EFI_HANDLE                Handle;
+  LIST_ENTRY            Link;
+  EFI_SHELL_PROTOCOL    *Interface;
+  EFI_HANDLE            Handle;
 } SHELL_PROTOCOL_HANDLE_LIST;
 
 // flags values...
-#define SHELL_MAP_FLAGS_CONSIST BIT1
+#define SHELL_MAP_FLAGS_CONSIST  BIT1
 
 /**
   Function to create and install on the current handle.
@@ -36,7 +29,7 @@ typedef struct {
 
   This must be removed via calling CleanUpShellProtocol().
 
-  @param[in, out] NewShell   The pointer to the pointer to the structure 
+  @param[in, out] NewShell   The pointer to the pointer to the structure
   to install.
 
   @retval EFI_SUCCESS     The operation was successful.
@@ -93,9 +86,9 @@ CleanUpShellEnvironment (
 **/
 EFI_STATUS
 EFIAPI
-EfiShellSetMap(
-  IN CONST EFI_DEVICE_PATH_PROTOCOL *DevicePath OPTIONAL,
-  IN CONST CHAR16 *Mapping
+EfiShellSetMap (
+  IN CONST EFI_DEVICE_PATH_PROTOCOL  *DevicePath OPTIONAL,
+  IN CONST CHAR16                    *Mapping
   );
 
 /**
@@ -113,8 +106,8 @@ EfiShellSetMap(
 **/
 CONST EFI_DEVICE_PATH_PROTOCOL *
 EFIAPI
-EfiShellGetDevicePathFromMap(
-  IN CONST CHAR16 *Mapping
+EfiShellGetDevicePathFromMap (
+  IN CONST CHAR16  *Mapping
   );
 
 /**
@@ -136,8 +129,8 @@ EfiShellGetDevicePathFromMap(
 **/
 CONST CHAR16 *
 EFIAPI
-EfiShellGetMapFromDevicePath(
-  IN OUT EFI_DEVICE_PATH_PROTOCOL **DevicePath
+EfiShellGetMapFromDevicePath (
+  IN OUT EFI_DEVICE_PATH_PROTOCOL  **DevicePath
   );
 
 /**
@@ -155,8 +148,8 @@ EfiShellGetMapFromDevicePath(
 **/
 CHAR16 *
 EFIAPI
-EfiShellGetFilePathFromDevicePath(
-  IN CONST EFI_DEVICE_PATH_PROTOCOL *Path
+EfiShellGetFilePathFromDevicePath (
+  IN CONST EFI_DEVICE_PATH_PROTOCOL  *Path
   );
 
 /**
@@ -172,8 +165,8 @@ EfiShellGetFilePathFromDevicePath(
 **/
 EFI_DEVICE_PATH_PROTOCOL *
 EFIAPI
-EfiShellGetDevicePathFromFilePath(
-  IN CONST CHAR16 *Path
+EfiShellGetDevicePathFromFilePath (
+  IN CONST CHAR16  *Path
   );
 
 /**
@@ -214,11 +207,11 @@ EfiShellGetDevicePathFromFilePath(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellGetDeviceName(
-  IN EFI_HANDLE DeviceHandle,
-  IN EFI_SHELL_DEVICE_NAME_FLAGS Flags,
-  IN CHAR8 *Language,
-  OUT CHAR16 **BestDeviceName
+EfiShellGetDeviceName (
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_SHELL_DEVICE_NAME_FLAGS  Flags,
+  IN CHAR8                        *Language,
+  OUT CHAR16                      **BestDeviceName
   );
 
 /**
@@ -238,9 +231,9 @@ EfiShellGetDeviceName(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellOpenRootByHandle(
-  IN EFI_HANDLE DeviceHandle,
-  OUT SHELL_FILE_HANDLE *FileHandle
+EfiShellOpenRootByHandle (
+  IN EFI_HANDLE          DeviceHandle,
+  OUT SHELL_FILE_HANDLE  *FileHandle
   );
 
 /**
@@ -261,9 +254,9 @@ EfiShellOpenRootByHandle(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellOpenRoot(
-  IN EFI_DEVICE_PATH_PROTOCOL *DevicePath,
-  OUT SHELL_FILE_HANDLE *FileHandle
+EfiShellOpenRoot (
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  OUT SHELL_FILE_HANDLE        *FileHandle
   );
 
 /**
@@ -289,15 +282,15 @@ EfiShellBatchIsActive (
   @param Attributes               the File Attributes to use when creating a new file
 
   @retval EFI_SUCCESS             the file is open and FileHandle is valid
-  @retval EFI_UNSUPPORTED         the device path cotained non-path elements
-  @retval other                   an error ocurred.
+  @retval EFI_UNSUPPORTED         the device path contained non-path elements
+  @retval other                   an error occurred.
 **/
 EFI_STATUS
-InternalOpenFileDevicePath(
-  IN OUT EFI_DEVICE_PATH_PROTOCOL *DevicePath2,
-  OUT SHELL_FILE_HANDLE             *FileHandle,
-  IN UINT64                       OpenMode,
-  IN UINT64                       Attributes OPTIONAL
+InternalOpenFileDevicePath (
+  IN OUT EFI_DEVICE_PATH_PROTOCOL  *DevicePath2,
+  OUT SHELL_FILE_HANDLE            *FileHandle,
+  IN UINT64                        OpenMode,
+  IN UINT64                        Attributes OPTIONAL
   );
 
 /**
@@ -315,7 +308,7 @@ InternalOpenFileDevicePath(
   already exists and is non-volatile then EFI_INVALID_PARAMETER is returned.
 
   @param FileName           Pointer to NULL-terminated file path
-  @param FileAttribs        The new file's attrbiutes.  the different attributes are
+  @param FileAttribs        The new file's attributes.  the different attributes are
                             described in EFI_FILE_PROTOCOL.Open().
   @param FileHandle         On return, points to the created file handle or directory's handle
 
@@ -338,10 +331,10 @@ InternalOpenFileDevicePath(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellCreateFile(
-  IN CONST CHAR16     *FileName,
-  IN UINT64           FileAttribs,
-  OUT SHELL_FILE_HANDLE *FileHandle
+EfiShellCreateFile (
+  IN CONST CHAR16        *FileName,
+  IN UINT64              FileAttribs,
+  OUT SHELL_FILE_HANDLE  *FileHandle
   );
 
 /**
@@ -398,10 +391,10 @@ EfiShellCreateFile(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellOpenFileByName(
-  IN CONST CHAR16 *FileName,
-  OUT SHELL_FILE_HANDLE *FileHandle,
-  IN UINT64 OpenMode
+EfiShellOpenFileByName (
+  IN CONST CHAR16        *FileName,
+  OUT SHELL_FILE_HANDLE  *FileHandle,
+  IN UINT64              OpenMode
   );
 
 /**
@@ -418,8 +411,8 @@ EfiShellOpenFileByName(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellDeleteFileByName(
-  IN CONST CHAR16 *FileName
+EfiShellDeleteFileByName (
+  IN CONST CHAR16  *FileName
   );
 
 /**
@@ -462,12 +455,12 @@ EfiShellEnablePageBreak (
   @retval EFI_UNSUPPORTED   Nested shell invocations are not allowed.
 **/
 EFI_STATUS
-InternalShellExecuteDevicePath(
-  IN CONST EFI_HANDLE               *ParentImageHandle,
-  IN CONST EFI_DEVICE_PATH_PROTOCOL *DevicePath,
-  IN CONST CHAR16                   *CommandLine OPTIONAL,
-  IN CONST CHAR16                   **Environment OPTIONAL,
-  OUT EFI_STATUS                    *StartImageStatus OPTIONAL
+InternalShellExecuteDevicePath (
+  IN CONST EFI_HANDLE                *ParentImageHandle,
+  IN CONST EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  IN CONST CHAR16                    *CommandLine OPTIONAL,
+  IN CONST CHAR16                    **Environment OPTIONAL,
+  OUT EFI_STATUS                     *StartImageStatus OPTIONAL
   );
 
 /**
@@ -503,11 +496,11 @@ InternalShellExecuteDevicePath(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellExecute(
-  IN EFI_HANDLE *ParentImageHandle,
-  IN CHAR16 *CommandLine OPTIONAL,
-  IN CHAR16 **Environment OPTIONAL,
-  OUT EFI_STATUS *StatusCode OPTIONAL
+EfiShellExecute (
+  IN EFI_HANDLE   *ParentImageHandle,
+  IN CHAR16       *CommandLine OPTIONAL,
+  IN CHAR16       **Environment OPTIONAL,
+  OUT EFI_STATUS  *StatusCode OPTIONAL
   );
 
 /**
@@ -519,8 +512,8 @@ EfiShellExecute(
   @param FileListNode     pointer to the list node to free
 **/
 VOID
-FreeShellFileInfoNode(
-  IN EFI_SHELL_FILE_INFO *FileListNode
+FreeShellFileInfoNode (
+  IN EFI_SHELL_FILE_INFO  *FileListNode
   );
 
 /**
@@ -537,8 +530,8 @@ FreeShellFileInfoNode(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellFreeFileList(
-  IN EFI_SHELL_FILE_INFO **FileList
+EfiShellFreeFileList (
+  IN EFI_SHELL_FILE_INFO  **FileList
   );
 
 /**
@@ -553,8 +546,8 @@ EfiShellFreeFileList(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellRemoveDupInFileList(
-  IN EFI_SHELL_FILE_INFO **FileList
+EfiShellRemoveDupInFileList (
+  IN EFI_SHELL_FILE_INFO  **FileList
   );
 
 /**
@@ -569,12 +562,12 @@ EfiShellRemoveDupInFileList(
 
 **/
 EFI_SHELL_FILE_INFO *
-CreateAndPopulateShellFileInfo(
-  IN CONST CHAR16 *BasePath,
-  IN CONST EFI_STATUS Status,
-  IN CONST CHAR16 *FileName,
-  IN CONST SHELL_FILE_HANDLE Handle,
-  IN CONST EFI_FILE_INFO *Info
+CreateAndPopulateShellFileInfo (
+  IN CONST CHAR16             *BasePath,
+  IN CONST EFI_STATUS         Status,
+  IN CONST CHAR16             *FileName,
+  IN CONST SHELL_FILE_HANDLE  Handle,
+  IN CONST EFI_FILE_INFO      *Info
   );
 
 /**
@@ -592,9 +585,9 @@ CreateAndPopulateShellFileInfo(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellFindFilesInDir(
-  IN SHELL_FILE_HANDLE FileDirHandle,
-  OUT EFI_SHELL_FILE_INFO **FileList
+EfiShellFindFilesInDir (
+  IN SHELL_FILE_HANDLE     FileDirHandle,
+  OUT EFI_SHELL_FILE_INFO  **FileList
   );
 
 /**
@@ -625,9 +618,9 @@ EfiShellFindFilesInDir(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellFindFiles(
-  IN CONST CHAR16 *FilePattern,
-  OUT EFI_SHELL_FILE_INFO **FileList
+EfiShellFindFiles (
+  IN CONST CHAR16          *FilePattern,
+  OUT EFI_SHELL_FILE_INFO  **FileList
   );
 
 /**
@@ -647,10 +640,10 @@ EfiShellFindFiles(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellOpenFileList(
-  IN CHAR16 *Path,
-  IN UINT64 OpenMode,
-  IN OUT EFI_SHELL_FILE_INFO **FileList
+EfiShellOpenFileList (
+  IN CHAR16                   *Path,
+  IN UINT64                   OpenMode,
+  IN OUT EFI_SHELL_FILE_INFO  **FileList
   );
 
 /**
@@ -666,8 +659,8 @@ EfiShellOpenFileList(
 **/
 CONST CHAR16 *
 EFIAPI
-EfiShellGetEnv(
-  IN CONST CHAR16 *Name
+EfiShellGetEnv (
+  IN CONST CHAR16  *Name
   );
 
 /**
@@ -693,10 +686,10 @@ EfiShellGetEnv(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellSetEnv(
-  IN CONST CHAR16 *Name,
-  IN CONST CHAR16 *Value,
-  IN BOOLEAN Volatile
+EfiShellSetEnv (
+  IN CONST CHAR16  *Name,
+  IN CONST CHAR16  *Value,
+  IN BOOLEAN       Volatile
   );
 
 /**
@@ -715,8 +708,8 @@ EfiShellSetEnv(
 **/
 CONST CHAR16 *
 EFIAPI
-EfiShellGetCurDir(
-  IN CONST CHAR16 *FileSystemMapping OPTIONAL
+EfiShellGetCurDir (
+  IN CONST CHAR16  *FileSystemMapping OPTIONAL
   );
 
 /**
@@ -740,13 +733,13 @@ EfiShellGetCurDir(
                                 directory is changed.
   @param Dir                    Points to the NULL-terminated directory on the device specified by FileSystem.
 
-  @retval EFI_SUCCESS           The operation was sucessful
+  @retval EFI_SUCCESS           The operation was successful
 **/
 EFI_STATUS
 EFIAPI
-EfiShellSetCurDir(
-  IN CONST CHAR16 *FileSystem OPTIONAL,
-  IN CONST CHAR16 *Dir
+EfiShellSetCurDir (
+  IN CONST CHAR16  *FileSystem OPTIONAL,
+  IN CONST CHAR16  *Dir
   );
 
 /**
@@ -776,10 +769,10 @@ EfiShellSetCurDir(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellGetHelpText(
-  IN CONST CHAR16 *Command,
-  IN CONST CHAR16 *Sections OPTIONAL,
-  OUT CHAR16 **HelpText
+EfiShellGetHelpText (
+  IN CONST CHAR16  *Command,
+  IN CONST CHAR16  *Sections OPTIONAL,
+  OUT CHAR16       **HelpText
   );
 
 /**
@@ -792,7 +785,7 @@ EfiShellGetHelpText(
 **/
 BOOLEAN
 EFIAPI
-EfiShellGetPageBreak(
+EfiShellGetPageBreak (
   VOID
   );
 
@@ -806,7 +799,7 @@ EfiShellGetPageBreak(
 **/
 BOOLEAN
 EFIAPI
-EfiShellIsRootShell(
+EfiShellIsRootShell (
   VOID
   );
 
@@ -819,19 +812,19 @@ EfiShellIsRootShell(
                                 aliases will be returned in ReturnedData.
   @param[out] Volatile          upon return of a single command if TRUE indicates
                                 this is stored in a volatile fashion.  FALSE otherwise.
-  @return                      	If Alias is not NULL, it will return a pointer to
+  @return                        If Alias is not NULL, it will return a pointer to
                                 the NULL-terminated command for that alias.
                                 If Alias is NULL, ReturnedData points to a ';'
                                 delimited list of alias (e.g.
                                 ReturnedData = "dir;del;copy;mfp") that is NULL-terminated.
-  @retval NULL                  an error ocurred
+  @retval NULL                  an error occurred
   @retval NULL                  Alias was not a valid Alias
 **/
 CONST CHAR16 *
 EFIAPI
-EfiShellGetAlias(
-  IN  CONST CHAR16 *Command,
-  OUT BOOLEAN      *Volatile OPTIONAL
+EfiShellGetAlias (
+  IN  CONST CHAR16  *Command,
+  OUT BOOLEAN       *Volatile OPTIONAL
   );
 
 /**
@@ -851,10 +844,10 @@ EfiShellGetAlias(
   @retval EFI_NOT_FOUND         the Alias intended to be deleted was not found
 **/
 EFI_STATUS
-InternalSetAlias(
-  IN CONST CHAR16 *Command,
-  IN CONST CHAR16 *Alias OPTIONAL,
-  IN BOOLEAN Volatile
+InternalSetAlias (
+  IN CONST CHAR16  *Command,
+  IN CONST CHAR16  *Alias OPTIONAL,
+  IN BOOLEAN       Volatile
   );
 
 /**
@@ -879,11 +872,11 @@ InternalSetAlias(
 **/
 EFI_STATUS
 EFIAPI
-EfiShellSetAlias(
-  IN CONST CHAR16 *Command,
-  IN CONST CHAR16 *Alias OPTIONAL,
-  IN BOOLEAN Replace,
-  IN BOOLEAN Volatile
+EfiShellSetAlias (
+  IN CONST CHAR16  *Command,
+  IN CONST CHAR16  *Alias OPTIONAL,
+  IN BOOLEAN       Replace,
+  IN BOOLEAN       Volatile
   );
 
 /**
@@ -895,8 +888,8 @@ EfiShellSetAlias(
   @param FileListNode     pointer to the list node to free
 **/
 VOID
-InternalFreeShellFileInfoNode(
-  IN EFI_SHELL_FILE_INFO *FileListNode
+InternalFreeShellFileInfoNode (
+  IN EFI_SHELL_FILE_INFO  *FileListNode
   );
 
 /**
@@ -910,21 +903,21 @@ InternalFreeShellFileInfoNode(
   @retval EFI_SUCCESS           The environment variable was successfully updated.
 **/
 EFI_STATUS
-InternalEfiShellSetEnv(
-  IN CONST CHAR16 *Name,
-  IN CONST CHAR16 *Value,
-  IN BOOLEAN Volatile
+InternalEfiShellSetEnv (
+  IN CONST CHAR16  *Name,
+  IN CONST CHAR16  *Value,
+  IN BOOLEAN       Volatile
   );
 
 /**
-  Function to start monitoring for CTRL-C using SimpleTextInputEx.  This 
+  Function to start monitoring for CTRL-C using SimpleTextInputEx.  This
   feature's enabled state was not known when the shell initially launched.
 
   @retval EFI_SUCCESS           The feature is enabled.
-  @retval EFI_OUT_OF_RESOURCES  There is not enough mnemory available.
+  @retval EFI_OUT_OF_RESOURCES  There is not enough memory available.
 **/
 EFI_STATUS
-InernalEfiShellStartMonitor(
+InernalEfiShellStartMonitor (
   VOID
   );
 
@@ -937,8 +930,6 @@ InernalEfiShellStartMonitor(
 **/
 EFI_STATUS
 EFIAPI
-NotificationFunction(
-  IN EFI_KEY_DATA *KeyData
+NotificationFunction (
+  IN EFI_KEY_DATA  *KeyData
   );
-#endif //_SHELL_PROTOCOL_HEADER_
-

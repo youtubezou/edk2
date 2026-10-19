@@ -1,22 +1,16 @@
 /** @file
-  This file implements I2C Host Protocol which provides callers with the ability to 
+  This file implements I2C Host Protocol which provides callers with the ability to
   do I/O transactions to all of the devices on the I2C bus.
 
   Copyright (c) 2014, Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2013 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "I2cDxe.h"
 
-EFI_DRIVER_BINDING_PROTOCOL gI2cHostDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gI2cHostDriverBinding = {
   I2cHostDriverSupported,
   I2cHostDriverStart,
   I2cHostDriverStop,
@@ -26,26 +20,26 @@ EFI_DRIVER_BINDING_PROTOCOL gI2cHostDriverBinding = {
 };
 
 //
-// Driver name table 
+// Driver name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mI2cHostDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mI2cHostDriverNameTable[] = {
   { "eng;en", L"I2c Host Driver" },
-  { NULL , NULL }
+  { NULL,     NULL               }
 };
 
 //
 // EFI Component Name Protocol
 //
 GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gI2cHostComponentName = {
-  (EFI_COMPONENT_NAME_GET_DRIVER_NAME) I2cHostComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME_GET_CONTROLLER_NAME) I2cHostComponentNameGetControllerName,
+  (EFI_COMPONENT_NAME_GET_DRIVER_NAME)I2cHostComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME_GET_CONTROLLER_NAME)I2cHostComponentNameGetControllerName,
   "eng"
 };
 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gI2cHostComponentName2 = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gI2cHostComponentName2 = {
   I2cHostComponentNameGetDriverName,
   I2cHostComponentNameGetControllerName,
   "en"
@@ -94,8 +88,8 @@ EFI_STATUS
 EFIAPI
 I2cHostComponentNameGetDriverName (
   IN  EFI_COMPONENT_NAME2_PROTOCOL  *This,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **DriverName
+  IN  CHAR8                         *Language,
+  OUT CHAR16                        **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -178,11 +172,11 @@ I2cHostComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 I2cHostComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME2_PROTOCOL                    *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME2_PROTOCOL  *This,
+  IN  EFI_HANDLE                    ControllerHandle,
+  IN  EFI_HANDLE                    ChildHandle        OPTIONAL,
+  IN  CHAR8                         *Language,
+  OUT CHAR16                        **ControllerName
   )
 {
   return EFI_UNSUPPORTED;
@@ -238,9 +232,9 @@ I2cHostDriverSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_I2C_MASTER_PROTOCOL                       *I2cMaster;
-  EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL *I2cBusConfigurationManagement;
-  EFI_STATUS                                    Status;
+  EFI_I2C_MASTER_PROTOCOL                        *I2cMaster;
+  EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL  *I2cBusConfigurationManagement;
+  EFI_STATUS                                     Status;
 
   //
   //  Locate I2C Bus Configuration Management Protocol
@@ -261,11 +255,11 @@ I2cHostDriverSupported (
   // Close the protocol because we don't use it here
   //
   gBS->CloseProtocol (
-                  Controller,
-                  &gEfiI2cBusConfigurationManagementProtocolGuid,
-                  This->DriverBindingHandle,
-                  Controller
-                  );
+         Controller,
+         &gEfiI2cBusConfigurationManagementProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
 
   //
   //  Locate I2C Master Protocol
@@ -317,21 +311,21 @@ I2cHostDriverSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failded to start the device.
+  @retval Others                   The driver failed to start the device.
 
 **/
 EFI_STATUS
 EFIAPI
 I2cHostDriverStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL        *This,
-  IN EFI_HANDLE                         Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL           *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                                          Status;
-  EFI_I2C_MASTER_PROTOCOL                             *I2cMaster;
-  EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL       *I2cBusConfigurationManagement;
-  I2C_HOST_CONTEXT                                    *I2cHostContext;
+  EFI_STATUS                                     Status;
+  EFI_I2C_MASTER_PROTOCOL                        *I2cMaster;
+  EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL  *I2cBusConfigurationManagement;
+  I2C_HOST_CONTEXT                               *I2cHostContext;
 
   I2cMaster                     = NULL;
   I2cHostContext                = NULL;
@@ -349,14 +343,14 @@ I2cHostDriverStart (
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: Open I2C bus configuration error, Status = %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHost: Open I2C bus configuration error, Status = %r\n", Status));
     return Status;
   }
 
   //
   // Locate I2C Master Protocol
   //
-  Status = gBS->OpenProtocol ( 
+  Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiI2cMasterProtocolGuid,
                   (VOID **)&I2cMaster,
@@ -365,7 +359,7 @@ I2cHostDriverStart (
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: Open I2C master error, Status = %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHost: Open I2C master error, Status = %r\n", Status));
     goto Exit;
   }
 
@@ -374,7 +368,7 @@ I2cHostDriverStart (
   //
   I2cHostContext = AllocateZeroPool (sizeof (I2C_HOST_CONTEXT));
   if (I2cHostContext == NULL) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: there is no enough memory to allocate.\n"));
+    DEBUG ((DEBUG_ERROR, "I2cHost: there is no enough memory to allocate.\n"));
     Status = EFI_OUT_OF_RESOURCES;
     goto Exit;
   }
@@ -385,15 +379,15 @@ I2cHostDriverStart (
   I2cHostContext->Signature                     = I2C_HOST_SIGNATURE;
   I2cHostContext->I2cMaster                     = I2cMaster;
   I2cHostContext->I2cBusConfigurationManagement = I2cBusConfigurationManagement;
-  I2cHostContext->I2cBusConfiguration           = (UINTN) -1;
-  InitializeListHead(&I2cHostContext->RequestList);
+  I2cHostContext->I2cBusConfiguration           = (UINTN)-1;
+  InitializeListHead (&I2cHostContext->RequestList);
 
   //
   // Reset the controller
   //
   Status = I2cMaster->Reset (I2cMaster);
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: I2C controller reset failed!\n"));
+    DEBUG ((DEBUG_ERROR, "I2cHost: I2C controller reset failed!\n"));
     goto Exit;
   }
 
@@ -408,7 +402,7 @@ I2cHostDriverStart (
                   &I2cHostContext->I2cEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: create complete event error, Status = %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHost: create complete event error, Status = %r\n", Status));
     goto Exit;
   }
 
@@ -423,9 +417,9 @@ I2cHostDriverStart (
                   &I2cHostContext->I2cBusConfigurationEvent
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: create bus available event error, Status = %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHost: create bus available event error, Status = %r\n", Status));
     goto Exit;
-  }  
+  }
 
   //
   // Build the I2C host protocol for the current I2C controller
@@ -444,16 +438,16 @@ I2cHostDriverStart (
                   );
 Exit:
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: Start() function failed, Status = %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHost: Start() function failed, Status = %r\n", Status));
     if (I2cBusConfigurationManagement != NULL) {
       gBS->CloseProtocol (
-                      Controller,
-                      &gEfiI2cBusConfigurationManagementProtocolGuid,
-                      This->DriverBindingHandle,
-                      Controller
-                      );      
+             Controller,
+             &gEfiI2cBusConfigurationManagementProtocolGuid,
+             This->DriverBindingHandle,
+             Controller
+             );
     }
-    
+
     if ((I2cHostContext != NULL) && (I2cHostContext->I2cEvent != NULL)) {
       gBS->CloseEvent (I2cHostContext->I2cEvent);
       I2cHostContext->I2cEvent = NULL;
@@ -507,27 +501,27 @@ Exit:
 EFI_STATUS
 EFIAPI
 I2cHostDriverStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL       *This,
-  IN  EFI_HANDLE                        Controller,
-  IN  UINTN                             NumberOfChildren,
-  IN  EFI_HANDLE                        *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS                  Status;  
-  I2C_HOST_CONTEXT            *I2cHostContext;
-  EFI_I2C_HOST_PROTOCOL       *I2cHost;
-  EFI_TPL                     TplPrevious;
+  EFI_STATUS             Status;
+  I2C_HOST_CONTEXT       *I2cHostContext;
+  EFI_I2C_HOST_PROTOCOL  *I2cHost;
+  EFI_TPL                TplPrevious;
 
   TplPrevious = EfiGetCurrentTpl ();
   if (TplPrevious > TPL_I2C_SYNC) {
-    DEBUG ((EFI_D_ERROR, "I2cHost: TPL %d is too high in Stop.\n", TplPrevious));
+    DEBUG ((DEBUG_ERROR, "I2cHost: TPL %d is too high in Stop.\n", TplPrevious));
     return EFI_DEVICE_ERROR;
   }
 
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiI2cHostProtocolGuid,
-                  (VOID **) &I2cHost,
+                  (VOID **)&I2cHost,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -543,14 +537,14 @@ I2cHostDriverStop (
   // Raise TPL for critical section
   //
   TplPrevious = gBS->RaiseTPL (TPL_I2C_SYNC);
-  
+
   //
   // If there is pending request or pending bus configuration, do not stop
   //
   Status = EFI_DEVICE_ERROR;
-  if (( !I2cHostContext->I2cBusConfigurationManagementPending )
-    && IsListEmpty (&I2cHostContext->RequestList)) {
-    
+  if (  (!I2cHostContext->I2cBusConfigurationManagementPending)
+     && IsListEmpty (&I2cHostContext->RequestList))
+  {
     //
     //  Remove the I2C host protocol
     //
@@ -561,7 +555,7 @@ I2cHostDriverStop (
                     NULL
                     );
   }
-  
+
   //
   // Leave critical section
   //
@@ -581,12 +575,12 @@ I2cHostDriverStop (
       gBS->CloseEvent (I2cHostContext->I2cBusConfigurationEvent);
       I2cHostContext->I2cBusConfigurationEvent = NULL;
     }
-    
+
     if (I2cHostContext->I2cEvent != NULL) {
       gBS->CloseEvent (I2cHostContext->I2cEvent);
       I2cHostContext->I2cEvent = NULL;
     }
-    
+
     FreePool (I2cHostContext);
   }
 
@@ -608,16 +602,16 @@ I2cHostDriverStop (
 VOID
 EFIAPI
 I2cHostI2cBusConfigurationAvailable (
-  IN EFI_EVENT Event,
-  IN VOID *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  I2C_HOST_CONTEXT            *I2cHostContext;
-  EFI_I2C_MASTER_PROTOCOL     *I2cMaster;
-  I2C_REQUEST                 *I2cRequest;
-  LIST_ENTRY                  *EntryHeader;
-  LIST_ENTRY                  *Entry;
-  EFI_STATUS                  Status;
+  I2C_HOST_CONTEXT         *I2cHostContext;
+  EFI_I2C_MASTER_PROTOCOL  *I2cMaster;
+  I2C_REQUEST              *I2cRequest;
+  LIST_ENTRY               *EntryHeader;
+  LIST_ENTRY               *Entry;
+  EFI_STATUS               Status;
 
   //
   // Mark this I2C bus configuration management operation as complete
@@ -643,8 +637,8 @@ I2cHostI2cBusConfigurationAvailable (
     // Unknown I2C bus configuration
     // Force next operation to enable the I2C bus configuration
     //
-    I2cHostContext->I2cBusConfiguration = (UINTN) -1;
-    
+    I2cHostContext->I2cBusConfiguration = (UINTN)-1;
+
     //
     // Do not continue current I2C request
     //
@@ -655,8 +649,8 @@ I2cHostI2cBusConfigurationAvailable (
   // Get the first request in the link with FIFO order
   //
   EntryHeader = &I2cHostContext->RequestList;
-  Entry = GetFirstNode (EntryHeader);
-  I2cRequest = I2C_REQUEST_FROM_ENTRY (Entry);
+  Entry       = GetFirstNode (EntryHeader);
+  I2cRequest  = I2C_REQUEST_FROM_ENTRY (Entry);
 
   //
   // Update the I2C bus configuration of the current I2C request
@@ -666,7 +660,7 @@ I2cHostI2cBusConfigurationAvailable (
   //
   // Start an I2C operation on the host, the status is returned by I2cHostContext->Status
   //
-  Status = I2cMaster->StartRequest ( 
+  Status = I2cMaster->StartRequest (
                         I2cMaster,
                         I2cRequest->SlaveAddress,
                         I2cRequest->RequestPacket,
@@ -675,7 +669,7 @@ I2cHostI2cBusConfigurationAvailable (
                         );
 
   if (EFI_ERROR (Status)) {
-    DEBUG((DEBUG_ERROR, "I2cHostI2cBusConfigurationAvailable: Error starting I2C operation, %r\n", Status));
+    DEBUG ((DEBUG_ERROR, "I2cHostI2cBusConfigurationAvailable: Error starting I2C operation, %r\n", Status));
   }
 }
 
@@ -692,20 +686,20 @@ I2cHostI2cBusConfigurationAvailable (
 **/
 EFI_STATUS
 I2cHostRequestComplete (
-  I2C_HOST_CONTEXT *I2cHostContext,
-  EFI_STATUS       Status
+  I2C_HOST_CONTEXT  *I2cHostContext,
+  EFI_STATUS        Status
   )
 {
-  I2C_REQUEST *I2cRequest;
-  LIST_ENTRY  *EntryHeader;
-  LIST_ENTRY  *Entry;
+  I2C_REQUEST  *I2cRequest;
+  LIST_ENTRY   *EntryHeader;
+  LIST_ENTRY   *Entry;
 
   //
   // Remove the current I2C request from the list
   //
   EntryHeader = &I2cHostContext->RequestList;
-  Entry = GetFirstNode (EntryHeader);
-  I2cRequest = I2C_REQUEST_FROM_ENTRY (Entry);
+  Entry       = GetFirstNode (EntryHeader);
+  I2cRequest  = I2C_REQUEST_FROM_ENTRY (Entry);
 
   //
   // Save the status for QueueRequest
@@ -731,10 +725,10 @@ I2cHostRequestComplete (
   //
   // If there is more I2C request, start next one
   //
-  if(!IsListEmpty (EntryHeader)) {
+  if (!IsListEmpty (EntryHeader)) {
     I2cHostRequestEnable (I2cHostContext);
   }
-  
+
   return Status;
 }
 
@@ -750,11 +744,11 @@ I2cHostRequestComplete (
 VOID
 EFIAPI
 I2cHostRequestCompleteEvent (
-  IN EFI_EVENT Event,
-  IN VOID *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
-  I2C_HOST_CONTEXT *I2cHostContext;
+  I2C_HOST_CONTEXT  *I2cHostContext;
 
   //
   // Handle the completion event
@@ -790,16 +784,16 @@ I2cHostRequestCompleteEvent (
 **/
 EFI_STATUS
 I2cHostRequestEnable (
-  I2C_HOST_CONTEXT *I2cHostContext
+  I2C_HOST_CONTEXT  *I2cHostContext
   )
 {
-  UINTN                                                 I2cBusConfiguration;
-  CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL   *I2cBusConfigurationManagement;
-  I2C_REQUEST                                           *I2cRequest;
-  EFI_STATUS                                            Status;
-  EFI_TPL                                               TplPrevious;
-  LIST_ENTRY                                            *EntryHeader;
-  LIST_ENTRY                                            *Entry;
+  UINTN                                                I2cBusConfiguration;
+  CONST EFI_I2C_BUS_CONFIGURATION_MANAGEMENT_PROTOCOL  *I2cBusConfigurationManagement;
+  I2C_REQUEST                                          *I2cRequest;
+  EFI_STATUS                                           Status;
+  EFI_TPL                                              TplPrevious;
+  LIST_ENTRY                                           *EntryHeader;
+  LIST_ENTRY                                           *Entry;
 
   //
   //  Assume pending request
@@ -813,7 +807,7 @@ I2cHostRequestEnable (
   //
   EntryHeader = &I2cHostContext->RequestList;
   Entry       = GetFirstNode (EntryHeader);
-  I2cRequest = I2C_REQUEST_FROM_ENTRY (Entry);
+  I2cRequest  = I2C_REQUEST_FROM_ENTRY (Entry);
 
   I2cBusConfiguration = I2cRequest->I2cBusConfiguration;
 
@@ -826,16 +820,16 @@ I2cHostRequestEnable (
     //  Update bus configuration for this device's requesting bus configuration
     //
     Status = I2cBusConfigurationManagement->EnableI2cBusConfiguration (
-                I2cBusConfigurationManagement,
-                I2cBusConfiguration,
-                I2cHostContext->I2cBusConfigurationEvent,
-                &I2cHostContext->Status
-                );
+                                              I2cBusConfigurationManagement,
+                                              I2cBusConfiguration,
+                                              I2cHostContext->I2cBusConfigurationEvent,
+                                              &I2cHostContext->Status
+                                              );
   } else {
     //
     //  I2C bus configuration is same, no need change configuration and start I2c transaction directly
     //
-    TplPrevious = gBS->RaiseTPL ( TPL_I2C_SYNC );
+    TplPrevious = gBS->RaiseTPL (TPL_I2C_SYNC);
 
     //
     //  Same I2C bus configuration
@@ -846,8 +840,9 @@ I2cHostRequestEnable (
     //
     //  Release the thread synchronization
     //
-    gBS->RestoreTPL ( TplPrevious );
+    gBS->RestoreTPL (TplPrevious);
   }
+
   return Status;
 }
 
@@ -942,7 +937,7 @@ I2cHostQueueRequest (
   if (RequestPacket == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-  
+
   if ((SlaveAddress & I2C_ADDRESSING_10_BIT) != 0) {
     //
     // 10-bit address, bits 0-9 are used for 10-bit I2C slave addresses,
@@ -970,25 +965,25 @@ I2cHostQueueRequest (
     //
     // For synchronous transaction, register an event used to wait for finishing synchronous transaction
     //
-    Status = gBS->CreateEvent ( 
-                0,
-                TPL_I2C_SYNC,
-                NULL,
-                NULL,
-                &SyncEvent
-                );
+    Status = gBS->CreateEvent (
+                    0,
+                    TPL_I2C_SYNC,
+                    NULL,
+                    NULL,
+                    &SyncEvent
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
   }
- 
+
   //
   // TPL should be at or below TPL_NOTIFY.
   // For synchronous requests this routine must be called at or below TPL_CALLBACK.
   //
   TplPrevious = EfiGetCurrentTpl ();
   if ((TplPrevious > TPL_I2C_SYNC) || ((Event == NULL) && (TplPrevious > TPL_CALLBACK))) {
-    DEBUG ((EFI_D_ERROR, "ERROR - TPL %d is too high!\n", TplPrevious));
+    DEBUG ((DEBUG_ERROR, "ERROR - TPL %d is too high!\n", TplPrevious));
     return EFI_INVALID_PARAMETER;
   }
 
@@ -997,7 +992,7 @@ I2cHostQueueRequest (
   //
   I2cRequest = AllocateZeroPool (sizeof (I2C_REQUEST));
   if (I2cRequest == NULL) {
-    DEBUG ((EFI_D_ERROR, "WARNING - Failed to allocate I2C_REQUEST!\n"));
+    DEBUG ((DEBUG_ERROR, "WARNING - Failed to allocate I2C_REQUEST!\n"));
     return EFI_OUT_OF_RESOURCES;
   }
 
@@ -1013,7 +1008,7 @@ I2cHostQueueRequest (
   //
   // Copy request packet into private buffer, as RequestPacket may be freed during asynchronous transaction
   //
-  RequestPacketSize = sizeof (UINTN) + RequestPacket->OperationCount * sizeof (EFI_I2C_OPERATION);
+  RequestPacketSize         = sizeof (UINTN) + RequestPacket->OperationCount * sizeof (EFI_I2C_OPERATION);
   I2cRequest->RequestPacket = AllocateZeroPool (RequestPacketSize);
   ASSERT (I2cRequest->RequestPacket != NULL);
   CopyMem (I2cRequest->RequestPacket, RequestPacket, RequestPacketSize);
@@ -1021,10 +1016,10 @@ I2cHostQueueRequest (
   //
   // Synchronize with the other threads
   //
-  gBS->RaiseTPL ( TPL_I2C_SYNC );
-  
+  gBS->RaiseTPL (TPL_I2C_SYNC);
+
   FirstRequest = IsListEmpty (&I2cHostContext->RequestList);
-  
+
   //
   // Insert new I2C request in the list
   //
@@ -1034,7 +1029,7 @@ I2cHostQueueRequest (
   // Release the thread synchronization
   //
   gBS->RestoreTPL (TplPrevious);
-  
+
   if (FirstRequest) {
     //
     // Start the first I2C request, then the subsequent of I2C request will continue
@@ -1091,12 +1086,12 @@ I2cHostQueueRequest (
 **/
 EFI_STATUS
 EFIAPI
-InitializeI2cHost(
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+InitializeI2cHost (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   //
   // Install driver model protocol(s).
@@ -1128,15 +1123,15 @@ InitializeI2cHost(
 EFI_STATUS
 EFIAPI
 I2cHostUnload (
-  IN EFI_HANDLE             ImageHandle
+  IN EFI_HANDLE  ImageHandle
   )
 {
-  EFI_STATUS                        Status;
-  EFI_HANDLE                        *DeviceHandleBuffer;
-  UINTN                             DeviceHandleCount;
-  UINTN                             Index;
-  EFI_COMPONENT_NAME_PROTOCOL       *ComponentName;
-  EFI_COMPONENT_NAME2_PROTOCOL      *ComponentName2;
+  EFI_STATUS                    Status;
+  EFI_HANDLE                    *DeviceHandleBuffer;
+  UINTN                         DeviceHandleCount;
+  UINTN                         Index;
+  EFI_COMPONENT_NAME_PROTOCOL   *ComponentName;
+  EFI_COMPONENT_NAME2_PROTOCOL  *ComponentName2;
 
   //
   // Get the list of all I2C Controller handles in the handle database.
@@ -1191,7 +1186,7 @@ I2cHostUnload (
   Status = gBS->HandleProtocol (
                   gI2cHostDriverBinding.DriverBindingHandle,
                   &gEfiComponentNameProtocolGuid,
-                  (VOID **) &ComponentName
+                  (VOID **)&ComponentName
                   );
   if (!EFI_ERROR (Status)) {
     gBS->UninstallProtocolInterface (
@@ -1204,7 +1199,7 @@ I2cHostUnload (
   Status = gBS->HandleProtocol (
                   gI2cHostDriverBinding.DriverBindingHandle,
                   &gEfiComponentName2ProtocolGuid,
-                  (VOID **) &ComponentName2
+                  (VOID **)&ComponentName2
                   );
   if (!EFI_ERROR (Status)) {
     gBS->UninstallProtocolInterface (

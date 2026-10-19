@@ -2,23 +2,57 @@
   Main file for Pause shell level 3 function.
 
   (C) Copyright 2015 Hewlett-Packard Development Company, L.P.<BR>
-  Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "UefiShellLevel3CommandsLib.h"
 
-STATIC CONST SHELL_PARAM_ITEM ParamList[] = {
-  {L"-q", TypeFlag},
-  {NULL, TypeMax}
-  };
+STATIC CONST SHELL_PARAM_ITEM  ParamList[] = {
+  { L"-q", TypeFlag },
+  { NULL,  TypeMax  }
+};
+
+/** Main function of the 'Pause' command.
+
+  @param[in] Package    List of input parameter for the command.
+**/
+STATIC
+SHELL_STATUS
+MainCmdPause (
+  LIST_ENTRY  *Package
+  )
+{
+  EFI_STATUS             Status;
+  SHELL_STATUS           ShellStatus;
+  SHELL_PROMPT_RESPONSE  *Resp;
+
+  ShellStatus = SHELL_SUCCESS;
+  Resp        = NULL;
+
+  if (ShellCommandLineGetRawValue (Package, 1) != NULL) {
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_GEN_TOO_MANY), gShellLevel3HiiHandle, L"pause");
+    return SHELL_INVALID_PARAMETER;
+  }
+
+  if (!ShellCommandLineGetFlag (Package, L"-q")) {
+    Status = ShellPromptForResponseHii (ShellPromptResponseTypeQuitContinue, STRING_TOKEN (STR_PAUSE_PROMPT), gShellLevel3HiiHandle, (VOID **)&Resp);
+  } else {
+    Status = ShellPromptForResponse (ShellPromptResponseTypeQuitContinue, NULL, (VOID **)&Resp);
+  }
+
+  if (EFI_ERROR (Status) || (Resp == NULL) || (*Resp == ShellPromptResponseQuit)) {
+    ShellCommandRegisterExit (TRUE, 0);
+    ShellStatus = SHELL_ABORTED;
+  }
+
+  if (Resp != NULL) {
+    FreePool (Resp);
+  }
+
+  return ShellStatus;
+}
 
 /**
   Function for 'pause' command.
@@ -33,27 +67,25 @@ ShellCommandRunPause (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS          Status;
-  LIST_ENTRY          *Package;
-  CHAR16              *ProblemParam;
-  SHELL_STATUS        ShellStatus;
-  SHELL_PROMPT_RESPONSE            *Resp;
+  EFI_STATUS    Status;
+  LIST_ENTRY    *Package;
+  CHAR16        *ProblemParam;
+  SHELL_STATUS  ShellStatus;
 
-  ProblemParam        = NULL;
-  ShellStatus         = SHELL_SUCCESS;
-  Resp                = NULL;
+  ProblemParam = NULL;
+  ShellStatus  = SHELL_SUCCESS;
 
   //
   // initialize the shell lib (we must be in non-auto-init...)
   //
-  Status = ShellInitialize();
-  ASSERT_EFI_ERROR(Status);
+  Status = ShellInitialize ();
+  ASSERT_EFI_ERROR (Status);
 
-  Status = CommandInit();
-  ASSERT_EFI_ERROR(Status);
+  Status = CommandInit ();
+  ASSERT_EFI_ERROR (Status);
 
-  if (!gEfiShellProtocol->BatchIsActive()) {
-    ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN (STR_NO_SCRIPT), gShellLevel3HiiHandle, L"pause");  
+  if (!gEfiShellProtocol->BatchIsActive ()) {
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_NO_SCRIPT), gShellLevel3HiiHandle, L"pause");
     return (SHELL_UNSUPPORTED);
   }
 
@@ -61,47 +93,24 @@ ShellCommandRunPause (
   // parse the command line
   //
   Status = ShellCommandLineParse (ParamList, &Package, &ProblemParam, TRUE);
-  if (EFI_ERROR(Status)) {
-    if (Status == EFI_VOLUME_CORRUPTED && ProblemParam != NULL) {
-      ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN (STR_GEN_PROBLEM), gShellLevel3HiiHandle, L"pause", ProblemParam);  
-      FreePool(ProblemParam);
+  if (EFI_ERROR (Status)) {
+    if ((Status == EFI_VOLUME_CORRUPTED) && (ProblemParam != NULL)) {
+      ShellPrintHiiDefaultEx (STRING_TOKEN (STR_GEN_PROBLEM), gShellLevel3HiiHandle, L"pause", ProblemParam);
+      FreePool (ProblemParam);
       ShellStatus = SHELL_INVALID_PARAMETER;
     } else {
-      ASSERT(FALSE);
-    }
-  } else {
-    //
-    // check for "-?"
-    //
-    if (ShellCommandLineGetFlag(Package, L"-?")) {
-      ASSERT(FALSE);
-    } else if (ShellCommandLineGetRawValue(Package, 1) != NULL) {
-      ShellPrintHiiEx(-1, -1, NULL, STRING_TOKEN (STR_GEN_TOO_MANY), gShellLevel3HiiHandle, L"pause");  
-      ShellStatus = SHELL_INVALID_PARAMETER;
-    } else {
-      if (!ShellCommandLineGetFlag(Package, L"-q")) {
-        Status = ShellPromptForResponseHii(ShellPromptResponseTypeQuitContinue, STRING_TOKEN (STR_PAUSE_PROMPT), gShellLevel3HiiHandle, (VOID**)&Resp);
-      } else {
-        Status = ShellPromptForResponse(ShellPromptResponseTypeQuitContinue, NULL, (VOID**)&Resp);
-      }
-
-      if (EFI_ERROR(Status) || Resp == NULL || *Resp == ShellPromptResponseQuit) {
-        ShellCommandRegisterExit(TRUE, 0);
-        ShellStatus = SHELL_ABORTED;
-      }
-
-      if (Resp != NULL) {
-        FreePool(Resp);
-      }
+      ASSERT (FALSE);
     }
 
-    //
-    // free the command line package
-    //
-    ShellCommandLineFreeVarList (Package);
+    return ShellStatus;
   }
 
+  ShellStatus = MainCmdPause (Package);
+
+  //
+  // free the command line package
+  //
+  ShellCommandLineFreeVarList (Package);
 
   return (ShellStatus);
 }
-

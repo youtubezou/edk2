@@ -6,13 +6,7 @@
 
   Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
   Portiions copyrigth (c) 2011, Apple Inc. All rights reserved.
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +15,6 @@
 #include <Library/DebugLib.h>
 
 #include <Ppi/MemoryDiscovered.h>
-
 
 CONST EFI_PEI_SERVICES  **gPeiServices = NULL;
 
@@ -39,7 +32,7 @@ CONST EFI_PEI_SERVICES  **gPeiServices = NULL;
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
   )
 {
   ASSERT (PeiServicesTablePointer != NULL);
@@ -70,8 +63,6 @@ GetPeiServicesTablePointer (
   return gPeiServices;
 }
 
-
-
 /**
   Notification service to be called when gEmuThunkPpiGuid is installed.
 
@@ -87,9 +78,9 @@ GetPeiServicesTablePointer (
 EFI_STATUS
 EFIAPI
 PeiServicesTablePointerNotifyCallback (
-  IN EFI_PEI_SERVICES              **PeiServices,
-  IN EFI_PEI_NOTIFY_DESCRIPTOR     *NotifyDescriptor,
-  IN VOID                          *Ppi
+  IN EFI_PEI_SERVICES           **PeiServices,
+  IN EFI_PEI_NOTIFY_DESCRIPTOR  *NotifyDescriptor,
+  IN VOID                       *Ppi
   )
 {
   gPeiServices = (CONST EFI_PEI_SERVICES  **)PeiServices;
@@ -97,13 +88,11 @@ PeiServicesTablePointerNotifyCallback (
   return EFI_SUCCESS;
 }
 
-
-EFI_PEI_NOTIFY_DESCRIPTOR mNotifyOnThunkList = {
+EFI_PEI_NOTIFY_DESCRIPTOR  mNotifyOnThunkList = {
   (EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEfiPeiMemoryDiscoveredPpiGuid,
   PeiServicesTablePointerNotifyCallback
 };
-
 
 /**
   Constructor register notification on when PPI updates. If PPI is
@@ -119,11 +108,11 @@ EFI_PEI_NOTIFY_DESCRIPTOR mNotifyOnThunkList = {
 EFI_STATUS
 EFIAPI
 PeiServicesTablePointerLibConstructor (
-  IN EFI_PEI_FILE_HANDLE        FileHandle,
-  IN CONST EFI_PEI_SERVICES     **PeiServices
+  IN EFI_PEI_FILE_HANDLE     FileHandle,
+  IN CONST EFI_PEI_SERVICES  **PeiServices
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   gPeiServices = (CONST EFI_PEI_SERVICES  **)PeiServices;
 
@@ -134,16 +123,16 @@ PeiServicesTablePointerLibConstructor (
 }
 
 /**
-  Perform CPU specific actions required to migrate the PEI Services Table 
+  Perform CPU specific actions required to migrate the PEI Services Table
   pointer from temporary RAM to permanent RAM.
 
-  For IA32 CPUs, the PEI Services Table pointer is stored in the 4 bytes 
+  For IA32 CPUs, the PEI Services Table pointer is stored in the 4 bytes
   immediately preceding the Interrupt Descriptor Table (IDT) in memory.
-  For X64 CPUs, the PEI Services Table pointer is stored in the 8 bytes 
+  For X64 CPUs, the PEI Services Table pointer is stored in the 8 bytes
   immediately preceding the Interrupt Descriptor Table (IDT) in memory.
   For Itanium and ARM CPUs, a the PEI Services Table Pointer is stored in
-  a dedicated CPU register.  This means that there is no memory storage 
-  associated with storing the PEI Services Table pointer, so no additional 
+  a dedicated CPU register.  This means that there is no memory storage
+  associated with storing the PEI Services Table pointer, so no additional
   migration actions are required for Itanium or ARM CPUs.
 
 **/
@@ -154,9 +143,8 @@ MigratePeiServicesTablePointer (
   )
 {
   //
-  //  PEI Services Table pointer is cached in the global variable. No additional 
+  //  PEI Services Table pointer is cached in the global variable. No additional
   //  migration actions are required.
   //
   return;
 }
-

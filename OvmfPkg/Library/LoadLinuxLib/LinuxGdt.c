@@ -2,18 +2,11 @@
   Initialize GDT for Linux.
 
   Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "LoadLinuxLib.h"
-
 
 //
 // Local structure definitions
@@ -26,33 +19,33 @@
 //
 
 typedef struct _GDT_ENTRY {
-  UINT16 Limit15_0;
-  UINT16 Base15_0;
-  UINT8  Base23_16;
-  UINT8  Type;
-  UINT8  Limit19_16_and_flags;
-  UINT8  Base31_24;
+  UINT16    Limit15_0;
+  UINT16    Base15_0;
+  UINT8     Base23_16;
+  UINT8     Type;
+  UINT8     Limit19_16_and_flags;
+  UINT8     Base31_24;
 } GDT_ENTRY;
 
 typedef
-struct _GDT_ENTRIES {
-  GDT_ENTRY Null;
-  GDT_ENTRY Null2;
-  GDT_ENTRY Linear;
-  GDT_ENTRY LinearCode;
-  GDT_ENTRY TaskSegment;
-  GDT_ENTRY Spare4;
-  GDT_ENTRY Spare5;
+  struct _GDT_ENTRIES {
+  GDT_ENTRY    Null;
+  GDT_ENTRY    Null2;
+  GDT_ENTRY    Linear;
+  GDT_ENTRY    LinearCode;
+  GDT_ENTRY    TaskSegment;
+  GDT_ENTRY    Spare4;
+  GDT_ENTRY    Spare5;
 } GDT_ENTRIES;
 
 #pragma pack ()
 
-STATIC GDT_ENTRIES *mGdt = NULL;
+STATIC GDT_ENTRIES  *mGdt = NULL;
 
 //
 // Global descriptor table (GDT) Template
 //
-STATIC GDT_ENTRIES GdtTemplate = {
+STATIC GDT_ENTRIES  GdtTemplate = {
   //
   // Null
   //
@@ -152,7 +145,6 @@ InitLinuxDescriptorTables (
   // Initialize all GDT entries
   //
   CopyMem (mGdt, &GdtTemplate, sizeof (GdtTemplate));
-
 }
 
 /**
@@ -164,18 +156,17 @@ SetLinuxDescriptorTables (
   VOID
   )
 {
-  IA32_DESCRIPTOR GdtPtr;
-  IA32_DESCRIPTOR IdtPtr;
+  IA32_DESCRIPTOR  GdtPtr;
+  IA32_DESCRIPTOR  IdtPtr;
 
   //
   // Write GDT register
   //
-  GdtPtr.Base = (UINT32)(UINTN)(VOID*) mGdt;
-  GdtPtr.Limit = (UINT16) (sizeof (GdtTemplate) - 1);
+  GdtPtr.Base  = (UINT32)(UINTN)(VOID *)mGdt;
+  GdtPtr.Limit = (UINT16)(sizeof (GdtTemplate) - 1);
   AsmWriteGdtr (&GdtPtr);
 
-  IdtPtr.Base = (UINT32) 0;
-  IdtPtr.Limit = (UINT16) 0;
+  IdtPtr.Base  = (UINT32)0;
+  IdtPtr.Limit = (UINT16)0;
   AsmWriteIdtr (&IdtPtr);
 }
-

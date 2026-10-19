@@ -2,34 +2,27 @@
   The head file of iSCSI DHCP4 related configuration routines.
 
 Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _ISCSI_DHCP_H_
-#define _ISCSI_DHCP_H_
+#pragma once
 
-#define ISCSI_ROOT_PATH_ID              "iscsi:"
-#define ISCSI_ROOT_PATH_FIELD_DELIMITER ':'
+#define ISCSI_ROOT_PATH_ID               "iscsi:"
+#define ISCSI_ROOT_PATH_FIELD_DELIMITER  ':'
 
-#define RP_FIELD_IDX_SERVERNAME         0
-#define RP_FIELD_IDX_PROTOCOL           1
-#define RP_FIELD_IDX_PORT               2
-#define RP_FIELD_IDX_LUN                3
-#define RP_FIELD_IDX_TARGETNAME         4
-#define RP_FIELD_IDX_MAX                5
+#define RP_FIELD_IDX_SERVERNAME  0
+#define RP_FIELD_IDX_PROTOCOL    1
+#define RP_FIELD_IDX_PORT        2
+#define RP_FIELD_IDX_LUN         3
+#define RP_FIELD_IDX_TARGETNAME  4
+#define RP_FIELD_IDX_MAX         5
 
 typedef struct _ISCSI_ATTEMPT_CONFIG_NVDATA ISCSI_ATTEMPT_CONFIG_NVDATA;
 
 typedef struct _ISCSI_ROOT_PATH_FIELD {
-  CHAR8 *Str;
-  UINT8 Len;
+  CHAR8    *Str;
+  UINTN    Len;
 } ISCSI_ROOT_PATH_FIELD;
 
 /**
@@ -47,9 +40,7 @@ typedef struct _ISCSI_ROOT_PATH_FIELD {
 **/
 EFI_STATUS
 IScsiDoDhcp (
-  IN     EFI_HANDLE                  Image,
-  IN     EFI_HANDLE                  Controller,
-  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA *ConfigData
+  IN     EFI_HANDLE                   Image,
+  IN     EFI_HANDLE                   Controller,
+  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA  *ConfigData
   );
-
-#endif

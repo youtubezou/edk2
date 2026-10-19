@@ -3,13 +3,7 @@
 //  Copyright (c) 2012-2015, ARM Limited. All rights reserved.
 //  Copyright (c) 2015, Linaro Limited. All rights reserved.
 //
-//  This program and the accompanying materials
-//  are licensed and made available under the terms and conditions of the BSD License
-//  which accompanies this distribution.  The full text of the license may be found at
-//  http://opensource.org/licenses/bsd-license.php
-//
-//  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+//  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 //
 
@@ -47,6 +41,7 @@ GCC_ASM_EXPORT(InternalSyncDecrement)
 //  IN      UINT16                    ExchangeValue
 //  )
 ASM_PFX(InternalSyncCompareExchange16):
+  AARCH64_BTI(c)
   uxth    w1, w1
   uxth    w2, w2
   dmb     sy
@@ -90,6 +85,7 @@ InternalSyncCompareExchange16Fail:
 //  IN      UINT32                    ExchangeValue
 //  )
 ASM_PFX(InternalSyncCompareExchange32):
+  AARCH64_BTI(c)
   dmb     sy
 
 InternalSyncCompareExchange32Again:
@@ -130,6 +126,7 @@ InternalSyncCompareExchange32Fail:
 //  IN      UINT64                    ExchangeValue
 //  )
 ASM_PFX(InternalSyncCompareExchange64):
+  AARCH64_BTI(c)
   dmb     sy
 
 InternalSyncCompareExchange64Again:
@@ -165,6 +162,7 @@ InternalSyncCompareExchange64Fail:
 //  IN      volatile UINT32           *Value
 //  )
 ASM_PFX(InternalSyncIncrement):
+  AARCH64_BTI(c)
   dmb     sy
 TryInternalSyncIncrement:
   ldxr    w1, [x0]
@@ -194,6 +192,7 @@ TryInternalSyncIncrement:
 //  IN      volatile UINT32           *Value
 //  )
 ASM_PFX(InternalSyncDecrement):
+  AARCH64_BTI(c)
   dmb     sy
 TryInternalSyncDecrement:
   ldxr    w1, [x0]

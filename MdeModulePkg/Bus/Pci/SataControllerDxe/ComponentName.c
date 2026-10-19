@@ -1,14 +1,8 @@
 /** @file
   UEFI Component Name(2) protocol implementation for Sata Controller driver.
 
-  Copyright (c) 2011 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,16 +20,16 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gSataControllerCompon
 //
 /// EFI Component Name 2 Protocol
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gSataControllerComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) SataControllerComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) SataControllerComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gSataControllerComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)SataControllerComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)SataControllerComponentNameGetControllerName,
   "en"
 };
 
 //
 /// Driver Name Strings
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSataControllerDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSataControllerDriverNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"Sata Controller Init Driver"
@@ -49,7 +43,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSataControllerDriverName
 ///
 /// Controller Name Strings
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSataControllerControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSataControllerControllerNameTable[] = {
   {
     "eng;en",
     (CHAR16 *)L"Sata Controller"
@@ -72,7 +66,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSataControllerController
   @param DriverName             A pointer to the Unicode string to return.  This Unicode string
                                 is the name of the driver specified by This in the language
                                 specified by Language.
-  
+
   @retval EFI_SUCCESS           The Unicode string for the Driver specified by This
                                 and the language specified by Language was returned
                                 in DriverName.
@@ -84,9 +78,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSataControllerController
 EFI_STATUS
 EFIAPI
 SataControllerComponentNameGetDriverName (
-  IN EFI_COMPONENT_NAME_PROTOCOL    *This,
-  IN CHAR8                          *Language,
-  OUT CHAR16                        **DriverName
+  IN EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN CHAR8                        *Language,
+  OUT CHAR16                      **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -100,7 +94,7 @@ SataControllerComponentNameGetDriverName (
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
-  that is being managed by an UEFI Driver.  
+  that is being managed by an UEFI Driver.
 
   @param This                   A pointer to the EFI_COMPONENT_NAME_PROTOCOL instance.
   @param ControllerHandle       The handle of a controller that the driver specified by
@@ -123,7 +117,7 @@ SataControllerComponentNameGetDriverName (
                                 ControllerHandle and ChildHandle in the language
                                 specified by Language from the point of view of the
                                 driver specified by This.
-  
+
   @retval EFI_SUCCESS           The Unicode string for the user readable name in the
                                 language specified by Language for the driver
                                 specified by This was returned in DriverName.
@@ -141,14 +135,14 @@ SataControllerComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 SataControllerComponentNameGetControllerName (
-  IN EFI_COMPONENT_NAME_PROTOCOL    *This,
-  IN EFI_HANDLE                     ControllerHandle,
-  IN EFI_HANDLE                     ChildHandle OPTIONAL,
-  IN CHAR8                          *Language,
-  OUT CHAR16                        **ControllerName
+  IN EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN EFI_HANDLE                   ControllerHandle,
+  IN EFI_HANDLE                   ChildHandle OPTIONAL,
+  IN CHAR8                        *Language,
+  OUT CHAR16                      **ControllerName
   )
 {
-  EFI_STATUS    Status;
+  EFI_STATUS  Status;
 
   //
   // Make sure this driver is currently managing ControllHandle
@@ -167,11 +161,10 @@ SataControllerComponentNameGetControllerName (
   }
 
   return LookupUnicodeString2 (
-          Language,
-          This->SupportedLanguages,
-          mSataControllerControllerNameTable,
-          ControllerName,
-          (BOOLEAN)(This == &gSataControllerComponentName)
-          );
+           Language,
+           This->SupportedLanguages,
+           mSataControllerControllerNameTable,
+           ControllerName,
+           (BOOLEAN)(This == &gSataControllerComponentName)
+           );
 }
-

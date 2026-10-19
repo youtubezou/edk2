@@ -26,15 +26,11 @@
     unreasonable for now.
 
   Copyright (C) 2012, Red Hat, Inc.
-  Copyright (c) 2012 - 2014, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017, AMD Inc, All rights reserved.<BR>
+  Copyright (c) 2024, Arm Limited. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -81,7 +77,7 @@
                                                 (Value)                     \
                                                 ))
 
-#define VIRTIO_CFG_READ(Dev, Field, Pointer) ((Dev)->VirtIo->ReadDevice (   \
+#define VIRTIO_CFG_READ(Dev, Field, Pointer)  ((Dev)->VirtIo->ReadDevice (  \
                                                 (Dev)->VirtIo,              \
                                                 OFFSET_OF_VSCSI (Field),    \
                                                 SIZE_OF_VSCSI (Field),      \
@@ -89,14 +85,13 @@
                                                 (Pointer)                   \
                                                 ))
 
-
 //
 // UEFI Spec 2.3.1 + Errata C, 14.7 Extended SCSI Pass Thru Protocol specifies
 // the PassThru() interface. Beside returning a status code, the function must
 // set some fields in the EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET in/out
 // parameter on return. The following is a full list of those fields, for
 // easier validation of PopulateRequest(), ParseResponse(), and
-// VirtioScsiPassThru() below.
+// ReportHostAdapterError() below.
 //
 // - InTransferLength
 // - OutTransferLength
@@ -158,32 +153,32 @@ PopulateRequest (
   OUT    volatile VIRTIO_SCSI_REQ                             *Request
   )
 {
-  UINTN Idx;
+  UINTN  Idx;
 
   if (
       //
       // bidirectional transfer was requested, but the host doesn't support it
       //
-      (Packet->InTransferLength > 0 && Packet->OutTransferLength > 0 &&
+      ((Packet->InTransferLength > 0) && (Packet->OutTransferLength > 0) &&
        !Dev->InOutSupported) ||
 
       //
       // a target / LUN was addressed that's impossible to encode for the host
       //
-      Target > 0xFF || Lun >= 0x4000 ||
+      (Target > 0xFF) || (Lun >= 0x4000) ||
 
       //
       // Command Descriptor Block bigger than VIRTIO_SCSI_CDB_SIZE
       //
-      Packet->CdbLength > VIRTIO_SCSI_CDB_SIZE ||
+      (Packet->CdbLength > VIRTIO_SCSI_CDB_SIZE) ||
 
       //
       // From virtio-0.9.5, 2.3.2 Descriptor Table:
       // "no descriptor chain may be more than 2^32 bytes long in total".
       //
-      (UINT64) Packet->InTransferLength + Packet->OutTransferLength > SIZE_1GB
-      ) {
-
+      ((UINT64)Packet->InTransferLength + Packet->OutTransferLength > SIZE_1GB)
+      )
+  {
     //
     // this error code doesn't require updates to the Packet output fields
     //
@@ -194,35 +189,35 @@ PopulateRequest (
       //
       // addressed invalid device
       //
-      Target > Dev->MaxTarget || Lun > Dev->MaxLun ||
+      (Target > Dev->MaxTarget) || (Lun > Dev->MaxLun) ||
 
       //
       // invalid direction (there doesn't seem to be a macro for the "no data
       // transferred" "direction", eg. for TEST UNIT READY)
       //
-      Packet->DataDirection > EFI_EXT_SCSI_DATA_DIRECTION_BIDIRECTIONAL ||
+      (Packet->DataDirection > EFI_EXT_SCSI_DATA_DIRECTION_BIDIRECTIONAL) ||
 
       //
       // trying to receive, but destination pointer is NULL, or contradicting
       // transfer direction
       //
-      (Packet->InTransferLength > 0 &&
-       (Packet->InDataBuffer == NULL ||
-        Packet->DataDirection == EFI_EXT_SCSI_DATA_DIRECTION_WRITE
-        )
-       ) ||
+      ((Packet->InTransferLength > 0) &&
+       ((Packet->InDataBuffer == NULL) ||
+        (Packet->DataDirection == EFI_EXT_SCSI_DATA_DIRECTION_WRITE)
+       )
+      ) ||
 
       //
       // trying to send, but source pointer is NULL, or contradicting transfer
       // direction
       //
-      (Packet->OutTransferLength > 0 &&
-       (Packet->OutDataBuffer == NULL ||
-        Packet->DataDirection == EFI_EXT_SCSI_DATA_DIRECTION_READ
-        )
+      ((Packet->OutTransferLength > 0) &&
+       ((Packet->OutDataBuffer == NULL) ||
+        (Packet->DataDirection == EFI_EXT_SCSI_DATA_DIRECTION_READ)
        )
-      ) {
-
+      )
+      )
+  {
     //
     // this error code doesn't require updates to the Packet output fields
     //
@@ -234,16 +229,17 @@ PopulateRequest (
   // then the combined size of a bidirectional request will not exceed the
   // virtio-scsi device's transfer limit either.
   //
-  if (ALIGN_VALUE (Packet->OutTransferLength, 512) / 512
-        > Dev->MaxSectors / 2 ||
-      ALIGN_VALUE (Packet->InTransferLength,  512) / 512
-        > Dev->MaxSectors / 2) {
+  if ((ALIGN_VALUE (Packet->OutTransferLength, 512) / 512
+       > Dev->MaxSectors / 2) ||
+      (ALIGN_VALUE (Packet->InTransferLength, 512) / 512
+       > Dev->MaxSectors / 2))
+  {
     Packet->InTransferLength  = (Dev->MaxSectors / 2) * 512;
     Packet->OutTransferLength = (Dev->MaxSectors / 2) * 512;
     Packet->HostAdapterStatus =
-                        EFI_EXT_SCSI_STATUS_HOST_ADAPTER_DATA_OVERRUN_UNDERRUN;
-    Packet->TargetStatus      = EFI_EXT_SCSI_STATUS_TARGET_GOOD;
-    Packet->SenseDataLength   = 0;
+      EFI_EXT_SCSI_STATUS_HOST_ADAPTER_DATA_OVERRUN_UNDERRUN;
+    Packet->TargetStatus    = EFI_EXT_SCSI_STATUS_TARGET_GOOD;
+    Packet->SenseDataLength = 0;
     return EFI_BAD_BUFFER_SIZE;
   }
 
@@ -252,21 +248,20 @@ PopulateRequest (
   // Device Operation: request queues
   //
   Request->Lun[0] = 1;
-  Request->Lun[1] = (UINT8) Target;
-  Request->Lun[2] = (UINT8) (((UINT32)Lun >> 8) | 0x40);
-  Request->Lun[3] = (UINT8) Lun;
+  Request->Lun[1] = (UINT8)Target;
+  Request->Lun[2] = (UINT8)(((UINT32)Lun >> 8) | 0x40);
+  Request->Lun[3] = (UINT8)Lun;
 
   //
   // CopyMem() would cast away the "volatile" qualifier before access, which is
   // undefined behavior (ISO C99 6.7.3p5)
   //
   for (Idx = 0; Idx < Packet->CdbLength; ++Idx) {
-    Request->Cdb[Idx] = ((UINT8 *) Packet->Cdb)[Idx];
+    Request->Cdb[Idx] = ((UINT8 *)Packet->Cdb)[Idx];
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
 
@@ -293,22 +288,23 @@ STATIC
 EFI_STATUS
 EFIAPI
 ParseResponse (
-  IN OUT                EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET *Packet,
-  IN     CONST volatile VIRTIO_SCSI_RESP                           *Response
+  IN OUT                EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET  *Packet,
+  IN     CONST volatile VIRTIO_SCSI_RESP                            *Response
   )
 {
-  UINTN ResponseSenseLen;
-  UINTN Idx;
+  UINTN  ResponseSenseLen;
+  UINTN  Idx;
 
   //
   // return sense data (length and contents) in all cases, truncated if needed
   //
   ResponseSenseLen = MIN (Response->SenseLen, VIRTIO_SCSI_SENSE_SIZE);
   if (Packet->SenseDataLength > ResponseSenseLen) {
-    Packet->SenseDataLength = (UINT8) ResponseSenseLen;
+    Packet->SenseDataLength = (UINT8)ResponseSenseLen;
   }
+
   for (Idx = 0; Idx < Packet->SenseDataLength; ++Idx) {
-    ((UINT8 *) Packet->SenseData)[Idx] = Response->Sense[Idx];
+    ((UINT8 *)Packet->SenseData)[Idx] = Response->Sense[Idx];
   }
 
   //
@@ -326,9 +322,8 @@ ParseResponse (
   //  V  @ OutTransferLength + InTransferLength    -+- @ 0
   //
   if (Response->Residual <= Packet->InTransferLength) {
-    Packet->InTransferLength  -= Response->Residual;
-  }
-  else {
+    Packet->InTransferLength -= Response->Residual;
+  } else {
     Packet->OutTransferLength -= Response->Residual - Packet->InTransferLength;
     Packet->InTransferLength   = 0;
   }
@@ -343,49 +338,78 @@ ParseResponse (
   // response code
   //
   switch (Response->Response) {
-  case VIRTIO_SCSI_S_OK:
-    Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OK;
-    return EFI_SUCCESS;
+    case VIRTIO_SCSI_S_OK:
+      Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OK;
+      return EFI_SUCCESS;
 
-  case VIRTIO_SCSI_S_OVERRUN:
-    Packet->HostAdapterStatus =
-                        EFI_EXT_SCSI_STATUS_HOST_ADAPTER_DATA_OVERRUN_UNDERRUN;
-    break;
+    case VIRTIO_SCSI_S_OVERRUN:
+      Packet->HostAdapterStatus =
+        EFI_EXT_SCSI_STATUS_HOST_ADAPTER_DATA_OVERRUN_UNDERRUN;
+      break;
 
-  case VIRTIO_SCSI_S_BAD_TARGET:
+    case VIRTIO_SCSI_S_BAD_TARGET:
+      //
+      // This is non-intuitive but explicitly required by the
+      // EFI_EXT_SCSI_PASS_THRU_PROTOCOL.PassThru() specification for
+      // disconnected (but otherwise valid) target / LUN addresses.
+      //
+      Packet->HostAdapterStatus =
+        EFI_EXT_SCSI_STATUS_HOST_ADAPTER_TIMEOUT_COMMAND;
+      return EFI_TIMEOUT;
+
+    case VIRTIO_SCSI_S_RESET:
+      Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_BUS_RESET;
+      break;
+
+    case VIRTIO_SCSI_S_BUSY:
+      Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OK;
+      return EFI_NOT_READY;
+
     //
-    // This is non-intuitive but explicitly required by the
-    // EFI_EXT_SCSI_PASS_THRU_PROTOCOL.PassThru() specification for
-    // disconnected (but otherwise valid) target / LUN addresses.
+    // Lump together the rest. The mapping for VIRTIO_SCSI_S_ABORTED is
+    // intentional as well, not an oversight.
     //
-    Packet->HostAdapterStatus =
-                              EFI_EXT_SCSI_STATUS_HOST_ADAPTER_TIMEOUT_COMMAND;
-    return EFI_TIMEOUT;
-
-  case VIRTIO_SCSI_S_RESET:
-    Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_BUS_RESET;
-    break;
-
-  case VIRTIO_SCSI_S_BUSY:
-    Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OK;
-    return EFI_NOT_READY;
-
-  //
-  // Lump together the rest. The mapping for VIRTIO_SCSI_S_ABORTED is
-  // intentional as well, not an oversight.
-  //
-  case VIRTIO_SCSI_S_ABORTED:
-  case VIRTIO_SCSI_S_TRANSPORT_FAILURE:
-  case VIRTIO_SCSI_S_TARGET_FAILURE:
-  case VIRTIO_SCSI_S_NEXUS_FAILURE:
-  case VIRTIO_SCSI_S_FAILURE:
-  default:
-    Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OTHER;
+    case VIRTIO_SCSI_S_ABORTED:
+    case VIRTIO_SCSI_S_TRANSPORT_FAILURE:
+    case VIRTIO_SCSI_S_TARGET_FAILURE:
+    case VIRTIO_SCSI_S_NEXUS_FAILURE:
+    case VIRTIO_SCSI_S_FAILURE:
+    default:
+      Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OTHER;
   }
 
   return EFI_DEVICE_ERROR;
 }
 
+/**
+
+  The function can be used to create a fake host adapter error.
+
+  When VirtioScsiPassThru() is failed due to some reasons then this function
+  can be called to construct a host adapter error.
+
+  @param[out] Packet  The Extended SCSI Pass Thru Protocol packet that the host
+                      adapter error shall be placed in.
+
+
+  @retval EFI_DEVICE_ERROR  The function returns this status code
+                            unconditionally, to be propagated by
+                            VirtioScsiPassThru().
+
+**/
+STATIC
+EFI_STATUS
+ReportHostAdapterError (
+  OUT EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET  *Packet
+  )
+{
+  Packet->InTransferLength  = 0;
+  Packet->OutTransferLength = 0;
+  Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OTHER;
+  Packet->TargetStatus      = EFI_EXT_SCSI_STATUS_TARGET_GOOD;
+  Packet->SenseDataLength   = 0;
+  return EFI_DEVICE_ERROR;
+}
 
 //
 // The next seven functions implement EFI_EXT_SCSI_PASS_THRU_PROTOCOL
@@ -397,37 +421,182 @@ ParseResponse (
 EFI_STATUS
 EFIAPI
 VirtioScsiPassThru (
-  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL            *This,
-  IN     UINT8                                      *Target,
-  IN     UINT64                                     Lun,
-  IN OUT EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET *Packet,
-  IN     EFI_EVENT                                  Event   OPTIONAL
+  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL             *This,
+  IN     UINT8                                       *Target,
+  IN     UINT64                                      Lun,
+  IN OUT EFI_EXT_SCSI_PASS_THRU_SCSI_REQUEST_PACKET  *Packet,
+  IN     EFI_EVENT                                   Event   OPTIONAL
   )
 {
-  VSCSI_DEV                 *Dev;
-  UINT16                    TargetValue;
-  EFI_STATUS                Status;
-  volatile VIRTIO_SCSI_REQ  Request;
-  volatile VIRTIO_SCSI_RESP Response;
-  DESC_INDICES              Indices;
+  VSCSI_DEV                  *Dev;
+  UINT16                     TargetValue;
+  EFI_STATUS                 Status;
+  volatile VIRTIO_SCSI_REQ   *Request;
+  volatile VIRTIO_SCSI_RESP  *Response;
+  VOID                       *ResponseBuffer;
+  DESC_INDICES               Indices;
+  VOID                       *RequestMapping;
+  VOID                       *ResponseMapping;
+  VOID                       *InDataMapping;
+  VOID                       *OutDataMapping;
+  EFI_PHYSICAL_ADDRESS       RequestDeviceAddress;
+  EFI_PHYSICAL_ADDRESS       ResponseDeviceAddress;
+  EFI_PHYSICAL_ADDRESS       InDataDeviceAddress;
+  EFI_PHYSICAL_ADDRESS       OutDataDeviceAddress;
+  VOID                       *InDataBuffer;
+  UINTN                      InDataNumPages;
+  BOOLEAN                    OutDataBufferIsMapped;
 
-  ZeroMem ((VOID*) &Request, sizeof (Request));
-  ZeroMem ((VOID*) &Response, sizeof (Response));
+  //
+  // Set InDataMapping,OutDataMapping,InDataDeviceAddress and OutDataDeviceAddress to
+  // suppress incorrect compiler/analyzer warnings.
+  //
+  InDataMapping        = NULL;
+  OutDataMapping       = NULL;
+  InDataDeviceAddress  = 0;
+  OutDataDeviceAddress = 0;
+
+  Request = AllocateZeroPool (sizeof (*Request));
+  if (Request == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   Dev = VIRTIO_SCSI_FROM_PASS_THRU (This);
   CopyMem (&TargetValue, Target, sizeof TargetValue);
 
-  Status = PopulateRequest (Dev, TargetValue, Lun, Packet, &Request);
+  InDataBuffer          = NULL;
+  OutDataBufferIsMapped = FALSE;
+  InDataNumPages        = 0;
+
+  Status = PopulateRequest (Dev, TargetValue, Lun, Packet, Request);
   if (EFI_ERROR (Status)) {
-    return Status;
+    goto FreeScsiRequest;
   }
 
-  VirtioPrepare (&Dev->Ring, &Indices);
+  //
+  // Map the virtio-scsi Request header buffer
+  //
+  Status = VirtioMapAllBytesInSharedBuffer (
+             Dev->VirtIo,
+             VirtioOperationBusMasterRead,
+             (VOID *)Request,
+             sizeof (*Request),
+             &RequestDeviceAddress,
+             &RequestMapping
+             );
+  if (EFI_ERROR (Status)) {
+    Status = ReportHostAdapterError (Packet);
+    goto FreeScsiRequest;
+  }
+
+  //
+  // Map the input buffer
+  //
+  if (Packet->InTransferLength > 0) {
+    //
+    // Allocate a intermediate input buffer. This is mainly to handle the
+    // following case:
+    //  * caller submits a bi-directional request
+    //  * we perform the request fine
+    //  * but we fail to unmap the "InDataMapping"
+    //
+    // In that case simply returning the EFI_DEVICE_ERROR is not sufficient. In
+    // addition to the error code we also need to update Packet fields
+    // accordingly so that we report the full loss of the incoming transfer.
+    //
+    // We allocate a temporary buffer and map it with BusMasterCommonBuffer. If
+    // the Virtio request is successful then we copy the data from temporary
+    // buffer into Packet->InDataBuffer.
+    //
+    InDataNumPages = EFI_SIZE_TO_PAGES ((UINTN)Packet->InTransferLength);
+    Status         = Dev->VirtIo->AllocateSharedPages (
+                                    Dev->VirtIo,
+                                    InDataNumPages,
+                                    &InDataBuffer
+                                    );
+    if (EFI_ERROR (Status)) {
+      Status = ReportHostAdapterError (Packet);
+      goto UnmapRequestBuffer;
+    }
+
+    ZeroMem (InDataBuffer, Packet->InTransferLength);
+
+    Status = VirtioMapAllBytesInSharedBuffer (
+               Dev->VirtIo,
+               VirtioOperationBusMasterCommonBuffer,
+               InDataBuffer,
+               Packet->InTransferLength,
+               &InDataDeviceAddress,
+               &InDataMapping
+               );
+    if (EFI_ERROR (Status)) {
+      Status = ReportHostAdapterError (Packet);
+      goto FreeInDataBuffer;
+    }
+  }
+
+  //
+  // Map the output buffer
+  //
+  if (Packet->OutTransferLength > 0) {
+    Status = VirtioMapAllBytesInSharedBuffer (
+               Dev->VirtIo,
+               VirtioOperationBusMasterRead,
+               Packet->OutDataBuffer,
+               Packet->OutTransferLength,
+               &OutDataDeviceAddress,
+               &OutDataMapping
+               );
+    if (EFI_ERROR (Status)) {
+      Status = ReportHostAdapterError (Packet);
+      goto UnmapInDataBuffer;
+    }
+
+    OutDataBufferIsMapped = TRUE;
+  }
+
+  //
+  // Response header is bi-direction (we preset with host status and expect
+  // the device to update it). Allocate a response buffer which can be mapped
+  // to access equally by both processor and device.
+  //
+  Status = Dev->VirtIo->AllocateSharedPages (
+                          Dev->VirtIo,
+                          EFI_SIZE_TO_PAGES (sizeof *Response),
+                          &ResponseBuffer
+                          );
+  if (EFI_ERROR (Status)) {
+    Status = ReportHostAdapterError (Packet);
+    goto UnmapOutDataBuffer;
+  }
+
+  Response = ResponseBuffer;
+
+  ZeroMem ((VOID *)Response, sizeof (*Response));
 
   //
   // preset a host status for ourselves that we do not accept as success
   //
-  Response.Response = VIRTIO_SCSI_S_FAILURE;
+  Response->Response = VIRTIO_SCSI_S_FAILURE;
+
+  //
+  // Map the response buffer with BusMasterCommonBuffer so that response
+  // buffer can be accessed by both host and device.
+  //
+  Status = VirtioMapAllBytesInSharedBuffer (
+             Dev->VirtIo,
+             VirtioOperationBusMasterCommonBuffer,
+             ResponseBuffer,
+             sizeof (*Response),
+             &ResponseDeviceAddress,
+             &ResponseMapping
+             );
+  if (EFI_ERROR (Status)) {
+    Status = ReportHostAdapterError (Packet);
+    goto FreeResponseBuffer;
+  }
+
+  VirtioPrepare (&Dev->Ring, &Indices);
 
   //
   // ensured by VirtioScsiInit() -- this predicate, in combination with the
@@ -438,63 +607,124 @@ VirtioScsiPassThru (
   //
   // enqueue Request
   //
-  VirtioAppendDesc (&Dev->Ring, (UINTN) &Request, sizeof Request,
-    VRING_DESC_F_NEXT, &Indices);
+  VirtioAppendDesc (
+    &Dev->Ring,
+    RequestDeviceAddress,
+    sizeof (*Request),
+    VRING_DESC_F_NEXT,
+    &Indices
+    );
 
   //
   // enqueue "dataout" if any
   //
   if (Packet->OutTransferLength > 0) {
-    VirtioAppendDesc (&Dev->Ring, (UINTN) Packet->OutDataBuffer,
-      Packet->OutTransferLength, VRING_DESC_F_NEXT, &Indices);
+    VirtioAppendDesc (
+      &Dev->Ring,
+      OutDataDeviceAddress,
+      Packet->OutTransferLength,
+      VRING_DESC_F_NEXT,
+      &Indices
+      );
   }
 
   //
   // enqueue Response, to be written by the host
   //
-  VirtioAppendDesc (&Dev->Ring, (UINTN) &Response, sizeof Response,
-    VRING_DESC_F_WRITE | (Packet->InTransferLength > 0 ?
-                          VRING_DESC_F_NEXT : 0),
-    &Indices);
+  VirtioAppendDesc (
+    &Dev->Ring,
+    ResponseDeviceAddress,
+    sizeof *Response,
+    VRING_DESC_F_WRITE | (Packet->InTransferLength > 0 ? VRING_DESC_F_NEXT : 0),
+    &Indices
+    );
 
   //
   // enqueue "datain" if any, to be written by the host
   //
   if (Packet->InTransferLength > 0) {
-    VirtioAppendDesc (&Dev->Ring, (UINTN) Packet->InDataBuffer,
-      Packet->InTransferLength, VRING_DESC_F_WRITE, &Indices);
+    VirtioAppendDesc (
+      &Dev->Ring,
+      InDataDeviceAddress,
+      Packet->InTransferLength,
+      VRING_DESC_F_WRITE,
+      &Indices
+      );
   }
 
   // If kicking the host fails, we must fake a host adapter error.
   // EFI_NOT_READY would save us the effort, but it would also suggest that the
   // caller retry.
   //
-  if (VirtioFlush (Dev->VirtIo, VIRTIO_SCSI_REQUEST_QUEUE, &Dev->Ring,
-        &Indices, NULL) != EFI_SUCCESS) {
-    Packet->InTransferLength  = 0;
-    Packet->OutTransferLength = 0;
-    Packet->HostAdapterStatus = EFI_EXT_SCSI_STATUS_HOST_ADAPTER_OTHER;
-    Packet->TargetStatus      = EFI_EXT_SCSI_STATUS_TARGET_GOOD;
-    Packet->SenseDataLength   = 0;
-    return EFI_DEVICE_ERROR;
+  if (VirtioFlush (
+        Dev->VirtIo,
+        VIRTIO_SCSI_REQUEST_QUEUE,
+        &Dev->Ring,
+        &Indices,
+        NULL
+        ) != EFI_SUCCESS)
+  {
+    Status = ReportHostAdapterError (Packet);
+    goto UnmapResponseBuffer;
   }
 
-  return ParseResponse (Packet, &Response);
-}
+  Status = ParseResponse (Packet, Response);
 
+  //
+  // If virtio request was successful and it was a CPU read request then we
+  // have used an intermediate buffer. Copy the data from intermediate buffer
+  // to the final buffer.
+  //
+  if (InDataBuffer != NULL) {
+    CopyMem (Packet->InDataBuffer, InDataBuffer, Packet->InTransferLength);
+  }
+
+UnmapResponseBuffer:
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, ResponseMapping);
+
+FreeResponseBuffer:
+  Dev->VirtIo->FreeSharedPages (
+                 Dev->VirtIo,
+                 EFI_SIZE_TO_PAGES (sizeof *Response),
+                 ResponseBuffer
+                 );
+
+UnmapOutDataBuffer:
+  if (OutDataBufferIsMapped) {
+    Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, OutDataMapping);
+  }
+
+UnmapInDataBuffer:
+  if (InDataBuffer != NULL) {
+    Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, InDataMapping);
+  }
+
+FreeInDataBuffer:
+  if (InDataBuffer != NULL) {
+    Dev->VirtIo->FreeSharedPages (Dev->VirtIo, InDataNumPages, InDataBuffer);
+  }
+
+UnmapRequestBuffer:
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, RequestMapping);
+
+FreeScsiRequest:
+  FreePool ((VOID *)Request);
+
+  return Status;
+}
 
 EFI_STATUS
 EFIAPI
 VirtioScsiGetNextTargetLun (
-  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This,
-  IN OUT UINT8                           **TargetPointer,
-  IN OUT UINT64                          *Lun
+  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This,
+  IN OUT UINT8                            **TargetPointer,
+  IN OUT UINT64                           *Lun
   )
 {
-  UINT8     *Target;
-  UINTN     Idx;
-  UINT16    LastTarget;
-  VSCSI_DEV *Dev;
+  UINT8      *Target;
+  UINTN      Idx;
+  UINT16     LastTarget;
+  VSCSI_DEV  *Dev;
 
   //
   // the TargetPointer input parameter is unnecessarily a pointer-to-pointer
@@ -504,8 +734,9 @@ VirtioScsiGetNextTargetLun (
   //
   // Search for first non-0xFF byte. If not found, return first target & LUN.
   //
-  for (Idx = 0; Idx < TARGET_MAX_BYTES && Target[Idx] == 0xFF; ++Idx)
-    ;
+  for (Idx = 0; Idx < TARGET_MAX_BYTES && Target[Idx] == 0xFF; ++Idx) {
+  }
+
   if (Idx == TARGET_MAX_BYTES) {
     SetMem (Target, TARGET_MAX_BYTES, 0x00);
     *Lun = 0;
@@ -521,7 +752,7 @@ VirtioScsiGetNextTargetLun (
   // increment (target, LUN) pair if valid on input
   //
   Dev = VIRTIO_SCSI_FROM_PASS_THRU (This);
-  if (LastTarget > Dev->MaxTarget || *Lun > Dev->MaxLun) {
+  if ((LastTarget > Dev->MaxTarget) || (*Lun > Dev->MaxLun)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -540,19 +771,18 @@ VirtioScsiGetNextTargetLun (
   return EFI_NOT_FOUND;
 }
 
-
 EFI_STATUS
 EFIAPI
 VirtioScsiBuildDevicePath (
-  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This,
-  IN     UINT8                           *Target,
-  IN     UINT64                          Lun,
-  IN OUT EFI_DEVICE_PATH_PROTOCOL        **DevicePath
+  IN     EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This,
+  IN     UINT8                            *Target,
+  IN     UINT64                           Lun,
+  IN OUT EFI_DEVICE_PATH_PROTOCOL         **DevicePath
   )
 {
-  UINT16           TargetValue;
-  VSCSI_DEV        *Dev;
-  SCSI_DEVICE_PATH *ScsiDevicePath;
+  UINT16            TargetValue;
+  VSCSI_DEV         *Dev;
+  SCSI_DEVICE_PATH  *ScsiDevicePath;
 
   if (DevicePath == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -560,7 +790,7 @@ VirtioScsiBuildDevicePath (
 
   CopyMem (&TargetValue, Target, sizeof TargetValue);
   Dev = VIRTIO_SCSI_FROM_PASS_THRU (This);
-  if (TargetValue > Dev->MaxTarget || Lun > Dev->MaxLun || Lun > 0xFFFF) {
+  if ((TargetValue > Dev->MaxTarget) || (Lun > Dev->MaxLun) || (Lun > 0xFFFF)) {
     return EFI_NOT_FOUND;
   }
 
@@ -571,43 +801,45 @@ VirtioScsiBuildDevicePath (
 
   ScsiDevicePath->Header.Type      = MESSAGING_DEVICE_PATH;
   ScsiDevicePath->Header.SubType   = MSG_SCSI_DP;
-  ScsiDevicePath->Header.Length[0] = (UINT8)  sizeof *ScsiDevicePath;
-  ScsiDevicePath->Header.Length[1] = (UINT8) (sizeof *ScsiDevicePath >> 8);
+  ScsiDevicePath->Header.Length[0] = (UINT8)sizeof *ScsiDevicePath;
+  ScsiDevicePath->Header.Length[1] = (UINT8)(sizeof *ScsiDevicePath >> 8);
   ScsiDevicePath->Pun              = TargetValue;
-  ScsiDevicePath->Lun              = (UINT16) Lun;
+  ScsiDevicePath->Lun              = (UINT16)Lun;
 
   *DevicePath = &ScsiDevicePath->Header;
   return EFI_SUCCESS;
 }
 
-
 EFI_STATUS
 EFIAPI
 VirtioScsiGetTargetLun (
-  IN  EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This,
-  IN  EFI_DEVICE_PATH_PROTOCOL        *DevicePath,
-  OUT UINT8                           **TargetPointer,
-  OUT UINT64                          *Lun
+  IN  EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This,
+  IN  EFI_DEVICE_PATH_PROTOCOL         *DevicePath,
+  OUT UINT8                            **TargetPointer,
+  OUT UINT64                           *Lun
   )
 {
-  SCSI_DEVICE_PATH *ScsiDevicePath;
-  VSCSI_DEV        *Dev;
-  UINT8            *Target;
+  SCSI_DEVICE_PATH  *ScsiDevicePath;
+  VSCSI_DEV         *Dev;
+  UINT8             *Target;
 
-  if (DevicePath == NULL || TargetPointer == NULL || *TargetPointer == NULL ||
-      Lun == NULL) {
+  if ((DevicePath == NULL) || (TargetPointer == NULL) || (*TargetPointer == NULL) ||
+      (Lun == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (DevicePath->Type    != MESSAGING_DEVICE_PATH ||
-      DevicePath->SubType != MSG_SCSI_DP) {
+  if ((DevicePath->Type    != MESSAGING_DEVICE_PATH) ||
+      (DevicePath->SubType != MSG_SCSI_DP))
+  {
     return EFI_UNSUPPORTED;
   }
 
-  ScsiDevicePath = (SCSI_DEVICE_PATH *) DevicePath;
-  Dev = VIRTIO_SCSI_FROM_PASS_THRU (This);
-  if (ScsiDevicePath->Pun > Dev->MaxTarget ||
-      ScsiDevicePath->Lun > Dev->MaxLun) {
+  ScsiDevicePath = (SCSI_DEVICE_PATH *)DevicePath;
+  Dev            = VIRTIO_SCSI_FROM_PASS_THRU (This);
+  if ((ScsiDevicePath->Pun > Dev->MaxTarget) ||
+      (ScsiDevicePath->Lun > Dev->MaxLun))
+  {
     return EFI_NOT_FOUND;
   }
 
@@ -624,40 +856,37 @@ VirtioScsiGetTargetLun (
   return EFI_SUCCESS;
 }
 
-
 EFI_STATUS
 EFIAPI
 VirtioScsiResetChannel (
-  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This
+  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This
   )
 {
   return EFI_UNSUPPORTED;
 }
-
 
 EFI_STATUS
 EFIAPI
 VirtioScsiResetTargetLun (
-  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This,
-  IN UINT8                           *Target,
-  IN UINT64                          Lun
+  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This,
+  IN UINT8                            *Target,
+  IN UINT64                           Lun
   )
 {
   return EFI_UNSUPPORTED;
 }
 
-
 EFI_STATUS
 EFIAPI
 VirtioScsiGetNextTarget (
-  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL *This,
-  IN OUT UINT8                       **TargetPointer
+  IN EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *This,
+  IN OUT UINT8                        **TargetPointer
   )
 {
-  UINT8     *Target;
-  UINTN     Idx;
-  UINT16    LastTarget;
-  VSCSI_DEV *Dev;
+  UINT8      *Target;
+  UINTN      Idx;
+  UINT16     LastTarget;
+  VSCSI_DEV  *Dev;
 
   //
   // the TargetPointer input parameter is unnecessarily a pointer-to-pointer
@@ -667,8 +896,9 @@ VirtioScsiGetNextTarget (
   //
   // Search for first non-0xFF byte. If not found, return first target.
   //
-  for (Idx = 0; Idx < TARGET_MAX_BYTES && Target[Idx] == 0xFF; ++Idx)
-    ;
+  for (Idx = 0; Idx < TARGET_MAX_BYTES && Target[Idx] == 0xFF; ++Idx) {
+  }
+
   if (Idx == TARGET_MAX_BYTES) {
     SetMem (Target, TARGET_MAX_BYTES, 0x00);
     return EFI_SUCCESS;
@@ -696,39 +926,38 @@ VirtioScsiGetNextTarget (
   return EFI_NOT_FOUND;
 }
 
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioScsiInit (
-  IN OUT VSCSI_DEV *Dev
+  IN OUT VSCSI_DEV  *Dev
   )
 {
-  UINT8      NextDevStat;
-  EFI_STATUS Status;
-
-  UINT64     Features;
-  UINT16     MaxChannel; // for validation only
-  UINT32     NumQueues;  // for validation only
-  UINT16     QueueSize;
+  UINT8       NextDevStat;
+  EFI_STATUS  Status;
+  UINT64      RingBaseShift;
+  UINT64      Features;
+  UINT16      MaxChannel; // for validation only
+  UINT32      NumQueues;  // for validation only
+  UINT16      QueueSize;
 
   //
   // Execute virtio-0.9.5, 2.2.1 Device Initialization Sequence.
   //
   NextDevStat = 0;             // step 1 -- reset device
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status      = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   NextDevStat |= VSTAT_ACK;    // step 2 -- acknowledge device presence
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   NextDevStat |= VSTAT_DRIVER; // step 3 -- we know how to drive it
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
@@ -748,12 +977,14 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
-  Dev->InOutSupported = (BOOLEAN) ((Features & VIRTIO_SCSI_F_INOUT) != 0);
+
+  Dev->InOutSupported = (BOOLEAN)((Features & VIRTIO_SCSI_F_INOUT) != 0);
 
   Status = VIRTIO_CFG_READ (Dev, MaxChannel, &MaxChannel);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (MaxChannel != 0) {
     //
     // this driver is for a single-channel virtio-scsi HBA
@@ -766,6 +997,7 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (NumQueues < 1) {
     Status = EFI_UNSUPPORTED;
     goto Failed;
@@ -775,6 +1007,7 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (Dev->MaxTarget > PcdGet16 (PcdVirtioScsiMaxTargetLimit)) {
     Dev->MaxTarget = PcdGet16 (PcdVirtioScsiMaxTargetLimit);
   }
@@ -783,6 +1016,7 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (Dev->MaxLun > PcdGet32 (PcdVirtioScsiMaxLunLimit)) {
     Dev->MaxLun = PcdGet32 (PcdVirtioScsiMaxLunLimit);
   }
@@ -791,6 +1025,7 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (Dev->MaxSectors < 2) {
     //
     // We must be able to halve it for bidirectional transfers
@@ -800,7 +1035,8 @@ VirtioScsiInit (
     goto Failed;
   }
 
-  Features &= VIRTIO_SCSI_F_INOUT | VIRTIO_F_VERSION_1;
+  Features &= VIRTIO_SCSI_F_INOUT | VIRTIO_F_VERSION_1 |
+              VIRTIO_F_IOMMU_PLATFORM;
 
   //
   // In virtio-1.0, feature negotiation is expected to complete before queue
@@ -820,10 +1056,12 @@ VirtioScsiInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   Status = Dev->VirtIo->GetQueueNumMax (Dev->VirtIo, &QueueSize);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   //
   // VirtioScsiPassThru() uses at most four descriptors
   //
@@ -832,41 +1070,58 @@ VirtioScsiInit (
     goto Failed;
   }
 
-  Status = VirtioRingInit (QueueSize, &Dev->Ring);
+  Status = VirtioRingInit (Dev->VirtIo, QueueSize, &Dev->Ring);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   //
-  // Additional steps for MMIO: align the queue appropriately, and set the
-  // size. If anything fails from here on, we must release the ring resources.
+  // If anything fails from here on, we must release the ring resources
   //
-  Status = Dev->VirtIo->SetQueueNum (Dev->VirtIo, QueueSize);
+  Status = VirtioRingMap (
+             Dev->VirtIo,
+             &Dev->Ring,
+             &RingBaseShift,
+             &Dev->RingMap
+             );
   if (EFI_ERROR (Status)) {
     goto ReleaseQueue;
   }
 
+  //
+  // Additional steps for MMIO: align the queue appropriately, and set the
+  // size. If anything fails from here on, we must unmap the ring resources.
+  //
+  Status = Dev->VirtIo->SetQueueNum (Dev->VirtIo, QueueSize);
+  if (EFI_ERROR (Status)) {
+    goto UnmapQueue;
+  }
+
   Status = Dev->VirtIo->SetQueueAlign (Dev->VirtIo, EFI_PAGE_SIZE);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
   // step 4c -- Report GPFN (guest-physical frame number) of queue.
   //
-  Status = Dev->VirtIo->SetQueueAddress (Dev->VirtIo, &Dev->Ring);
+  Status = Dev->VirtIo->SetQueueAddress (
+                          Dev->VirtIo,
+                          &Dev->Ring,
+                          RingBaseShift
+                          );
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
   // step 5 -- Report understood features and guest-tuneables.
   //
   if (Dev->VirtIo->Revision < VIRTIO_SPEC_REVISION (1, 0, 0)) {
-    Features &= ~(UINT64)VIRTIO_F_VERSION_1;
-    Status = Dev->VirtIo->SetGuestFeatures (Dev->VirtIo, Features);
+    Features &= ~(UINT64)(VIRTIO_F_VERSION_1 | VIRTIO_F_IOMMU_PLATFORM);
+    Status    = Dev->VirtIo->SetGuestFeatures (Dev->VirtIo, Features);
     if (EFI_ERROR (Status)) {
-      goto ReleaseQueue;
+      goto UnmapQueue;
     }
   }
 
@@ -876,20 +1131,21 @@ VirtioScsiInit (
   //
   Status = VIRTIO_CFG_WRITE (Dev, CdbSize, VIRTIO_SCSI_CDB_SIZE);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
+
   Status = VIRTIO_CFG_WRITE (Dev, SenseSize, VIRTIO_SCSI_SENSE_SIZE);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
   // step 6 -- initialization complete
   //
   NextDevStat |= VSTAT_DRIVER_OK;
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
@@ -925,8 +1181,11 @@ VirtioScsiInit (
 
   return EFI_SUCCESS;
 
+UnmapQueue:
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, Dev->RingMap);
+
 ReleaseQueue:
-  VirtioRingUninit (&Dev->Ring);
+  VirtioRingUninit (Dev->VirtIo, &Dev->Ring);
 
 Failed:
   //
@@ -944,12 +1203,11 @@ Failed:
   return Status; // reached only via Failed above
 }
 
-
 STATIC
 VOID
 EFIAPI
 VirtioScsiUninit (
-  IN OUT VSCSI_DEV *Dev
+  IN OUT VSCSI_DEV  *Dev
   )
 {
   //
@@ -964,12 +1222,12 @@ VirtioScsiUninit (
   Dev->MaxLun         = 0;
   Dev->MaxSectors     = 0;
 
-  VirtioRingUninit (&Dev->Ring);
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, Dev->RingMap);
+  VirtioRingUninit (Dev->VirtIo, &Dev->Ring);
 
-  SetMem (&Dev->PassThru,     sizeof Dev->PassThru,     0x00);
+  SetMem (&Dev->PassThru, sizeof Dev->PassThru, 0x00);
   SetMem (&Dev->PassThruMode, sizeof Dev->PassThruMode, 0x00);
 }
-
 
 //
 // Event notification function enqueued by ExitBootServices().
@@ -979,12 +1237,13 @@ STATIC
 VOID
 EFIAPI
 VirtioScsiExitBoot (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
-  VSCSI_DEV *Dev;
+  VSCSI_DEV  *Dev;
 
+  DEBUG ((DEBUG_VERBOSE, "%a: Context=0x%p\n", __func__, Context));
   //
   // Reset the device. This causes the hypervisor to forget about the virtio
   // ring.
@@ -995,7 +1254,6 @@ VirtioScsiExitBoot (
   Dev = Context;
   Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, 0);
 }
-
 
 //
 // Probe, start and stop functions of this driver, called by the DXE core for
@@ -1015,13 +1273,13 @@ VirtioScsiExitBoot (
 EFI_STATUS
 EFIAPI
 VirtioScsiDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS             Status;
-  VIRTIO_DEVICE_PROTOCOL *VirtIo;
+  EFI_STATUS              Status;
+  VIRTIO_DEVICE_PROTOCOL  *VirtIo;
 
   //
   // Attempt to open the device with the VirtIo set of interfaces. On success,
@@ -1050,31 +1308,39 @@ VirtioScsiDriverBindingSupported (
   // We needed VirtIo access only transitorily, to see whether we support the
   // device or not.
   //
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
   return Status;
 }
-
 
 EFI_STATUS
 EFIAPI
 VirtioScsiDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  VSCSI_DEV  *Dev;
-  EFI_STATUS Status;
+  VSCSI_DEV   *Dev;
+  EFI_STATUS  Status;
 
-  Dev = (VSCSI_DEV *) AllocateZeroPool (sizeof *Dev);
+  Dev = (VSCSI_DEV *)AllocateZeroPool (sizeof *Dev);
   if (Dev == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = gBS->OpenProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-                  (VOID **)&Dev->VirtIo, This->DriverBindingHandle,
-                  DeviceHandle, EFI_OPEN_PROTOCOL_BY_DRIVER);
+  Status = gBS->OpenProtocol (
+                  DeviceHandle,
+                  &gVirtioDeviceProtocolGuid,
+                  (VOID **)&Dev->VirtIo,
+                  This->DriverBindingHandle,
+                  DeviceHandle,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
   if (EFI_ERROR (Status)) {
     goto FreeVirtioScsi;
   }
@@ -1087,8 +1353,13 @@ VirtioScsiDriverBindingStart (
     goto CloseVirtIo;
   }
 
-  Status = gBS->CreateEvent (EVT_SIGNAL_EXIT_BOOT_SERVICES, TPL_CALLBACK,
-                  &VirtioScsiExitBoot, Dev, &Dev->ExitBoot);
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
+                  TPL_CALLBACK,
+                  &VirtioScsiExitBoot,
+                  Dev,
+                  &Dev->ExitBoot
+                  );
   if (EFI_ERROR (Status)) {
     goto UninitDev;
   }
@@ -1098,9 +1369,12 @@ VirtioScsiDriverBindingStart (
   // interface.
   //
   Dev->Signature = VSCSI_SIG;
-  Status = gBS->InstallProtocolInterface (&DeviceHandle,
-                  &gEfiExtScsiPassThruProtocolGuid, EFI_NATIVE_INTERFACE,
-                  &Dev->PassThru);
+  Status         = gBS->InstallProtocolInterface (
+                          &DeviceHandle,
+                          &gEfiExtScsiPassThruProtocolGuid,
+                          EFI_NATIVE_INTERFACE,
+                          &Dev->PassThru
+                          );
   if (EFI_ERROR (Status)) {
     goto CloseExitBoot;
   }
@@ -1114,8 +1388,12 @@ UninitDev:
   VirtioScsiUninit (Dev);
 
 CloseVirtIo:
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
 FreeVirtioScsi:
   FreePool (Dev);
@@ -1123,19 +1401,18 @@ FreeVirtioScsi:
   return Status;
 }
 
-
 EFI_STATUS
 EFIAPI
 VirtioScsiDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN UINTN                       NumberOfChildren,
-  IN EFI_HANDLE                  *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS                      Status;
-  EFI_EXT_SCSI_PASS_THRU_PROTOCOL *PassThru;
-  VSCSI_DEV                       *Dev;
+  EFI_STATUS                       Status;
+  EFI_EXT_SCSI_PASS_THRU_PROTOCOL  *PassThru;
+  VSCSI_DEV                        *Dev;
 
   Status = gBS->OpenProtocol (
                   DeviceHandle,                     // candidate device
@@ -1154,8 +1431,11 @@ VirtioScsiDriverBindingStop (
   //
   // Handle Stop() requests for in-use driver instances gracefully.
   //
-  Status = gBS->UninstallProtocolInterface (DeviceHandle,
-                  &gEfiExtScsiPassThruProtocolGuid, &Dev->PassThru);
+  Status = gBS->UninstallProtocolInterface (
+                  DeviceHandle,
+                  &gEfiExtScsiPassThruProtocolGuid,
+                  &Dev->PassThru
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1164,21 +1444,24 @@ VirtioScsiDriverBindingStop (
 
   VirtioScsiUninit (Dev);
 
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
   FreePool (Dev);
 
   return EFI_SUCCESS;
 }
 
-
 //
 // The static object that groups the Supported() (ie. probe), Start() and
 // Stop() functions of the driver together. Refer to UEFI Spec 2.3.1 + Errata
 // C, 10.1 EFI Driver Binding Protocol.
 //
-STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
+STATIC EFI_DRIVER_BINDING_PROTOCOL  gDriverBinding = {
   &VirtioScsiDriverBindingSupported,
   &VirtioScsiDriverBindingStart,
   &VirtioScsiDriverBindingStop,
@@ -1187,7 +1470,6 @@ STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
         // EfiLibInstallDriverBindingComponentName2() in VirtioScsiEntryPoint()
   NULL  // DriverBindingHandle, ditto
 };
-
 
 //
 // The purpose of the following scaffolding (EFI_COMPONENT_NAME_PROTOCOL and
@@ -1202,20 +1484,20 @@ STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
 //
 
 STATIC
-EFI_UNICODE_STRING_TABLE mDriverNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mDriverNameTable[] = {
   { "eng;en", L"Virtio SCSI Host Driver" },
-  { NULL,     NULL                   }
+  { NULL,     NULL                       }
 };
 
 STATIC
-EFI_COMPONENT_NAME_PROTOCOL gComponentName;
+EFI_COMPONENT_NAME_PROTOCOL  gComponentName;
 
 EFI_STATUS
 EFIAPI
 VirtioScsiGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -1230,30 +1512,29 @@ VirtioScsiGetDriverName (
 EFI_STATUS
 EFIAPI
 VirtioScsiGetDeviceName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  EFI_HANDLE                  DeviceHandle,
-  IN  EFI_HANDLE                  ChildHandle,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   DeviceHandle,
+  IN  EFI_HANDLE                   ChildHandle,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   return EFI_UNSUPPORTED;
 }
 
 STATIC
-EFI_COMPONENT_NAME_PROTOCOL gComponentName = {
+EFI_COMPONENT_NAME_PROTOCOL  gComponentName = {
   &VirtioScsiGetDriverName,
   &VirtioScsiGetDeviceName,
   "eng" // SupportedLanguages, ISO 639-2 language codes
 };
 
 STATIC
-EFI_COMPONENT_NAME2_PROTOCOL gComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)     &VirtioScsiGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) &VirtioScsiGetDeviceName,
+EFI_COMPONENT_NAME2_PROTOCOL  gComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)&VirtioScsiGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)&VirtioScsiGetDeviceName,
   "en" // SupportedLanguages, RFC 4646 language codes
 };
-
 
 //
 // Entry point of this driver.
@@ -1261,8 +1542,8 @@ EFI_COMPONENT_NAME2_PROTOCOL gComponentName2 = {
 EFI_STATUS
 EFIAPI
 VirtioScsiEntryPoint (
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   return EfiLibInstallDriverBindingComponentName2 (

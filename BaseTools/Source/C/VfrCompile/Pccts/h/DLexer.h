@@ -30,6 +30,8 @@
  * 1989-2000
  */
 
+#include <assert.h>
+
 #define ZZINC {if ( track_columns ) (++_endcol);}
 
 #define ZZGETC {ch = input->nextChar(); cl = ZZSHIFT(ch);}
@@ -63,9 +65,9 @@ mode( int m )
 ANTLRTokenType DLGLexer::
 nextTokenType(void)
 {
-	register int state, newstate;
+	int state, newstate;
 	/* last space reserved for the null char */
-	register DLGChar *lastpos;
+	DLGChar *lastpos;
 	ANTLRTokenType tk;
 
 skip:
@@ -114,6 +116,7 @@ more:
 		state = dfa_base[automaton];
 		while (ZZNEWSTATE != DfaStates) {
 			state = newstate;
+            assert(state <= sizeof(dfa)/sizeof(dfa[0]));
 			ZZCOPY;
 			ZZGETC;
 			ZZINC;

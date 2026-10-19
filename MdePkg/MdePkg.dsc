@@ -1,62 +1,43 @@
 ## @file
 # EFI/PI MdePkg Package
 #
-# Copyright (c) 2007 - 2016, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2007 - 2022, Intel Corporation. All rights reserved.<BR>
 # Portions copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
+# (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
+# Copyright (c) 2022, Loongson Technology Corporation Limited. All rights reserved.<BR>
 #
-#    This program and the accompanying materials
-#    are licensed and made available under the terms and conditions of the BSD License
-#    which accompanies this distribution. The full text of the license may be found at
-#    http://opensource.org/licenses/bsd-license.php
-#
-#    THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#    WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
 [Defines]
   PLATFORM_NAME                  = Mde
   PLATFORM_GUID                  = 082F8BFC-0455-4859-AE3C-ECD64FB81642
-  PLATFORM_VERSION               = 1.06
+  PLATFORM_VERSION               = 1.08
   DSC_SPECIFICATION              = 0x00010005
   OUTPUT_DIRECTORY               = Build/Mde
-  SUPPORTED_ARCHITECTURES        = IA32|IPF|X64|EBC|ARM|AARCH64
+  SUPPORTED_ARCHITECTURES        = IA32|X64|EBC|AARCH64|RISCV64|LOONGARCH64
   BUILD_TARGETS                  = DEBUG|RELEASE|NOOPT
   SKUID_IDENTIFIER               = DEFAULT
 
-[PcdsFeatureFlag]
-  gEfiMdePkgTokenSpaceGuid.PcdUgaConsumeSupport|TRUE
+!include UnitTestFrameworkPkg/UnitTestFrameworkPkgTarget.dsc.inc
+
+!include MdePkg/MdeLibs.dsc.inc
 
 [PcdsFixedAtBuild]
   gEfiMdePkgTokenSpaceGuid.PcdDebugPropertyMask|0x0f
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x80000000
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress|0xE0000000
 
-[PcdsFixedAtBuild.IPF]
-  gEfiMdePkgTokenSpaceGuid.PcdIoBlockBaseAddressForIpf|0x0ffffc000000
-
-###################################################################################################
-#
-# Components Section - list of the modules and components that will be processed by compilation
-#                      tools and the EDK II tools to generate PE32/PE32+/Coff image files.
-#
-# Note: The EDK II DSC file is not used to specify how compiled binary images get placed
-#       into firmware volume images. This section is just a list of modules to compile from
-#       source into UEFI-compliant binaries.
-#       It is the FDF file that contains information on combining binary files into firmware
-#       volume images, whose concept is beyond UEFI and is described in PI specification.
-#       Binary modules do not need to be listed in this section, as they should be
-#       specified in the FDF file. For example: Shell binary (Shell_Full.efi), FAT binary (Fat.efi),
-#       Logo (Logo.bmp), and etc.
-#       There may also be modules listed in this section that are not required in the FDF file,
-#       When a module listed here is excluded from FDF file, then UEFI-compliant binary will be
-#       generated for it, but the binary will not be put into any firmware volume.
-#
-###################################################################################################
+[LibraryClasses]
+  SafeIntLib|MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
 
 [Components]
+  MdePkg/Library/UefiFileHandleLib/UefiFileHandleLib.inf
   MdePkg/Library/BaseCacheMaintenanceLib/BaseCacheMaintenanceLib.inf
+  MdePkg/Library/BaseCacheMaintenanceLibNull/BaseCacheMaintenanceLibNull.inf
   MdePkg/Library/BaseCpuLib/BaseCpuLib.inf
+  MdePkg/Library/BaseCpuLibNull/BaseCpuLibNull.inf
   MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
   MdePkg/Library/BaseDebugLibSerialPort/BaseDebugLibSerialPort.inf
   MdePkg/Library/BaseDebugPrintErrorLevelLib/BaseDebugPrintErrorLevelLib.inf
@@ -69,6 +50,11 @@
   MdePkg/Library/BasePciLibCf8/BasePciLibCf8.inf
   MdePkg/Library/BasePciLibPciExpress/BasePciLibPciExpress.inf
   MdePkg/Library/BasePciSegmentLibPci/BasePciSegmentLibPci.inf
+  MdePkg/Library/BasePciSegmentInfoLibNull/BasePciSegmentInfoLibNull.inf
+  MdePkg/Library/PciSegmentLibSegmentInfo/BasePciSegmentLibSegmentInfo.inf
+  MdePkg/Library/PciSegmentLibSegmentInfo/DxeRuntimePciSegmentLibSegmentInfo.inf
+  MdePkg/Library/BaseS3PciSegmentLib/BaseS3PciSegmentLib.inf
+  MdePkg/Library/BaseArmTrngLibNull/BaseArmTrngLibNull.inf
   MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
   MdePkg/Library/BasePeCoffLib/BasePeCoffLib.inf
   MdePkg/Library/BasePeCoffExtraActionLibNull/BasePeCoffExtraActionLibNull.inf
@@ -77,11 +63,17 @@
   MdePkg/Library/BasePostCodeLibPort80/BasePostCodeLibPort80.inf
   MdePkg/Library/BasePrintLib/BasePrintLib.inf
   MdePkg/Library/BaseReportStatusCodeLibNull/BaseReportStatusCodeLibNull.inf
+  MdePkg/Library/DxeRngLib/DxeRngLib.inf
+  MdePkg/Library/BaseRngLibNull/BaseRngLibNull.inf
+  MdePkg/Library/BaseRngLibTimerLib/BaseRngLibTimerLib.inf
+
   MdePkg/Library/BaseSerialPortLibNull/BaseSerialPortLibNull.inf
   MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
   MdePkg/Library/BaseTimerLibNullTemplate/BaseTimerLibNullTemplate.inf
   MdePkg/Library/BaseUefiDecompressLib/BaseUefiDecompressLib.inf
+  MdePkg/Library/BaseUefiDecompressLib/BaseUefiTianoCustomDecompressLib.inf
   MdePkg/Library/BaseSmbusLibNull/BaseSmbusLibNull.inf
+  MdePkg/Library/BaseSafeIntLib/BaseSafeIntLib.inf
 
   MdePkg/Library/DxeCoreEntryPoint/DxeCoreEntryPoint.inf
   MdePkg/Library/DxeCoreHobLib/DxeCoreHobLib.inf
@@ -93,8 +85,8 @@
   MdePkg/Library/DxeSmbusLib/DxeSmbusLib.inf
   MdePkg/Library/DxeIoLibCpuIo2/DxeIoLibCpuIo2.inf
   MdePkg/Library/DxeHstiLib/DxeHstiLib.inf
-
   MdePkg/Library/DxeRuntimePciExpressLib/DxeRuntimePciExpressLib.inf
+  MdePkg/Library/DxeRuntimeDebugLibSerialPort/DxeRuntimeDebugLibSerialPort.inf
 
   MdePkg/Library/PeiCoreEntryPoint/PeiCoreEntryPoint.inf
   MdePkg/Library/PeiDxePostCodeLibReportStatusCode/PeiDxePostCodeLibReportStatusCode.inf
@@ -118,6 +110,7 @@
   MdePkg/Library/UefiDebugLibDebugPortProtocol/UefiDebugLibDebugPortProtocol.inf
   MdePkg/Library/UefiDebugLibStdErr/UefiDebugLibStdErr.inf
   MdePkg/Library/UefiDevicePathLib/UefiDevicePathLib.inf
+  MdePkg/Library/UefiDevicePathLib/UefiDevicePathLibBase.inf
   MdePkg/Library/UefiDevicePathLib/UefiDevicePathLibOptionalDevicePathProtocol.inf
   MdePkg/Library/UefiDevicePathLibDevicePathProtocol/UefiDevicePathLibDevicePathProtocol.inf
   MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
@@ -132,8 +125,47 @@
   MdePkg/Library/SmmLibNull/SmmLibNull.inf
   MdePkg/Library/BaseExtractGuidedSectionLib/BaseExtractGuidedSectionLib.inf
 
+  MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
+  MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
+
+  MdePkg/Library/RegisterFilterLibNull/RegisterFilterLibNull.inf
+  MdePkg/Library/CcProbeLibNull/CcProbeLibNull.inf
+  MdePkg/Library/SmmCpuRendezvousLibNull/SmmCpuRendezvousLibNull.inf
+
+  MdePkg/Library/JedecJep106Lib/JedecJep106Lib.inf
+  MdePkg/Library/BaseFdtLib/BaseFdtLib.inf
+  MdePkg/Library/PeiRngLib/PeiRngLib.inf
+
+  MdePkg/Library/StackCheckFailureHookLibNull/StackCheckFailureHookLibNull.inf
+  MdePkg/Library/StackCheckLibNull/StackCheckLibNull.inf
+  MdePkg/Library/StackCheckLib/StackCheckLib.inf
+  MdePkg/Library/DynamicStackCookieEntryPointLib/DxeCoreEntryPoint.inf
+  MdePkg/Library/DynamicStackCookieEntryPointLib/StandaloneMmDriverEntryPoint.inf
+  MdePkg/Library/DynamicStackCookieEntryPointLib/UefiApplicationEntryPoint.inf
+  MdePkg/Library/DynamicStackCookieEntryPointLib/UefiDriverEntryPoint.inf
+  MdePkg/Library/FvLib/FvLib.inf
+
+[Components.IA32, Components.X64, Components.AARCH64]
+  #
+  # Add UEFI Target Based Unit Tests
+  #
+  MdePkg/Test/UnitTest/Library/BaseLib/BaseLibUnitTestsUefi.inf
+
+  #
+  # Build PEIM, DXE_DRIVER, SMM_DRIVER, UEFI Shell components that test SafeIntLib
+  #
+  MdePkg/Test/UnitTest/Library/BaseSafeIntLib/TestBaseSafeIntLibPei.inf
+  MdePkg/Test/UnitTest/Library/BaseSafeIntLib/TestBaseSafeIntLibDxe.inf
+  MdePkg/Test/UnitTest/Library/BaseSafeIntLib/TestBaseSafeIntLibSmm.inf
+  MdePkg/Test/UnitTest/Library/BaseSafeIntLib/TestBaseSafeIntLibUefiShell.inf
+
+[Components.IA32, Components.X64, Components.AARCH64, Components.LOONGARCH64]
+  MdePkg/Library/BaseRngLib/BaseRngLib.inf
+
 [Components.IA32, Components.X64]
+  MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
   MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
+  MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsicSev.inf
   MdePkg/Library/BaseMemoryLibMmx/BaseMemoryLibMmx.inf
   MdePkg/Library/BaseMemoryLibOptDxe/BaseMemoryLibOptDxe.inf
   MdePkg/Library/BaseMemoryLibOptPei/BaseMemoryLibOptPei.inf
@@ -153,32 +185,44 @@
   MdePkg/Library/BaseS3SmbusLib/BaseS3SmbusLib.inf
   MdePkg/Library/BaseS3StallLib/BaseS3StallLib.inf
   MdePkg/Library/SmmMemLib/SmmMemLib.inf
-  MdePkg/Library/BaseRngLib/BaseRngLib.inf
+  MdePkg/Library/SmmIoLib/SmmIoLib.inf
   MdePkg/Library/SmmPciExpressLib/SmmPciExpressLib.inf
+  MdePkg/Library/SmiHandlerProfileLibNull/SmiHandlerProfileLibNull.inf
+  MdePkg/Library/MmServicesTableLib/MmServicesTableLib.inf
+  MdePkg/Library/MmUnblockMemoryLib/MmUnblockMemoryLibNull.inf
+  MdePkg/Library/TdxLib/TdxLib.inf
+  MdePkg/Library/MipiSysTLib/MipiSysTLib.inf
+  MdePkg/Library/TraceHubDebugSysTLibNull/TraceHubDebugSysTLibNull.inf
 
-[Components.IPF]
-  MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
-  MdePkg/Library/BasePalLibNull/BasePalLibNull.inf
-  MdePkg/Library/PeiPalLib/PeiPalLib.inf
-  MdePkg/Library/PeiServicesTablePointerLibKr7/PeiServicesTablePointerLibKr7.inf
-  MdePkg/Library/SecPeiDxeTimerLibCpu/SecPeiDxeTimerLibCpu.inf
-  MdePkg/Library/UefiPalLib/UefiPalLib.inf
-  MdePkg/Library/UefiSalLib/UefiSalLib.inf
-  MdePkg/Library/DxeExtendedSalLib/DxeExtendedSalLib.inf
-  MdePkg/Library/DxeIoLibEsal/DxeIoLibEsal.inf
-  MdePkg/Library/DxePalLibEsal/DxePalLibEsal.inf
-  MdePkg/Library/DxePciLibEsal/DxePciLibEsal.inf
-  MdePkg/Library/DxePciSegmentLibEsal/DxePciSegmentLibEsal.inf
-  MdePkg/Library/DxeRuntimeExtendedSalLib/DxeRuntimeExtendedSalLib.inf
-  MdePkg/Library/DxeSalLibEsal/DxeSalLibEsal.inf
-  MdePkg/Library/DxeTimerLibEsal/DxeTimerLibEsal.inf  
-  
+[Components.X64]
+  MdePkg/Library/DynamicStackCookieEntryPointLib/StandaloneMmCoreEntryPoint.inf
+  MdePkg/Library/StandaloneMmCoreEntryPoint/StandaloneMmCoreEntryPoint.inf
+
 [Components.EBC]
   MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsic.inf
   MdePkg/Library/UefiRuntimeLib/UefiRuntimeLib.inf
 
-[Components.ARM, Components.AARCH64]
-  MdePkg/Library/BaseStackCheckLib/BaseStackCheckLib.inf
+[Components.AARCH64]
+  MdePkg/Library/BaseIoLibIntrinsic/BaseIoLibIntrinsicArmVirt.inf
+  MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
+  MdePkg/Library/ArmSmcLib/ArmSmcLib.inf
+  MdePkg/Library/ArmSmcLibNull/ArmSmcLibNull.inf
+  MdePkg/Library/ArmSvcLib/ArmSvcLib.inf
+  MdePkg/Library/ArmFfaMemMgmtLib/ArmFfaMemMgmtLib.inf
+  MdePkg/Library/ArmLib/ArmBaseLib.inf
+  MdePkg/Library/ArmTransferListLib/ArmTransferListLib.inf
+
+[Components.RISCV64]
+  MdePkg/Library/BaseRiscVSbiLib/BaseRiscVSbiLib.inf
+  MdePkg/Library/BaseSerialPortLibRiscVSbiLib/BaseSerialPortLibRiscVSbiLib.inf
+  MdePkg/Library/BaseSerialPortLibRiscVSbiLib/BaseSerialPortLibRiscVSbiLibRam.inf
+  MdePkg/Library/PeiServicesTablePointerLibRiscV/PeiServicesTablePointerLib.inf
+  MdePkg/Library/DxeRiscvMpxyLib/DxeRiscvMpxy.inf
+  MdePkg/Library/DxeRiscvRasAgentClientLib/DxeRiscvRasAgentClientLib.inf
+  MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
+
+[Components.LOONGARCH64]
+  MdePkg/Library/PeiServicesTablePointerLibKs0/PeiServicesTablePointerLibKs0.inf
+  MdePkg/Library/CompilerIntrinsicsLib/CompilerIntrinsicsLib.inf
 
 [BuildOptions]
-  *_*_*_CC_FLAGS = -D DISABLE_NEW_DEPRECATED_INTERFACES

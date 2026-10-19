@@ -1,19 +1,12 @@
 /** @file
   Declares menubar interface functions.
 
-  Copyright (c) 2005 - 2011, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _LIB_MENU_BAR_H_
-#define _LIB_MENU_BAR_H_
+#pragma once
 
 #define SCAN_CONTROL_E  5
 #define SCAN_CONTROL_F  6
@@ -28,7 +21,6 @@
 #define SCAN_CONTROL_W  23
 #define SCAN_CONTROL_Z  26
 
-
 typedef
 EFI_STATUS
 (*MENU_ITEM_FUNCTION) (
@@ -36,9 +28,9 @@ EFI_STATUS
   );
 
 typedef struct _EDITOR_MENU_ITEM {
-  EFI_STRING_ID           NameToken;
-  CHAR16                  FunctionKeyToken;
-  MENU_ITEM_FUNCTION  Function;
+  EFI_STRING_ID         NameToken;
+  CHAR16                FunctionKeyToken;
+  MENU_ITEM_FUNCTION    Function;
 } EDITOR_MENU_ITEM;
 
 /**
@@ -84,8 +76,8 @@ MenuBarCleanup (
 **/
 EFI_STATUS
 MenuBarRefresh (
-  IN CONST UINTN LastRow,
-  IN CONST UINTN LastCol
+  IN CONST UINTN  LastRow,
+  IN CONST UINTN  LastCol
   );
 
 /**
@@ -93,27 +85,25 @@ MenuBarRefresh (
 
   @param[in] Key                The pressed key.
 
-  @retval EFI_NOT_FOUND         The key was not a valid function key 
+  @retval EFI_NOT_FOUND         The key was not a valid function key
                                 (an error was sent to the status bar).
   @return The return value from the called dispatch function.
 **/
 EFI_STATUS
 MenuBarDispatchFunctionKey (
-  IN CONST EFI_INPUT_KEY   *Key
+  IN CONST EFI_INPUT_KEY  *Key
   );
 
 /**
   Function to dispatch the correct function based on a control-based key (ctrl+o...)
 
-  @param[in] Key                The pressed key.
+  @param[in] KeyData                The pressed key.
 
-  @retval EFI_NOT_FOUND         The key was not a valid control-based key 
+  @retval EFI_NOT_FOUND         The key was not a valid control-based key
                                 (an error was sent to the status bar).
   @return EFI_SUCCESS.
 **/
 EFI_STATUS
 MenuBarDispatchControlHotKey (
-  IN CONST EFI_INPUT_KEY   *Key
+  IN CONST EFI_KEY_DATA  *KeyData
   );
-
-#endif

@@ -1,21 +1,15 @@
 /** @file
   Install Serial IO Protocol that layers on top of a Debug Communication Library instance.
 
-  Copyright (c) 2012 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeDebugAgentLib.h"
 
 //
-// Serial I/O Protocol Interface defintions.
+// Serial I/O Protocol Interface definitions.
 //
 
 /**
@@ -31,7 +25,7 @@ EFIAPI
 SerialReset (
   IN EFI_SERIAL_IO_PROTOCOL  *This
   );
-  
+
 /**
   Set new attributes to a serial device.
 
@@ -159,7 +153,7 @@ EFI_SERIAL_IO_MODE  mSerialIoMode = {
 //
 // EFI_SERIAL_IO_PROTOCOL instance
 //
-EFI_SERIAL_IO_PROTOCOL mSerialIo = {
+EFI_SERIAL_IO_PROTOCOL  mSerialIo = {
   SERIAL_IO_INTERFACE_REVISION,
   SerialReset,
   SerialSetAttributes,
@@ -174,22 +168,22 @@ EFI_SERIAL_IO_PROTOCOL mSerialIo = {
 // Serial IO Device Path definition
 //
 typedef struct {
-  VENDOR_DEVICE_PATH        VendorDevicePath;
-  UART_DEVICE_PATH          UartDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL  EndDevicePath;
+  VENDOR_DEVICE_PATH          VendorDevicePath;
+  UART_DEVICE_PATH            UartDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    EndDevicePath;
 } SERIAL_IO_DEVICE_PATH;
 
 //
 // Serial IO Device Patch instance
 //
-SERIAL_IO_DEVICE_PATH mSerialIoDevicePath = {
+SERIAL_IO_DEVICE_PATH  mSerialIoDevicePath = {
   {
     {
       HARDWARE_DEVICE_PATH,
       HW_VENDOR_DP,
       {
-        (UINT8) (sizeof (VENDOR_DEVICE_PATH)),
-        (UINT8) ((sizeof (VENDOR_DEVICE_PATH)) >> 8)
+        (UINT8)(sizeof (VENDOR_DEVICE_PATH)),
+        (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
       }
     },
     EFI_DEBUG_AGENT_GUID,
@@ -199,8 +193,8 @@ SERIAL_IO_DEVICE_PATH mSerialIoDevicePath = {
       MESSAGING_DEVICE_PATH,
       MSG_UART_DP,
       {
-        (UINT8) (sizeof (UART_DEVICE_PATH)),
-        (UINT8) ((sizeof (UART_DEVICE_PATH)) >> 8)
+        (UINT8)(sizeof (UART_DEVICE_PATH)),
+        (UINT8)((sizeof (UART_DEVICE_PATH)) >> 8)
       }
     },
     0,
@@ -219,10 +213,10 @@ SERIAL_IO_DEVICE_PATH mSerialIoDevicePath = {
   }
 };
 
-#define DEBGU_SERIAL_IO_FIFO_DEPTH      10
+#define DEBUG_SERIAL_IO_FIFO_DEPTH  10
 //
 //  Data buffer for Terminal input character and Debug Symbols.
-//  The depth is DEBGU_SERIAL_IO_FIFO_DEPTH.
+//  The depth is DEBUG_SERIAL_IO_FIFO_DEPTH.
 //  Fields:
 //      First   UINT8: The index of the first data in array Data[].
 //      Last    UINT8: The index, which you can put a new data into array Data[].
@@ -230,34 +224,38 @@ SERIAL_IO_DEVICE_PATH mSerialIoDevicePath = {
 //      Data[]  UINT8: An array, which used to store data.
 //
 typedef struct {
-  UINT8  First;
-  UINT8  Last;
-  UINT8  Surplus;
-  UINT8  Data[DEBGU_SERIAL_IO_FIFO_DEPTH];
+  UINT8    First;
+  UINT8    Last;
+  UINT8    Surplus;
+  UINT8    Data[DEBUG_SERIAL_IO_FIFO_DEPTH];
 } DEBUG_SERIAL_FIFO;
 
 //
-// Global Varibles
+// Global Variables
 //
-EFI_HANDLE                   mSerialIoHandle        = NULL;
-UINTN                        mLoopbackBuffer        = 0;
-DEBUG_SERIAL_FIFO            mSerialFifoForTerminal = {0, 0, DEBGU_SERIAL_IO_FIFO_DEPTH, { 0 }};
-DEBUG_SERIAL_FIFO            mSerialFifoForDebug    = {0, 0, DEBGU_SERIAL_IO_FIFO_DEPTH, { 0 }};
+EFI_HANDLE         mSerialIoHandle        = NULL;
+UINTN              mLoopbackBuffer        = 0;
+DEBUG_SERIAL_FIFO  mSerialFifoForTerminal = {
+  0, 0, DEBUG_SERIAL_IO_FIFO_DEPTH, { 0 }
+};
+DEBUG_SERIAL_FIFO  mSerialFifoForDebug = {
+  0, 0, DEBUG_SERIAL_IO_FIFO_DEPTH, { 0 }
+};
 
 /**
   Detect whether specific FIFO is empty or not.
- 
+
   @param[in]  Fifo    A pointer to the Data Structure DEBUG_SERIAL_FIFO.
 
   @return whether specific FIFO is empty or not.
 
 **/
 BOOLEAN
-IsDebugTermianlFifoEmpty (
-  IN DEBUG_SERIAL_FIFO    *Fifo
+IsDebugTerminalFifoEmpty (
+  IN DEBUG_SERIAL_FIFO  *Fifo
   )
 {
-  if (Fifo->Surplus == DEBGU_SERIAL_IO_FIFO_DEPTH) {
+  if (Fifo->Surplus == DEBUG_SERIAL_IO_FIFO_DEPTH) {
     return TRUE;
   }
 
@@ -274,7 +272,7 @@ IsDebugTermianlFifoEmpty (
 **/
 BOOLEAN
 IsDebugTerminalFifoFull (
-  IN DEBUG_SERIAL_FIFO    *Fifo
+  IN DEBUG_SERIAL_FIFO  *Fifo
   )
 
 {
@@ -297,8 +295,8 @@ IsDebugTerminalFifoFull (
 **/
 EFI_STATUS
 DebugTerminalFifoAdd (
-  IN DEBUG_SERIAL_FIFO   *Fifo,
-  IN UINT8               Data
+  IN DEBUG_SERIAL_FIFO  *Fifo,
+  IN UINT8              Data
   )
 
 {
@@ -308,13 +306,14 @@ DebugTerminalFifoAdd (
   if (IsDebugTerminalFifoFull (Fifo)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // FIFO is not full can add data
   //
   Fifo->Data[Fifo->Last] = Data;
   Fifo->Surplus--;
   Fifo->Last++;
-  if (Fifo->Last == DEBGU_SERIAL_IO_FIFO_DEPTH) {
+  if (Fifo->Last == DEBUG_SERIAL_IO_FIFO_DEPTH) {
     Fifo->Last = 0;
   }
 
@@ -333,23 +332,24 @@ DebugTerminalFifoAdd (
 **/
 EFI_STATUS
 DebugTerminalFifoRemove (
-  IN  DEBUG_SERIAL_FIFO   *Fifo,
-  OUT UINT8               *Data
+  IN  DEBUG_SERIAL_FIFO  *Fifo,
+  OUT UINT8              *Data
   )
 {
   //
   // if FIFO is empty, no data can remove
   //
-  if (IsDebugTermianlFifoEmpty (Fifo)) {
+  if (IsDebugTerminalFifoEmpty (Fifo)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // FIFO is not empty, can remove data
   //
   *Data = Fifo->Data[Fifo->First];
   Fifo->Surplus++;
   Fifo->First++;
-  if (Fifo->First == DEBGU_SERIAL_IO_FIFO_DEPTH) {
+  if (Fifo->First == DEBUG_SERIAL_IO_FIFO_DEPTH) {
     Fifo->First = 0;
   }
 
@@ -357,7 +357,7 @@ DebugTerminalFifoRemove (
 }
 
 /**
-  Install EFI Serial IO protocol based on Debug Communication Library. 
+  Install EFI Serial IO protocol based on Debug Communication Library.
 
 **/
 VOID
@@ -365,16 +365,18 @@ InstallSerialIo (
   VOID
   )
 {
-  EFI_STATUS       Status;
+  EFI_STATUS  Status;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &mSerialIoHandle,
-                  &gEfiDevicePathProtocolGuid, &mSerialIoDevicePath,
-                  &gEfiSerialIoProtocolGuid,   &mSerialIo,
+                  &gEfiDevicePathProtocolGuid,
+                  &mSerialIoDevicePath,
+                  &gEfiSerialIoProtocolGuid,
+                  &mSerialIo,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Debug Agent: Failed to install EFI Serial IO Protocol on Debug Port!\n"));
+    DEBUG ((DEBUG_ERROR, "Debug Agent: Failed to install EFI Serial IO Protocol on Debug Port!\n"));
   }
 }
 
@@ -393,9 +395,9 @@ SerialReset (
   )
 {
   mSerialIoMode.ControlMask = SERIAL_PORT_DEFAULT_CONTROL_MASK;
-  mLoopbackBuffer = 0;
+  mLoopbackBuffer           = 0;
   //
-  // Not reset serial devcie hardware indeed.
+  // Not reset serial device hardware indeed.
   //
   return EFI_SUCCESS;
 }
@@ -431,12 +433,12 @@ SerialSetAttributes (
   //
   // The Debug Communication Library CAN NOT change communications parameters (if it has)
   // actually. Because it also has no any idea on what parameters are based on, we cannot
-  // check the input parameters (like BaudRate, Parity, DataBits and StopBits). 
+  // check the input parameters (like BaudRate, Parity, DataBits and StopBits).
   //
-  
+
   //
   // Update the Timeout value in the mode structure based on the request.
-  // The Debug Communication Library can not support a timeout on writes, but the timeout on 
+  // The Debug Communication Library can not support a timeout on writes, but the timeout on
   // reads can be provided by this module.
   //
   if (Timeout == 0) {
@@ -444,14 +446,14 @@ SerialSetAttributes (
   } else {
     mSerialIoMode.Timeout = Timeout;
   }
-  
+
   //
   // Update the ReceiveFifoDepth value in the mode structure based on the request.
-  // This module assumes that the Debug Communication Library uses a FIFO depth of 
-  // SERIAL_PORT_DEFAULT_RECEIVE_FIFO_DEPTH.  The Debug Communication Library may actually be 
+  // This module assumes that the Debug Communication Library uses a FIFO depth of
+  // SERIAL_PORT_DEFAULT_RECEIVE_FIFO_DEPTH.  The Debug Communication Library may actually be
   // using a larger FIFO, but there is no way to tell.
   //
-  if (ReceiveFifoDepth == 0 || ReceiveFifoDepth >= SERIAL_PORT_DEFAULT_RECEIVE_FIFO_DEPTH) {
+  if ((ReceiveFifoDepth == 0) || (ReceiveFifoDepth >= SERIAL_PORT_DEFAULT_RECEIVE_FIFO_DEPTH)) {
     mSerialIoMode.ReceiveFifoDepth = SERIAL_PORT_DEFAULT_RECEIVE_FIFO_DEPTH;
   } else {
     return EFI_INVALID_PARAMETER;
@@ -484,6 +486,7 @@ SerialSetControl (
   if ((Control & (~EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE)) != 0) {
     return EFI_UNSUPPORTED;
   }
+
   mSerialIoMode.ControlMask = Control;
   return EFI_SUCCESS;
 }
@@ -504,45 +507,45 @@ SerialGetControl (
   OUT UINT32                 *Control
   )
 {
-  DEBUG_PORT_HANDLE                Handle;
-  BOOLEAN                          DebugTimerInterruptState;
-  EFI_TPL                          Tpl;
+  DEBUG_PORT_HANDLE  Handle;
+  BOOLEAN            DebugTimerInterruptState;
+  EFI_TPL            Tpl;
 
   //
   // Raise TPL to prevent recursion from EFI timer interrupts
   //
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
-  
+
   //
   // Save and disable Debug Timer interrupt to avoid it to access Debug Port
   //
   DebugTimerInterruptState = SaveAndSetDebugTimerInterrupt (FALSE);
-  Handle = GetDebugPortHandle ();
-  
+  Handle                   = GetDebugPortHandle ();
+
   //
   // Always assume the output buffer is empty and the Debug Communication Library can process
   // more write requests.
   //
   *Control = mSerialIoMode.ControlMask | EFI_SERIAL_OUTPUT_BUFFER_EMPTY;
-  
+
   //
-  // Check to see if the Terminal FIFO is empty and 
+  // Check to see if the Terminal FIFO is empty and
   // check to see if the input buffer in the Debug Communication Library is empty
   //
-  if (!IsDebugTermianlFifoEmpty (&mSerialFifoForTerminal) || DebugPortPollBuffer (Handle)) {
+  if (!IsDebugTerminalFifoEmpty (&mSerialFifoForTerminal) || DebugPortPollBuffer (Handle)) {
     *Control &= ~EFI_SERIAL_INPUT_BUFFER_EMPTY;
   }
 
   //
   // Restore Debug Timer interrupt
-  //  
+  //
   SaveAndSetDebugTimerInterrupt (DebugTimerInterruptState);
-  
+
   //
   // Restore to original TPL
   //
   gBS->RestoreTPL (Tpl);
-  
+
   return EFI_SUCCESS;
 }
 
@@ -567,45 +570,47 @@ SerialWrite (
   IN VOID                    *Buffer
   )
 {
-  DEBUG_PORT_HANDLE                Handle;
-  BOOLEAN                          DebugTimerInterruptState;
-  EFI_TPL                          Tpl;
+  DEBUG_PORT_HANDLE  Handle;
+  BOOLEAN            DebugTimerInterruptState;
+  EFI_TPL            Tpl;
 
   //
   // Raise TPL to prevent recursion from EFI timer interrupts
   //
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
-  
+
   //
   // Save and disable Debug Timer interrupt to avoid it to access Debug Port
   //
   DebugTimerInterruptState = SaveAndSetDebugTimerInterrupt (FALSE);
-  Handle = GetDebugPortHandle ();
-  
-  if ((mSerialIoMode.ControlMask & EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE) != 0)  {
+  Handle                   = GetDebugPortHandle ();
+
+  if ((mSerialIoMode.ControlMask & EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE) != 0) {
     if (*BufferSize == 0) {
       return EFI_SUCCESS;
     }
+
     if ((mLoopbackBuffer & SERIAL_PORT_LOOPBACK_BUFFER_FULL) != 0) {
       *BufferSize = 0;
       return EFI_TIMEOUT;
     }
+
     mLoopbackBuffer = SERIAL_PORT_LOOPBACK_BUFFER_FULL | *(UINT8 *)Buffer;
-    *BufferSize = 1;
+    *BufferSize     = 1;
   } else {
     *BufferSize = DebugPortWriteBuffer (Handle, Buffer, *BufferSize);
   }
 
   //
   // Restore Debug Timer interrupt
-  //  
+  //
   SaveAndSetDebugTimerInterrupt (DebugTimerInterruptState);
-  
+
   //
   // Restore to original TPL
   //
   gBS->RestoreTPL (Tpl);
-  
+
   return EFI_SUCCESS;
 }
 
@@ -630,35 +635,36 @@ SerialRead (
   OUT VOID                   *Buffer
   )
 {
-  EFI_STATUS                  Status;
-  UINTN                       Index;
-  UINT8                       *Uint8Buffer;
-  BOOLEAN                     DebugTimerInterruptState;
-  EFI_TPL                     Tpl;
-  DEBUG_PORT_HANDLE           Handle;
-  DEBUG_PACKET_HEADER         DebugHeader;
-  UINT8                       *Data8;
+  EFI_STATUS           Status;
+  UINTN                Index;
+  UINT8                *Uint8Buffer;
+  BOOLEAN              DebugTimerInterruptState;
+  EFI_TPL              Tpl;
+  DEBUG_PORT_HANDLE    Handle;
+  DEBUG_PACKET_HEADER  DebugHeader;
+  UINT8                *Data8;
 
   //
   // Raise TPL to prevent recursion from EFI timer interrupts
   //
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
-  
+
   //
   // Save and disable Debug Timer interrupt to avoid it to access Debug Port
   //
   DebugTimerInterruptState = SaveAndSetDebugTimerInterrupt (FALSE);
-  Handle = GetDebugPortHandle ();
- 
-  Data8 = (UINT8 *) &DebugHeader;
+  Handle                   = GetDebugPortHandle ();
+
+  Data8       = (UINT8 *)&DebugHeader;
   Uint8Buffer = (UINT8 *)Buffer;
-  if ((mSerialIoMode.ControlMask & EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE) != 0)  {
+  if ((mSerialIoMode.ControlMask & EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE) != 0) {
     if ((mLoopbackBuffer & SERIAL_PORT_LOOPBACK_BUFFER_FULL) == 0) {
       return EFI_TIMEOUT;
     }
-    *Uint8Buffer = (UINT8)(mLoopbackBuffer & 0xff);
+
+    *Uint8Buffer    = (UINT8)(mLoopbackBuffer & 0xff);
     mLoopbackBuffer = 0;
-    *BufferSize = 1;
+    *BufferSize     = 1;
   } else {
     for (Index = 0; Index < *BufferSize; Index++) {
       //
@@ -667,15 +673,17 @@ SerialRead (
       Status = DebugTerminalFifoRemove (&mSerialFifoForTerminal, Data8);
       if (Status == EFI_SUCCESS) {
         *Uint8Buffer = *Data8;
-        Uint8Buffer ++;
+        Uint8Buffer++;
         continue;
       }
+
       //
-      // Read the input character from Debug Port 
+      // Read the input character from Debug Port
       //
       if (!DebugPortPollBuffer (Handle)) {
         break;
       }
+
       DebugAgentReadBuffer (Handle, Data8, 1, 0);
 
       if (*Data8 == DEBUG_STARTING_SYMBOL_ATTACH) {
@@ -690,27 +698,29 @@ SerialRead (
           DebugAgentMsgPrint (DEBUG_AGENT_INFO, "Terminal Timer break symbol received %x", DebugHeader.Command);
           DebugTerminalFifoAdd (&mSerialFifoForDebug, DebugHeader.Command);
         }
+
         if (Status == EFI_TIMEOUT) {
           continue;
         }
       } else {
         *Uint8Buffer = *Data8;
-        Uint8Buffer ++;
+        Uint8Buffer++;
       }
     }
+
     *BufferSize = (UINTN)Uint8Buffer - (UINTN)Buffer;
   }
 
   //
   // Restore Debug Timer interrupt
-  //  
+  //
   SaveAndSetDebugTimerInterrupt (DebugTimerInterruptState);
-  
+
   //
   // Restore to original TPL
   //
   gBS->RestoreTPL (Tpl);
-  
+
   return EFI_SUCCESS;
 }
 
@@ -726,19 +736,19 @@ SerialRead (
 **/
 EFI_STATUS
 DebugReadBreakFromDebugPort (
-  IN  DEBUG_PORT_HANDLE      Handle,
-  OUT UINT8                  *BreakSymbol
+  IN  DEBUG_PORT_HANDLE  Handle,
+  OUT UINT8              *BreakSymbol
   )
 {
-  EFI_STATUS                 Status;
-  DEBUG_PACKET_HEADER        DebugHeader;
-  UINT8                      *Data8;
+  EFI_STATUS           Status;
+  DEBUG_PACKET_HEADER  DebugHeader;
+  UINT8                *Data8;
 
   *BreakSymbol = 0;
   //
   // If Debug Port buffer has data, read it till it was break symbol or Debug Port buffer empty.
   //
-  Data8 = (UINT8 *) &DebugHeader;
+  Data8 = (UINT8 *)&DebugHeader;
   while (TRUE) {
     //
     // If start symbol is not received
@@ -749,6 +759,7 @@ DebugReadBreakFromDebugPort (
       //
       break;
     }
+
     //
     // Try to read the start symbol
     //
@@ -757,7 +768,8 @@ DebugReadBreakFromDebugPort (
       DebugAgentMsgPrint (DEBUG_AGENT_INFO, "Debug Timer attach symbol received %x", *Data8);
       *BreakSymbol = *Data8;
       return EFI_SUCCESS;
-    } 
+    }
+
     if (*Data8 == DEBUG_STARTING_SYMBOL_NORMAL) {
       Status = ReadRemainingBreakPacket (Handle, &DebugHeader);
       if (Status == EFI_SUCCESS) {
@@ -765,6 +777,7 @@ DebugReadBreakFromDebugPort (
         *BreakSymbol = DebugHeader.Command;
         return EFI_SUCCESS;
       }
+
       if (Status == EFI_TIMEOUT) {
         break;
       }
@@ -775,7 +788,7 @@ DebugReadBreakFromDebugPort (
       DebugTerminalFifoAdd (&mSerialFifoForTerminal, *Data8);
     }
   }
-  
+
   return EFI_NOT_FOUND;
 }
 
@@ -791,12 +804,12 @@ DebugReadBreakFromDebugPort (
 **/
 EFI_STATUS
 DebugReadBreakSymbol (
-  IN  DEBUG_PORT_HANDLE      Handle,
-  OUT UINT8                  *BreakSymbol
+  IN  DEBUG_PORT_HANDLE  Handle,
+  OUT UINT8              *BreakSymbol
   )
 {
-  EFI_STATUS               Status;
-  UINT8                    Data8;
+  EFI_STATUS  Status;
+  UINT8       Data8;
 
   //
   // Read break symbol from debug FIFO firstly

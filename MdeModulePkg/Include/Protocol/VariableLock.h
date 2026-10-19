@@ -3,26 +3,19 @@
   and intended for use as a means to mark a variable read-only after the event
   EFI_END_OF_DXE_EVENT_GUID is signaled.
 
-  Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __VARIABLE_LOCK_H__
-#define __VARIABLE_LOCK_H__
+#pragma once
 
 #define EDKII_VARIABLE_LOCK_PROTOCOL_GUID \
   { \
     0xcd3d0a05, 0x9e24, 0x437c, { 0xa8, 0x91, 0x1e, 0xe0, 0x53, 0xdb, 0x76, 0x38 } \
   }
 
-typedef struct _EDKII_VARIABLE_LOCK_PROTOCOL  EDKII_VARIABLE_LOCK_PROTOCOL;
+typedef struct _EDKII_VARIABLE_LOCK_PROTOCOL EDKII_VARIABLE_LOCK_PROTOCOL;
 
 /**
   Mark a variable that will become read-only after leaving the DXE phase of execution.
@@ -42,7 +35,7 @@ typedef struct _EDKII_VARIABLE_LOCK_PROTOCOL  EDKII_VARIABLE_LOCK_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI * EDKII_VARIABLE_LOCK_PROTOCOL_REQUEST_TO_LOCK) (
+(EFIAPI *EDKII_VARIABLE_LOCK_PROTOCOL_REQUEST_TO_LOCK)(
   IN CONST EDKII_VARIABLE_LOCK_PROTOCOL *This,
   IN       CHAR16                       *VariableName,
   IN       EFI_GUID                     *VendorGuid
@@ -54,10 +47,7 @@ EFI_STATUS
 /// EFI_END_OF_DXE_EVENT_GUID is signaled.
 ///
 struct _EDKII_VARIABLE_LOCK_PROTOCOL {
-  EDKII_VARIABLE_LOCK_PROTOCOL_REQUEST_TO_LOCK RequestToLock;
+  EDKII_VARIABLE_LOCK_PROTOCOL_REQUEST_TO_LOCK    RequestToLock;
 };
 
-extern EFI_GUID gEdkiiVariableLockProtocolGuid;
-
-#endif  
-
+extern EFI_GUID  gEdkiiVariableLockProtocolGuid;

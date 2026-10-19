@@ -2,13 +2,7 @@
   UEFI Component Name(2) protocol implementation for the generic GOP driver.
 
 Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
@@ -16,14 +10,14 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <PiDxe.h>
 #include <Library/UefiLib.h>
 
-extern EFI_COMPONENT_NAME_PROTOCOL  mGraphicsOutputComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL mGraphicsOutputComponentName2;
+extern EFI_COMPONENT_NAME_PROTOCOL   mGraphicsOutputComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL  mGraphicsOutputComponentName2;
 
 //
 // Driver name table for GraphicsOutput module.
 // It is shared by the implementation of ComponentName & ComponentName2 Protocol.
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mGraphicsOutputDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mGraphicsOutputDriverNameTable[] = {
   {
     "eng;en",
     L"Generic Graphics Output Driver"
@@ -86,7 +80,7 @@ GraphicsOutputComponentNameGetDriverName (
            This->SupportedLanguages,
            mGraphicsOutputDriverNameTable,
            DriverName,
-           (BOOLEAN) (This == &mGraphicsOutputComponentName)
+           (BOOLEAN)(This == &mGraphicsOutputComponentName)
            );
 }
 
@@ -161,11 +155,11 @@ GraphicsOutputComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 GraphicsOutputComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   return EFI_UNSUPPORTED;
@@ -183,8 +177,8 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  mGraphicsOutputCompon
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL mGraphicsOutputComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) GraphicsOutputComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) GraphicsOutputComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  mGraphicsOutputComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)GraphicsOutputComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)GraphicsOutputComponentNameGetControllerName,
   "en"
 };

@@ -1,21 +1,13 @@
 /** @file
   x64-specifc functionality for DxeLoad.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeIpl.h"
 #include "X64/VirtualMemory.h"
-
-
 
 /**
    Transfers control to DxeCore.
@@ -30,17 +22,19 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 HandOffToDxeCore (
-  IN EFI_PHYSICAL_ADDRESS   DxeCoreEntryPoint,
-  IN EFI_PEI_HOB_POINTERS   HobList
+  IN EFI_PHYSICAL_ADDRESS  DxeCoreEntryPoint,
+  IN EFI_PEI_HOB_POINTERS  HobList
   )
 {
-  VOID                            *BaseOfStack;
-  VOID                            *TopOfStack;
-  EFI_STATUS                      Status;
-  UINTN                           PageTables;
-  UINT32                          Index;
-  EFI_VECTOR_HANDOFF_INFO         *VectorInfo;
-  EFI_PEI_VECTOR_HANDOFF_INFO_PPI *VectorHandoffInfoPpi;
+  VOID                             *BaseOfStack;
+  VOID                             *TopOfStack;
+  EFI_STATUS                       Status;
+  UINTN                            PageTables;
+  UINT32                           Index;
+  EFI_VECTOR_HANDOFF_INFO          *VectorInfo;
+  EFI_PEI_VECTOR_HANDOFF_INFO_PPI  *VectorHandoffInfoPpi;
+  VOID                             *GhcbBase;
+  UINTN                            GhcbSize;
 
   //
   // Get Vector Hand-off Info PPI and build Guided HOB
@@ -52,13 +46,14 @@ HandOffToDxeCore (
              (VOID **)&VectorHandoffInfoPpi
              );
   if (Status == EFI_SUCCESS) {
-    DEBUG ((EFI_D_INFO, "Vector Hand-off Info PPI is gotten, GUIDed HOB is created!\n"));
+    DEBUG ((DEBUG_INFO, "Vector Hand-off Info PPI is gotten, GUIDed HOB is created!\n"));
     VectorInfo = VectorHandoffInfoPpi->Info;
-    Index = 1;
+    Index      = 1;
     while (VectorInfo->Attribute != EFI_VECTOR_HANDOFF_LAST_ENTRY) {
-      VectorInfo ++;
-      Index ++;
+      VectorInfo++;
+      Index++;
     }
+
     BuildGuidDataHob (
       &gEfiVectorHandoffInfoPpiGuid,
       VectorHandoffInfoPpi->Info,
@@ -76,23 +71,35 @@ HandOffToDxeCore (
   // Compute the top of the stack we were allocated. Pre-allocate a UINTN
   // for safety.
   //
-  TopOfStack = (VOID *) ((UINTN) BaseOfStack + EFI_SIZE_TO_PAGES (STACK_SIZE) * EFI_PAGE_SIZE - CPU_STACK_ALIGNMENT);
+  TopOfStack = (VOID *)((UINTN)BaseOfStack + EFI_SIZE_TO_PAGES (STACK_SIZE) * EFI_PAGE_SIZE - CPU_STACK_ALIGNMENT);
   TopOfStack = ALIGN_POINTER (TopOfStack, CPU_STACK_ALIGNMENT);
+
+  //
+  // Get the address and size of the GHCB pages
+  //
+  GhcbBase = (VOID *)PcdGet64 (PcdGhcbBase);
+  GhcbSize = PcdGet64 (PcdGhcbSize);
 
   PageTables = 0;
   if (FeaturePcdGet (PcdDxeIplBuildPageTables)) {
     //
     // Create page table and save PageMapLevel4 to CR3
     //
-    PageTables = CreateIdentityMappingPageTables ((EFI_PHYSICAL_ADDRESS) (UINTN) BaseOfStack, STACK_SIZE);
+    PageTables = CreateIdentityMappingPageTables (
+                   (EFI_PHYSICAL_ADDRESS)(UINTN)BaseOfStack,
+                   STACK_SIZE,
+                   (EFI_PHYSICAL_ADDRESS)(UINTN)GhcbBase,
+                   GhcbSize
+                   );
   } else {
     //
     // Set NX for stack feature also require PcdDxeIplBuildPageTables be TRUE
     // for the DxeIpl and the DxeCore are both X64.
     //
     ASSERT (PcdGetBool (PcdSetNxForStack) == FALSE);
+    ASSERT (PcdGetBool (PcdCpuStackGuard) == FALSE);
   }
-  
+
   //
   // End of PEI phase signal
   //
@@ -105,8 +112,8 @@ HandOffToDxeCore (
 
   //
   // Update the contents of BSP stack HOB to reflect the real stack info passed to DxeCore.
-  //    
-  UpdateStackHob ((EFI_PHYSICAL_ADDRESS)(UINTN) BaseOfStack, STACK_SIZE);
+  //
+  UpdateStackHob ((EFI_PHYSICAL_ADDRESS)(UINTN)BaseOfStack, STACK_SIZE);
 
   //
   // Transfer the control to the entry point of DxeCore.

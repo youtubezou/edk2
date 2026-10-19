@@ -1,31 +1,24 @@
 /** @file
-  
+
  Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 
- This program and the accompanying materials
- are licensed and made available under the terms and conditions of the BSD License
- which accompanies this distribution.  The full text of the license may be found at
- http://opensource.org/licenses/bsd-license.php
-
- THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
- WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __LOCK_BOX_LIB_IMPL_H__
-#define __LOCK_BOX_LIB_IMPL_H__
+#pragma once
 
 #pragma pack(1)
 
 typedef struct {
-  UINT32               Signature;
-  UINT32               SubPageBuffer;
-  UINT32               SubPageRemaining;
+  UINT32    Signature;
+  UINT32    SubPageBuffer;
+  UINT32    SubPageRemaining;
 } LOCK_BOX_GLOBAL;
 
-#define LOCK_BOX_GLOBAL_SIGNATURE SIGNATURE_32('L', 'B', 'G', 'S')
+#define LOCK_BOX_GLOBAL_SIGNATURE  SIGNATURE_32('L', 'B', 'G', 'S')
 
-extern LOCK_BOX_GLOBAL *mLockBoxGlobal;
+extern LOCK_BOX_GLOBAL  *mLockBoxGlobal;
 
 #pragma pack()
 
@@ -49,12 +42,8 @@ AllocateAcpiNvsPool (
   IN UINTN  AllocationSize
   );
 
-
 RETURN_STATUS
 EFIAPI
 LockBoxLibInitialize (
   VOID
   );
-
-
-#endif

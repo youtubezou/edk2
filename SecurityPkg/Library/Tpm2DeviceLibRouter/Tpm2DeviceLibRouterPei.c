@@ -3,14 +3,8 @@
   via PcdTpmInstanceGuid. Platform need make choice that which one will be final one.
   At most one TPM2 instance can be finally registered, and other will return unsupported.
 
-Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +15,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/PcdLib.h>
 #include <Library/Tpm2DeviceLib.h>
 
-EFI_GUID mInternalTpm2DeviceInterfaceGuid = {
+EFI_GUID  mInternalTpm2DeviceInterfaceGuid = {
   0x349cf818, 0xc0ba, 0x4c43, { 0x92, 0x9a, 0xc8, 0xa1, 0xb1, 0xb3, 0xd2, 0x55 }
 };
 
@@ -35,12 +29,13 @@ InternalGetTpm2DeviceInterface (
   VOID
   )
 {
-  EFI_HOB_GUID_TYPE *Hob;
+  EFI_HOB_GUID_TYPE  *Hob;
 
   Hob = GetFirstGuidHob (&mInternalTpm2DeviceInterfaceGuid);
   if (Hob == NULL) {
     return NULL;
   }
+
   return (TPM2_DEVICE_INTERFACE *)(Hob + 1);
 }
 
@@ -54,18 +49,18 @@ InternalGetTpm2DeviceInterface (
 
   @retval EFI_SUCCESS            The command byte stream was successfully sent to the device and a response was successfully received.
   @retval EFI_DEVICE_ERROR       The command was not successfully sent to the device or a response was not successfully received from the device.
-  @retval EFI_BUFFER_TOO_SMALL   The output parameter block is too small. 
+  @retval EFI_BUFFER_TOO_SMALL   The output parameter block is too small.
 **/
 EFI_STATUS
 EFIAPI
 Tpm2SubmitCommand (
-  IN UINT32            InputParameterBlockSize,
-  IN UINT8             *InputParameterBlock,
-  IN OUT UINT32        *OutputParameterBlockSize,
-  IN UINT8             *OutputParameterBlock
+  IN UINT32      InputParameterBlockSize,
+  IN UINT8       *InputParameterBlock,
+  IN OUT UINT32  *OutputParameterBlockSize,
+  IN UINT8       *OutputParameterBlock
   )
 {
-  TPM2_DEVICE_INTERFACE *Tpm2DeviceInterface;
+  TPM2_DEVICE_INTERFACE  *Tpm2DeviceInterface;
 
   Tpm2DeviceInterface = InternalGetTpm2DeviceInterface ();
   if (Tpm2DeviceInterface == NULL) {
@@ -93,12 +88,13 @@ Tpm2RequestUseTpm (
   VOID
   )
 {
-  TPM2_DEVICE_INTERFACE *Tpm2DeviceInterface;
+  TPM2_DEVICE_INTERFACE  *Tpm2DeviceInterface;
 
   Tpm2DeviceInterface = InternalGetTpm2DeviceInterface ();
   if (Tpm2DeviceInterface == NULL) {
     return EFI_UNSUPPORTED;
   }
+
   return Tpm2DeviceInterface->Tpm2RequestUseTpm ();
 }
 
@@ -114,13 +110,13 @@ Tpm2RequestUseTpm (
 EFI_STATUS
 EFIAPI
 Tpm2RegisterTpm2DeviceLib (
-  IN TPM2_DEVICE_INTERFACE   *Tpm2Device
+  IN TPM2_DEVICE_INTERFACE  *Tpm2Device
   )
 {
-  TPM2_DEVICE_INTERFACE *Tpm2DeviceInterface;
+  TPM2_DEVICE_INTERFACE  *Tpm2DeviceInterface;
 
-  if (!CompareGuid (PcdGetPtr(PcdTpmInstanceGuid), &Tpm2Device->ProviderGuid)){
-    DEBUG ((EFI_D_ERROR, "WARNING: Tpm2RegisterTpm2DeviceLib - does not support %g registration\n", &Tpm2Device->ProviderGuid));
+  if (!CompareGuid (PcdGetPtr (PcdTpmInstanceGuid), &Tpm2Device->ProviderGuid)) {
+    DEBUG ((DEBUG_WARN, "WARNING: Tpm2RegisterTpm2DeviceLib - does not support %g registration\n", &Tpm2Device->ProviderGuid));
     return EFI_UNSUPPORTED;
   }
 
@@ -129,11 +125,11 @@ Tpm2RegisterTpm2DeviceLib (
     //
     // In PEI phase, there will be shadow driver dispatched again.
     //
-    DEBUG ((EFI_D_INFO, "Tpm2RegisterTpm2DeviceLib - Override\n"));
-    CopyMem (Tpm2DeviceInterface, Tpm2Device, sizeof(*Tpm2Device));
+    DEBUG ((DEBUG_INFO, "Tpm2RegisterTpm2DeviceLib - Override\n"));
+    CopyMem (Tpm2DeviceInterface, Tpm2Device, sizeof (*Tpm2Device));
     return EFI_SUCCESS;
   } else {
-    Tpm2Device = BuildGuidDataHob (&mInternalTpm2DeviceInterfaceGuid, Tpm2Device, sizeof(*Tpm2Device));
+    Tpm2Device = BuildGuidDataHob (&mInternalTpm2DeviceInterfaceGuid, Tpm2Device, sizeof (*Tpm2Device));
     if (Tpm2Device != NULL) {
       return EFI_SUCCESS;
     } else {

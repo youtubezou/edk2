@@ -2,19 +2,16 @@
   Build a table, each item is (Key, Info) pair.
   And give a interface of query a string out of a table.
 
-  Copyright (c) 2005 - 2015, Intel Corporation. All rights reserved.<BR>
-  (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) Microsoft Corporation. All rights reserved.<BR>
+  Copyright (c) 2005 - 2024, Intel Corporation. All rights reserved.<BR>
+  (C) Copyright 2016-2019 Hewlett Packard Enterprise Development LP<BR>
+  Copyright (c) 2023-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  Copyright (c) 2023-2026, Arm Limited. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "../UefiShellDebug1CommandsLib.h"
+#include "UefiShellDebug1CommandsLib.h"
 #include "QueryTable.h"
 #include "PrintInfo.h"
 
@@ -166,7 +163,7 @@ TABLE_ITEM  SystemEnclosureTypeTable[] = {
   },
   {
     0x09,
-    L"  LapTop"
+    L"  Laptop"
   },
   {
     0x0A,
@@ -194,19 +191,19 @@ TABLE_ITEM  SystemEnclosureTypeTable[] = {
   },
   {
     0x10,
-    L"  Main Server Chassis"
+    L"  Lunch Box"
   },
   {
     0x11,
-    L"  Expansion Chassis"
+    L"  Main Server Chassis"
   },
   {
     0x12,
-    L"  SubChassis"
+    L"  Expansion Chassis"
   },
   {
     0x13,
-    L"  Sub Notebook"
+    L"  SubChassis"
   },
   {
     0x14,
@@ -247,6 +244,34 @@ TABLE_ITEM  SystemEnclosureTypeTable[] = {
   {
     0x1D,
     L"  Blade Enclosure"
+  },
+  {
+    0x1E,
+    L"  Tablet"
+  },
+  {
+    0x1F,
+    L"  Convertible"
+  },
+  {
+    0x20,
+    L"  Detachable"
+  },
+  {
+    0x21,
+    L"  IoT Gateway"
+  },
+  {
+    0x22,
+    L"  Embedded PC"
+  },
+  {
+    0x23,
+    L"  Mini PC"
+  },
+  {
+    0x24,
+    L"  Stick PC"
   },
 };
 
@@ -503,6 +528,178 @@ TABLE_ITEM  ProcessorUpgradeTable[] = {
   {
     0x2C,
     L"Socket LGA1356-3"
+  },
+  {
+    0x2D,
+    L"Socket LGA1150"
+  },
+  {
+    0x2E,
+    L"Socket BGA1168"
+  },
+  {
+    0x2F,
+    L"Socket BGA1234"
+  },
+  {
+    0x30,
+    L"Socket BGA1364"
+  },
+  {
+    0x31,
+    L"Socket AM4"
+  },
+  {
+    0x32,
+    L"Socket LGA1151"
+  },
+  {
+    0x33,
+    L"Socket BGA1356"
+  },
+  {
+    0x34,
+    L"Socket BGA1440"
+  },
+  {
+    0x35,
+    L"Socket BGA1515"
+  },
+  {
+    0x36,
+    L"Socket LGA3647-1"
+  },
+  {
+    0x37,
+    L"Socket SP3"
+  },
+  {
+    0x38,
+    L"Socket SP3r2"
+  },
+  {
+    0x39,
+    L"Socket LGA2066"
+  },
+  {
+    0x3A,
+    L"Socket BGA1392"
+  },
+  {
+    0x3B,
+    L"Socket BGA1510"
+  },
+  {
+    0x3C,
+    L"Socket BGA1528"
+  },
+  {
+    0x3D,
+    L"Socket LGA4189"
+  },
+  {
+    0x3E,
+    L"Socket LGA1200"
+  },
+  {
+    0x3F,
+    L"Socket LGA4677"
+  },
+  {
+    0x40,
+    L"Socket LGA1700"
+  },
+  {
+    0x41,
+    L"Socket BGA1744"
+  },
+  {
+    0x42,
+    L"Socket BGA1781"
+  },
+  {
+    0x43,
+    L"Socket BGA1211"
+  },
+  {
+    0x44,
+    L"Socket BGA2422"
+  },
+  {
+    0x45,
+    L"Socket LGA1211"
+  },
+  {
+    0x46,
+    L"Socket LGA2422"
+  },
+  {
+    0x47,
+    L"Socket LGA5773"
+  },
+  {
+    0x48,
+    L"Socket BGA5773"
+  },
+  {
+    0x49,
+    L"Socket AM5"
+  },
+  {
+    0x4A,
+    L"Socket SP5"
+  },
+  {
+    0x4B,
+    L"Socket SP6"
+  },
+  {
+    0x4C,
+    L"Socket BGA883"
+  },
+  {
+    0x4D,
+    L"Socket BGA1190"
+  },
+  {
+    0x4E,
+    L"Socket BGA4129"
+  },
+  {
+    0x4F,
+    L"Socket LGA4710"
+  },
+  {
+    0x50,
+    L"Socket LGA7529"
+  },
+  {
+    0x51,
+    L"Socket BGA1964"
+  },
+  {
+    0x52,
+    L"Socket BGA1792"
+  },
+  {
+    0x53,
+    L"Socket BGA2049"
+  },
+  {
+    0x54,
+    L"Socket BGA2551"
+  },
+  {
+    0x55,
+    L"Socket LGA1851"
+  },
+  {
+    0x56,
+    L"Socket BGA2114"
+  },
+  {
+    0x57,
+    L"Socket BGA2833"
   }
 };
 
@@ -534,9 +731,16 @@ TABLE_ITEM  ProcessorCharacteristicsTable[] = {
   {
     7,
     L" Power/Performance Control"
+  },
+  {
+    8,
+    L" 128-bit Capable"
+  },
+  {
+    9,
+    L" ARM64 SoC ID"
   }
 };
-
 
 TABLE_ITEM  McErrorDetectMethodTable[] = {
   {
@@ -1013,6 +1217,10 @@ TABLE_ITEM  PortConnectorTypeTable[] = {
     L"SAS/SATA Plug Receptacle"
   },
   {
+    0x23,
+    L"USB Type-C Receptacle"
+  },
+  {
     0xA0,
     L"PC-98"
   },
@@ -1176,6 +1384,14 @@ TABLE_ITEM  PortTypeTable[] = {
     L"SAS Port"
   },
   {
+    0x22,
+    L"Multi-Function Display Port (MFDP)"
+  },
+  {
+    0x23,
+    L"Thunderbolt"
+  },
+  {
     0xA0,
     L"8251 Compatible"
   },
@@ -1261,6 +1477,98 @@ TABLE_ITEM  SystemSlotTypeTable[] = {
   {
     0x12,
     L"PCI-X"
+  },
+  {
+    0x13,
+    L"AGP 8X"
+  },
+  {
+    0x14,
+    L"M.2 Socket 1-DP (Mechanical Key A)"
+  },
+  {
+    0x15,
+    L"M.2 Socket 1-SD (Mechanical Key E)"
+  },
+  {
+    0x16,
+    L"M.2 Socket 2 (Mechanical Key B)"
+  },
+  {
+    0x17,
+    L"M.2 Socket 3 (Mechanical Key M)"
+  },
+  {
+    0x18,
+    L"MXM Type I"
+  },
+  {
+    0x19,
+    L"MXM Type II"
+  },
+  {
+    0x1A,
+    L"MXM Type III (standard connector)"
+  },
+  {
+    0x1B,
+    L"MXM Type III (HE connector)"
+  },
+  {
+    0x1C,
+    L"MXM Type IV"
+  },
+  {
+    0x1D,
+    L"MXM 3.0 Type A"
+  },
+  {
+    0x1E,
+    L"MXM 3.0 Type B"
+  },
+  {
+    0x1F,
+    L"PCI Express Gen 2 SFF-8639"
+  },
+  {
+    0x20,
+    L"PCI Express Gen 3 SFF-8639"
+  },
+  {
+    0x21,
+    L"PCI Express Mini 52-pin (CEM spec. 2.0) with bottom-side keep-outs"
+  },
+  {
+    0x22,
+    L"PCI Express Mini 52-pin (CEM spec. 2.0) without bottom-side keep-outs"
+  },
+  {
+    0x23,
+    L"PCI Express Mini 76-pin (CEM spec. 2.0) Corresponds to Display-Mini card"
+  },
+  {
+    0x24,
+    L"PCI Express Gen 4 SFF-8639 (U.2)"
+  },
+  {
+    0x25,
+    L"PCI Express Gen 5 SFF-8639 (U.2)"
+  },
+  {
+    0x26,
+    L"OCP NIC 3.0 Small Form Factor (SFF)"
+  },
+  {
+    0x27,
+    L"OCP NIC 3.0 Large Form Factor (LFF)"
+  },
+  {
+    0x28,
+    L"OCP NIC Prior to 3.0"
+  },
+  {
+    SlotTypeCXLFlexbus10,
+    L"CXL Flexbus 1.0"
   },
   {
     0xA0,
@@ -1353,6 +1661,66 @@ TABLE_ITEM  SystemSlotTypeTable[] = {
   {
     0xB6,
     L"PCI Express Gen 3 X16"
+  },
+  {
+    SlotTypePciExpressGen4,
+    L"PCI Express Gen 4"
+  },
+  {
+    SlotTypePciExpressGen4X1,
+    L"PCI Express Gen 4 X1"
+  },
+  {
+    SlotTypePciExpressGen4X2,
+    L"PCI Express Gen 4 X2"
+  },
+  {
+    SlotTypePciExpressGen4X4,
+    L"PCI Express Gen 4 X4"
+  },
+  {
+    SlotTypePciExpressGen4X8,
+    L"PCI Express Gen 4 X8"
+  },
+  {
+    SlotTypePciExpressGen4X16,
+    L"PCI Express Gen 4 X16"
+  },
+  {
+    SlotTypePCIExpressGen5,
+    L"PCI Express Gen 5"
+  },
+  {
+    SlotTypePCIExpressGen5X1,
+    L"PCI Express Gen 5 x1"
+  },
+  {
+    SlotTypePCIExpressGen5X2,
+    L"PCI Express Gen 5 x2"
+  },
+  {
+    SlotTypePCIExpressGen5X4,
+    L"PCI Express Gen 5 x4"
+  },
+  {
+    SlotTypePCIExpressGen5X8,
+    L"PCI Express Gen 5 x8"
+  },
+  {
+    SlotTypePCIExpressGen5X16,
+    L"PCI Express Gen 5 x16"
+  },
+  {
+    SlotTypePCIExpressGen6andBeyond,
+    L"PCI Express Gen 6 and Beyond"
+  },
+  {
+    SlotTypeEnterpriseandDatacenter1UE1FormFactorSlot,
+    L"Enterprise and Datacenter 1U E1 Form Factor Slot"
+  },
+  {
+    SlotTypeEnterpriseandDatacenter3E3FormFactorSlot,
+    L"Enterprise and Datacenter 3'E3 Form Factor Slot"
   }
 };
 
@@ -1415,6 +1783,96 @@ TABLE_ITEM  SystemSlotDataBusWidthTable[] = {
   }
 };
 
+TABLE_ITEM  SystemSlotPhysicalWidthTable[] = {
+  {
+    0x01,
+    L" Other"
+  },
+  {
+    0x02,
+    L" Unknown"
+  },
+  {
+    0x03,
+    L" 8 bit"
+  },
+  {
+    0x04,
+    L" 16 bit"
+  },
+  {
+    0x05,
+    L" 32 bit"
+  },
+  {
+    0x06,
+    L" 64 bit"
+  },
+  {
+    0x07,
+    L" 128 bit"
+  },
+  {
+    0x08,
+    L" 1x or x1"
+  },
+  {
+    0x09,
+    L" 2x or x2"
+  },
+  {
+    0x0A,
+    L" 4x or x4"
+  },
+  {
+    0x0B,
+    L" 8x or x8"
+  },
+  {
+    0x0C,
+    L" 12x or x12"
+  },
+  {
+    0x0D,
+    L" 16x or x16"
+  },
+  {
+    0x0E,
+    L" 32x or x32"
+  }
+};
+
+TABLE_ITEM  SystemSlotInformationTable[] = {
+  {
+    0x00,
+    L" Others"
+  },
+  {
+    0x01,
+    L" Gen 1"
+  },
+  {
+    0x02,
+    L" Gen 2"
+  },
+  {
+    0x03,
+    L" Gen 3"
+  },
+  {
+    0x04,
+    L" Gen 4"
+  },
+  {
+    0x05,
+    L" Gen 5"
+  },
+  {
+    0x06,
+    L" Gen 6"
+  }
+};
+
 TABLE_ITEM  SystemSlotCurrentUsageTable[] = {
   {
     0x01,
@@ -1432,6 +1890,10 @@ TABLE_ITEM  SystemSlotCurrentUsageTable[] = {
     0x04,
     L" In use"
   },
+  {
+    0x05,
+    L" Unavailable"
+  }
 };
 
 TABLE_ITEM  SystemSlotLengthTable[] = {
@@ -1450,6 +1912,29 @@ TABLE_ITEM  SystemSlotLengthTable[] = {
   {
     0x04,
     L" Long Length"
+  },
+};
+
+TABLE_ITEM  SystemSlotHeightTable[] = {
+  {
+    0x00,
+    L" Not applicable"
+  },
+  {
+    0x01,
+    L" Other"
+  },
+  {
+    0x02,
+    L" Unknown"
+  },
+  {
+    0x03,
+    L" Full height"
+  },
+  {
+    0x04,
+    L" Low-Profile"
   },
 };
 
@@ -1501,6 +1986,26 @@ TABLE_ITEM  SlotCharacteristics2Table[] = {
   {
     2,
     L" PCI slot supports SMBus signal"
+  },
+  {
+    3,
+    L" PCIe slot supports bifurcation"
+  },
+  {
+    4,
+    L" Slot supports async/surprise removal"
+  },
+  {
+    5,
+    L" Flexbus slot, CXL 1.0 capable"
+  },
+  {
+    6,
+    L" Flexbus slot, CXL 2.0 capable"
+  },
+  {
+    7,
+    L" Reserved"
   }
 };
 
@@ -1545,6 +2050,30 @@ TABLE_ITEM  OnboardDeviceTypesTable[] = {
     0x0A,
     L"  Sas Controller"
   },
+  {
+    0x0B,
+    L"  Wireless LAN"
+  },
+  {
+    0x0C,
+    L"  Bluetooth"
+  },
+  {
+    0x0D,
+    L"  WWAN"
+  },
+  {
+    0x0E,
+    L"  embedded Multi-Media Controller"
+  },
+  {
+    0x0F,
+    L"  NVMe Controller"
+  },
+  {
+    0x10,
+    L"  UFS Controller"
+  }
 };
 
 TABLE_ITEM  SELTypesTable[] = {
@@ -2088,6 +2617,10 @@ TABLE_ITEM  PMALocationTable[] = {
   {
     0xA3,
     L"  PC-98/Local bus add-on card"
+  },
+  {
+    MemoryArrayLocationCXLAddonCard,
+    L"  CXL add-on card"
   }
 };
 
@@ -2213,6 +2746,22 @@ TABLE_ITEM  MemoryDeviceFormFactorTable[] = {
   {
     0x0F,
     L"  FB-DIMM"
+  },
+  {
+    MemoryFormFactorDie,
+    L"  Die"
+  },
+  {
+    MemoryFormFactorCamm,
+    L"  CAMM"
+  },
+  {
+    MemoryFormFactorCuDimm,
+    L"  CUDIMM"
+  },
+  {
+    MemoryFormFactorCsoDimm,
+    L"  CSODIMM"
   }
 };
 
@@ -2324,6 +2873,38 @@ TABLE_ITEM  MemoryDeviceTypeTable[] = {
   {
     0x1E,
     L"  LPDDR4"
+  },
+  {
+    0x1F,
+    L"  Logical non-volatile device"
+  },
+  {
+    MemoryTypeHBM,
+    L"  HBM (High Bandwidth Memory)"
+  },
+  {
+    MemoryTypeHBM2,
+    L"  HBM2 (High Bandwidth Memory Generation 2)"
+  },
+  {
+    MemoryTypeDdr5,
+    L"  DDR5"
+  },
+  {
+    MemoryTypeLpddr5,
+    L"  LPDDR5"
+  },
+  {
+    MemoryTypeHBM3,
+    L"  HBM3 (High Bandwidth Memory Generation 3)"
+  },
+  {
+    MemoryTypeMrDimm,
+    L"  MRDIMM (Multi-Channel RDIMM)"
+  },
+  {
+    MemoryTypeLpddr6,
+    L"  LPDDR6"
   }
 };
 
@@ -2383,6 +2964,64 @@ TABLE_ITEM  MemoryDeviceTypeDetailTable[] = {
   {
     14,
     L" Unbuffered(Unregistered)"
+  }
+};
+
+TABLE_ITEM  MemoryDeviceMemoryTechnologyTable[] = {
+  {
+    0x01,
+    L" Other"
+  },
+  {
+    0x02,
+    L" Unknown"
+  },
+  {
+    0x03,
+    L" DRAM"
+  },
+  {
+    0x04,
+    L" NVDIMM-N"
+  },
+  {
+    0x05,
+    L" NVDIMM-F"
+  },
+  {
+    0x06,
+    L" NVDIMM-P"
+  },
+  {
+    MemoryTechnologyIntelOptanePersistentMemory,
+    L" Intel Optane Persistent Memory"
+  },
+  {
+    MemoryTechnologyMrDimmDeprecated,
+    L" MRDIMM"
+  }
+};
+
+TABLE_ITEM  MemoryDeviceMemoryOperatingModeCapabilityTable[] = {
+  {
+    1,
+    L" Other"
+  },
+  {
+    2,
+    L" Unknown"
+  },
+  {
+    3,
+    L" Volatile memory"
+  },
+  {
+    4,
+    L" Byte-accessible persistent memory"
+  },
+  {
+    5,
+    L" Block-accessible persistent memory"
   }
 };
 
@@ -2611,33 +3250,6 @@ TABLE_ITEM  VPLocationTable[] = {
   },
   {
     0x03,
-    L" OK "
-  },
-  {
-    0x04,
-    L" Non-critical "
-  },
-  {
-    0x05,
-    L" Critical "
-  },
-  {
-    0x06,
-    L" Non-recoverable "
-  },
-};
-
-TABLE_ITEM  VPStatusTable[] = {
-  {
-    0x01,
-    L" Other "
-  },
-  {
-    0x02,
-    L" Unknown "
-  },
-  {
-    0x03,
     L" Processor "
   },
   {
@@ -2671,6 +3283,33 @@ TABLE_ITEM  VPStatusTable[] = {
   {
     0x0B,
     L" Add-in Card "
+  },
+};
+
+TABLE_ITEM  VPStatusTable[] = {
+  {
+    0x01,
+    L" Other "
+  },
+  {
+    0x02,
+    L" Unknown "
+  },
+  {
+    0x03,
+    L" OK "
+  },
+  {
+    0x04,
+    L" Non-critical "
+  },
+  {
+    0x05,
+    L" Critical "
+  },
+  {
+    0x06,
+    L" Non-recoverable "
   },
 };
 
@@ -2819,6 +3458,22 @@ TABLE_ITEM  TemperatureProbeLocTable[] = {
   {
     0x0B,
     L" Add-in Card "
+  },
+  {
+    0x0C,
+    L" Front Panel Board "
+  },
+  {
+    0x0D,
+    L" Back Panel Board "
+  },
+  {
+    0x0E,
+    L" Power System Board "
+  },
+  {
+    0x0F,
+    L" Drive Back Plane "
   },
 };
 
@@ -3011,8 +3666,120 @@ TABLE_ITEM  IPMIDIBMCInterfaceTypeTable[] = {
     L" BT: Block Transfer "
   },
   {
-    0xFF04,
+    0x04,
+    L" SSIF: SMBus System Interface "
+  },
+  {
+    0xFF05,
     L" Reserved for future assignment by this specification "
+  },
+};
+
+TABLE_ITEM  MCHostInterfaceTypeTable[] = {
+  {
+    0x3F00,
+    L" MCTP Host Interface "
+  },
+  {
+    0x40,
+    L" Network Host Interface "
+  },
+  {
+    0xF0,
+    L" OEM defined "
+  },
+};
+
+TABLE_ITEM  ProcessorArchitectureTypesTable[] = {
+  {
+    0,
+    L" Reserved "
+  },
+  {
+    1,
+    L" IA32 (x86) "
+  },
+  {
+    2,
+    L" x64 (x86-64, intel64, AMD64, EM64T) "
+  },
+  {
+    3,
+    L" Intel Itanium architecture "
+  },
+  {
+    4,
+    L" 32-bit ARM (Aarch32) "
+  },
+  {
+    5,
+    L" 64-bit ARM (Aarch64) "
+  },
+  {
+    6,
+    L" 32-bit RISC-V (RV32) "
+  },
+  {
+    7,
+    L" 64-bit RISC-V (RV64) "
+  },
+  {
+    8,
+    L" 128-bit RISC-V (RV128) "
+  },
+  {
+    9,
+    L" 32-bit LoongArch (LoongArch32) "
+  },
+  {
+    10,
+    L" 64-bit LoongArch (LoongArch64) "
+  }
+};
+
+TABLE_ITEM  FirmwareInventoryCharTable[] = {
+  {
+    0,
+    L"Updatable"
+  },
+  {
+    1,
+    L"Write-Protect"
+  }
+};
+
+TABLE_ITEM  FirmwareInventoryStateTable[] = {
+  {
+    1,
+    L"  Other"
+  },
+  {
+    2,
+    L"  Unknown "
+  },
+  {
+    3,
+    L"  Disabled: This firmware component is disabled. "
+  },
+  {
+    4,
+    L"  Enabled: This firmware component is enabled. "
+  },
+  {
+    5,
+    L"  Absent: This firmware component is either not present or not detected "
+  },
+  {
+    6,
+    L"  StandbyOffline: This firmware is enabled but awaits an external action to activate it. "
+  },
+  {
+    7,
+    L"  StandbySpare: This firmware is part of a redundancy set and awaits a failover or other external action to activate it. "
+  },
+  {
+    8,
+    L"  UnavailableOffline: This firmware component is present but cannot be used. "
   },
 };
 
@@ -3190,6 +3957,18 @@ TABLE_ITEM  StructureTypeInfoTable[] = {
     L" Management Controller Host Interface"
   },
   {
+    43,
+    L" TPM Device"
+  },
+  {
+    44,
+    L" Processor Additional Information"
+  },
+  {
+    45,
+    L" Firmware Inventory Information"
+  },
+  {
     0x7E,
     L" Inactive"
   },
@@ -3198,7 +3977,6 @@ TABLE_ITEM  StructureTypeInfoTable[] = {
     L" End-of-Table "
   },
 };
-
 
 /**
   Given a table and a Key, return the responding info.
@@ -3226,32 +4004,33 @@ TABLE_ITEM  StructureTypeInfoTable[] = {
 **/
 UINT8
 QueryTable (
-  IN  TABLE_ITEM    *Table,
-  IN  UINTN         Number,
-  IN  UINT8         Key,
-  IN  OUT CHAR16    *Info,
-  IN  UINTN         InfoLen
+  IN  TABLE_ITEM  *Table,
+  IN  UINTN       Number,
+  IN  UINT8       Key,
+  IN  OUT CHAR16  *Info,
+  IN  UINTN       InfoLen
   )
 {
-  UINTN Index;
+  UINTN  Index;
   //
   // High byte and Low byte of word
   //
-  UINT8 High;
-  UINT8 Low;
+  UINT8  High;
+  UINT8  Low;
 
   for (Index = 0; Index < Number; Index++) {
-    High  = (UINT8) (Table[Index].Key >> 8);
-    Low   = (UINT8) (Table[Index].Key & 0x00FF);
+    High = (UINT8)(Table[Index].Key >> 8);
+    Low  = (UINT8)(Table[Index].Key & 0x00FF);
 
     //
     // Check if Key is in the range
     // or if Key == Value in the table
     //
-    if ((High > Low && Key >= Low && Key <= High) 
-      || (Table[Index].Key == Key)) {
+    if (  ((High > Low) && (Key >= Low) && (Key <= High))
+       || (Table[Index].Key == Key))
+    {
       StrnCpyS (Info, InfoLen, Table[Index].Info, InfoLen - 1);
-      StrnCatS (Info, InfoLen, L"\n", InfoLen - 1 - StrLen(Info));
+      StrnCatS (Info, InfoLen, L"\n", InfoLen - 1 - StrLen (Info));
       return Key;
     }
   }
@@ -3269,35 +4048,41 @@ QueryTable (
 **/
 VOID
 PrintBitsInfo (
-  IN  TABLE_ITEM    *Table,
-  IN  UINTN         Number,
-  IN  UINT32        Bits
+  IN  TABLE_ITEM  *Table,
+  IN  UINTN       Number,
+  IN  UINT32      Bits
   )
 {
   //
   // Get certain bit of 'Value':
   //
-#define BIT(Value, bit) ((Value) & ((UINT32) 1) << (bit))
+  #define BIT(Value, bit)  ((Value) & ((UINT32) 1) << (bit))
   //
   // Clear certain bit of 'Value':
   //
-#define CLR_BIT(Value, bit) ((Value) -= (BIT (Value, bit)))
+  #define CLR_BIT(Value, bit)  ((Value) -= (BIT (Value, bit)))
 
-  UINTN   Index;
-  UINT32  Value;
-  BOOLEAN NoInfo;
+  UINTN    Index;
+  UINT32   Value;
+  BOOLEAN  FirstInfo;
 
-  NoInfo  = TRUE;
-  Value   = Bits;
+  FirstInfo = TRUE;
+  Value     = Bits;
   //
   // query the table and print information
   //
   for (Index = 0; Index < Number; Index++) {
     if (BIT (Value, Table[Index].Key) != 0) {
-      Print (Table[Index].Info);
-      Print (L" | ");
+      if (!FirstInfo) {
+        //
+        // If it is not first info, print the separator first.
+        //
+        Print (L" | ");
+      }
 
-      NoInfo = FALSE;
+      Print (Table[Index].Info);
+
+      FirstInfo = FALSE;
       //
       // clear the bit, for reserved bits test
       //
@@ -3305,20 +4090,24 @@ PrintBitsInfo (
     }
   }
 
-  if (NoInfo) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_NO_INFO), gShellDebug1HiiHandle);
+  //
+  // There is no any info if FirstInfo is still TRUE.
+  //
+  if (FirstInfo) {
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_NO_INFO), gShellDebug1HiiHandle);
   }
 
   if (Value != 0) {
-    ShellPrintHiiEx(-1,-1,NULL,
+    ShellPrintHiiDefaultEx (
       STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_RSVD_BITS_SET),
       gShellDebug1HiiHandle,
       Value
-     );
+      );
   }
 
   Print (L"\n");
 }
+
 //
 // //////////////////////////////////////////////////////////////////
 //
@@ -3351,11 +4140,11 @@ PrintBitsInfo (
 **/
 VOID
 DisplaySystemWakeupType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_WAKEUP_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_WAKEUP_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (SystemWakeupTypeTable, Type);
 }
@@ -3368,11 +4157,11 @@ DisplaySystemWakeupType (
 **/
 VOID
 DisplayBaseBoardFeatureFlags (
-  IN UINT8 FeatureFlags,
-  IN UINT8 Option
+  IN UINT8  FeatureFlags,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BASE_BOARD_FEATURE_FLAGS), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BASE_BOARD_FEATURE_FLAGS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (FeatureFlags, Option);
   PRINT_BITS_INFO (BaseBoardFeatureFlagsTable, FeatureFlags);
 }
@@ -3384,12 +4173,12 @@ DisplayBaseBoardFeatureFlags (
   @param[in] Option         The optional information.
 **/
 VOID
-DisplayBaseBoardBoardType(
-  IN UINT8 Type,
-  IN UINT8 Option
+DisplayBaseBoardBoardType (
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BASE_BOARD_BOARD_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BASE_BOARD_BOARD_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (BaseBoardBoardTypeTable, Type);
 }
@@ -3402,11 +4191,11 @@ DisplayBaseBoardBoardType(
 **/
 VOID
 DisplaySystemEnclosureType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   //
   // query table and print info
@@ -3414,7 +4203,7 @@ DisplaySystemEnclosureType (
   PRINT_TABLE_ITEM (SystemEnclosureTypeTable, Type);
 
   if (BIT (Type, 7) != 0) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CHASSIS_LOCK_PRESENT), gShellDebug1HiiHandle);
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CHASSIS_LOCK_PRESENT), gShellDebug1HiiHandle);
   }
 }
 
@@ -3426,11 +4215,11 @@ DisplaySystemEnclosureType (
 **/
 VOID
 DisplaySystemEnclosureStatus (
-  IN UINT8 Status,
-  IN UINT8 Option
+  IN UINT8  Status,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_STATUS), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (SystemEnclosureStatusTable, Status);
 }
@@ -3443,11 +4232,11 @@ DisplaySystemEnclosureStatus (
 **/
 VOID
 DisplaySESecurityStatus (
-  IN UINT8 Status,
-  IN UINT8 Option
+  IN UINT8  Status,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_SECURITY), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_CHASSIS_SECURITY), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (SESecurityStatusTable, Status);
 }
@@ -3460,11 +4249,11 @@ DisplaySESecurityStatus (
 **/
 VOID
 DisplayProcessorType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (ProcessorTypeTable, Type);
 }
@@ -3477,11 +4266,11 @@ DisplayProcessorType (
 **/
 VOID
 DisplayProcessorUpgrade (
-  IN UINT8 Upgrade,
-  IN UINT8 Option
+  IN UINT8  Upgrade,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_UPDATE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_UPDATE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Upgrade, Option);
   PRINT_TABLE_ITEM (ProcessorUpgradeTable, Upgrade);
 }
@@ -3494,11 +4283,11 @@ DisplayProcessorUpgrade (
 **/
 VOID
 DisplayProcessorCharacteristics (
-  IN UINT16 Type,
-  IN UINT8 Option
+  IN UINT16  Type,
+  IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_CHARACTERISTICS), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROC_CHARACTERISTICS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_BITS_INFO (ProcessorCharacteristicsTable, Type);
 }
@@ -3511,11 +4300,11 @@ DisplayProcessorCharacteristics (
 **/
 VOID
 DisplayMcErrorDetectMethod (
-  IN UINT8 Method,
-  IN UINT8 Option
+  IN UINT8  Method,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DETECTMETHOD), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DETECTMETHOD), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Method, Option);
   PRINT_TABLE_ITEM (McErrorDetectMethodTable, Method);
 }
@@ -3528,11 +4317,11 @@ DisplayMcErrorDetectMethod (
 **/
 VOID
 DisplayMcErrorCorrectCapability (
-  IN UINT8 Capability,
-  IN UINT8 Option
+  IN UINT8  Capability,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_CORRECT_CAPABILITY), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_CORRECT_CAPABILITY), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Capability, Option);
   PRINT_BITS_INFO (McErrorCorrectCapabilityTable, Capability);
 }
@@ -3545,11 +4334,11 @@ DisplayMcErrorCorrectCapability (
 **/
 VOID
 DisplayMcInterleaveSupport (
-  IN UINT8 Support,
-  IN UINT8 Option
+  IN UINT8  Support,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_INTERLEAVE_SUPPORT), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_INTERLEAVE_SUPPORT), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Support, Option);
   PRINT_TABLE_ITEM (McInterleaveSupportTable, Support);
 }
@@ -3566,7 +4355,7 @@ DisplayMcMemorySpeeds (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MEMORY_SPEED), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MEMORY_SPEED), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Speed, Option);
   PRINT_BITS_INFO (McMemorySpeedsTable, Speed);
 }
@@ -3579,11 +4368,11 @@ DisplayMcMemorySpeeds (
 **/
 VOID
 DisplayMemoryModuleVoltage (
-  IN UINT8 Voltage,
-  IN UINT8 Option
+  IN UINT8  Voltage,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_REQUIRED_VOLTAGES), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_REQUIRED_VOLTAGES), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Voltage, Option);
   PRINT_BITS_INFO (MemoryModuleVoltageTable, Voltage);
 }
@@ -3600,7 +4389,7 @@ DisplayMmMemoryType (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MODULE_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MODULE_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_BITS_INFO (MmMemoryTypeTable, Type);
 }
@@ -3613,11 +4402,11 @@ DisplayMmMemoryType (
 **/
 VOID
 DisplayMmErrorStatus (
-  IN UINT8 Status,
-  IN UINT8 Option
+  IN UINT8  Status,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MODULE_ERROR_STATUS), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_MODULE_ERROR_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_BITS_INFO (MmErrorStatusTable, Status);
 }
@@ -3634,9 +4423,9 @@ DisplayCacheSRAMType (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_SRAM_TYPE), gShellDebug1HiiHandle);
-  PRINT_INFO_OPTION ((UINT8) Type, Option);
-  PRINT_BITS_INFO (CacheSRAMTypeTable, (UINT8) Type);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_SRAM_TYPE), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION ((UINT8)Type, Option);
+  PRINT_BITS_INFO (CacheSRAMTypeTable, (UINT8)Type);
 }
 
 /**
@@ -3647,11 +4436,11 @@ DisplayCacheSRAMType (
 **/
 VOID
 DisplayCacheErrCorrectingType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_ERROR_CORRECTING), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_ERROR_CORRECTING), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (CacheErrCorrectingTypeTable, Type);
 }
@@ -3664,11 +4453,11 @@ DisplayCacheErrCorrectingType (
 **/
 VOID
 DisplayCacheSystemCacheType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_SYSTEM_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_SYSTEM_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (CacheSystemCacheTypeTable, Type);
 }
@@ -3681,11 +4470,11 @@ DisplayCacheSystemCacheType (
 **/
 VOID
 DisplayCacheAssociativity (
-  IN UINT8 Associativity,
-  IN UINT8 Option
+  IN UINT8  Associativity,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_ASSOCIATIVITY), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_CACHE_ASSOCIATIVITY), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Associativity, Option);
   PRINT_TABLE_ITEM (CacheAssociativityTable, Associativity);
 }
@@ -3698,11 +4487,11 @@ DisplayCacheAssociativity (
 **/
 VOID
 DisplayPortConnectorType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORT_CONNECTOR_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORT_CONNECTOR_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (PortConnectorTypeTable, Type);
 }
@@ -3715,11 +4504,11 @@ DisplayPortConnectorType (
 **/
 VOID
 DisplayPortType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORT_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORT_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (PortTypeTable, Type);
 }
@@ -3732,11 +4521,11 @@ DisplayPortType (
 **/
 VOID
 DisplaySystemSlotType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (SystemSlotTypeTable, Type);
 }
@@ -3749,11 +4538,11 @@ DisplaySystemSlotType (
 **/
 VOID
 DisplaySystemSlotDataBusWidth (
-  IN UINT8 Width,
-  IN UINT8 Option
+  IN UINT8  Width,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_DATA), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_DATA), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Width, Option);
   PRINT_TABLE_ITEM (SystemSlotDataBusWidthTable, Width);
 }
@@ -3766,11 +4555,11 @@ DisplaySystemSlotDataBusWidth (
 **/
 VOID
 DisplaySystemSlotCurrentUsage (
-  IN UINT8 Usage,
-  IN UINT8 Option
+  IN UINT8  Usage,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_CURRENT_USAGE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_CURRENT_USAGE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Usage, Option);
   PRINT_TABLE_ITEM (SystemSlotCurrentUsageTable, Usage);
 }
@@ -3783,11 +4572,11 @@ DisplaySystemSlotCurrentUsage (
 **/
 VOID
 DisplaySystemSlotLength (
-  IN UINT8 Length,
-  IN UINT8 Option
+  IN UINT8  Length,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_LENGTH), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_LENGTH), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Length, Option);
   PRINT_TABLE_ITEM (SystemSlotLengthTable, Length);
 }
@@ -3800,11 +4589,11 @@ DisplaySystemSlotLength (
 **/
 VOID
 DisplaySlotCharacteristics1 (
-  IN UINT8 Chara1,
-  IN UINT8 Option
+  IN UINT8  Chara1,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SLOT_CHARACTERISTICS), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SLOT_CHARACTERISTICS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Chara1, Option);
   PRINT_BITS_INFO (SlotCharacteristics1Table, Chara1);
 }
@@ -3817,13 +4606,64 @@ DisplaySlotCharacteristics1 (
 **/
 VOID
 DisplaySlotCharacteristics2 (
-  IN UINT8 Chara2,
-  IN UINT8 Option
+  IN UINT8  Chara2,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SLOT_CHARACTERISTICS_2), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SLOT_CHARACTERISTICS_2), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Chara2, Option);
   PRINT_BITS_INFO (SlotCharacteristics2Table, Chara2);
+}
+
+/**
+  Display System Slots (Type 9) Information.
+
+  @param[in] Width      The key of the structure.
+  @param[in] Option     The optional information.
+**/
+VOID
+DisplaySystemSlotInformation (
+  IN UINT8  Width,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_INFORMATION), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Width, Option);
+  PRINT_TABLE_ITEM (SystemSlotInformationTable, Width);
+}
+
+/**
+  Display System Slots (Type 9) Physical Width.
+
+  @param[in] Width      The key of the structure.
+  @param[in] Option     The optional information.
+**/
+VOID
+DisplaySystemSlotPhysicalWidth (
+  IN UINT8  Width,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_PHYSICAL_WIDTH), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Width, Option);
+  PRINT_TABLE_ITEM (SystemSlotPhysicalWidthTable, Width);
+}
+
+/**
+  Display System Slots (Type 9) slot height.
+
+  @param[in] Length     The key of the structure.
+  @param[in] Option     The optional information.
+**/
+VOID
+DisplaySystemSlotHeight (
+  IN UINT8  Length,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_SLOT_HEIGHT), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Length, Option);
+  PRINT_TABLE_ITEM (SystemSlotHeightTable, Length);
 }
 
 /**
@@ -3834,11 +4674,11 @@ DisplaySlotCharacteristics2 (
 **/
 VOID
 DisplayOnboardDeviceTypes (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ONBOARD_DEVICE_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ONBOARD_DEVICE_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (OnboardDeviceTypesTable, Type);
 }
@@ -3851,11 +4691,11 @@ DisplayOnboardDeviceTypes (
 **/
 VOID
 DisplaySELTypes (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_EVENT_LOG_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_EVENT_LOG_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (SELTypesTable, Type);
 }
@@ -3868,11 +4708,11 @@ DisplaySELTypes (
 **/
 VOID
 DisplaySELVarDataFormatType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_EVENT_LOG_VAR_DATA_FORMAT), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_EVENT_LOG_VAR_DATA_FORMAT), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (SELVarDataFormatTypeTable, Type);
 }
@@ -3889,7 +4729,7 @@ DisplayPostResultsBitmapDw1 (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POST_RESULTS_BITMAP), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POST_RESULTS_BITMAP), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_BITS_INFO (PostResultsBitmapDw1Table, Key);
 }
@@ -3906,7 +4746,7 @@ DisplayPostResultsBitmapDw2 (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POST_RESULTS_SECOND_DWORD), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POST_RESULTS_SECOND_DWORD), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_BITS_INFO (PostResultsBitmapDw2Table, Key);
 }
@@ -3923,27 +4763,27 @@ DisplaySELSysManagementTypes (
   IN UINT8   Option
   )
 {
-  UINT8       Temp;
+  UINT8  Temp;
 
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_MANAGEMENT_TYPES), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_MANAGEMENT_TYPES), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (SMType, Option);
 
   //
   // Deal with wide range Value
   //
   if (SMType >= 0x80000000) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_OEM_ASSIGNED), gShellDebug1HiiHandle);
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_OEM_ASSIGNED), gShellDebug1HiiHandle);
   } else if (SMType >= 0x00020000) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_RSVD_FOR_FUTURE_ASSIGN), gShellDebug1HiiHandle);
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_RSVD_FOR_FUTURE_ASSIGN), gShellDebug1HiiHandle);
   } else if (SMType >= 0x00010000) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_MANAGEMENT_PROBE), gShellDebug1HiiHandle);
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_SYSTEM_MANAGEMENT_PROBE), gShellDebug1HiiHandle);
   } else if (SMType >= 0x31) {
-    ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_RSVD_FOR_FUTURE_ASSIGN), gShellDebug1HiiHandle);
+    ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_RSVD_FOR_FUTURE_ASSIGN), gShellDebug1HiiHandle);
   } else {
     //
     // Deal with One byte data
     //
-    Temp = (UINT8) (SMType & 0x3F);
+    Temp = (UINT8)(SMType & 0x3F);
     PRINT_TABLE_ITEM (SELSysManagementTypesTable, Temp);
   }
 }
@@ -3956,11 +4796,11 @@ DisplaySELSysManagementTypes (
 **/
 VOID
 DisplayPMALocation (
-  IN UINT8 Location,
-  IN UINT8 Option
+  IN UINT8  Location,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_LOCATION), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_LOCATION), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Location, Option);
   PRINT_TABLE_ITEM (PMALocationTable, Location);
 }
@@ -3973,11 +4813,11 @@ DisplayPMALocation (
 **/
 VOID
 DisplayPMAUse (
-  IN UINT8 Use,
-  IN UINT8 Option
+  IN UINT8  Use,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_USE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_USE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Use, Option);
   PRINT_TABLE_ITEM (PMAUseTable, Use);
 }
@@ -3990,11 +4830,11 @@ DisplayPMAUse (
 **/
 VOID
 DisplayPMAErrorCorrectionTypes (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_ERROR), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PHYS_MEM_ARRAY_ERROR), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (PMAErrorCorrectionTypesTable, Type);
 }
@@ -4007,11 +4847,11 @@ DisplayPMAErrorCorrectionTypes (
 **/
 VOID
 DisplayMemoryDeviceFormFactor (
-  IN UINT8 FormFactor,
-  IN UINT8 Option
+  IN UINT8  FormFactor,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_FORM_FACTOR), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_FORM_FACTOR), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (FormFactor, Option);
   PRINT_TABLE_ITEM (MemoryDeviceFormFactorTable, FormFactor);
 }
@@ -4024,11 +4864,11 @@ DisplayMemoryDeviceFormFactor (
 **/
 VOID
 DisplayMemoryDeviceType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (MemoryDeviceTypeTable, Type);
 }
@@ -4045,9 +4885,43 @@ DisplayMemoryDeviceTypeDetail (
   IN UINT8   Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_TYPE_DETAIL), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_TYPE_DETAIL), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Para, Option);
   PRINT_BITS_INFO (MemoryDeviceTypeDetailTable, Para);
+}
+
+/**
+  Display Memory Device (Type 17) memory technology.
+
+  @param[in] Para     The key of the structure.
+  @param[in] Option   The optional information.
+**/
+VOID
+DisplayMemoryDeviceMemoryTechnology (
+  IN UINT8  Para,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_MEMORY_TECHNOLOGY), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Para, Option);
+  PRINT_TABLE_ITEM (MemoryDeviceMemoryTechnologyTable, Para);
+}
+
+/**
+  Display Memory Device (Type 17) memory operating mode capability.
+
+  @param[in] Para     The key of the structure.
+  @param[in] Option   The optional information.
+**/
+VOID
+DisplayMemoryDeviceMemoryOperatingModeCapability (
+  IN UINT16  Para,
+  IN UINT8   Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_DEVICE_MEM_OPER_MODE_CAPA), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Para, Option);
+  PRINT_BITS_INFO (MemoryDeviceMemoryOperatingModeCapabilityTable, Para);
 }
 
 /**
@@ -4058,11 +4932,11 @@ DisplayMemoryDeviceTypeDetail (
 **/
 VOID
 DisplayMemoryErrorType (
-  IN UINT8 ErrorType,
-  IN UINT8 Option
+  IN UINT8  ErrorType,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_INFO), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_INFO), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (ErrorType, Option);
   PRINT_TABLE_ITEM (MemoryErrorTypeTable, ErrorType);
 }
@@ -4075,11 +4949,11 @@ DisplayMemoryErrorType (
 **/
 VOID
 DisplayMemoryErrorGranularity (
-  IN UINT8 Granularity,
-  IN UINT8 Option
+  IN UINT8  Granularity,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_GRANULARITY), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_GRANULARITY), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Granularity, Option);
   PRINT_TABLE_ITEM (MemoryErrorGranularityTable, Granularity);
 }
@@ -4092,11 +4966,11 @@ DisplayMemoryErrorGranularity (
 **/
 VOID
 DisplayMemoryErrorOperation (
-  IN UINT8 Operation,
-  IN UINT8 Option
+  IN UINT8  Operation,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_OP), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_ERROR_OP), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Operation, Option);
   PRINT_TABLE_ITEM (MemoryErrorOperationTable, Operation);
 }
@@ -4109,11 +4983,11 @@ DisplayMemoryErrorOperation (
 **/
 VOID
 DisplayPointingDeviceType (
-  IN UINT8 Type,
-  IN UINT8 Option
+  IN UINT8  Type,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POINTING_DEVICE_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POINTING_DEVICE_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (PointingDeviceTypeTable, Type);
 }
@@ -4126,11 +5000,11 @@ DisplayPointingDeviceType (
 **/
 VOID
 DisplayPointingDeviceInterface (
-  IN UINT8   Interface,
-  IN UINT8   Option
+  IN UINT8  Interface,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POINTING_DEVICE_INTERFACE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_POINTING_DEVICE_INTERFACE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Interface, Option);
   PRINT_TABLE_ITEM (PointingDeviceInterfaceTable, Interface);
 }
@@ -4143,11 +5017,11 @@ DisplayPointingDeviceInterface (
 **/
 VOID
 DisplayPBDeviceChemistry (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORTABLE_BATT_DEV_CHEM), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PORTABLE_BATT_DEV_CHEM), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (PBDeviceChemistryTable, Key);
 }
@@ -4160,14 +5034,14 @@ DisplayPBDeviceChemistry (
 **/
 VOID
 DisplayVPLocation (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Loc;
+  UINT8  Loc;
 
-  Loc = (UINT8) ((Key & 0xE0) >> 5);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_VOLTAGE_PROBE_LOC), gShellDebug1HiiHandle);
+  Loc = (UINT8)(Key & 0x1F);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_VOLTAGE_PROBE_LOC), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Loc, Option);
   PRINT_TABLE_ITEM (VPLocationTable, Loc);
 }
@@ -4180,14 +5054,14 @@ DisplayVPLocation (
 **/
 VOID
 DisplayVPStatus (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Status;
+  UINT8  Status;
 
-  Status = (UINT8) (Key & 0x1F);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_VOLTAGE_PROBE_STATUS), gShellDebug1HiiHandle);
+  Status = (UINT8)((Key & 0xE0) >> 5);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_VOLTAGE_PROBE_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (VPStatusTable, Status);
 }
@@ -4200,14 +5074,14 @@ DisplayVPStatus (
 **/
 VOID
 DisplayCoolingDeviceStatus (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Status;
+  UINT8  Status;
 
-  Status = (UINT8) ((Key & 0xE0) >> 5);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_COOLING_DEV_STATUS), gShellDebug1HiiHandle);
+  Status = (UINT8)((Key & 0xE0) >> 5);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_COOLING_DEV_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (CoolingDeviceStatusTable, Status);
 }
@@ -4220,14 +5094,14 @@ DisplayCoolingDeviceStatus (
 **/
 VOID
 DisplayCoolingDeviceType (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Type;
+  UINT8  Type;
 
-  Type = (UINT8) (Key & 0x1F);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_COOLING_DEV_TYPE), gShellDebug1HiiHandle);
+  Type = (UINT8)(Key & 0x1F);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_COOLING_DEV_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Type, Option);
   PRINT_TABLE_ITEM (CoolingDeviceTypeTable, Type);
 }
@@ -4240,14 +5114,14 @@ DisplayCoolingDeviceType (
 **/
 VOID
 DisplayTemperatureProbeStatus (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Status;
+  UINT8  Status;
 
-  Status = (UINT8) ((Key & 0xE0) >> 5);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_TEMP_PROBE), gShellDebug1HiiHandle);
+  Status = (UINT8)((Key & 0xE0) >> 5);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_TEMP_PROBE_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (TemperatureProbeStatusTable, Status);
 }
@@ -4260,14 +5134,14 @@ DisplayTemperatureProbeStatus (
 **/
 VOID
 DisplayTemperatureProbeLoc (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Loc;
+  UINT8  Loc;
 
-  Loc = (UINT8) (Key & 0x1F);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_VOLTAGE_PROBE_LOC), gShellDebug1HiiHandle);
+  Loc = (UINT8)(Key & 0x1F);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_TEMP_PROBE_LOC), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Loc, Option);
   PRINT_TABLE_ITEM (TemperatureProbeLocTable, Loc);
 }
@@ -4280,14 +5154,14 @@ DisplayTemperatureProbeLoc (
 **/
 VOID
 DisplayECPStatus (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Status;
+  UINT8  Status;
 
-  Status = (UINT8) ((Key & 0xE0) >> 5);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ELEC_PROBE_STATUS), gShellDebug1HiiHandle);
+  Status = (UINT8)((Key & 0xE0) >> 5);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ELEC_PROBE_STATUS), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Status, Option);
   PRINT_TABLE_ITEM (ECPStatusTable, Status);
 }
@@ -4300,14 +5174,14 @@ DisplayECPStatus (
 **/
 VOID
 DisplayECPLoc (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  UINT8       Loc;
+  UINT8  Loc;
 
-  Loc = (UINT8) (Key & 0x1F);
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ELEC_PROBE_LOC), gShellDebug1HiiHandle);
+  Loc = (UINT8)(Key & 0x1F);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_ELEC_PROBE_LOC), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Loc, Option);
   PRINT_TABLE_ITEM (ECPLocTable, Loc);
 }
@@ -4320,11 +5194,11 @@ DisplayECPLoc (
 **/
 VOID
 DisplayMDType (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MANAGEMENT_DEV_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MANAGEMENT_DEV_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (MDTypeTable, Key);
 }
@@ -4337,11 +5211,11 @@ DisplayMDType (
 **/
 VOID
 DisplayMDAddressType (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MANAGEMENT_DEV_ADDR_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MANAGEMENT_DEV_ADDR_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (MDAddressTypeTable, Key);
 }
@@ -4354,11 +5228,11 @@ DisplayMDAddressType (
 **/
 VOID
 DisplayMemoryChannelType (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_CHANNEL_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MEM_CHANNEL_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (MemoryChannelTypeTable, Key);
 }
@@ -4371,13 +5245,81 @@ DisplayMemoryChannelType (
 **/
 VOID
 DisplayIPMIDIBMCInterfaceType (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BMC_INTERFACE_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_BMC_INTERFACE_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (IPMIDIBMCInterfaceTypeTable, Key);
+}
+
+/**
+  Display Management Controller Host Interface (Type 42) information.
+
+  @param[in] Key      The key of the structure.
+  @param[in] Option   The optional information.
+**/
+VOID
+DisplayMCHostInterfaceType (
+  IN UINT8  Key,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_MC_HOST_INTERFACE_TYPE), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Key, Option);
+  PRINT_TABLE_ITEM (MCHostInterfaceTypeTable, Key);
+}
+
+/**
+  Display Processor Architecture Type (Type 44).
+
+  @param[in] Key            The key of the structure.
+  @param[in] Option         The optional information.
+**/
+VOID
+DisplayProcessorArchitectureType (
+  IN UINT8  Key,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_PROCESSOR_ARCH_TYPE), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Key, Option);
+  PRINT_TABLE_ITEM (ProcessorArchitectureTypesTable, Key);
+}
+
+/**
+  Display Firmware Characteristics (Type 45) details.
+
+  @param[in] Chara    The information bits.
+  @param[in] Option   The optional information.
+**/
+VOID
+DisplayFirmwareCharacteristics (
+  IN UINT16  Chara,
+  IN UINT8   Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_FIRMWARE_INVENTORY_CHAR), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Chara, Option);
+  PRINT_BITS_INFO (FirmwareInventoryCharTable, Chara);
+}
+
+/**
+  Display Firmware state (Type 45) details.
+
+  @param[in] Key            The key of the structure.
+  @param[in] Option         The optional information.
+**/
+VOID
+DisplayFirmwareState (
+  IN UINT8  Key,
+  IN UINT8  Option
+  )
+{
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_FIRMWARE_INVENTORY_STATE), gShellDebug1HiiHandle);
+  PRINT_INFO_OPTION (Key, Option);
+  PRINT_TABLE_ITEM (FirmwareInventoryStateTable, Key);
 }
 
 /**
@@ -4388,14 +5330,14 @@ DisplayIPMIDIBMCInterfaceType (
 **/
 VOID
 DisplayStructureTypeInfo (
-  IN UINT8 Key,
-  IN UINT8 Option
+  IN UINT8  Key,
+  IN UINT8  Option
   )
 {
   //
   // display
   //
-  ShellPrintHiiEx(-1,-1,NULL,STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_STRUCT_TYPE), gShellDebug1HiiHandle);
+  ShellPrintHiiDefaultEx (STRING_TOKEN (STR_SMBIOSVIEW_QUERYTABLE_STRUCT_TYPE), gShellDebug1HiiHandle);
   PRINT_INFO_OPTION (Key, Option);
   PRINT_TABLE_ITEM (StructureTypeInfoTable, Key);
 }

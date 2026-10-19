@@ -8,13 +8,7 @@ Any other driver or application can get the table and know the common
 communication buffer.
 
 Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -25,8 +19,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/BaseMemoryLib.h>
 #include <Library/MemoryAllocationLib.h>
 #include <Library/DebugLib.h>
+#include <Library/HobLib.h>
 #include <Library/UefiLib.h>
-#include <Library/PcdLib.h>
+#include <Guid/MmCommBuffer.h>
 #include <Guid/PiSmmCommunicationRegionTable.h>
 
 #define DEFAULT_COMMON_PI_SMM_COMMUNIATION_REGION_PAGES  4
@@ -51,43 +46,60 @@ SmmCommunicationBufferEntryPoint (
   UINT32                                   DescriptorSize;
   EDKII_PI_SMM_COMMUNICATION_REGION_TABLE  *PiSmmCommunicationRegionTable;
   EFI_MEMORY_DESCRIPTOR                    *Entry;
+  EFI_HOB_GUID_TYPE                        *GuidHob;
+  MM_COMM_BUFFER                           *MmCommBuffer;
 
-  DescriptorSize = sizeof(EFI_MEMORY_DESCRIPTOR);
+  DescriptorSize = sizeof (EFI_MEMORY_DESCRIPTOR);
+
   //
   // Make sure Size != sizeof(EFI_MEMORY_DESCRIPTOR). This will
   // prevent people from having pointer math bugs in their code.
   // now you have to use *DescriptorSize to make things work.
   //
-  DescriptorSize += sizeof(UINT64) - (DescriptorSize % sizeof (UINT64));
+  DescriptorSize += sizeof (UINT64) - (DescriptorSize % sizeof (UINT64));
 
   //
   // Allocate and fill PiSmmCommunicationRegionTable
   //
-  PiSmmCommunicationRegionTable = AllocateReservedPool (sizeof(EDKII_PI_SMM_COMMUNICATION_REGION_TABLE) + DescriptorSize);
-  ASSERT(PiSmmCommunicationRegionTable != NULL);
-  ZeroMem (PiSmmCommunicationRegionTable, sizeof(EDKII_PI_SMM_COMMUNICATION_REGION_TABLE) + DescriptorSize);
+  PiSmmCommunicationRegionTable = AllocateReservedPool (sizeof (EDKII_PI_SMM_COMMUNICATION_REGION_TABLE) + DescriptorSize);
+  ASSERT (PiSmmCommunicationRegionTable != NULL);
+  if (PiSmmCommunicationRegionTable == NULL) {
+    return EFI_OUT_OF_RESOURCES;
+  }
+
+  ZeroMem (PiSmmCommunicationRegionTable, sizeof (EDKII_PI_SMM_COMMUNICATION_REGION_TABLE) + DescriptorSize);
 
   PiSmmCommunicationRegionTable->Version         = EDKII_PI_SMM_COMMUNICATION_REGION_TABLE_VERSION;
   PiSmmCommunicationRegionTable->NumberOfEntries = 1;
   PiSmmCommunicationRegionTable->DescriptorSize  = DescriptorSize;
-  Entry = (EFI_MEMORY_DESCRIPTOR *)(PiSmmCommunicationRegionTable + 1);
-  Entry->Type          = EfiConventionalMemory;
-  Entry->PhysicalStart = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocateReservedPages (DEFAULT_COMMON_PI_SMM_COMMUNIATION_REGION_PAGES);
-  ASSERT(Entry->PhysicalStart != 0);
-  Entry->VirtualStart  = 0;
-  Entry->NumberOfPages = DEFAULT_COMMON_PI_SMM_COMMUNIATION_REGION_PAGES;
-  Entry->Attribute     = 0;
+  Entry                                          = (EFI_MEMORY_DESCRIPTOR *)(PiSmmCommunicationRegionTable + 1);
+  Entry->Type                                    = EfiConventionalMemory;
 
-  DEBUG ((EFI_D_INFO, "PiSmmCommunicationRegionTable:(0x%x)\n", PiSmmCommunicationRegionTable));
-  DEBUG ((EFI_D_INFO, "  Version         - 0x%x\n", PiSmmCommunicationRegionTable->Version));
-  DEBUG ((EFI_D_INFO, "  NumberOfEntries - 0x%x\n", PiSmmCommunicationRegionTable->NumberOfEntries));
-  DEBUG ((EFI_D_INFO, "  DescriptorSize  - 0x%x\n", PiSmmCommunicationRegionTable->DescriptorSize));
-  DEBUG ((EFI_D_INFO, "Entry:(0x%x)\n", Entry));
-  DEBUG ((EFI_D_INFO, "  Type            - 0x%x\n", Entry->Type));
-  DEBUG ((EFI_D_INFO, "  PhysicalStart   - 0x%lx\n", Entry->PhysicalStart));
-  DEBUG ((EFI_D_INFO, "  VirtualStart    - 0x%lx\n", Entry->VirtualStart));
-  DEBUG ((EFI_D_INFO, "  NumberOfPages   - 0x%lx\n", Entry->NumberOfPages));
-  DEBUG ((EFI_D_INFO, "  Attribute       - 0x%lx\n", Entry->Attribute));
+  GuidHob = GetFirstGuidHob (&gMmCommBufferHobGuid);
+
+  if (GuidHob == NULL) {
+    Entry->PhysicalStart = (EFI_PHYSICAL_ADDRESS)(UINTN)AllocateReservedPages (DEFAULT_COMMON_PI_SMM_COMMUNIATION_REGION_PAGES);
+    Entry->NumberOfPages = DEFAULT_COMMON_PI_SMM_COMMUNIATION_REGION_PAGES;
+  } else {
+    MmCommBuffer         = GET_GUID_HOB_DATA (GuidHob);
+    Entry->PhysicalStart = MmCommBuffer->PhysicalStart;
+    Entry->NumberOfPages = MmCommBuffer->NumberOfPages;
+  }
+
+  ASSERT (Entry->PhysicalStart != 0);
+  Entry->VirtualStart = 0;
+  Entry->Attribute    = 0;
+
+  DEBUG ((DEBUG_INFO, "PiSmmCommunicationRegionTable:(0x%x)\n", PiSmmCommunicationRegionTable));
+  DEBUG ((DEBUG_INFO, "  Version         - 0x%x\n", PiSmmCommunicationRegionTable->Version));
+  DEBUG ((DEBUG_INFO, "  NumberOfEntries - 0x%x\n", PiSmmCommunicationRegionTable->NumberOfEntries));
+  DEBUG ((DEBUG_INFO, "  DescriptorSize  - 0x%x\n", PiSmmCommunicationRegionTable->DescriptorSize));
+  DEBUG ((DEBUG_INFO, "Entry:(0x%x)\n", Entry));
+  DEBUG ((DEBUG_INFO, "  Type            - 0x%x\n", Entry->Type));
+  DEBUG ((DEBUG_INFO, "  PhysicalStart   - 0x%lx\n", Entry->PhysicalStart));
+  DEBUG ((DEBUG_INFO, "  VirtualStart    - 0x%lx\n", Entry->VirtualStart));
+  DEBUG ((DEBUG_INFO, "  NumberOfPages   - 0x%lx\n", Entry->NumberOfPages));
+  DEBUG ((DEBUG_INFO, "  Attribute       - 0x%lx\n", Entry->Attribute));
 
   //
   // Publish this table, so that other driver can use the buffer.

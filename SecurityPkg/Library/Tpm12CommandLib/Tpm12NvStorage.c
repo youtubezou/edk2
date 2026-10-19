@@ -1,15 +1,9 @@
 /** @file
   Implement TPM1.2 NV storage related command.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved. <BR>
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved. <BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -28,37 +22,37 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #pragma pack(1)
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR   Hdr;
-  TPM12_NV_DATA_PUBLIC  PubInfo;
-  TPM_ENCAUTH           EncAuth;
+  TPM_RQU_COMMAND_HDR     Hdr;
+  TPM12_NV_DATA_PUBLIC    PubInfo;
+  TPM_ENCAUTH             EncAuth;
 } TPM_CMD_NV_DEFINE_SPACE;
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR   Hdr;
-  TPM_NV_INDEX          NvIndex;
-  UINT32                Offset;
-  UINT32                DataSize;
+  TPM_RQU_COMMAND_HDR    Hdr;
+  TPM_NV_INDEX           NvIndex;
+  UINT32                 Offset;
+  UINT32                 DataSize;
 } TPM_CMD_NV_READ_VALUE;
 
 typedef struct {
-  TPM_RSP_COMMAND_HDR   Hdr;
-  UINT32                DataSize;
-  UINT8                 Data[TPMNVVALUELENGTH];
+  TPM_RSP_COMMAND_HDR    Hdr;
+  UINT32                 DataSize;
+  UINT8                  Data[TPMNVVALUELENGTH];
 } TPM_RSP_NV_READ_VALUE;
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR   Hdr;
-  TPM_NV_INDEX          NvIndex;
-  UINT32                Offset;
-  UINT32                DataSize;
-  UINT8                 Data[TPMNVVALUELENGTH];
+  TPM_RQU_COMMAND_HDR    Hdr;
+  TPM_NV_INDEX           NvIndex;
+  UINT32                 Offset;
+  UINT32                 DataSize;
+  UINT8                  Data[TPMNVVALUELENGTH];
 } TPM_CMD_NV_WRITE_VALUE;
 
 #pragma pack()
 
 /**
   Send NV DefineSpace command to TPM1.2.
-  
+
   @param PubInfo           The public parameters of the NV area.
   @param EncAuth           The encrypted AuthData, only valid if the attributes require subsequent authorization.
 
@@ -80,41 +74,42 @@ Tpm12NvDefineSpace (
   //
   // send Tpm command TPM_ORD_NV_DefineSpace
   //
-  Command.Hdr.tag         = SwapBytes16 (TPM_TAG_RQU_COMMAND);
-  Command.Hdr.paramSize   = SwapBytes32 (sizeof (Command));
-  Command.Hdr.ordinal     = SwapBytes32 (TPM_ORD_NV_DefineSpace);
-  Command.PubInfo.tag     = SwapBytes16 (PubInfo->tag);
-  Command.PubInfo.nvIndex = SwapBytes32 (PubInfo->nvIndex);
-  Command.PubInfo.pcrInfoRead.pcrSelection.sizeOfSelect  = SwapBytes16 (PubInfo->pcrInfoRead.pcrSelection.sizeOfSelect);
-  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[0]  = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[0];
-  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[1]  = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[1];
-  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[2]  = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[2];
-  Command.PubInfo.pcrInfoRead.localityAtRelease          = PubInfo->pcrInfoRead.localityAtRelease;
-  CopyMem (&Command.PubInfo.pcrInfoRead.digestAtRelease, &PubInfo->pcrInfoRead.digestAtRelease, sizeof(PubInfo->pcrInfoRead.digestAtRelease));
+  Command.Hdr.tag                                       = SwapBytes16 (TPM_TAG_RQU_COMMAND);
+  Command.Hdr.paramSize                                 = SwapBytes32 (sizeof (Command));
+  Command.Hdr.ordinal                                   = SwapBytes32 (TPM_ORD_NV_DefineSpace);
+  Command.PubInfo.tag                                   = SwapBytes16 (PubInfo->tag);
+  Command.PubInfo.nvIndex                               = SwapBytes32 (PubInfo->nvIndex);
+  Command.PubInfo.pcrInfoRead.pcrSelection.sizeOfSelect = SwapBytes16 (PubInfo->pcrInfoRead.pcrSelection.sizeOfSelect);
+  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[0] = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[0];
+  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[1] = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[1];
+  Command.PubInfo.pcrInfoRead.pcrSelection.pcrSelect[2] = PubInfo->pcrInfoRead.pcrSelection.pcrSelect[2];
+  Command.PubInfo.pcrInfoRead.localityAtRelease         = PubInfo->pcrInfoRead.localityAtRelease;
+  CopyMem (&Command.PubInfo.pcrInfoRead.digestAtRelease, &PubInfo->pcrInfoRead.digestAtRelease, sizeof (PubInfo->pcrInfoRead.digestAtRelease));
   Command.PubInfo.pcrInfoWrite.pcrSelection.sizeOfSelect = SwapBytes16 (PubInfo->pcrInfoWrite.pcrSelection.sizeOfSelect);
   Command.PubInfo.pcrInfoWrite.pcrSelection.pcrSelect[0] = PubInfo->pcrInfoWrite.pcrSelection.pcrSelect[0];
   Command.PubInfo.pcrInfoWrite.pcrSelection.pcrSelect[1] = PubInfo->pcrInfoWrite.pcrSelection.pcrSelect[1];
   Command.PubInfo.pcrInfoWrite.pcrSelection.pcrSelect[2] = PubInfo->pcrInfoWrite.pcrSelection.pcrSelect[2];
   Command.PubInfo.pcrInfoWrite.localityAtRelease         = PubInfo->pcrInfoWrite.localityAtRelease;
-  CopyMem (&Command.PubInfo.pcrInfoWrite.digestAtRelease, &PubInfo->pcrInfoWrite.digestAtRelease, sizeof(PubInfo->pcrInfoWrite.digestAtRelease));
+  CopyMem (&Command.PubInfo.pcrInfoWrite.digestAtRelease, &PubInfo->pcrInfoWrite.digestAtRelease, sizeof (PubInfo->pcrInfoWrite.digestAtRelease));
   Command.PubInfo.permission.tag        = SwapBytes16 (PubInfo->permission.tag);
   Command.PubInfo.permission.attributes = SwapBytes32 (PubInfo->permission.attributes);
   Command.PubInfo.bReadSTClear          = PubInfo->bReadSTClear;
   Command.PubInfo.bWriteSTClear         = PubInfo->bWriteSTClear;
   Command.PubInfo.bWriteDefine          = PubInfo->bWriteDefine;
   Command.PubInfo.dataSize              = SwapBytes32 (PubInfo->dataSize);
-  CopyMem (&Command.EncAuth, EncAuth, sizeof(*EncAuth));
+  CopyMem (&Command.EncAuth, EncAuth, sizeof (*EncAuth));
   Length = sizeof (Response);
   Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   DEBUG ((DEBUG_INFO, "Tpm12NvDefineSpace - ReturnCode = %x\n", SwapBytes32 (Response.returnCode)));
   switch (SwapBytes32 (Response.returnCode)) {
-  case TPM_SUCCESS:
-    return EFI_SUCCESS;
-  default:
-    return EFI_DEVICE_ERROR;
+    case TPM_SUCCESS:
+      return EFI_SUCCESS;
+    default:
+      return EFI_DEVICE_ERROR;
   }
 }
 
@@ -152,17 +147,18 @@ Tpm12NvReadValue (
   Command.NvIndex       = SwapBytes32 (NvIndex);
   Command.Offset        = SwapBytes32 (Offset);
   Command.DataSize      = SwapBytes32 (*DataSize);
-  Length = sizeof (Response);
-  Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
+  Length                = sizeof (Response);
+  Status                = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   DEBUG ((DEBUG_INFO, "Tpm12NvReadValue - ReturnCode = %x\n", SwapBytes32 (Response.Hdr.returnCode)));
   switch (SwapBytes32 (Response.Hdr.returnCode)) {
-  case TPM_SUCCESS:
-    break;
-  default:
-    return EFI_DEVICE_ERROR;
+    case TPM_SUCCESS:
+      break;
+    default:
+      return EFI_DEVICE_ERROR;
   }
 
   //
@@ -171,6 +167,7 @@ Tpm12NvReadValue (
   if (SwapBytes32 (Response.DataSize) > *DataSize) {
     return EFI_BUFFER_TOO_SMALL;
   }
+
   *DataSize = SwapBytes32 (Response.DataSize);
   ZeroMem (Data, *DataSize);
   CopyMem (Data, &Response.Data, *DataSize);
@@ -180,7 +177,7 @@ Tpm12NvReadValue (
 
 /**
   Send NV WriteValue command to TPM1.2.
-  
+
   @param NvIndex           The index of the area to set.
   @param Offset            The offset into the NV Area.
   @param DataSize          The size of the data parameter.
@@ -212,7 +209,7 @@ Tpm12NvWriteValue (
   // send Tpm command TPM_ORD_NV_WriteValue
   //
   Command.Hdr.tag       = SwapBytes16 (TPM_TAG_RQU_COMMAND);
-  CommandLength = sizeof (Command) - sizeof(Command.Data) + DataSize;
+  CommandLength         = sizeof (Command) - sizeof (Command.Data) + DataSize;
   Command.Hdr.paramSize = SwapBytes32 (CommandLength);
   Command.Hdr.ordinal   = SwapBytes32 (TPM_ORD_NV_WriteValue);
   Command.NvIndex       = SwapBytes32 (NvIndex);
@@ -220,15 +217,16 @@ Tpm12NvWriteValue (
   Command.DataSize      = SwapBytes32 (DataSize);
   CopyMem (Command.Data, Data, DataSize);
   ResponseLength = sizeof (Response);
-  Status = Tpm12SubmitCommand (CommandLength, (UINT8 *)&Command, &ResponseLength, (UINT8 *)&Response);
+  Status         = Tpm12SubmitCommand (CommandLength, (UINT8 *)&Command, &ResponseLength, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  DEBUG ((DEBUG_INFO, "Tpm12NvWritedValue - ReturnCode = %x\n", SwapBytes32 (Response.returnCode)));
+
+  DEBUG ((DEBUG_INFO, "Tpm12NvWriteValue - ReturnCode = %x\n", SwapBytes32 (Response.returnCode)));
   switch (SwapBytes32 (Response.returnCode)) {
-  case TPM_SUCCESS:
-    return EFI_SUCCESS;
-  default:
-    return EFI_DEVICE_ERROR;
+    case TPM_SUCCESS:
+      return EFI_SUCCESS;
+    default:
+      return EFI_DEVICE_ERROR;
   }
 }

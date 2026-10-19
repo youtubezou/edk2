@@ -1,22 +1,15 @@
 /** @file
   This file defines the EFI EAP Configuration protocol.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This Protocol is introduced in UEFI Specification 2.5
 
 **/
 
-#ifndef __EFI_EAP_CONFIGURATION_PROTOCOL_H__
-#define __EFI_EAP_CONFIGURATION_PROTOCOL_H__
+#pragma once
 
 ///
 /// EFI EAP Configuration protocol provides a way to set and get EAP configuration.
@@ -31,7 +24,7 @@ typedef struct _EFI_EAP_CONFIGURATION_PROTOCOL EFI_EAP_CONFIGURATION_PROTOCOL;
 ///
 /// Make sure it not conflict with any real EapTypeXXX
 ///
-#define EFI_EAP_TYPE_ATTRIBUTE 0
+#define EFI_EAP_TYPE_ATTRIBUTE  0
 
 typedef enum {
   ///
@@ -104,7 +97,7 @@ typedef UINT8 EFI_EAP_TYPE;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_EAP_CONFIGURATION_SET_DATA) (
+(EFIAPI *EFI_EAP_CONFIGURATION_SET_DATA)(
   IN EFI_EAP_CONFIGURATION_PROTOCOL       *This,
   IN EFI_EAP_TYPE                         EapType,
   IN EFI_EAP_CONFIG_DATA_TYPE             DataType,
@@ -136,7 +129,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_EAP_CONFIGURATION_GET_DATA) (
+(EFIAPI *EFI_EAP_CONFIGURATION_GET_DATA)(
   IN EFI_EAP_CONFIGURATION_PROTOCOL       *This,
   IN EFI_EAP_TYPE                         EapType,
   IN EFI_EAP_CONFIG_DATA_TYPE             DataType,
@@ -150,10 +143,8 @@ EFI_STATUS
 /// private key file.
 ///
 struct _EFI_EAP_CONFIGURATION_PROTOCOL {
-  EFI_EAP_CONFIGURATION_SET_DATA          SetData;
-  EFI_EAP_CONFIGURATION_GET_DATA          GetData;
+  EFI_EAP_CONFIGURATION_SET_DATA    SetData;
+  EFI_EAP_CONFIGURATION_GET_DATA    GetData;
 };
 
-extern EFI_GUID gEfiEapConfigurationProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiEapConfigurationProtocolGuid;

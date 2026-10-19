@@ -1,21 +1,15 @@
 /** @file
-*
-*  Copyright (c) 2011, ARM Limited. All rights reserved.
-*
-*  This program and the accompanying materials
-*  are licensed and made available under the terms and conditions of the BSD License
-*  which accompanies this distribution.  The full text of the license may be found at
-*  http://opensource.org/licenses/bsd-license.php
-*
-*  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-*
+
+  Copyright (c) 2011, ARM Limited. All rights reserved.
+
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
 **/
 
 #include <PiPei.h>
 
 //
-// The protocols, PPI and GUID defintions for this module
+// The protocols, PPI and GUID definitions for this module
 //
 #include <Ppi/MasterBootMode.h>
 #include <Ppi/BootInRecoveryMode.h>
@@ -30,6 +24,7 @@
 #include <Library/PeimEntryPoint.h>
 #include <Library/PeiServicesLib.h>
 #include <Library/PcdLib.h>
+#include <Guid/TransferListHob.h>
 
 EFI_STATUS
 EFIAPI
@@ -82,22 +77,40 @@ InitializePlatformPeim (
   IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
-  EFI_STATUS                    Status;
-  UINTN                         BootMode;
+  EFI_STATUS         Status;
+  EFI_BOOT_MODE      BootMode;
+  VOID               *TransferListBase;
+  UINTN              *TransferListHobData;
+  EFI_HOB_GUID_TYPE  *GuidHob;
 
-  DEBUG ((EFI_D_LOAD | EFI_D_INFO, "Platform PEIM Loaded\n"));
+  DEBUG ((DEBUG_LOAD | DEBUG_INFO, "Platform PEIM Loaded\n"));
+
+  Status = PeiServicesSetBootMode (ArmPlatformGetBootMode ());
+  ASSERT_EFI_ERROR (Status);
+
+  // If TransferList PPI is present and TransferListHobGuid is not present,
+  // then create a TransferListHob with the TransferListBase address.
+  Status = PeiServicesLocatePpi (&gArmTransferListPpiGuid, 0, NULL, &TransferListBase);
+  if (!EFI_ERROR (Status)) {
+    GuidHob = GetFirstGuidHob (&gArmTransferListHobGuid);
+    if ((GuidHob == NULL) && (TransferListBase != NULL)) {
+      TransferListHobData = BuildGuidHob (&gArmTransferListHobGuid, sizeof (*TransferListHobData));
+      ASSERT (TransferListHobData != NULL);
+
+      *TransferListHobData = (UINTN)TransferListBase;
+    }
+  }
 
   PlatformPeim ();
 
-  BootMode  = ArmPlatformGetBootMode ();
-  Status    = (**PeiServices).SetBootMode (PeiServices, (UINT8) BootMode);
+  Status = PeiServicesGetBootMode (&BootMode);
   ASSERT_EFI_ERROR (Status);
 
-  Status = (**PeiServices).InstallPpi (PeiServices, &mPpiListBootMode);
+  Status = PeiServicesInstallPpi (&mPpiListBootMode);
   ASSERT_EFI_ERROR (Status);
 
   if (BootMode == BOOT_IN_RECOVERY_MODE) {
-    Status = (**PeiServices).InstallPpi (PeiServices, &mPpiListRecoveryBootMode);
+    Status = PeiServicesInstallPpi (&mPpiListRecoveryBootMode);
     ASSERT_EFI_ERROR (Status);
   }
 

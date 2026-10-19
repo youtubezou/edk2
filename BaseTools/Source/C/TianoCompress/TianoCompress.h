@@ -1,19 +1,12 @@
 /** @file
   Internal include file for Tiano Decompress Library.
 
-  Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __TIANO_DECOMPRESS_H__
-#define __TIANO_DECOMPRESS_H__
+#pragma once
 
 #include <stdio.h>
 #include <assert.h>
@@ -95,7 +88,7 @@ GetFileContents (
   OUT UINT8   *FileBuffer,
   OUT UINT32  *BufferLength
   );
-  
+
 STATIC
 VOID
 PutDword(
@@ -228,7 +221,7 @@ MakeCrcTable (
   VOID
   );
 
-  
+
 STATIC
 VOID
 PutBits (
@@ -283,7 +276,7 @@ MakeTree (
   OUT UINT8   LenParm[ ],
   OUT UINT16  CodeParm[]
   );
-  
+
 /**
   Read NumOfBit of bits from source into mBitBuf
 
@@ -302,8 +295,8 @@ FillBuf (
 /**
   Get NumOfBits of bits out from mBitBuf
 
-  Get NumOfBits of bits out from mBitBuf. Fill mBitBuf with subsequent 
-  NumOfBits of bits from source. Returns NumOfBits of bits that are 
+  Get NumOfBits of bits out from mBitBuf. Fill mBitBuf with subsequent
+  NumOfBits of bits from source. Returns NumOfBits of bits that are
   popped out.
 
   @param  Sd        The global scratch data.
@@ -321,7 +314,7 @@ GetBits (
 /**
   Creates Huffman Code mapping table according to code length array.
 
-  Creates Huffman Code mapping table for Extra Set, Char&Len Set 
+  Creates Huffman Code mapping table for Extra Set, Char&Len Set
   and Position Set according to code length array.
 
   @param  Sd        The global scratch data
@@ -347,7 +340,7 @@ MakeTable (
   Decodes a position value.
 
   Get a position value according to Position Huffman Table.
-  
+
   @param  Sd the global scratch data
 
   @return The position value decoded.
@@ -383,7 +376,7 @@ ReadPTLen (
 
 /**
   Reads code lengths for Char&Len Set.
-  
+
   Read in and decode the Char&Len Set Code Length Array, then
   generate the Huffman Code mapping table for the Char&Len Set.
 
@@ -397,7 +390,7 @@ ReadCLen (
 
 /**
   Decode a character/length value.
-  
+
   Read one value from mBitBuf, Get one code from mBitBuf. If it is at block boundary, generates
   Huffman code mapping table for Extra Set, Code&Len Set and
   Position Set.
@@ -416,7 +409,7 @@ DecodeC (
   Decode the source data and put the resulting data into the destination buffer.
 
   Decode the source data and put the resulting data into the destination buffer.
-  
+
   @param  Sd The global scratch data
 
 **/
@@ -427,11 +420,9 @@ Decode (
 
 RETURN_STATUS
 EFIAPI
-Decompress (
+TDecompress (
   IN VOID  *Source,
   IN OUT VOID    *Destination,
   IN OUT VOID    *Scratch,
   IN UINT32      Version
   );
-
-#endif

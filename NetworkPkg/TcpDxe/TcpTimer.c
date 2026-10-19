@@ -2,20 +2,14 @@
   TCP timer related functions.
 
   Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
-
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) Microsoft Corporation
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "TcpMain.h"
 
-UINT32    mTcpTick = 1000;
+UINT32  mTcpTick = 1000;
 
 /**
   Connect timeout handler.
@@ -25,7 +19,7 @@ UINT32    mTcpTick = 1000;
 **/
 VOID
 TcpConnectTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
 /**
@@ -36,7 +30,7 @@ TcpConnectTimeout (
 **/
 VOID
 TcpRexmitTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
 /**
@@ -47,7 +41,7 @@ TcpRexmitTimeout (
 **/
 VOID
 TcpProbeTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
 /**
@@ -58,7 +52,7 @@ TcpProbeTimeout (
 **/
 VOID
 TcpKeepaliveTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
 /**
@@ -69,7 +63,7 @@ TcpKeepaliveTimeout (
 **/
 VOID
 TcpFinwait2Timeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
 /**
@@ -80,10 +74,10 @@ TcpFinwait2Timeout (
 **/
 VOID
 Tcp2MSLTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   );
 
-TCP_TIMER_HANDLER mTcpTimerHandler[TCP_TIMER_NUMBER] = {
+TCP_TIMER_HANDLER  mTcpTimerHandler[TCP_TIMER_NUMBER] = {
   TcpConnectTimeout,
   TcpRexmitTimeout,
   TcpProbeTimeout,
@@ -100,7 +94,7 @@ TCP_TIMER_HANDLER mTcpTimerHandler[TCP_TIMER_NUMBER] = {
 **/
 VOID
 TcpClose (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   NetbufFreeList (&Tcb->SndQue);
@@ -117,7 +111,7 @@ TcpClose (
 **/
 VOID
 TcpBackoffRto (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   //
@@ -127,16 +121,14 @@ TcpBackoffRto (
   //
   if ((Tcb->LossTimes >= TCP_FOLD_RTT) && (Tcb->SRtt != 0)) {
     Tcb->RttVar += Tcb->SRtt >> 2;
-    Tcb->SRtt = 0;
+    Tcb->SRtt    = 0;
   }
 
   Tcb->Rto <<= 1;
 
   if (Tcb->Rto < TCP_RTO_MIN) {
-
     Tcb->Rto = TCP_RTO_MIN;
   } else if (Tcb->Rto > TCP_RTO_MAX) {
-
     Tcb->Rto = TCP_RTO_MAX;
   }
 }
@@ -149,14 +141,14 @@ TcpBackoffRto (
 **/
 VOID
 TcpConnectTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   if (!TCP_CONNECTED (Tcb->State)) {
     DEBUG (
-      (EFI_D_ERROR,
-      "TcpConnectTimeout: connection closed because conenction timer timeout for TCB %p\n",
-      Tcb)
+      (DEBUG_ERROR,
+       "TcpConnectTimeout: connection closed because connection timer timeout for TCB %p\n",
+       Tcb)
       );
 
     if (EFI_ABORTED == Tcb->Sk->SockError) {
@@ -165,19 +157,17 @@ TcpConnectTimeout (
 
     if (TCP_SYN_RCVD == Tcb->State) {
       DEBUG (
-        (EFI_D_WARN,
-        "TcpConnectTimeout: send reset because connection timer timeout for TCB %p\n",
-        Tcb)
+        (DEBUG_WARN,
+         "TcpConnectTimeout: send reset because connection timer timeout for TCB %p\n",
+         Tcb)
         );
 
       TcpResetConnection (Tcb);
-
     }
 
     TcpClose (Tcb);
   }
 }
-
 
 /**
   Timeout handler for TCP retransmission timer.
@@ -187,15 +177,15 @@ TcpConnectTimeout (
 **/
 VOID
 TcpRexmitTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   UINT32  FlightSize;
 
   DEBUG (
-    (EFI_D_WARN,
-    "TcpRexmitTimeout: transmission timeout for TCB %p\n",
-    Tcb)
+    (DEBUG_WARN,
+     "TcpRexmitTimeout: transmission timeout for TCB %p\n",
+     Tcb)
     );
 
   //
@@ -203,19 +193,18 @@ TcpRexmitTimeout (
   // amount of data that has been sent but not
   // yet ACKed.
   //
-  FlightSize        = TCP_SUB_SEQ (Tcb->SndNxt, Tcb->SndUna);
-  Tcb->Ssthresh     = MAX ((UINT32) (2 * Tcb->SndMss), FlightSize / 2);
+  FlightSize    = TCP_SUB_SEQ (Tcb->SndNxt, Tcb->SndUna);
+  Tcb->Ssthresh = MAX ((UINT32)(2 * Tcb->SndMss), FlightSize / 2);
 
-  Tcb->CWnd         = Tcb->SndMss;
-  Tcb->LossRecover  = Tcb->SndNxt;
+  Tcb->CWnd        = Tcb->SndMss;
+  Tcb->LossRecover = Tcb->SndNxt;
 
   Tcb->LossTimes++;
   if ((Tcb->LossTimes > Tcb->MaxRexmit) && !TCP_TIMER_ON (Tcb->EnabledTimer, TCP_TIMER_CONNECT)) {
-
     DEBUG (
-      (EFI_D_ERROR,
-      "TcpRexmitTimeout: connection closed because too many timeouts for TCB %p\n",
-      Tcb)
+      (DEBUG_ERROR,
+       "TcpRexmitTimeout: connection closed because too many timeouts for TCB %p\n",
+       Tcb)
       );
 
     if (EFI_ABORTED == Tcb->Sk->SockError) {
@@ -223,7 +212,7 @@ TcpRexmitTimeout (
     }
 
     TcpClose (Tcb);
-    return ;
+    return;
   }
 
   TcpBackoffRto (Tcb);
@@ -243,7 +232,7 @@ TcpRexmitTimeout (
 **/
 VOID
 TcpProbeTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   //
@@ -253,10 +242,9 @@ TcpProbeTimeout (
   // the probe timer, since retransmit timer is on.
   //
   if ((TcpDataToSend (Tcb, 1) != 0) && (TcpToSendData (Tcb, 1) > 0)) {
-
     ASSERT (TCP_TIMER_ON (Tcb->EnabledTimer, TCP_TIMER_REXMIT) != 0);
     Tcb->ProbeTimerOn = FALSE;
-    return ;
+    return;
   }
 
   TcpSendZeroProbe (Tcb);
@@ -271,7 +259,7 @@ TcpProbeTimeout (
 **/
 VOID
 TcpKeepaliveTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   Tcb->KeepAliveProbes++;
@@ -280,13 +268,12 @@ TcpKeepaliveTimeout (
   // Too many Keep-alive probes, drop the connection
   //
   if (Tcb->KeepAliveProbes > Tcb->MaxKeepAlive) {
-
     if (EFI_ABORTED == Tcb->Sk->SockError) {
       SOCK_ERROR (Tcb->Sk, EFI_TIMEOUT);
     }
 
     TcpClose (Tcb);
-    return ;
+    return;
   }
 
   TcpSendZeroProbe (Tcb);
@@ -301,13 +288,13 @@ TcpKeepaliveTimeout (
 **/
 VOID
 TcpFinwait2Timeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   DEBUG (
-    (EFI_D_WARN,
-    "TcpFinwait2Timeout: connection closed because FIN_WAIT2 timer timeouts for TCB %p\n",
-    Tcb)
+    (DEBUG_WARN,
+     "TcpFinwait2Timeout: connection closed because FIN_WAIT2 timer timeouts for TCB %p\n",
+     Tcb)
     );
 
   TcpClose (Tcb);
@@ -321,13 +308,13 @@ TcpFinwait2Timeout (
 **/
 VOID
 Tcp2MSLTimeout (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   DEBUG (
-    (EFI_D_WARN,
-    "Tcp2MSLTimeout: connection closed because TIME_WAIT timer timeouts for TCB %p\n",
-    Tcb)
+    (DEBUG_WARN,
+     "Tcp2MSLTimeout: connection closed because TIME_WAIT timer timeouts for TCB %p\n",
+     Tcb)
     );
 
   TcpClose (Tcb);
@@ -342,7 +329,7 @@ Tcp2MSLTimeout (
 **/
 VOID
 TcpUpdateTimer (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   UINT16  Index;
@@ -355,11 +342,10 @@ TcpUpdateTimer (
   TCP_CLEAR_FLG (Tcb->CtrlFlag, TCP_CTRL_TIMER_ON);
 
   for (Index = 0; Index < TCP_TIMER_NUMBER; Index++) {
-
     if (TCP_TIMER_ON (Tcb->EnabledTimer, Index) &&
         TCP_TIME_LT (Tcb->Timer[Index], mTcpTick + Tcb->NextExpire)
-        ) {
-
+        )
+    {
       Tcb->NextExpire = TCP_SUB_TIME (Tcb->Timer[Index], mTcpTick);
       TCP_SET_FLG (Tcb->CtrlFlag, TCP_CTRL_TIMER_ON);
     }
@@ -376,9 +362,9 @@ TcpUpdateTimer (
 **/
 VOID
 TcpSetTimer (
-  IN OUT TCP_CB *Tcb,
-  IN     UINT16 Timer,
-  IN     UINT32 TimeOut
+  IN OUT TCP_CB  *Tcb,
+  IN     UINT16  Timer,
+  IN     UINT32  TimeOut
   )
 {
   TCP_SET_TIMER (Tcb->EnabledTimer, Timer);
@@ -396,8 +382,8 @@ TcpSetTimer (
 **/
 VOID
 TcpClearTimer (
-  IN OUT TCP_CB *Tcb,
-  IN     UINT16 Timer
+  IN OUT TCP_CB  *Tcb,
+  IN     UINT16  Timer
   )
 {
   TCP_CLEAR_TIMER (Tcb->EnabledTimer, Timer);
@@ -412,7 +398,7 @@ TcpClearTimer (
 **/
 VOID
 TcpClearAllTimer (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   Tcb->EnabledTimer = 0;
@@ -427,22 +413,19 @@ TcpClearAllTimer (
 **/
 VOID
 TcpSetProbeTimer (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   if (!Tcb->ProbeTimerOn) {
     Tcb->ProbeTime    = Tcb->Rto;
     Tcb->ProbeTimerOn = TRUE;
-
   } else {
     Tcb->ProbeTime <<= 1;
   }
 
   if (Tcb->ProbeTime < TCP_RTO_MIN) {
-
     Tcb->ProbeTime = TCP_RTO_MIN;
   } else if (Tcb->ProbeTime > TCP_RTO_MAX) {
-
     Tcb->ProbeTime = TCP_RTO_MAX;
   }
 
@@ -457,12 +440,11 @@ TcpSetProbeTimer (
 **/
 VOID
 TcpSetKeepaliveTimer (
-  IN OUT TCP_CB *Tcb
+  IN OUT TCP_CB  *Tcb
   )
 {
   if (TCP_FLG_ON (Tcb->CtrlFlag, TCP_CTRL_NO_KEEPALIVE)) {
-    return ;
-
+    return;
   }
 
   //
@@ -474,13 +456,11 @@ TcpSetKeepaliveTimer (
   //
   if (!TCP_TIMER_ON (Tcb->EnabledTimer, TCP_TIMER_KEEPALIVE) ||
       (Tcb->Idle < Tcb->KeepAliveIdle)
-      ) {
-
+      )
+  {
     TcpSetTimer (Tcb, TCP_TIMER_KEEPALIVE, Tcb->KeepAliveIdle);
     Tcb->KeepAliveProbes = 0;
-
   } else {
-
     TcpSetTimer (Tcb, TCP_TIMER_KEEPALIVE, Tcb->KeepAlivePeriod);
   }
 }
@@ -494,29 +474,28 @@ TcpSetKeepaliveTimer (
 VOID
 EFIAPI
 TcpTickingDpc (
-  IN VOID       *Context
+  IN VOID  *Context
   )
 {
-  LIST_ENTRY      *Entry;
-  LIST_ENTRY      *Next;
-  TCP_CB          *Tcb;
-  INT16           Index;
+  LIST_ENTRY  *Entry;
+  LIST_ENTRY  *Next;
+  TCP_CB      *Tcb;
+  INT16       Index;
 
   mTcpTick++;
-  mTcpGlobalIss += TCP_ISS_INCREMENT_2;
 
   //
   // Don't use LIST_FOR_EACH, which isn't delete safe.
   //
   for (Entry = mTcpRunQue.ForwardLink; Entry != &mTcpRunQue; Entry = Next) {
+    Next = Entry->ForwardLink;
 
-    Next  = Entry->ForwardLink;
-
-    Tcb   = NET_LIST_USER_STRUCT (Entry, TCP_CB, List);
+    Tcb = NET_LIST_USER_STRUCT (Entry, TCP_CB, List);
 
     if (Tcb->State == TCP_CLOSED) {
       continue;
     }
+
     //
     // The connection is doing RTT measurement.
     //
@@ -530,7 +509,7 @@ TcpTickingDpc (
       TcpSendAck (Tcb);
     }
 
-    if (Tcb->IpInfo->IpVersion == IP_VERSION_6 && Tcb->Tick > 0) {
+    if ((Tcb->IpInfo->IpVersion == IP_VERSION_6) && (Tcb->Tick > 0)) {
       Tcb->Tick--;
     }
 
@@ -538,7 +517,6 @@ TcpTickingDpc (
     // No timer is active or no timer expired
     //
     if (!TCP_FLG_ON (Tcb->CtrlFlag, TCP_CTRL_TIMER_ON) || ((--Tcb->NextExpire) > 0)) {
-
       continue;
     }
 
@@ -546,7 +524,6 @@ TcpTickingDpc (
     // Call the timeout handler for each expired timer.
     //
     for (Index = 0; Index < TCP_TIMER_NUMBER; Index++) {
-
       if (TCP_TIMER_ON (Tcb->EnabledTimer, Index) && TCP_TIME_LEQ (Tcb->Timer[Index], mTcpTick)) {
         //
         // disable the timer before calling the handler
@@ -584,10 +561,9 @@ TcpTickingDpc (
 VOID
 EFIAPI
 TcpTicking (
-  IN EFI_EVENT Event,
-  IN VOID      *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   QueueDpc (TPL_CALLBACK, TcpTickingDpc, Context);
 }
-

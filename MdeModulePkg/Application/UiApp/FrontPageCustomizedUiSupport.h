@@ -2,18 +2,11 @@
   This library class defines a set of interfaces to be used by customize Ui module
 
 Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FRONTPAGE_CUSTOMIZE_UI_SUPPORT_UI_H__
-#define __FRONTPAGE_CUSTOMIZE_UI_SUPPORT_UI_H__
+#pragma once
 
 /**
   Create continue menu in the front page.
@@ -24,8 +17,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 UiCreateContinueMenu (
-  IN EFI_HII_HANDLE              HiiHandle,
-  IN VOID                        *StartOpCodeHandle
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
   );
 
 /**
@@ -37,8 +30,8 @@ UiCreateContinueMenu (
 **/
 VOID
 UiCreateEmptyLine (
-  IN EFI_HII_HANDLE              HiiHandle,
-  IN VOID                        *StartOpCodeHandle
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
   );
 
 /**
@@ -50,8 +43,8 @@ UiCreateEmptyLine (
 **/
 VOID
 UiCreateLanguageMenu (
-  IN EFI_HII_HANDLE              HiiHandle,
-  IN VOID                        *StartOpCodeHandle
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
   );
 
 /**
@@ -63,8 +56,8 @@ UiCreateLanguageMenu (
 **/
 VOID
 UiCreateResetMenu (
-  IN EFI_HII_HANDLE              HiiHandle,
-  IN VOID                        *StartOpCodeHandle
+  IN EFI_HII_HANDLE  HiiHandle,
+  IN VOID            *StartOpCodeHandle
   );
 
 /**
@@ -83,7 +76,7 @@ BOOLEAN
   IN  CHAR16                   *DriverName,
   OUT CHAR16                   **NewName,
   OUT BOOLEAN                  *EmptyLineAfter
-);
+  );
 
 /**
   Search the drivers in the system which need to show in the front page
@@ -91,7 +84,7 @@ BOOLEAN
 
   @param    HiiHandle           The hii handle for the Uiapp driver.
   @param    ClassGuid           The class guid for the driver which is the target.
-  @param    SpecialHandlerFn      The pointer to the specail handler function, if any.
+  @param    SpecialHandlerFn    The pointer to the special handler function, if any.
   @param    StartOpCodeHandle   The opcode handle to save the new opcode.
 
   @retval   EFI_SUCCESS         Search the driver success
@@ -99,10 +92,10 @@ BOOLEAN
 **/
 EFI_STATUS
 UiListThirdPartyDrivers (
-  IN EFI_HII_HANDLE              HiiHandle,
-  IN EFI_GUID                    *ClassGuid,
-  IN DRIVER_SPECIAL_HANDLER      SpecialHandlerFn,
-  IN VOID                        *StartOpCodeHandle
+  IN EFI_HII_HANDLE          HiiHandle,
+  IN EFI_GUID                *ClassGuid,
+  IN DRIVER_SPECIAL_HANDLER  SpecialHandlerFn,
+  IN VOID                    *StartOpCodeHandle
   );
 
 /**
@@ -124,13 +117,11 @@ UiListThirdPartyDrivers (
 **/
 BOOLEAN
 UiSupportLibCallbackHandler (
-  IN  EFI_HII_HANDLE                         HiiHandle,
-  IN  EFI_BROWSER_ACTION                     Action,
-  IN  EFI_QUESTION_ID                        QuestionId,
-  IN  UINT8                                  Type,
-  IN  EFI_IFR_TYPE_VALUE                     *Value,
-  OUT EFI_BROWSER_ACTION_REQUEST             *ActionRequest,
-  OUT EFI_STATUS                             *Status
+  IN  EFI_HII_HANDLE              HiiHandle,
+  IN  EFI_BROWSER_ACTION          Action,
+  IN  EFI_QUESTION_ID             QuestionId,
+  IN  UINT8                       Type,
+  IN  EFI_IFR_TYPE_VALUE          *Value,
+  OUT EFI_BROWSER_ACTION_REQUEST  *ActionRequest,
+  OUT EFI_STATUS                  *Status
   );
-
-#endif

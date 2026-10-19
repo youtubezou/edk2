@@ -1,18 +1,11 @@
 /** @file
 
-  Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _SEC_FSP_H_
-#define _SEC_FSP_H_
+#pragma once
 
 #include <PiPei.h>
 #include <FspEas.h>
@@ -23,6 +16,7 @@
 #include <Library/BaseMemoryLib.h>
 #include <Library/FspCommonLib.h>
 #include <Library/FspSecPlatformLib.h>
+#include <Library/FspPlatformLib.h>
 
 #define FSP_MCUD_SIGNATURE  SIGNATURE_32 ('M', 'C', 'U', 'D')
 #define FSP_PER0_SIGNATURE  SIGNATURE_32 ('P', 'E', 'R', '0')
@@ -36,8 +30,8 @@
   @return                     FSP specific IDT gate descriptor.
 
 **/
-UINT64
-FspGetExceptionHandler(
+IA32_IDT_GATE_DESCRIPTOR
+FspGetExceptionHandler (
   IN  UINT64  IdtEntryTemplate
   );
 
@@ -53,11 +47,10 @@ FspGetExceptionHandler(
 **/
 VOID
 FspGlobalDataInit (
-  IN OUT  FSP_GLOBAL_DATA    *PeiFspData,
-  IN UINT32                   BootLoaderStack,
-  IN UINT8                    ApiIdx
+  IN OUT  FSP_GLOBAL_DATA  *PeiFspData,
+  IN UINTN                 BootLoaderStack,
+  IN UINT8                 ApiIdx
   );
-
 
 /**
 
@@ -68,9 +61,8 @@ FspGlobalDataInit (
 **/
 VOID
 FspDataPointerFixUp (
-  IN UINT32   OffsetGap
+  IN UINTN  OffsetGap
   );
-
 
 /**
   This interface returns the base address of FSP binary.
@@ -78,7 +70,7 @@ FspDataPointerFixUp (
   @return   FSP binary base address.
 
 **/
-UINT32
+UINTN
 EFIAPI
 AsmGetFspBaseAddress (
   VOID
@@ -87,13 +79,11 @@ AsmGetFspBaseAddress (
 /**
   This interface gets FspInfoHeader pointer
 
-  @return   FSP binary base address.
+  @return   FSP info header.
 
 **/
-UINT32
+UINTN
 EFIAPI
 AsmGetFspInfoHeader (
   VOID
   );
-
-#endif

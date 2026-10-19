@@ -4,19 +4,12 @@
   This file defines common data structures, macro definitions and some module
   internal function header files.
 
-  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EMMC_DXE_H_
-#define _EMMC_DXE_H_
+#pragma once
 
 #include <Uefi.h>
 #include <IndustryStandard/Emmc.h>
@@ -26,6 +19,7 @@
 #include <Protocol/BlockIo2.h>
 #include <Protocol/StorageSecurityCommand.h>
 #include <Protocol/EraseBlock.h>
+#include <Protocol/DiskInfo.h>
 
 #include <Protocol/DevicePath.h>
 
@@ -40,14 +34,16 @@
 #include <Library/UefiRuntimeServicesTableLib.h>
 
 #include "EmmcBlockIo.h"
+#include "EmmcDiskInfo.h"
+
 //
 // Global Variables
 //
-extern EFI_DRIVER_BINDING_PROTOCOL      gEmmcDxeDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL      gEmmcDxeComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL     gEmmcDxeComponentName2;
+extern EFI_DRIVER_BINDING_PROTOCOL   gEmmcDxeDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL   gEmmcDxeComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL  gEmmcDxeComponentName2;
 
-#define EMMC_PARTITION_SIGNATURE        SIGNATURE_32 ('E', 'm', 'm', 'P')
+#define EMMC_PARTITION_SIGNATURE  SIGNATURE_32 ('E', 'm', 'm', 'P')
 
 #define EMMC_PARTITION_DATA_FROM_BLKIO(a) \
     CR(a, EMMC_PARTITION, BlockIo, EMMC_PARTITION_SIGNATURE)
@@ -61,74 +57,78 @@ extern EFI_COMPONENT_NAME2_PROTOCOL     gEmmcDxeComponentName2;
 #define EMMC_PARTITION_DATA_FROM_ERASEBLK(a) \
     CR(a, EMMC_PARTITION, EraseBlock, EMMC_PARTITION_SIGNATURE)
 
+#define EMMC_PARTITION_DATA_FROM_DISKINFO(a) \
+    CR(a, EMMC_PARTITION, DiskInfo, EMMC_PARTITION_SIGNATURE)
+
 //
 // Take 2.5 seconds as generic time out value, 1 microsecond as unit.
 //
-#define EMMC_GENERIC_TIMEOUT             2500 * 1000
+#define EMMC_GENERIC_TIMEOUT  2500 * 1000
 
-#define EMMC_REQUEST_SIGNATURE           SIGNATURE_32 ('E', 'm', 'R', 'e')
+#define EMMC_REQUEST_SIGNATURE  SIGNATURE_32 ('E', 'm', 'R', 'e')
 
-typedef struct _EMMC_DEVICE              EMMC_DEVICE;
-typedef struct _EMMC_DRIVER_PRIVATE_DATA EMMC_DRIVER_PRIVATE_DATA;
+typedef struct _EMMC_DEVICE               EMMC_DEVICE;
+typedef struct _EMMC_DRIVER_PRIVATE_DATA  EMMC_DRIVER_PRIVATE_DATA;
 
 //
 // Asynchronous I/O request.
 //
 typedef struct {
-  UINT32                                Signature;
-  LIST_ENTRY                            Link;
+  UINT32                                 Signature;
+  LIST_ENTRY                             Link;
 
-  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_SD_MMC_COMMAND_BLOCK               SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK                SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET    Packet;
 
-  BOOLEAN                               IsEnd;
+  BOOLEAN                                IsEnd;
 
-  EFI_BLOCK_IO2_TOKEN                   *Token;
-  EFI_EVENT                             Event;
+  EFI_BLOCK_IO2_TOKEN                    *Token;
+  EFI_EVENT                              Event;
 } EMMC_REQUEST;
 
 #define EMMC_REQUEST_FROM_LINK(a) \
     CR(a, EMMC_REQUEST, Link, EMMC_REQUEST_SIGNATURE)
 
 typedef struct {
-  UINT32                                Signature;
-  BOOLEAN                               Enable;
-  EMMC_PARTITION_TYPE                   PartitionType;
-  EFI_HANDLE                            Handle;
-  EFI_DEVICE_PATH_PROTOCOL              *DevicePath;
-  EFI_BLOCK_IO_PROTOCOL                 BlockIo;
-  EFI_BLOCK_IO2_PROTOCOL                BlockIo2;
-  EFI_BLOCK_IO_MEDIA                    BlockMedia;
-  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL StorageSecurity;
-  EFI_ERASE_BLOCK_PROTOCOL              EraseBlock;
+  UINT32                                   Signature;
+  BOOLEAN                                  Enable;
+  EMMC_PARTITION_TYPE                      PartitionType;
+  EFI_HANDLE                               Handle;
+  EFI_DEVICE_PATH_PROTOCOL                 *DevicePath;
+  EFI_BLOCK_IO_PROTOCOL                    BlockIo;
+  EFI_BLOCK_IO2_PROTOCOL                   BlockIo2;
+  EFI_BLOCK_IO_MEDIA                       BlockMedia;
+  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    StorageSecurity;
+  EFI_ERASE_BLOCK_PROTOCOL                 EraseBlock;
+  EFI_DISK_INFO_PROTOCOL                   DiskInfo;
 
-  LIST_ENTRY                            Queue;
+  LIST_ENTRY                               Queue;
 
-  EMMC_DEVICE                           *Device;
+  EMMC_DEVICE                              *Device;
 } EMMC_PARTITION;
 
 //
 // Up to 6 slots per EMMC PCI host controller
 //
-#define EMMC_MAX_DEVICES                6
+#define EMMC_MAX_DEVICES  6
 //
 // Up to 8 partitions per EMMC device.
 //
-#define EMMC_MAX_PARTITIONS             8
-#define EMMC_MODEL_NAME_MAX_LEN         32
+#define EMMC_MAX_PARTITIONS      8
+#define EMMC_MODEL_NAME_MAX_LEN  32
 
 struct _EMMC_DEVICE {
-  EFI_HANDLE                            Handle;
-  EFI_DEVICE_PATH_PROTOCOL              *DevicePath;
-  UINT8                                 Slot;
-  BOOLEAN                               SectorAddressing;
+  EFI_HANDLE                  Handle;
+  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
+  UINT8                       Slot;
+  BOOLEAN                     SectorAddressing;
 
-  EMMC_PARTITION                        Partition[EMMC_MAX_PARTITIONS];
-  EMMC_CSD                              Csd;
-  EMMC_CID                              Cid;
-  EMMC_EXT_CSD                          ExtCsd;
-  EFI_UNICODE_STRING_TABLE              *ControllerNameTable;
+  EMMC_PARTITION              Partition[EMMC_MAX_PARTITIONS];
+  EMMC_CSD                    Csd;
+  EMMC_CID                    Cid;
+  EMMC_EXT_CSD                ExtCsd;
+  EFI_UNICODE_STRING_TABLE    *ControllerNameTable;
   //
   // The model name consists of three fields in CID register
   // 1) OEM/Application ID (2 bytes)
@@ -136,21 +136,21 @@ struct _EMMC_DEVICE {
   // 3) Product Serial Number (4 bytes)
   // The delimiters of these fields are whitespace.
   //
-  CHAR16                                ModelName[EMMC_MODEL_NAME_MAX_LEN];
-  EMMC_DRIVER_PRIVATE_DATA              *Private;
-} ;
+  CHAR16                      ModelName[EMMC_MODEL_NAME_MAX_LEN];
+  EMMC_DRIVER_PRIVATE_DATA    *Private;
+};
 
 //
 // EMMC DXE driver private data structure
 //
 struct _EMMC_DRIVER_PRIVATE_DATA {
-  EFI_SD_MMC_PASS_THRU_PROTOCOL         *PassThru;
-  EFI_HANDLE                            Controller;
-  EFI_DEVICE_PATH_PROTOCOL              *ParentDevicePath;
-  EFI_HANDLE                            DriverBindingHandle;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL    *PassThru;
+  EFI_HANDLE                       Controller;
+  EFI_DEVICE_PATH_PROTOCOL         *ParentDevicePath;
+  EFI_HANDLE                       DriverBindingHandle;
 
-  EMMC_DEVICE                           Device[EMMC_MAX_DEVICES];
-} ;
+  EMMC_DEVICE                      Device[EMMC_MAX_DEVICES];
+};
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -197,9 +197,9 @@ struct _EMMC_DRIVER_PRIVATE_DATA {
 EFI_STATUS
 EFIAPI
 EmmcDxeDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN EFI_HANDLE                    Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL      *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
 
 /**
@@ -234,15 +234,15 @@ EmmcDxeDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failded to start the device.
+  @retval Others                   The driver failed to start the device.
 
 **/
 EFI_STATUS
 EFIAPI
 EmmcDxeDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN EFI_HANDLE                    Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL      *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
 
 /**
@@ -274,10 +274,10 @@ EmmcDxeDriverBindingStart (
 EFI_STATUS
 EFIAPI
 EmmcDxeDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN  EFI_HANDLE                      Controller,
-  IN  UINTN                           NumberOfChildren,
-  IN  EFI_HANDLE                      *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
   );
 
 /**
@@ -398,11 +398,11 @@ EmmcDxeComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmmcDxeComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
 
 /**
@@ -418,8 +418,8 @@ EmmcDxeComponentNameGetControllerName (
 **/
 EFI_STATUS
 EmmcSelect (
-  IN     EMMC_DEVICE            *Device,
-  IN     UINT16                 Rca
+  IN     EMMC_DEVICE  *Device,
+  IN     UINT16       Rca
   );
 
 /**
@@ -436,9 +436,9 @@ EmmcSelect (
 **/
 EFI_STATUS
 EmmcSendStatus (
-  IN     EMMC_DEVICE            *Device,
-  IN     UINT16                 Rca,
-     OUT UINT32                 *DevStatus
+  IN     EMMC_DEVICE  *Device,
+  IN     UINT16       Rca,
+  OUT UINT32          *DevStatus
   );
 
 /**
@@ -455,9 +455,9 @@ EmmcSendStatus (
 **/
 EFI_STATUS
 EmmcGetCsd (
-  IN     EMMC_DEVICE            *Device,
-  IN     UINT16                 Rca,
-     OUT EMMC_CSD               *Csd
+  IN     EMMC_DEVICE  *Device,
+  IN     UINT16       Rca,
+  OUT EMMC_CSD        *Csd
   );
 
 /**
@@ -474,9 +474,9 @@ EmmcGetCsd (
 **/
 EFI_STATUS
 EmmcGetCid (
-  IN     EMMC_DEVICE            *Device,
-  IN     UINT16                 Rca,
-     OUT EMMC_CID               *Cid
+  IN     EMMC_DEVICE  *Device,
+  IN     UINT16       Rca,
+  OUT EMMC_CID        *Cid
   );
 
 /**
@@ -492,9 +492,6 @@ EmmcGetCid (
 **/
 EFI_STATUS
 EmmcGetExtCsd (
-  IN     EMMC_DEVICE            *Device,
-     OUT EMMC_EXT_CSD           *ExtCsd
+  IN     EMMC_DEVICE  *Device,
+  OUT EMMC_EXT_CSD    *ExtCsd
   );
-
-#endif
-

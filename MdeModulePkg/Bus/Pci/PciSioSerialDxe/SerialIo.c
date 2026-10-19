@@ -1,14 +1,8 @@
 /** @file
   SerialIo implementation for PCI or SIO UARTs.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,27 +20,31 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 UART_DEVICE_PATH *
 SkipControllerDevicePathNode (
-  EFI_DEVICE_PATH_PROTOCOL          *DevicePath,
-  BOOLEAN                           *ContainsControllerNode,
-  UINT32                            *ControllerNumber
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  BOOLEAN                   *ContainsControllerNode,
+  UINT32                    *ControllerNumber
   )
 {
   if ((DevicePathType (DevicePath) == HARDWARE_DEVICE_PATH) &&
       (DevicePathSubType (DevicePath) == HW_CONTROLLER_DP)
-      ) {
+      )
+  {
     if (ContainsControllerNode != NULL) {
       *ContainsControllerNode = TRUE;
     }
+
     if (ControllerNumber != NULL) {
-      *ControllerNumber = ((CONTROLLER_DEVICE_PATH *) DevicePath)->ControllerNumber;
+      *ControllerNumber = ((CONTROLLER_DEVICE_PATH *)DevicePath)->ControllerNumber;
     }
+
     DevicePath = NextDevicePathNode (DevicePath);
   } else {
     if (ContainsControllerNode != NULL) {
       *ContainsControllerNode = FALSE;
     }
   }
-  return (UART_DEVICE_PATH *) DevicePath;
+
+  return (UART_DEVICE_PATH *)DevicePath;
 }
 
 /**
@@ -71,28 +69,29 @@ SkipControllerDevicePathNode (
 **/
 BOOLEAN
 VerifyUartParameters (
-  IN     UINT32                  ClockRate,
-  IN     UINT64                  BaudRate,
-  IN     UINT8                   DataBits,
-  IN     EFI_PARITY_TYPE         Parity,
-  IN     EFI_STOP_BITS_TYPE      StopBits,
-     OUT UINT64                  *Divisor,
-     OUT UINT64                  *ActualBaudRate
+  IN     UINT32              ClockRate,
+  IN     UINT64              BaudRate,
+  IN     UINT8               DataBits,
+  IN     EFI_PARITY_TYPE     Parity,
+  IN     EFI_STOP_BITS_TYPE  StopBits,
+  OUT UINT64                 *Divisor,
+  OUT UINT64                 *ActualBaudRate
   )
 {
-  UINT64                     Remainder;
-  UINT32                     ComputedBaudRate;
-  UINT64                     ComputedDivisor;
-  UINT64                     Percent;
+  UINT64  Remainder;
+  UINT32  ComputedBaudRate;
+  UINT64  ComputedDivisor;
+  UINT64  Percent;
 
   if ((DataBits < 5) || (DataBits > 8) ||
       (Parity < NoParity) || (Parity > SpaceParity) ||
       (StopBits < OneStopBit) || (StopBits > TwoStopBits) ||
       ((DataBits == 5) && (StopBits == TwoStopBits)) ||
       ((DataBits >= 6) && (DataBits <= 8) && (StopBits == OneFiveStopBits))
-      ) {
+      )
+  {
     return FALSE;
-  } 
+  }
 
   //
   // Do not verify the baud rate if clock rate is unknown (0).
@@ -114,6 +113,7 @@ VerifyUartParameters (
   if (Remainder >= LShiftU64 (BaudRate, 3)) {
     ComputedDivisor++;
   }
+
   //
   // If the computed divisor is larger than the maximum value that can be programmed
   // into the UART, then the requested baud rate can not be supported.
@@ -134,15 +134,15 @@ VerifyUartParameters (
   // Actual baud rate that the serial port will be programmed for
   // should be with in 4% of requested one.
   //
-  ComputedBaudRate = ClockRate / ((UINT16) ComputedDivisor << 4);
+  ComputedBaudRate = ClockRate / ((UINT16)ComputedDivisor << 4);
   if (ComputedBaudRate == 0) {
     return FALSE;
   }
 
   Percent = DivU64x32 (MultU64x32 (BaudRate, 100), ComputedBaudRate);
-  DEBUG ((EFI_D_INFO, "ClockRate = %d\n",  ClockRate));
-  DEBUG ((EFI_D_INFO, "Divisor   = %ld\n", ComputedDivisor));
-  DEBUG ((EFI_D_INFO, "BaudRate/Actual (%ld/%d) = %d%%\n", BaudRate, ComputedBaudRate, Percent));
+  DEBUG ((DEBUG_VERBOSE, "ClockRate = %d\n", ClockRate));
+  DEBUG ((DEBUG_VERBOSE, "Divisor   = %ld\n", ComputedDivisor));
+  DEBUG ((DEBUG_VERBOSE, "BaudRate/Actual (%ld/%d) = %d%%\n", BaudRate, ComputedBaudRate, Percent));
 
   //
   // If the requested BaudRate is not supported:
@@ -153,45 +153,53 @@ VerifyUartParameters (
     if (ActualBaudRate != NULL) {
       *ActualBaudRate = BaudRate;
     }
+
     if (Divisor != NULL) {
       *Divisor = ComputedDivisor;
     }
+
     return TRUE;
   }
+
   if (ComputedBaudRate < BaudRate) {
     if (ActualBaudRate != NULL) {
       *ActualBaudRate = ComputedBaudRate;
     }
+
     if (Divisor != NULL) {
       *Divisor = ComputedDivisor;
     }
+
     return TRUE;
   }
 
   //
-  // ActualBaudRate is higher than requested baud rate and more than 4% 
-  // higher than the requested value.  Increment Divisor if it is less 
+  // ActualBaudRate is higher than requested baud rate and more than 4%
+  // higher than the requested value.  Increment Divisor if it is less
   // than MAX_UINT16 and computed baud rate with new divisor.
   //
   if (ComputedDivisor == MAX_UINT16) {
     return FALSE;
   }
+
   ComputedDivisor++;
-  ComputedBaudRate = ClockRate / ((UINT16) ComputedDivisor << 4);
+  ComputedBaudRate = ClockRate / ((UINT16)ComputedDivisor << 4);
   if (ComputedBaudRate == 0) {
     return FALSE;
   }
 
-  DEBUG ((EFI_D_INFO, "ClockRate = %d\n",  ClockRate));
-  DEBUG ((EFI_D_INFO, "Divisor   = %ld\n", ComputedDivisor));
-  DEBUG ((EFI_D_INFO, "BaudRate/Actual (%ld/%d) = %d%%\n", BaudRate, ComputedBaudRate, Percent));
+  DEBUG ((DEBUG_VERBOSE, "ClockRate = %d\n", ClockRate));
+  DEBUG ((DEBUG_VERBOSE, "Divisor   = %ld\n", ComputedDivisor));
+  DEBUG ((DEBUG_VERBOSE, "BaudRate/Actual (%ld/%d) = %d%%\n", BaudRate, ComputedBaudRate, Percent));
 
   if (ActualBaudRate != NULL) {
     *ActualBaudRate = ComputedBaudRate;
   }
+
   if (Divisor != NULL) {
     *Divisor = ComputedDivisor;
   }
+
   return TRUE;
 }
 
@@ -204,26 +212,26 @@ VerifyUartParameters (
 **/
 BOOLEAN
 SerialFifoFull (
-  IN SERIAL_DEV_FIFO *Fifo
+  IN SERIAL_DEV_FIFO  *Fifo
   )
 {
-  return (BOOLEAN) (((Fifo->Tail + 1) % SERIAL_MAX_FIFO_SIZE) == Fifo->Head);
+  return (BOOLEAN)(((Fifo->Tail + 1) % SERIAL_MAX_FIFO_SIZE) == Fifo->Head);
 }
 
 /**
   Detect whether specific FIFO is empty or not.
- 
+
   @param  Fifo    A pointer to the Data Structure SERIAL_DEV_FIFO
 
   @return whether specific FIFO is empty or not
 **/
 BOOLEAN
 SerialFifoEmpty (
-  IN SERIAL_DEV_FIFO *Fifo
+  IN SERIAL_DEV_FIFO  *Fifo
   )
 
 {
-  return (BOOLEAN) (Fifo->Head == Fifo->Tail);
+  return (BOOLEAN)(Fifo->Head == Fifo->Tail);
 }
 
 /**
@@ -237,8 +245,8 @@ SerialFifoEmpty (
 **/
 EFI_STATUS
 SerialFifoAdd (
-  IN OUT SERIAL_DEV_FIFO *Fifo,
-  IN     UINT8           Data
+  IN OUT SERIAL_DEV_FIFO  *Fifo,
+  IN     UINT8            Data
   )
 {
   //
@@ -247,11 +255,12 @@ SerialFifoAdd (
   if (SerialFifoFull (Fifo)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // FIFO is not full can add data
   //
   Fifo->Data[Fifo->Tail] = Data;
-  Fifo->Tail = (Fifo->Tail + 1) % SERIAL_MAX_FIFO_SIZE;
+  Fifo->Tail             = (Fifo->Tail + 1) % SERIAL_MAX_FIFO_SIZE;
   return EFI_SUCCESS;
 }
 
@@ -267,8 +276,8 @@ SerialFifoAdd (
 **/
 EFI_STATUS
 SerialFifoRemove (
-  IN OUT SERIAL_DEV_FIFO *Fifo,
-  OUT    UINT8           *Data
+  IN OUT SERIAL_DEV_FIFO  *Fifo,
+  OUT    UINT8            *Data
   )
 {
   //
@@ -277,10 +286,11 @@ SerialFifoRemove (
   if (SerialFifoEmpty (Fifo)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // FIFO is not empty, can remove data
   //
-  *Data = Fifo->Data[Fifo->Head];
+  *Data      = Fifo->Data[Fifo->Head];
   Fifo->Head = (Fifo->Head + 1) % SERIAL_MAX_FIFO_SIZE;
   return EFI_SUCCESS;
 }
@@ -297,16 +307,16 @@ SerialFifoRemove (
 **/
 EFI_STATUS
 SerialReceiveTransmit (
-  IN SERIAL_DEV *SerialDevice
+  IN SERIAL_DEV  *SerialDevice
   )
 
 {
-  SERIAL_PORT_LSR Lsr;
-  UINT8           Data;
-  BOOLEAN         ReceiveFifoFull;
-  SERIAL_PORT_MSR Msr;
-  SERIAL_PORT_MCR Mcr;
-  UINTN           TimeOut;
+  SERIAL_PORT_LSR  Lsr;
+  UINT8            Data;
+  BOOLEAN          ReceiveFifoFull;
+  SERIAL_PORT_MSR  Msr;
+  SERIAL_PORT_MCR  Mcr;
+  UINTN            TimeOut;
 
   Data = 0;
 
@@ -332,13 +342,15 @@ SerialReceiveTransmit (
     // if receive buffer is available.
     //
     if (SerialDevice->HardwareFlowControl &&
-        !FeaturePcdGet(PcdSerialUseHalfHandshake)&&
+        !FeaturePcdGet (PcdSerialUseHalfHandshake) &&
         !ReceiveFifoFull
-        ) {
+        )
+    {
       Mcr.Data     = READ_MCR (SerialDevice);
       Mcr.Bits.Rts = 1;
       WRITE_MCR (SerialDevice, Mcr.Data);
     }
+
     do {
       Lsr.Data = READ_LSR (SerialDevice);
 
@@ -348,13 +360,13 @@ SerialReceiveTransmit (
       if ((Lsr.Bits.Dr == 1) && !ReceiveFifoFull) {
         ReceiveFifoFull = SerialFifoFull (&SerialDevice->Receive);
         if (!ReceiveFifoFull) {
-          if (Lsr.Bits.FIFOe == 1 || Lsr.Bits.Oe == 1 || Lsr.Bits.Pe == 1 || Lsr.Bits.Fe == 1 || Lsr.Bits.Bi == 1) {
+          if ((Lsr.Bits.FIFOe == 1) || (Lsr.Bits.Oe == 1) || (Lsr.Bits.Pe == 1) || (Lsr.Bits.Fe == 1) || (Lsr.Bits.Bi == 1)) {
             REPORT_STATUS_CODE_WITH_DEVICE_PATH (
               EFI_ERROR_CODE,
               EFI_P_EC_INPUT_ERROR | EFI_PERIPHERAL_SERIAL_PORT,
               SerialDevice->DevicePath
               );
-            if (Lsr.Bits.FIFOe == 1 || Lsr.Bits.Pe == 1|| Lsr.Bits.Fe == 1 || Lsr.Bits.Bi == 1) {
+            if ((Lsr.Bits.FIFOe == 1) || (Lsr.Bits.Pe == 1) || (Lsr.Bits.Fe == 1) || (Lsr.Bits.Bi == 1)) {
               Data = READ_RBR (SerialDevice);
               continue;
             }
@@ -363,20 +375,20 @@ SerialReceiveTransmit (
           Data = READ_RBR (SerialDevice);
 
           SerialFifoAdd (&SerialDevice->Receive, Data);
-          
+
           //
           // For full handshake flow control, if receive buffer full
           // tell the peer to stop sending data.
           //
           if (SerialDevice->HardwareFlowControl &&
-              !FeaturePcdGet(PcdSerialUseHalfHandshake)   &&
+              !FeaturePcdGet (PcdSerialUseHalfHandshake)   &&
               SerialFifoFull (&SerialDevice->Receive)
-              ) {
+              )
+          {
             Mcr.Data     = READ_MCR (SerialDevice);
             Mcr.Bits.Rts = 0;
             WRITE_MCR (SerialDevice, Mcr.Data);
           }
-
 
           continue;
         } else {
@@ -387,10 +399,11 @@ SerialReceiveTransmit (
             );
         }
       }
+
       //
       // Do the write
       //
-      if (Lsr.Bits.Thre == 1 && !SerialFifoEmpty (&SerialDevice->Transmit)) {
+      if ((Lsr.Bits.Thre == 1) && !SerialFifoEmpty (&SerialDevice->Transmit)) {
         //
         // Make sure the transmit data will not be missed
         //
@@ -398,17 +411,18 @@ SerialReceiveTransmit (
           //
           // For half handshake flow control assert RTS before sending.
           //
-          if (FeaturePcdGet(PcdSerialUseHalfHandshake)) {
+          if (FeaturePcdGet (PcdSerialUseHalfHandshake)) {
             Mcr.Data     = READ_MCR (SerialDevice);
-            Mcr.Bits.Rts= 0;
+            Mcr.Bits.Rts = 0;
             WRITE_MCR (SerialDevice, Mcr.Data);
           }
+
           //
           // Wait for CTS
           //
-          TimeOut   = 0;
-          Msr.Data  = READ_MSR (SerialDevice);
-          while ((Msr.Bits.Dcd == 1) && ((Msr.Bits.Cts == 0) ^ FeaturePcdGet(PcdSerialUseHalfHandshake))) {
+          TimeOut  = 0;
+          Msr.Data = READ_MSR (SerialDevice);
+          while ((Msr.Bits.Dcd == 1) && ((Msr.Bits.Cts == 0) ^ FeaturePcdGet (PcdSerialUseHalfHandshake))) {
             gBS->Stall (TIMEOUT_STALL_INTERVAL);
             TimeOut++;
             if (TimeOut > 5) {
@@ -418,7 +432,7 @@ SerialReceiveTransmit (
             Msr.Data = READ_MSR (SerialDevice);
           }
 
-          if ((Msr.Bits.Dcd == 0) || ((Msr.Bits.Cts == 1) ^ FeaturePcdGet(PcdSerialUseHalfHandshake))) {
+          if ((Msr.Bits.Dcd == 0) || ((Msr.Bits.Cts == 1) ^ FeaturePcdGet (PcdSerialUseHalfHandshake))) {
             SerialFifoRemove (&SerialDevice->Transmit, &Data);
             WRITE_THR (SerialDevice, Data);
           }
@@ -426,8 +440,8 @@ SerialReceiveTransmit (
           //
           // For half handshake flow control, tell DCE we are done.
           //
-          if (FeaturePcdGet(PcdSerialUseHalfHandshake)) {
-            Mcr.Data = READ_MCR (SerialDevice);
+          if (FeaturePcdGet (PcdSerialUseHalfHandshake)) {
+            Mcr.Data     = READ_MCR (SerialDevice);
             Mcr.Bits.Rts = 1;
             WRITE_MCR (SerialDevice, Mcr.Data);
           }
@@ -442,9 +456,73 @@ SerialReceiveTransmit (
   return EFI_SUCCESS;
 }
 
+/**
+  Flush the serial hardware transmit FIFO, holding register, and shift register.
+
+  @param SerialDevice  The device to flush.
+
+  @retval  EFI_SUCCESS  The transmit FIFO is completely flushed.
+  @retval  EFI_TIMEOUT  A timeout occurred waiting for the transmit FIFO to flush.
+**/
+EFI_STATUS
+SerialFlushTransmitFifo (
+  SERIAL_DEV  *SerialDevice
+  )
+{
+  SERIAL_PORT_LSR  Lsr;
+  UINTN            Timeout;
+  UINTN            Elapsed;
+
+  //
+  // If this is the first time the UART is being configured, then the current
+  // UART settings are not known, so compute a timeout to wait for the Tx FIFO
+  // assuming the worst case current settings.
+  //
+  // Timeout = (Max Bits per Char) * (Max Pending Chars) / (Slowest Baud Rate)
+  //   Max Bits per Char = Start bit + 8 data bits + parity + 2 stop bits = 12
+  //   Max Pending Chars = Largest Tx FIFO + hold + shift = 64 + 1 + 1 = 66
+  //   Slowest Reasonable Baud Rate = 300 baud
+  // Timeout = 12 * 66 / 300 = 2.64 seconds = 2,640,000 uS
+  //
+  Timeout = 2640000;
+
+  //
+  // Use the largest of the computed timeout, the default timeout, and the
+  // currently set timeout.
+  //
+  Timeout = MAX (Timeout, SERIAL_PORT_DEFAULT_TIMEOUT);
+  Timeout = MAX (Timeout, SerialDevice->SerialMode.Timeout);
+
+  //
+  // Wait for the shortest time possible for the serial port to be ready making
+  // sure the transmit FIFO, holding register, and shift register are all
+  // empty.  The actual wait time is expected to be very small because the
+  // number characters currently in the FIFO should be small when a
+  // configuration change is requested.
+  //
+  // NOTE: Do not use any DEBUG() or REPORT_STATUS_CODE() or any other calls
+  // in the rest of this function that may send additional characters to this
+  // UART device invalidating the flush operation.
+  //
+  Elapsed  = 0;
+  Lsr.Data = READ_LSR (SerialDevice);
+  while (Lsr.Bits.Temt == 0 || Lsr.Bits.Thre == 0) {
+    if (Elapsed >= Timeout) {
+      return EFI_TIMEOUT;
+    }
+
+    gBS->Stall (TIMEOUT_STALL_INTERVAL);
+    Elapsed += TIMEOUT_STALL_INTERVAL;
+    Lsr.Data = READ_LSR (SerialDevice);
+  }
+
+  return EFI_SUCCESS;
+}
+
 //
 // Interface Functions
 //
+
 /**
   Reset serial device.
 
@@ -460,14 +538,14 @@ SerialReset (
   IN EFI_SERIAL_IO_PROTOCOL  *This
   )
 {
-  EFI_STATUS      Status;
-  SERIAL_DEV      *SerialDevice;
-  SERIAL_PORT_LCR Lcr;
-  SERIAL_PORT_IER Ier;
-  SERIAL_PORT_MCR Mcr;
-  SERIAL_PORT_FCR Fcr;
-  EFI_TPL         Tpl;
-  UINT32          Control;
+  EFI_STATUS       Status;
+  SERIAL_DEV       *SerialDevice;
+  SERIAL_PORT_LCR  Lcr;
+  SERIAL_PORT_IER  Ier;
+  SERIAL_PORT_MCR  Mcr;
+  SERIAL_PORT_FCR  Fcr;
+  EFI_TPL          Tpl;
+  UINT32           Control;
 
   SerialDevice = SERIAL_DEV_FROM_THIS (This);
 
@@ -483,6 +561,15 @@ SerialReset (
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
   //
+  // Wait for all data to be transmitted before changing the UART configuration.
+  //
+  // NOTE: Do not use any DEBUG() or REPORT_STATUS_CODE() or any other calls
+  // that may send additional characters to this UART device until the UART
+  // configuration change is complete.
+  //
+  SerialFlushTransmitFifo (SerialDevice);
+
+  //
   // Make sure DLAB is 0.
   //
   Lcr.Data      = READ_LCR (SerialDevice);
@@ -492,17 +579,17 @@ SerialReset (
   //
   // Turn off all interrupts
   //
-  Ier.Data        = READ_IER (SerialDevice);
-  Ier.Bits.Ravie  = 0;
-  Ier.Bits.Theie  = 0;
-  Ier.Bits.Rie    = 0;
-  Ier.Bits.Mie    = 0;
+  Ier.Data       = READ_IER (SerialDevice);
+  Ier.Bits.Ravie = 0;
+  Ier.Bits.Theie = 0;
+  Ier.Bits.Rie   = 0;
+  Ier.Bits.Mie   = 0;
   WRITE_IER (SerialDevice, Ier.Data);
 
   //
   // Reset the FIFO
   //
-  Fcr.Data = 0;
+  Fcr.Data         = 0;
   Fcr.Bits.TrFIFOE = 0;
   WRITE_FCR (SerialDevice, Fcr.Data);
 
@@ -523,12 +610,13 @@ SerialReset (
   //
   // Enable FIFO
   //
-  Fcr.Bits.TrFIFOE  = 1;
+  Fcr.Bits.TrFIFOE = 1;
   if (SerialDevice->ReceiveFifoDepth > 16) {
     Fcr.Bits.TrFIFO64 = 1;
   }
-  Fcr.Bits.ResetRF  = 1;
-  Fcr.Bits.ResetTF  = 1;
+
+  Fcr.Bits.ResetRF = 1;
+  Fcr.Bits.ResetTF = 1;
   WRITE_FCR (SerialDevice, Fcr.Data);
 
   //
@@ -539,15 +627,16 @@ SerialReset (
                    This->Mode->BaudRate,
                    This->Mode->ReceiveFifoDepth,
                    This->Mode->Timeout,
-                   (EFI_PARITY_TYPE) This->Mode->Parity,
-                   (UINT8) This->Mode->DataBits,
-                   (EFI_STOP_BITS_TYPE) This->Mode->StopBits
+                   (EFI_PARITY_TYPE)This->Mode->Parity,
+                   (UINT8)This->Mode->DataBits,
+                   (EFI_STOP_BITS_TYPE)This->Mode->StopBits
                    );
 
   if (EFI_ERROR (Status)) {
     gBS->RestoreTPL (Tpl);
     return EFI_DEVICE_ERROR;
   }
+
   //
   // Go set the current control bits
   //
@@ -555,9 +644,11 @@ SerialReset (
   if (SerialDevice->HardwareFlowControl) {
     Control |= EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
   }
+
   if (SerialDevice->SoftwareLoopbackEnable) {
     Control |= EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE;
   }
+
   Status = This->SetControl (
                    This,
                    Control
@@ -571,7 +662,7 @@ SerialReset (
   //
   // Reset the software FIFO
   //
-  SerialDevice->Receive.Head = SerialDevice->Receive.Tail = 0;
+  SerialDevice->Receive.Head  = SerialDevice->Receive.Tail = 0;
   SerialDevice->Transmit.Head = SerialDevice->Transmit.Tail = 0;
   gBS->RestoreTPL (Tpl);
 
@@ -610,12 +701,12 @@ SerialSetAttributes (
   IN EFI_STOP_BITS_TYPE      StopBits
   )
 {
-  EFI_STATUS                Status;
-  SERIAL_DEV                *SerialDevice;
-  UINT64                    Divisor;
-  SERIAL_PORT_LCR           Lcr;
-  UART_DEVICE_PATH          *Uart;
-  EFI_TPL                   Tpl;
+  EFI_STATUS        Status;
+  SERIAL_DEV        *SerialDevice;
+  UINT64            Divisor;
+  SERIAL_PORT_LCR   Lcr;
+  UART_DEVICE_PATH  *Uart;
+  EFI_TPL           Tpl;
 
   SerialDevice = SERIAL_DEV_FROM_THIS (This);
 
@@ -635,7 +726,7 @@ SerialSetAttributes (
   }
 
   if (Parity == DefaultParity) {
-    Parity = (EFI_PARITY_TYPE) PcdGet8 (PcdUartDefaultParity);
+    Parity = (EFI_PARITY_TYPE)PcdGet8 (PcdUartDefaultParity);
   }
 
   if (DataBits == 0) {
@@ -643,7 +734,7 @@ SerialSetAttributes (
   }
 
   if (StopBits == DefaultStopBits) {
-    StopBits = (EFI_STOP_BITS_TYPE) PcdGet8 (PcdUartDefaultStopBits);
+    StopBits = (EFI_STOP_BITS_TYPE)PcdGet8 (PcdUartDefaultStopBits);
   }
 
   if (!VerifyUartParameters (SerialDevice->ClockRate, BaudRate, DataBits, Parity, StopBits, &Divisor, &BaudRate)) {
@@ -661,6 +752,15 @@ SerialSetAttributes (
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
   //
+  // Wait for all data to be transmitted before changing the UART configuration.
+  //
+  // NOTE: Do not use any DEBUG() or REPORT_STATUS_CODE() or any other calls
+  // that may send additional characters to this UART device until the UART
+  // configuration change is complete.
+  //
+  SerialFlushTransmitFifo (SerialDevice);
+
+  //
   // Put serial port on Divisor Latch Mode
   //
   Lcr.Data      = READ_LCR (SerialDevice);
@@ -670,8 +770,8 @@ SerialSetAttributes (
   //
   // Write the divisor to the serial port
   //
-  WRITE_DLL (SerialDevice, (UINT8) Divisor);
-  WRITE_DLM (SerialDevice, (UINT8) ((UINT16) Divisor >> 8));
+  WRITE_DLL (SerialDevice, (UINT8)Divisor);
+  WRITE_DLM (SerialDevice, (UINT8)((UINT16)Divisor >> 8));
 
   //
   // Put serial port back in normal mode and set remaining attributes.
@@ -679,98 +779,100 @@ SerialSetAttributes (
   Lcr.Bits.DLab = 0;
 
   switch (Parity) {
-  case NoParity:
-    Lcr.Bits.ParEn    = 0;
-    Lcr.Bits.EvenPar  = 0;
-    Lcr.Bits.SticPar  = 0;
-    break;
+    case NoParity:
+      Lcr.Bits.ParEn   = 0;
+      Lcr.Bits.EvenPar = 0;
+      Lcr.Bits.SticPar = 0;
+      break;
 
-  case EvenParity:
-    Lcr.Bits.ParEn    = 1;
-    Lcr.Bits.EvenPar  = 1;
-    Lcr.Bits.SticPar  = 0;
-    break;
+    case EvenParity:
+      Lcr.Bits.ParEn   = 1;
+      Lcr.Bits.EvenPar = 1;
+      Lcr.Bits.SticPar = 0;
+      break;
 
-  case OddParity:
-    Lcr.Bits.ParEn    = 1;
-    Lcr.Bits.EvenPar  = 0;
-    Lcr.Bits.SticPar  = 0;
-    break;
+    case OddParity:
+      Lcr.Bits.ParEn   = 1;
+      Lcr.Bits.EvenPar = 0;
+      Lcr.Bits.SticPar = 0;
+      break;
 
-  case SpaceParity:
-    Lcr.Bits.ParEn    = 1;
-    Lcr.Bits.EvenPar  = 1;
-    Lcr.Bits.SticPar  = 1;
-    break;
+    case SpaceParity:
+      Lcr.Bits.ParEn   = 1;
+      Lcr.Bits.EvenPar = 1;
+      Lcr.Bits.SticPar = 1;
+      break;
 
-  case MarkParity:
-    Lcr.Bits.ParEn    = 1;
-    Lcr.Bits.EvenPar  = 0;
-    Lcr.Bits.SticPar  = 1;
-    break;
+    case MarkParity:
+      Lcr.Bits.ParEn   = 1;
+      Lcr.Bits.EvenPar = 0;
+      Lcr.Bits.SticPar = 1;
+      break;
 
-  default:
-    break;
+    default:
+      break;
   }
 
   switch (StopBits) {
-  case OneStopBit:
-    Lcr.Bits.StopB = 0;
-    break;
+    case OneStopBit:
+      Lcr.Bits.StopB = 0;
+      break;
 
-  case OneFiveStopBits:
-  case TwoStopBits:
-    Lcr.Bits.StopB = 1;
-    break;
+    case OneFiveStopBits:
+    case TwoStopBits:
+      Lcr.Bits.StopB = 1;
+      break;
 
-  default:
-    break;
+    default:
+      break;
   }
+
   //
   // DataBits
   //
-  Lcr.Bits.SerialDB = (UINT8) ((DataBits - 5) & 0x03);
+  Lcr.Bits.SerialDB = (UINT8)((DataBits - 5) & 0x03);
   WRITE_LCR (SerialDevice, Lcr.Data);
 
   //
   // Set the Serial I/O mode
   //
-  This->Mode->BaudRate          = BaudRate;
-  This->Mode->ReceiveFifoDepth  = ReceiveFifoDepth;
-  This->Mode->Timeout           = Timeout;
-  This->Mode->Parity            = Parity;
-  This->Mode->DataBits          = DataBits;
-  This->Mode->StopBits          = StopBits;
+  This->Mode->BaudRate         = BaudRate;
+  This->Mode->ReceiveFifoDepth = ReceiveFifoDepth;
+  This->Mode->Timeout          = Timeout;
+  This->Mode->Parity           = Parity;
+  This->Mode->DataBits         = DataBits;
+  This->Mode->StopBits         = StopBits;
 
   //
   // See if Device Path Node has actually changed
   //
-  if (SerialDevice->UartDevicePath.BaudRate == BaudRate &&
-      SerialDevice->UartDevicePath.DataBits == DataBits &&
-      SerialDevice->UartDevicePath.Parity == Parity &&
-      SerialDevice->UartDevicePath.StopBits == StopBits
-      ) {
+  if ((SerialDevice->UartDevicePath.BaudRate == BaudRate) &&
+      (SerialDevice->UartDevicePath.DataBits == DataBits) &&
+      (SerialDevice->UartDevicePath.Parity == Parity) &&
+      (SerialDevice->UartDevicePath.StopBits == StopBits)
+      )
+  {
     gBS->RestoreTPL (Tpl);
     return EFI_SUCCESS;
   }
+
   //
   // Update the device path
   //
   SerialDevice->UartDevicePath.BaudRate = BaudRate;
   SerialDevice->UartDevicePath.DataBits = DataBits;
-  SerialDevice->UartDevicePath.Parity   = (UINT8) Parity;
-  SerialDevice->UartDevicePath.StopBits = (UINT8) StopBits;
+  SerialDevice->UartDevicePath.Parity   = (UINT8)Parity;
+  SerialDevice->UartDevicePath.StopBits = (UINT8)StopBits;
 
   Status = EFI_SUCCESS;
   if (SerialDevice->Handle != NULL) {
-
     //
     // Skip the optional Controller device path node
     //
     Uart = SkipControllerDevicePathNode (
-             (EFI_DEVICE_PATH_PROTOCOL *) (
-               (UINT8 *) SerialDevice->DevicePath + GetDevicePathSize (SerialDevice->ParentDevicePath) - END_DEVICE_PATH_LENGTH
-               ),
+             (EFI_DEVICE_PATH_PROTOCOL *)(
+                                          (UINT8 *)SerialDevice->DevicePath + GetDevicePathSize (SerialDevice->ParentDevicePath) - END_DEVICE_PATH_LENGTH
+                                          ),
              NULL,
              NULL
              );
@@ -805,11 +907,11 @@ SerialSetControl (
   IN UINT32                  Control
   )
 {
-  SERIAL_DEV                    *SerialDevice;
-  SERIAL_PORT_MCR               Mcr;
-  EFI_TPL                       Tpl;
-  UART_FLOW_CONTROL_DEVICE_PATH *FlowControl;
-  EFI_STATUS                    Status;
+  SERIAL_DEV                     *SerialDevice;
+  SERIAL_PORT_MCR                Mcr;
+  EFI_TPL                        Tpl;
+  UART_FLOW_CONTROL_DEVICE_PATH  *FlowControl;
+  EFI_STATUS                     Status;
 
   //
   // The control bits that can be set are :
@@ -826,18 +928,28 @@ SerialSetControl (
   //
   if ((Control & (~(EFI_SERIAL_REQUEST_TO_SEND | EFI_SERIAL_DATA_TERMINAL_READY |
                     EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE | EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE |
-                    EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE))) != 0) {
+                    EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE))) != 0)
+  {
     return EFI_UNSUPPORTED;
   }
 
   Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
-  Mcr.Data = READ_MCR (SerialDevice);
-  Mcr.Bits.DtrC = 0;
-  Mcr.Bits.Rts = 0;
-  Mcr.Bits.Lme = 0;
+  //
+  // Wait for all data to be transmitted before changing the UART configuration.
+  //
+  // NOTE: Do not use any DEBUG() or REPORT_STATUS_CODE() or any other calls
+  // that may send additional characters to this UART device until the UART
+  // configuration change is complete.
+  //
+  SerialFlushTransmitFifo (SerialDevice);
+
+  Mcr.Data                             = READ_MCR (SerialDevice);
+  Mcr.Bits.DtrC                        = 0;
+  Mcr.Bits.Rts                         = 0;
+  Mcr.Bits.Lme                         = 0;
   SerialDevice->SoftwareLoopbackEnable = FALSE;
-  SerialDevice->HardwareFlowControl = FALSE;
+  SerialDevice->HardwareFlowControl    = FALSE;
 
   if ((Control & EFI_SERIAL_DATA_TERMINAL_READY) == EFI_SERIAL_DATA_TERMINAL_READY) {
     Mcr.Bits.DtrC = 1;
@@ -863,14 +975,15 @@ SerialSetControl (
 
   Status = EFI_SUCCESS;
   if (SerialDevice->Handle != NULL) {
-    FlowControl = (UART_FLOW_CONTROL_DEVICE_PATH *) (
-                    (UINTN) SerialDevice->DevicePath
-                    + GetDevicePathSize (SerialDevice->ParentDevicePath)
-                    - END_DEVICE_PATH_LENGTH
-                    + sizeof (UART_DEVICE_PATH)
-                    );
+    FlowControl = (UART_FLOW_CONTROL_DEVICE_PATH *)(
+                                                    (UINTN)SerialDevice->DevicePath
+                                                    + GetDevicePathSize (SerialDevice->ParentDevicePath)
+                                                    - END_DEVICE_PATH_LENGTH
+                                                    + sizeof (UART_DEVICE_PATH)
+                                                    );
     if (IsUartFlowControlDevicePathNode (FlowControl) &&
-        ((BOOLEAN) (ReadUnaligned32 (&FlowControl->FlowControlMap) == UART_FLOW_CONTROL_HARDWARE) != SerialDevice->HardwareFlowControl)) {
+        ((BOOLEAN)(ReadUnaligned32 (&FlowControl->FlowControlMap) == UART_FLOW_CONTROL_HARDWARE) != SerialDevice->HardwareFlowControl))
+    {
       //
       // Flow Control setting is changed, need to reinstall device path protocol
       //
@@ -905,16 +1018,16 @@ SerialGetControl (
   OUT UINT32                 *Control
   )
 {
-  SERIAL_DEV      *SerialDevice;
-  SERIAL_PORT_MSR Msr;
-  SERIAL_PORT_MCR Mcr;
-  EFI_TPL         Tpl;
+  SERIAL_DEV       *SerialDevice;
+  SERIAL_PORT_MSR  Msr;
+  SERIAL_PORT_MCR  Mcr;
+  EFI_TPL          Tpl;
 
-  Tpl           = gBS->RaiseTPL (TPL_NOTIFY);
+  Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
-  SerialDevice  = SERIAL_DEV_FROM_THIS (This);
+  SerialDevice = SERIAL_DEV_FROM_THIS (This);
 
-  *Control      = 0;
+  *Control = 0;
 
   //
   // Read the Modem Status Register
@@ -936,6 +1049,7 @@ SerialGetControl (
   if (Msr.Bits.Dcd == 1) {
     *Control |= EFI_SERIAL_CARRIER_DETECT;
   }
+
   //
   // Read the Modem Control Register
   //
@@ -956,6 +1070,7 @@ SerialGetControl (
   if (SerialDevice->HardwareFlowControl) {
     *Control |= EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
   }
+
   //
   // Update FIFO status
   //
@@ -1014,9 +1129,9 @@ SerialWrite (
   UINTN       Timeout;
   UINTN       BitsPerCharacter;
 
-  SerialDevice  = SERIAL_DEV_FROM_THIS (This);
-  Elapsed       = 0;
-  ActualWrite   = 0;
+  SerialDevice = SERIAL_DEV_FROM_THIS (This);
+  Elapsed      = 0;
+  ActualWrite  = 0;
 
   if (*BufferSize == 0) {
     return EFI_SUCCESS;
@@ -1032,9 +1147,9 @@ SerialWrite (
     return EFI_DEVICE_ERROR;
   }
 
-  Tpl         = gBS->RaiseTPL (TPL_NOTIFY);
+  Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
-  CharBuffer  = (UINT8 *) Buffer;
+  CharBuffer = (UINT8 *)Buffer;
 
   //
   // Compute the number of bits in a single character.  This is a start bit,
@@ -1060,12 +1175,12 @@ SerialWrite (
   Timeout = MAX (
               This->Mode->Timeout,
               (UINTN)DivU64x64Remainder (
-                BitsPerCharacter * (SerialDevice->TransmitFifoDepth + 1) * 1000000,
-                This->Mode->BaudRate,
-                NULL
-                )
+                       BitsPerCharacter * (SerialDevice->TransmitFifoDepth + 1) * 1000000,
+                       This->Mode->BaudRate,
+                       NULL
+                       )
               );
-  
+
   for (Index = 0; Index < *BufferSize; Index++) {
     SerialFifoAdd (&SerialDevice->Transmit, CharBuffer[Index]);
 
@@ -1119,14 +1234,14 @@ SerialRead (
   )
 {
   SERIAL_DEV  *SerialDevice;
-  UINT32      Index;
+  UINTN       Index;
   UINT8       *CharBuffer;
   UINTN       Elapsed;
   EFI_STATUS  Status;
   EFI_TPL     Tpl;
 
-  SerialDevice  = SERIAL_DEV_FROM_THIS (This);
-  Elapsed       = 0;
+  SerialDevice = SERIAL_DEV_FROM_THIS (This);
+  Elapsed      = 0;
 
   if (*BufferSize == 0) {
     return EFI_SUCCESS;
@@ -1136,9 +1251,9 @@ SerialRead (
     return EFI_DEVICE_ERROR;
   }
 
-  Tpl     = gBS->RaiseTPL (TPL_NOTIFY);
+  Tpl = gBS->RaiseTPL (TPL_NOTIFY);
 
-  Status  = SerialReceiveTransmit (SerialDevice);
+  Status = SerialReceiveTransmit (SerialDevice);
 
   if (EFI_ERROR (Status)) {
     *BufferSize = 0;
@@ -1154,7 +1269,7 @@ SerialRead (
     return EFI_DEVICE_ERROR;
   }
 
-  CharBuffer = (UINT8 *) Buffer;
+  CharBuffer = (UINT8 *)Buffer;
   for (Index = 0; Index < *BufferSize; Index++) {
     while (SerialFifoRemove (&SerialDevice->Receive, &(CharBuffer[Index])) != EFI_SUCCESS) {
       //
@@ -1178,6 +1293,7 @@ SerialRead (
         return EFI_DEVICE_ERROR;
       }
     }
+
     //
     //  Successful read so reset timeout
     //
@@ -1200,12 +1316,12 @@ SerialRead (
 **/
 BOOLEAN
 SerialPresent (
-  IN SERIAL_DEV *SerialDevice
+  IN SERIAL_DEV  *SerialDevice
   )
 
 {
-  UINT8   Temp;
-  BOOLEAN Status;
+  UINT8    Temp;
+  BOOLEAN  Status;
 
   Status = TRUE;
 
@@ -1224,6 +1340,7 @@ SerialPresent (
   if (READ_SCR (SerialDevice) != 0x55) {
     Status = FALSE;
   }
+
   //
   // Restore SCR
   //
@@ -1242,23 +1359,36 @@ SerialPresent (
 **/
 UINT8
 SerialReadRegister (
-  IN SERIAL_DEV                            *SerialDev,
-  IN UINT32                                Offset
+  IN SERIAL_DEV  *SerialDev,
+  IN UINT32      Offset
   )
 {
-  UINT8                                    Data;
-  EFI_STATUS                               Status;
+  UINT8       Data;
+  EFI_STATUS  Status;
 
   if (SerialDev->PciDeviceInfo == NULL) {
-    return IoRead8 ((UINTN) SerialDev->BaseAddress + Offset * SerialDev->RegisterStride);
+    return IoRead8 ((UINTN)SerialDev->BaseAddress + Offset * SerialDev->RegisterStride);
   } else {
     if (SerialDev->MmioAccess) {
-      Status = SerialDev->PciDeviceInfo->PciIo->Mem.Read (SerialDev->PciDeviceInfo->PciIo, EfiPciIoWidthUint8, EFI_PCI_IO_PASS_THROUGH_BAR,
-                                                          SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, 1, &Data);
+      Status = SerialDev->PciDeviceInfo->PciIo->Mem.Read (
+                                                      SerialDev->PciDeviceInfo->PciIo,
+                                                      EfiPciIoWidthUint8,
+                                                      EFI_PCI_IO_PASS_THROUGH_BAR,
+                                                      SerialDev->BaseAddress + Offset * SerialDev->RegisterStride,
+                                                      1,
+                                                      &Data
+                                                      );
     } else {
-      Status = SerialDev->PciDeviceInfo->PciIo->Io.Read (SerialDev->PciDeviceInfo->PciIo, EfiPciIoWidthUint8, EFI_PCI_IO_PASS_THROUGH_BAR,
-                                                         SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, 1, &Data);
+      Status = SerialDev->PciDeviceInfo->PciIo->Io.Read (
+                                                     SerialDev->PciDeviceInfo->PciIo,
+                                                     EfiPciIoWidthUint8,
+                                                     EFI_PCI_IO_PASS_THROUGH_BAR,
+                                                     SerialDev->BaseAddress + Offset * SerialDev->RegisterStride,
+                                                     1,
+                                                     &Data
+                                                     );
     }
+
     ASSERT_EFI_ERROR (Status);
     return Data;
   }
@@ -1273,23 +1403,36 @@ SerialReadRegister (
 **/
 VOID
 SerialWriteRegister (
-  IN SERIAL_DEV                            *SerialDev,
-  IN UINT32                                Offset,
-  IN UINT8                                 Data
+  IN SERIAL_DEV  *SerialDev,
+  IN UINT32      Offset,
+  IN UINT8       Data
   )
 {
-  EFI_STATUS                               Status;
+  EFI_STATUS  Status;
 
   if (SerialDev->PciDeviceInfo == NULL) {
-    IoWrite8 ((UINTN) SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, Data);
+    IoWrite8 ((UINTN)SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, Data);
   } else {
     if (SerialDev->MmioAccess) {
-      Status = SerialDev->PciDeviceInfo->PciIo->Mem.Write (SerialDev->PciDeviceInfo->PciIo, EfiPciIoWidthUint8, EFI_PCI_IO_PASS_THROUGH_BAR,
-                                                           SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, 1, &Data);
+      Status = SerialDev->PciDeviceInfo->PciIo->Mem.Write (
+                                                      SerialDev->PciDeviceInfo->PciIo,
+                                                      EfiPciIoWidthUint8,
+                                                      EFI_PCI_IO_PASS_THROUGH_BAR,
+                                                      SerialDev->BaseAddress + Offset * SerialDev->RegisterStride,
+                                                      1,
+                                                      &Data
+                                                      );
     } else {
-      Status = SerialDev->PciDeviceInfo->PciIo->Io.Write (SerialDev->PciDeviceInfo->PciIo, EfiPciIoWidthUint8, EFI_PCI_IO_PASS_THROUGH_BAR,
-                                                          SerialDev->BaseAddress + Offset * SerialDev->RegisterStride, 1, &Data);
+      Status = SerialDev->PciDeviceInfo->PciIo->Io.Write (
+                                                     SerialDev->PciDeviceInfo->PciIo,
+                                                     EfiPciIoWidthUint8,
+                                                     EFI_PCI_IO_PASS_THROUGH_BAR,
+                                                     SerialDev->BaseAddress + Offset * SerialDev->RegisterStride,
+                                                     1,
+                                                     &Data
+                                                     );
     }
+
     ASSERT_EFI_ERROR (Status);
   }
 }

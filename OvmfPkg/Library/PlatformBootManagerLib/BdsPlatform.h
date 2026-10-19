@@ -1,14 +1,8 @@
 /** @file
   Platform BDS customizations include file.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -20,9 +14,7 @@ Abstract:
 
 **/
 
-#ifndef _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
-#define _PLATFORM_SPECIFIC_BDS_PLATFORM_H_
-
+#pragma once
 
 #include <PiDxe.h>
 
@@ -30,6 +22,7 @@ Abstract:
 #include <IndustryStandard/Acpi.h>
 #include <IndustryStandard/SmBios.h>
 #include <IndustryStandard/PeImage.h>
+#include <IndustryStandard/Virtio095.h>
 
 #include <Library/DebugLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -48,6 +41,7 @@ Abstract:
 #include <Library/IoLib.h>
 #include <Library/NvVarsFileLib.h>
 #include <Library/QemuFwCfgLib.h>
+#include <Library/QemuFwCfgS3Lib.h>
 #include <Library/QemuBootOrderLib.h>
 
 #include <Protocol/Decompress.h>
@@ -57,22 +51,21 @@ Abstract:
 #include <Protocol/PciRootBridgeIo.h>
 #include <Protocol/S3SaveState.h>
 #include <Protocol/DxeSmmReadyToLock.h>
-#include <Protocol/LoadedImage.h>
 
 #include <Guid/Acpi.h>
 #include <Guid/SmBios.h>
-#include <Guid/Mps.h>
 #include <Guid/HobList.h>
 #include <Guid/GlobalVariable.h>
 #include <Guid/EventGroup.h>
+#include <Guid/DebugAgentGuid.h>
 
 #include <OvmfPlatforms.h>
 
-extern EFI_DEVICE_PATH_PROTOCOL   *gPlatformConnectSequence[];
-extern ACPI_HID_DEVICE_PATH       gPnpPs2KeyboardDeviceNode;
-extern ACPI_HID_DEVICE_PATH       gPnp16550ComPortDeviceNode;
-extern UART_DEVICE_PATH           gUartDeviceNode;
-extern VENDOR_DEVICE_PATH         gTerminalTypeDeviceNode;
+extern EFI_DEVICE_PATH_PROTOCOL  *gPlatformConnectSequence[];
+extern ACPI_HID_DEVICE_PATH      gPnpPs2KeyboardDeviceNode;
+extern ACPI_HID_DEVICE_PATH      gPnp16550ComPortDeviceNode;
+extern UART_DEVICE_PATH          gUartDeviceNode;
+extern VENDOR_DEVICE_PATH        gTerminalTypeDeviceNode;
 
 #define PCI_DEVICE_PATH_NODE(Func, Dev) \
   { \
@@ -131,7 +124,7 @@ extern VENDOR_DEVICE_PATH         gTerminalTypeDeviceNode;
     1 \
   }
 
-#define gPcAnsiTerminal \
+#define gVtUtf8Terminal \
   { \
     { \
       MESSAGING_DEVICE_PATH, \
@@ -141,24 +134,35 @@ extern VENDOR_DEVICE_PATH         gTerminalTypeDeviceNode;
         (UINT8) ((sizeof (VENDOR_DEVICE_PATH)) >> 8) \
       } \
     }, \
-    DEVICE_PATH_MESSAGING_PC_ANSI \
+    DEVICE_PATH_MESSAGING_VT_UTF8 \
   }
 
-#define PCI_CLASS_SCC          0x07
-#define PCI_SUBCLASS_SERIAL    0x00
-#define PCI_IF_16550           0x02
-#define IS_PCI_16550SERIAL(_p)           IS_CLASS3 (_p, PCI_CLASS_SCC, PCI_SUBCLASS_SERIAL, PCI_IF_16550)
-#define IS_PCI_ISA_PDECODE(_p)        IS_CLASS3 (_p, PCI_CLASS_BRIDGE, PCI_CLASS_BRIDGE_ISA_PDECODE, 0)
+#define gEndEntire \
+  { \
+    END_DEVICE_PATH_TYPE, \
+    END_ENTIRE_DEVICE_PATH_SUBTYPE, \
+    { \
+      END_DEVICE_PATH_LENGTH, \
+      0 \
+    } \
+  }
+
+#define PCI_CLASS_SCC        0x07
+#define PCI_SUBCLASS_SERIAL  0x00
+#define PCI_IF_16550         0x02
+#define IS_PCI_16550SERIAL(_p)  IS_CLASS3 (_p, PCI_CLASS_SCC, PCI_SUBCLASS_SERIAL, PCI_IF_16550)
+#define IS_PCI_ISA_PDECODE(_p)  IS_CLASS3 (_p, PCI_CLASS_BRIDGE, PCI_CLASS_BRIDGE_ISA_PDECODE, 0)
 
 typedef struct {
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  UINTN                     ConnectType;
+  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
+  UINTN                       ConnectType;
 } PLATFORM_CONSOLE_CONNECT_ENTRY;
 
-#define CONSOLE_OUT BIT0
-#define CONSOLE_IN  BIT1
-#define STD_ERROR   BIT2
+#define CONSOLE_OUT  BIT0
+#define CONSOLE_IN   BIT1
+#define STD_ERROR    BIT2
 extern PLATFORM_CONSOLE_CONNECT_ENTRY  gPlatformConsole[];
+extern PLATFORM_CONSOLE_CONNECT_ENTRY  gXenPlatformConsole[];
 
 //
 // Platform BDS Functions
@@ -166,7 +170,7 @@ extern PLATFORM_CONSOLE_CONNECT_ENTRY  gPlatformConsole[];
 
 VOID
 PlatformInitializeConsole (
-  IN PLATFORM_CONSOLE_CONNECT_ENTRY   *PlatformConsole
+  IN PLATFORM_CONSOLE_CONNECT_ENTRY  *PlatformConsole
   );
 
 /**
@@ -179,5 +183,3 @@ EFI_STATUS
 TryRunningQemuKernel (
   VOID
   );
-
-#endif // _PLATFORM_SPECIFIC_BDS_PLATFORM_H_

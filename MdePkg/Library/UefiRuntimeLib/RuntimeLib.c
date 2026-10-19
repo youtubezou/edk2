@@ -3,17 +3,11 @@
 
   This library hides the global variable for the EFI Runtime Services so the
   caller does not need to deal with the possibility of being called from an
-  OS virtual address space. All pointer values are different for a virtual 
+  OS virtual address space. All pointer values are different for a virtual
   mapping than from the normal physical mapping at boot services time.
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -27,11 +21,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 ///
 /// Driver Lib Module Globals
 ///
-EFI_EVENT              mEfiVirtualNotifyEvent;
-EFI_EVENT              mEfiExitBootServicesEvent;
-BOOLEAN                mEfiGoneVirtual         = FALSE;
-BOOLEAN                mEfiAtRuntime           = FALSE;
-EFI_RUNTIME_SERVICES   *mInternalRT;
+EFI_EVENT             mEfiVirtualNotifyEvent;
+EFI_EVENT             mEfiExitBootServicesEvent;
+BOOLEAN               mEfiGoneVirtual = FALSE;
+BOOLEAN               mEfiAtRuntime   = FALSE;
+EFI_RUNTIME_SERVICES  *mInternalRT;
 
 /**
   Set AtRuntime flag as TRUE after ExitBootServices.
@@ -43,8 +37,8 @@ EFI_RUNTIME_SERVICES   *mInternalRT;
 VOID
 EFIAPI
 RuntimeLibExitBootServicesEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   mEfiAtRuntime = TRUE;
@@ -61,14 +55,14 @@ RuntimeLibExitBootServicesEvent (
 VOID
 EFIAPI
 RuntimeLibVirtualNotifyEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
 {
   //
   // Update global for Runtime Services Table and IO
   //
-  EfiConvertPointer (0, (VOID **) &mInternalRT);
+  EfiConvertPointer (0, (VOID **)&mInternalRT);
 
   mEfiGoneVirtual = TRUE;
 }
@@ -86,8 +80,8 @@ RuntimeLibVirtualNotifyEvent (
 EFI_STATUS
 EFIAPI
 RuntimeDriverLibConstruct (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS  Status;
@@ -99,23 +93,21 @@ RuntimeDriverLibConstruct (
   //
   // Register SetVirtualAddressMap () notify function
   //
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE,
                   TPL_NOTIFY,
                   RuntimeLibVirtualNotifyEvent,
                   NULL,
-                  &gEfiEventVirtualAddressChangeGuid,
                   &mEfiVirtualNotifyEvent
                   );
 
   ASSERT_EFI_ERROR (Status);
 
-  Status = gBS->CreateEventEx (
-                  EVT_NOTIFY_SIGNAL,
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
                   TPL_NOTIFY,
                   RuntimeLibExitBootServicesEvent,
                   NULL,
-                  &gEfiEventExitBootServicesGuid,
                   &mEfiExitBootServicesEvent
                   );
 
@@ -125,7 +117,7 @@ RuntimeDriverLibConstruct (
 }
 
 /**
-  If a runtime driver exits with an error, it must call this routine 
+  If a runtime driver exits with an error, it must call this routine
   to free the allocated resource before the exiting.
   It will ASSERT() if gBS is NULL.
   It will ASSERT() if that operation fails.
@@ -180,7 +172,7 @@ EfiAtRuntime (
 }
 
 /**
-  This function allows the caller to determine if UEFI SetVirtualAddressMap() has been called. 
+  This function allows the caller to determine if UEFI SetVirtualAddressMap() has been called.
 
   This function returns TRUE after all the EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE functions have
   executed as a result of the OS calling SetVirtualAddressMap(). Prior to this time FALSE
@@ -199,7 +191,6 @@ EfiGoneVirtual (
 {
   return mEfiGoneVirtual;
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service ResetSystem().
@@ -233,15 +224,14 @@ EfiGoneVirtual (
 VOID
 EFIAPI
 EfiResetSystem (
-  IN EFI_RESET_TYPE               ResetType,
-  IN EFI_STATUS                   ResetStatus,
-  IN UINTN                        DataSize,
-  IN VOID                         *ResetData OPTIONAL
+  IN EFI_RESET_TYPE  ResetType,
+  IN EFI_STATUS      ResetStatus,
+  IN UINTN           DataSize,
+  IN VOID            *ResetData OPTIONAL
   )
 {
   mInternalRT->ResetSystem (ResetType, ResetStatus, DataSize, ResetData);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetTime().
@@ -262,18 +252,20 @@ EfiResetSystem (
   @retval  EFI_SUCCESS            The operation completed successfully.
   @retval  EFI_INVALID_PARAMETER  Time is NULL.
   @retval  EFI_DEVICE_ERROR       The time could not be retrieved due to a hardware error.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiGetTime (
-  OUT EFI_TIME                    *Time,
-  OUT EFI_TIME_CAPABILITIES       *Capabilities  OPTIONAL
+  OUT EFI_TIME               *Time,
+  OUT EFI_TIME_CAPABILITIES  *Capabilities  OPTIONAL
   )
 {
   return mInternalRT->GetTime (Time, Capabilities);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service SetTime().
@@ -295,17 +287,19 @@ EfiGetTime (
   @retval  EFI_SUCCESS            The operation completed successfully.
   @retval  EFI_INVALID_PARAMETER  A time field is out of range.
   @retval  EFI_DEVICE_ERROR       The time could not be set due to a hardware error.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiSetTime (
-  IN EFI_TIME                   *Time
+  IN EFI_TIME  *Time
   )
 {
   return mInternalRT->SetTime (Time);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetWakeupTime().
@@ -325,21 +319,21 @@ EfiSetTime (
   @retval  EFI_INVALID_PARAMETER  Pending is NULL.
   @retval  EFI_INVALID_PARAMETER  Time is NULL.
   @retval  EFI_DEVICE_ERROR       The wakeup time could not be retrieved due to a hardware error.
-  @retval  EFI_UNSUPPORTED        A wakeup timer is not supported on this platform.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiGetWakeupTime (
-  OUT BOOLEAN                     *Enabled,
-  OUT BOOLEAN                     *Pending,
-  OUT EFI_TIME                    *Time
+  OUT BOOLEAN   *Enabled,
+  OUT BOOLEAN   *Pending,
+  OUT EFI_TIME  *Time
   )
 {
   return mInternalRT->GetWakeupTime (Enabled, Pending, Time);
 }
-
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service SetWakeupTime()
@@ -360,19 +354,20 @@ EfiGetWakeupTime (
                                   If Enable is FALSE, then the wakeup alarm was disabled.
   @retval  EFI_INVALID_PARAMETER  A time field is out of range.
   @retval  EFI_DEVICE_ERROR       The wakeup time could not be set due to a hardware error.
-  @retval  EFI_UNSUPPORTED        A wakeup timer is not supported on this platform.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiSetWakeupTime (
-  IN BOOLEAN                      Enable,
-  IN EFI_TIME                     *Time   OPTIONAL
+  IN BOOLEAN   Enable,
+  IN EFI_TIME  *Time   OPTIONAL
   )
 {
   return mInternalRT->SetWakeupTime (Enable, Time);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetVariable().
@@ -403,20 +398,23 @@ EfiSetWakeupTime (
   @retval  EFI_INVALID_PARAMETER  The DataSize is not too small and Data is NULL.
   @retval  EFI_DEVICE_ERROR       The variable could not be retrieved due to a hardware error.
   @retval  EFI_SECURITY_VIOLATION The variable could not be retrieved due to an authentication failure.
+  @retval  EFI_UNSUPPORTED        After ExitBootServices() has been called, this return code may be returned
+                                  if no variable storage is supported. The platform should describe this
+                                  runtime service as unsupported at runtime via an EFI_RT_PROPERTIES_TABLE
+                                  configuration table.
 **/
 EFI_STATUS
 EFIAPI
 EfiGetVariable (
-  IN      CHAR16                   *VariableName,
-  IN      EFI_GUID                 *VendorGuid,
-  OUT     UINT32                   *Attributes OPTIONAL,
-  IN OUT  UINTN                    *DataSize,
-  OUT     VOID                     *Data
+  IN      CHAR16    *VariableName,
+  IN      EFI_GUID  *VendorGuid,
+  OUT     UINT32    *Attributes OPTIONAL,
+  IN OUT  UINTN     *DataSize,
+  OUT     VOID      *Data
   )
 {
   return mInternalRT->GetVariable (VariableName, VendorGuid, Attributes, DataSize, Data);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetNextVariableName().
@@ -434,7 +432,7 @@ EfiGetVariable (
                            As output, returns the name of variable. The name
                            string is Null-Terminated Unicode string.
   @param  VendorGuid       As input, supplies the last VendorGuid that was returned by
-                           GetNextVriableName().
+                           GetNextVariableName().
                            As output, returns the VendorGuid of the current variable.
 
   @retval  EFI_SUCCESS           The function completed successfully.
@@ -446,19 +444,22 @@ EfiGetVariable (
   @retval  EFI_INVALID_PARAMETER VariableName is NULL.
   @retval  EFI_INVALID_PARAMETER VendorGuid is NULL.
   @retval  EFI_DEVICE_ERROR      The variable name could not be retrieved due to a hardware error.
+  @retval  EFI_UNSUPPORTED       After ExitBootServices() has been called, this return code may be returned
+                                 if no variable storage is supported. The platform should describe this
+                                 runtime service as unsupported at runtime via an EFI_RT_PROPERTIES_TABLE
+                                 configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiGetNextVariableName (
-  IN OUT UINTN                    *VariableNameSize,
-  IN OUT CHAR16                   *VariableName,
-  IN OUT EFI_GUID                 *VendorGuid
+  IN OUT UINTN     *VariableNameSize,
+  IN OUT CHAR16    *VariableName,
+  IN OUT EFI_GUID  *VendorGuid
   )
 {
   return mInternalRT->GetNextVariableName (VariableNameSize, VariableName, VendorGuid);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetNextVariableName()
@@ -466,7 +467,7 @@ EfiGetNextVariableName (
   Variables are stored by the firmware and may maintain their values across power cycles. Each vendor
   may create and manage its own variables without the risk of name conflicts by using a unique VendorGuid.
 
-  @param  VariableName The name of the vendor's variable; it's a Null-Terminated 
+  @param  VariableName The name of the vendor's variable; it's a Null-Terminated
                        Unicode String
   @param  VendorGuid   Unify identifier for vendor.
   @param  Attributes   Points to a memory location to return the attributes of variable. If the point
@@ -483,25 +484,27 @@ EfiGetNextVariableName (
   @retval  EFI_DEVICE_ERROR       The variable could not be saved due to a hardware failure.
   @retval  EFI_WRITE_PROTECTED    The variable in question is read-only.
   @retval  EFI_WRITE_PROTECTED    The variable in question cannot be deleted.
-  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS
+  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS
                                   set but the AuthInfo does NOT pass the validation check carried
                                   out by the firmware.
   @retval  EFI_NOT_FOUND          The variable trying to be updated or deleted was not found.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiSetVariable (
-  IN CHAR16                       *VariableName,
-  IN EFI_GUID                     *VendorGuid,
-  IN UINT32                       Attributes,
-  IN UINTN                        DataSize,
-  IN VOID                         *Data
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN UINT32    Attributes,
+  IN UINTN     DataSize,
+  IN VOID      *Data
   )
 {
   return mInternalRT->SetVariable (VariableName, VendorGuid, Attributes, DataSize, Data);
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetNextHighMonotonicCount().
@@ -517,20 +520,22 @@ EfiSetVariable (
   @retval  EFI_SUCCESS           The next high monotonic count was returned.
   @retval  EFI_DEVICE_ERROR      The device is not functioning properly.
   @retval  EFI_INVALID_PARAMETER HighCount is NULL.
+  @retval  EFI_UNSUPPORTED       This call is not supported by this platform at the time the call is made.
+                                 The platform should describe this runtime service as unsupported at runtime
+                                 via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiGetNextHighMonotonicCount (
-  OUT UINT32                      *HighCount
+  OUT UINT32  *HighCount
   )
 {
   return mInternalRT->GetNextHighMonotonicCount (HighCount);
 }
 
-
 /**
-  This service is a wrapper for the UEFI Runtime Service ConvertPointer().  
+  This service is a wrapper for the UEFI Runtime Service ConvertPointer().
 
   The ConvertPointer() function is used by an EFI component during the SetVirtualAddressMap() operation.
   ConvertPointer()must be called using physical address pointers during the execution of SetVirtualAddressMap().
@@ -544,28 +549,31 @@ EfiGetNextHighMonotonicCount (
   @retval  EFI_NOT_FOUND          The pointer pointed to by Address was not found to be part of
                                   the current memory map. This is normally fatal.
   @retval  EFI_INVALID_PARAMETER  Address is NULL.
-  @retval  EFI_INVALID_PARAMETER  *Address is NULL and DebugDispositio
+  @retval  EFI_INVALID_PARAMETER  *Address is NULL and DebugDisposition does
+                                  not have the EFI_OPTIONAL_PTR bit set.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiConvertPointer (
-  IN UINTN                  DebugDisposition,
-  IN OUT VOID               **Address
+  IN UINTN     DebugDisposition,
+  IN OUT VOID  **Address
   )
 {
   return gRT->ConvertPointer (DebugDisposition, Address);
 }
 
-
 /**
   Determines the new virtual address that is to be used on subsequent memory accesses.
 
   For IA32, x64, and EBC, this service is a wrapper for the UEFI Runtime Service
-  ConvertPointer().  See the UEFI Specification for details. 
+  ConvertPointer().  See the UEFI Specification for details.
   For IPF, this function interprets Address as a pointer to an EFI_PLABEL structure
   and both the EntryPoint and GP fields of an EFI_PLABEL are converted from physical
-  to virtiual addressing.  Since IPF allows the GP to point to an address outside
+  to virtual addressing.  Since IPF allows the GP to point to an address outside
   a PE/COFF image, the physical to virtual offset for the EntryPoint field is used
   to adjust the GP field.  The UEFI Runtime Service ConvertPointer() is used to convert
   EntryPoint and the status code for this conversion is always returned.   If the convertion
@@ -583,13 +591,12 @@ EfiConvertPointer (
 EFI_STATUS
 EFIAPI
 EfiConvertFunctionPointer (
-  IN UINTN                DebugDisposition,
-  IN OUT VOID             **Address
+  IN UINTN     DebugDisposition,
+  IN OUT VOID  **Address
   )
 {
   return EfiConvertPointer (DebugDisposition, Address);
 }
-
 
 /**
   Convert the standard Lib double linked list to a virtual mapping.
@@ -608,13 +615,13 @@ EfiConvertFunctionPointer (
 EFI_STATUS
 EFIAPI
 EfiConvertList (
-  IN UINTN                DebugDisposition,
-  IN OUT LIST_ENTRY       *ListHead
+  IN UINTN           DebugDisposition,
+  IN OUT LIST_ENTRY  *ListHead
   )
 {
   LIST_ENTRY  *Link;
   LIST_ENTRY  *NextLink;
-  
+
   //
   // For NULL List, return EFI_SUCCESS
   //
@@ -631,19 +638,19 @@ EfiConvertList (
 
     EfiConvertPointer (
       Link->ForwardLink == ListHead ? DebugDisposition : 0,
-      (VOID **) &Link->ForwardLink
+      (VOID **)&Link->ForwardLink
       );
 
     EfiConvertPointer (
       Link->BackLink == ListHead ? DebugDisposition : 0,
-      (VOID **) &Link->BackLink
+      (VOID **)&Link->BackLink
       );
 
     Link = NextLink;
   } while (Link != ListHead);
+
   return EFI_SUCCESS;
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service SetVirtualAddressMap().
@@ -670,24 +677,26 @@ EfiConvertList (
                                 map that requires a mapping.
   @retval EFI_NOT_FOUND         A virtual address was supplied for an address that is not found
                                 in the memory map.
+  @retval EFI_UNSUPPORTED       This call is not supported by this platform at the time the call is made.
+                                The platform should describe this runtime service as unsupported at runtime
+                                via an EFI_RT_PROPERTIES_TABLE configuration table.
 **/
 EFI_STATUS
 EFIAPI
 EfiSetVirtualAddressMap (
-  IN UINTN                          MemoryMapSize,
-  IN UINTN                          DescriptorSize,
-  IN UINT32                         DescriptorVersion,
-  IN CONST EFI_MEMORY_DESCRIPTOR    *VirtualMap
+  IN UINTN                        MemoryMapSize,
+  IN UINTN                        DescriptorSize,
+  IN UINT32                       DescriptorVersion,
+  IN CONST EFI_MEMORY_DESCRIPTOR  *VirtualMap
   )
 {
   return mInternalRT->SetVirtualAddressMap (
                         MemoryMapSize,
                         DescriptorSize,
                         DescriptorVersion,
-                        (EFI_MEMORY_DESCRIPTOR *) VirtualMap
+                        (EFI_MEMORY_DESCRIPTOR *)VirtualMap
                         );
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service UpdateCapsule().
@@ -704,7 +713,7 @@ EfiSetVirtualAddressMap (
                                 ScatterGatherList. The CapsuleHeaderArray must
                                 have the capsules in the same order as the ScatterGatherList.
   @param  CapsuleCount          The number of pointers to EFI_CAPSULE_HEADER in
-                                CaspuleHeaderArray.
+                                CapsuleHeaderArray.
   @param  ScatterGatherList     Physical pointer to a set of
                                 EFI_CAPSULE_BLOCK_DESCRIPTOR that describes the
                                 location in physical memory of a set of capsules. See Related
@@ -721,14 +730,17 @@ EfiSetVirtualAddressMap (
   @retval EFI_DEVICE_ERROR      The capsule update was started, but failed due to a device error.
   @retval EFI_UNSUPPORTED       The capsule type is not supported on this platform.
   @retval EFI_OUT_OF_RESOURCES  There were insufficient resources to process the capsule.
+  @retval EFI_UNSUPPORTED       This call is not supported by this platform at the time the call is made.
+                                The platform should describe this runtime service as unsupported at runtime
+                                via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiUpdateCapsule (
-  IN EFI_CAPSULE_HEADER       **CapsuleHeaderArray,
-  IN UINTN                    CapsuleCount,
-  IN EFI_PHYSICAL_ADDRESS     ScatterGatherList OPTIONAL
+  IN EFI_CAPSULE_HEADER    **CapsuleHeaderArray,
+  IN UINTN                 CapsuleCount,
+  IN EFI_PHYSICAL_ADDRESS  ScatterGatherList OPTIONAL
   )
 {
   return mInternalRT->UpdateCapsule (
@@ -737,7 +749,6 @@ EfiUpdateCapsule (
                         ScatterGatherList
                         );
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service QueryCapsuleCapabilities().
@@ -759,7 +770,7 @@ EfiUpdateCapsule (
                                 being passed into update capsule. The capsules are assumed to
                                 stored in contiguous virtual memory.
   @param  CapsuleCount          The number of pointers to EFI_CAPSULE_HEADER in
-                                CaspuleHeaderArray.
+                                CapsuleHeaderArray.
   @param  MaximumCapsuleSize     On output the maximum size that UpdateCapsule() can
                                 support as an argument to UpdateCapsule() via
                                 CapsuleHeaderArray and ScatterGatherList.
@@ -771,15 +782,18 @@ EfiUpdateCapsule (
   @retval EFI_UNSUPPORTED       The capsule type is not supported on this platform, and
                                 MaximumCapsuleSize and ResetType are undefined.
   @retval EFI_OUT_OF_RESOURCES  There were insufficient resources to process the query request.
+  @retval EFI_UNSUPPORTED       This call is not supported by this platform at the time the call is made.
+                                The platform should describe this runtime service as unsupported at runtime
+                                via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiQueryCapsuleCapabilities (
-  IN  EFI_CAPSULE_HEADER       **CapsuleHeaderArray,
-  IN  UINTN                    CapsuleCount,
-  OUT UINT64                   *MaximumCapsuleSize,
-  OUT EFI_RESET_TYPE           *ResetType
+  IN  EFI_CAPSULE_HEADER  **CapsuleHeaderArray,
+  IN  UINTN               CapsuleCount,
+  OUT UINT64              *MaximumCapsuleSize,
+  OUT EFI_RESET_TYPE      *ResetType
   )
 {
   return mInternalRT->QueryCapsuleCapabilities (
@@ -789,7 +803,6 @@ EfiQueryCapsuleCapabilities (
                         ResetType
                         );
 }
-
 
 /**
   This service is a wrapper for the UEFI Runtime Service QueryVariableInfo().

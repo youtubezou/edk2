@@ -5,19 +5,12 @@
   oriented devices. The Disk IO protocol is intended to layer on top of the
   Block IO protocol.
 
-  Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __DISK_IO_H__
-#define __DISK_IO_H__
+#pragma once
 
 #define EFI_DISK_IO_PROTOCOL_GUID \
   { \
@@ -26,15 +19,15 @@
 
 ///
 /// Protocol GUID name defined in EFI1.1.
-/// 
+///
 #define DISK_IO_PROTOCOL  EFI_DISK_IO_PROTOCOL_GUID
 
 typedef struct _EFI_DISK_IO_PROTOCOL EFI_DISK_IO_PROTOCOL;
 
 ///
 /// Protocol defined in EFI1.1.
-/// 
-typedef EFI_DISK_IO_PROTOCOL  EFI_DISK_IO;
+///
+typedef EFI_DISK_IO_PROTOCOL EFI_DISK_IO;
 
 /**
   Read BufferSize bytes from Offset into Buffer.
@@ -48,7 +41,7 @@ typedef EFI_DISK_IO_PROTOCOL  EFI_DISK_IO;
   @retval EFI_SUCCESS           The data was read correctly from the device.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_INVALID_PARAMETER The read request contains device addresses that are not
                                 valid for the device.
 
@@ -76,7 +69,7 @@ EFI_STATUS
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_INVALID_PARAMETER The write request contains device addresses that are not
                                  valid for the device.
 
@@ -91,11 +84,11 @@ EFI_STATUS
   IN VOID                         *Buffer
   );
 
-#define EFI_DISK_IO_PROTOCOL_REVISION 0x00010000
+#define EFI_DISK_IO_PROTOCOL_REVISION  0x00010000
 
 ///
 /// Revision defined in EFI1.1
-/// 
+///
 #define EFI_DISK_IO_INTERFACE_REVISION  EFI_DISK_IO_PROTOCOL_REVISION
 
 ///
@@ -107,11 +100,9 @@ struct _EFI_DISK_IO_PROTOCOL {
   /// revisions must be backwards compatible. If a future version is not
   /// backwards compatible, it is not the same GUID.
   ///
-  UINT64          Revision;
-  EFI_DISK_READ   ReadDisk;
-  EFI_DISK_WRITE  WriteDisk;
+  UINT64            Revision;
+  EFI_DISK_READ     ReadDisk;
+  EFI_DISK_WRITE    WriteDisk;
 };
 
-extern EFI_GUID gEfiDiskIoProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiDiskIoProtocolGuid;

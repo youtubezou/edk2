@@ -5,13 +5,7 @@
 
 Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2008 - 2011, Apple Inc. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -29,8 +23,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Cache of UnixThunk protocol
 //
-EMU_THUNK_PROTOCOL   *mThunk = NULL;
-
+EMU_THUNK_PROTOCOL  *mThunk = NULL;
 
 /**
   The constructor function gets  the pointer of the WinNT thunk functions
@@ -46,7 +39,7 @@ DxeEmuPeCoffLibExtraActionConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-   EFI_HOB_GUID_TYPE        *GuidHob;
+  EFI_HOB_GUID_TYPE  *GuidHob;
 
   //
   // Retrieve EmuThunkProtocol from GUID'ed HOB
@@ -78,8 +71,6 @@ PeCoffLoaderRelocateImageExtraAction (
     mThunk->PeCoffRelocateImageExtraAction (ImageContext);
   }
 }
-
-
 
 /**
   Performs additional actions just before a PE/COFF image is unloaded.  Any resources

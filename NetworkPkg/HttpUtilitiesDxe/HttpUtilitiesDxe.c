@@ -1,20 +1,13 @@
 /** @file
   The DriverEntryPoint and Unload for HttpUtilities driver.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "HttpUtilitiesDxe.h"
-
 
 /**
   Unloads an image.
@@ -25,20 +18,19 @@
   @retval EFI_INVALID_PARAMETER ImageHandle is not a valid image handle.
 
 **/
-EFI_STATUS 
+EFI_STATUS
 EFIAPI
 HttpUtilitiesDxeUnload (
   IN EFI_HANDLE  ImageHandle
   )
 {
-  EFI_STATUS                      Status;
-  UINTN                           HandleNum;
-  EFI_HANDLE                      *HandleBuffer;
-  UINT32                          Index;
-  EFI_HTTP_UTILITIES_PROTOCOL     *HttpUtilitiesProtocol;
+  EFI_STATUS                   Status;
+  UINTN                        HandleNum;
+  EFI_HANDLE                   *HandleBuffer;
+  UINT32                       Index;
+  EFI_HTTP_UTILITIES_PROTOCOL  *HttpUtilitiesProtocol;
 
-
-  HandleBuffer   = NULL;
+  HandleBuffer = NULL;
 
   //
   // Locate all the handles with HttpUtilities protocol.
@@ -59,33 +51,38 @@ HttpUtilitiesDxeUnload (
     // Firstly, find HttpUtilitiesProtocol interface
     //
     Status = gBS->OpenProtocol (
-                    HandleBuffer[Index], 
-                    &gEfiHttpUtilitiesProtocolGuid, 
-                    (VOID **) &HttpUtilitiesProtocol, 
-                    ImageHandle, 
-                    NULL, 
+                    HandleBuffer[Index],
+                    &gEfiHttpUtilitiesProtocolGuid,
+                    (VOID **)&HttpUtilitiesProtocol,
+                    ImageHandle,
+                    NULL,
                     EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL
                     );
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto Exit;
     }
 
     //
     // Then, uninstall HttpUtilities interface
-    // 
+    //
     Status = gBS->UninstallMultipleProtocolInterfaces (
                     HandleBuffer[Index],
-                    &gEfiHttpUtilitiesProtocolGuid, HttpUtilitiesProtocol,
+                    &gEfiHttpUtilitiesProtocolGuid,
+                    HttpUtilitiesProtocol,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
-      return Status;
+      goto Exit;
     }
   }
 
-  return EFI_SUCCESS;
-}
+  Status = EFI_SUCCESS;
 
+Exit:
+  gBS->FreePool (HandleBuffer);
+
+  return Status;
+}
 
 /**
   This is the declaration of an EFI image entry point. This entry point is
@@ -105,9 +102,9 @@ HttpUtilitiesDxeDriverEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS             Status;
+  EFI_STATUS  Status;
 
-  EFI_HANDLE             Handle;
+  EFI_HANDLE  Handle;
 
   Handle = NULL;
 
@@ -120,7 +117,6 @@ HttpUtilitiesDxeDriverEntryPoint (
                   &mHttpUtilitiesProtocol,
                   NULL
                   );
-  
+
   return Status;
 }
-

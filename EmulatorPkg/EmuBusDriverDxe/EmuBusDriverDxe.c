@@ -1,27 +1,19 @@
 /** @file
  Emu Bus driver
 
-Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
 
 #include "EmuBusDriverDxe.h"
 
-
-
 //
 // DriverBinding protocol global
 //
-EFI_DRIVER_BINDING_PROTOCOL           gEmuBusDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gEmuBusDriverBinding = {
   EmuBusDriverBindingSupported,
   EmuBusDriverBindingStart,
   EmuBusDriverBindingStop,
@@ -29,8 +21,6 @@ EFI_DRIVER_BINDING_PROTOCOL           gEmuBusDriverBinding = {
   NULL,
   NULL
 };
-
-
 
 EFI_STATUS
 EFIAPI
@@ -58,9 +48,10 @@ EmuBusDriverBindingSupported (
       // If RemainingDevicePath isn't the End of Device Path Node,
       // check its validation
       //
-      if (RemainingDevicePath->Type != HARDWARE_DEVICE_PATH ||
-          RemainingDevicePath->SubType != HW_VENDOR_DP ||
-          DevicePathNodeLength(RemainingDevicePath) != sizeof(EMU_VENDOR_DEVICE_PATH_NODE)) {
+      if ((RemainingDevicePath->Type != HARDWARE_DEVICE_PATH) ||
+          (RemainingDevicePath->SubType != HW_VENDOR_DP) ||
+          (DevicePathNodeLength (RemainingDevicePath) != sizeof (EMU_VENDOR_DEVICE_PATH_NODE)))
+      {
         return EFI_UNSUPPORTED;
       }
     }
@@ -72,7 +63,7 @@ EmuBusDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEmuThunkProtocolGuid,
-                  (VOID **)&EmuThunk   ,
+                  (VOID **)&EmuThunk,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -89,11 +80,11 @@ EmuBusDriverBindingSupported (
   // Close the I/O Abstraction(s) used to perform the supported test
   //
   gBS->CloseProtocol (
-        ControllerHandle,
-        &gEmuThunkProtocolGuid,
-        This->DriverBindingHandle,
-        ControllerHandle
-        );
+         ControllerHandle,
+         &gEmuThunkProtocolGuid,
+         This->DriverBindingHandle,
+         ControllerHandle
+         );
 
   //
   // Open the EFI Device Path protocol needed to perform the supported test
@@ -114,20 +105,18 @@ EmuBusDriverBindingSupported (
     return Status;
   }
 
-
   //
   // Close protocol, don't use device path protocol in the Support() function
   //
   gBS->CloseProtocol (
-        ControllerHandle,
-        &gEfiDevicePathProtocolGuid,
-        This->DriverBindingHandle,
-        ControllerHandle
-        );
+         ControllerHandle,
+         &gEfiDevicePathProtocolGuid,
+         This->DriverBindingHandle,
+         ControllerHandle
+         );
 
   return Status;
 }
-
 
 EFI_STATUS
 EFIAPI
@@ -137,19 +126,19 @@ EmuBusDriverBindingStart (
   IN  EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                      Status;
-  EFI_STATUS                      InstallStatus;
-  EMU_THUNK_PROTOCOL              *EmuThunk;
-  EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
-  EMU_IO_DEVICE                   *EmuDevice;
-  EMU_BUS_DEVICE                  *EmuBusDevice;
-  EMU_IO_THUNK_PROTOCOL           *EmuIoThunk;
-  UINT16                          ComponentName[512];
-  EMU_VENDOR_DEVICE_PATH_NODE     *Node;
-  BOOLEAN                         CreateDevice;
+  EFI_STATUS                   Status;
+  EFI_STATUS                   InstallStatus;
+  EMU_THUNK_PROTOCOL           *EmuThunk;
+  EFI_DEVICE_PATH_PROTOCOL     *ParentDevicePath;
+  EMU_IO_DEVICE                *EmuDevice;
+  EMU_BUS_DEVICE               *EmuBusDevice;
+  EMU_IO_THUNK_PROTOCOL        *EmuIoThunk;
+  UINT16                       ComponentName[512];
+  EMU_VENDOR_DEVICE_PATH_NODE  *Node;
+  BOOLEAN                      CreateDevice;
 
   InstallStatus = EFI_UNSUPPORTED;
-  Status = EFI_UNSUPPORTED;
+  Status        = EFI_UNSUPPORTED;
 
   //
   // Grab the protocols we need
@@ -162,7 +151,7 @@ EmuBusDriverBindingStart (
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
-  if (EFI_ERROR (Status) && Status != EFI_ALREADY_STARTED) {
+  if (EFI_ERROR (Status) && (Status != EFI_ALREADY_STARTED)) {
     return Status;
   }
 
@@ -174,7 +163,7 @@ EmuBusDriverBindingStart (
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
-  if (EFI_ERROR (Status) && Status != EFI_ALREADY_STARTED) {
+  if (EFI_ERROR (Status) && (Status != EFI_ALREADY_STARTED)) {
     return Status;
   }
 
@@ -202,10 +191,10 @@ EmuBusDriverBindingStart (
       FALSE
       );
 
-
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &ControllerHandle,
-                    &gEfiCallerIdGuid, EmuBusDevice,
+                    &gEfiCallerIdGuid,
+                    EmuBusDevice,
                     NULL
                     );
     if (EFI_ERROR (Status)) {
@@ -215,7 +204,6 @@ EmuBusDriverBindingStart (
     }
   }
 
-
   for (Status = EFI_SUCCESS, EmuIoThunk = NULL; !EFI_ERROR (Status); ) {
     Status = EmuThunk->GetNextProtocol (TRUE, &EmuIoThunk);
     if (EFI_ERROR (Status)) {
@@ -224,7 +212,7 @@ EmuBusDriverBindingStart (
 
     CreateDevice = TRUE;
     if (RemainingDevicePath != NULL) {
-      CreateDevice  = FALSE;
+      CreateDevice = FALSE;
       //
       // Check if RemainingDevicePath is the End of Device Path Node,
       // if yes, don't create any child device
@@ -234,12 +222,13 @@ EmuBusDriverBindingStart (
         // If RemainingDevicePath isn't the End of Device Path Node,
         // check its validation
         //
-        Node          = (EMU_VENDOR_DEVICE_PATH_NODE *) RemainingDevicePath;
-        if (Node->VendorDevicePath.Header.Type == HARDWARE_DEVICE_PATH &&
-            Node->VendorDevicePath.Header.SubType == HW_VENDOR_DP &&
-            DevicePathNodeLength (&Node->VendorDevicePath.Header) == sizeof (EMU_VENDOR_DEVICE_PATH_NODE)
-            ) {
-          if (CompareGuid (&Node->VendorDevicePath.Guid, EmuIoThunk->Protocol) && Node->Instance == EmuIoThunk->Instance) {
+        Node = (EMU_VENDOR_DEVICE_PATH_NODE *)RemainingDevicePath;
+        if ((Node->VendorDevicePath.Header.Type == HARDWARE_DEVICE_PATH) &&
+            (Node->VendorDevicePath.Header.SubType == HW_VENDOR_DP) &&
+            (DevicePathNodeLength (&Node->VendorDevicePath.Header) == sizeof (EMU_VENDOR_DEVICE_PATH_NODE))
+            )
+        {
+          if (CompareGuid (&Node->VendorDevicePath.Guid, EmuIoThunk->Protocol) && (Node->Instance == EmuIoThunk->Instance)) {
             CreateDevice = TRUE;
           }
         }
@@ -255,20 +244,25 @@ EmuBusDriverBindingStart (
         return EFI_OUT_OF_RESOURCES;
       }
 
-      EmuDevice->Handle             = NULL;
-      EmuDevice->ControllerHandle   = ControllerHandle;
-      EmuDevice->ParentDevicePath   = ParentDevicePath;
+      EmuDevice->Handle           = NULL;
+      EmuDevice->ControllerHandle = ControllerHandle;
+      EmuDevice->ParentDevicePath = ParentDevicePath;
       CopyMem (&EmuDevice->EmuIoThunk, EmuIoThunk, sizeof (EMU_IO_THUNK_PROTOCOL));
 
       EmuDevice->ControllerNameTable = NULL;
 
-      StrnCpy (ComponentName, EmuIoThunk->ConfigString, sizeof (ComponentName)/sizeof (CHAR16));
+      StrnCpyS (
+        ComponentName,
+        sizeof (ComponentName) / sizeof (CHAR16),
+        EmuIoThunk->ConfigString,
+        sizeof (ComponentName) / sizeof (CHAR16)
+        );
 
       EmuDevice->DevicePath = EmuBusCreateDevicePath (
-                                  ParentDevicePath,
-                                  EmuIoThunk->Protocol,
-                                  EmuIoThunk->Instance
-                                  );
+                                ParentDevicePath,
+                                EmuIoThunk->Protocol,
+                                EmuIoThunk->Instance
+                                );
       if (EmuDevice->DevicePath == NULL) {
         gBS->FreePool (EmuDevice);
         return EFI_OUT_OF_RESOURCES;
@@ -284,11 +278,13 @@ EmuBusDriverBindingStart (
       EmuDevice->Signature = EMU_IO_DEVICE_SIGNATURE;
 
       InstallStatus = gBS->InstallMultipleProtocolInterfaces (
-                            &EmuDevice->Handle,
-                            &gEfiDevicePathProtocolGuid,  EmuDevice->DevicePath,
-                            &gEmuIoThunkProtocolGuid,     &EmuDevice->EmuIoThunk,
-                            NULL
-                            );
+                             &EmuDevice->Handle,
+                             &gEfiDevicePathProtocolGuid,
+                             EmuDevice->DevicePath,
+                             &gEmuIoThunkProtocolGuid,
+                             &EmuDevice->EmuIoThunk,
+                             NULL
+                             );
       if (EFI_ERROR (InstallStatus)) {
         FreeUnicodeStringTable (EmuDevice->ControllerNameTable);
         gBS->FreePool (EmuDevice);
@@ -299,7 +295,7 @@ EmuBusDriverBindingStart (
         Status = gBS->OpenProtocol (
                         ControllerHandle,
                         &gEmuThunkProtocolGuid,
-                        (VOID **)&EmuThunk   ,
+                        (VOID **)&EmuThunk,
                         This->DriverBindingHandle,
                         EmuDevice->Handle,
                         EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -314,7 +310,6 @@ EmuBusDriverBindingStart (
   return InstallStatus;
 }
 
-
 EFI_STATUS
 EFIAPI
 EmuBusDriverBindingStop (
@@ -324,13 +319,13 @@ EmuBusDriverBindingStop (
   IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS                Status;
-  UINTN                     Index;
-  BOOLEAN                   AllChildrenStopped;
-  EMU_IO_THUNK_PROTOCOL     *EmuIoThunk;
-  EMU_BUS_DEVICE            *EmuBusDevice;
-  EMU_IO_DEVICE             *EmuDevice;
-  EMU_THUNK_PROTOCOL        *EmuThunk;
+  EFI_STATUS             Status;
+  UINTN                  Index;
+  BOOLEAN                AllChildrenStopped;
+  EMU_IO_THUNK_PROTOCOL  *EmuIoThunk;
+  EMU_BUS_DEVICE         *EmuBusDevice;
+  EMU_IO_DEVICE          *EmuDevice;
+  EMU_THUNK_PROTOCOL     *EmuThunk;
 
   //
   // Complete all outstanding transactions to Controller.
@@ -354,35 +349,35 @@ EmuBusDriverBindingStop (
     }
 
     gBS->UninstallMultipleProtocolInterfaces (
-          ControllerHandle,
-          &gEfiCallerIdGuid,  EmuBusDevice,
-          NULL
-          );
+           ControllerHandle,
+           &gEfiCallerIdGuid,
+           EmuBusDevice,
+           NULL
+           );
 
     FreeUnicodeStringTable (EmuBusDevice->ControllerNameTable);
 
     gBS->FreePool (EmuBusDevice);
 
     gBS->CloseProtocol (
-          ControllerHandle,
-          &gEmuThunkProtocolGuid,
-          This->DriverBindingHandle,
-          ControllerHandle
-          );
+           ControllerHandle,
+           &gEmuThunkProtocolGuid,
+           This->DriverBindingHandle,
+           ControllerHandle
+           );
 
     gBS->CloseProtocol (
-          ControllerHandle,
-          &gEfiDevicePathProtocolGuid,
-          This->DriverBindingHandle,
-          ControllerHandle
-          );
+           ControllerHandle,
+           &gEfiDevicePathProtocolGuid,
+           This->DriverBindingHandle,
+           ControllerHandle
+           );
     return EFI_SUCCESS;
   }
 
   AllChildrenStopped = TRUE;
 
   for (Index = 0; Index < NumberOfChildren; Index++) {
-
     Status = gBS->OpenProtocol (
                     ChildHandleBuffer[Index],
                     &gEmuIoThunkProtocolGuid,
@@ -403,20 +398,22 @@ EmuBusDriverBindingStop (
 
       Status = gBS->UninstallMultipleProtocolInterfaces (
                       EmuDevice->Handle,
-                      &gEfiDevicePathProtocolGuid,  EmuDevice->DevicePath,
-                      &gEmuIoThunkProtocolGuid,     &EmuDevice->EmuIoThunk,
+                      &gEfiDevicePathProtocolGuid,
+                      EmuDevice->DevicePath,
+                      &gEmuIoThunkProtocolGuid,
+                      &EmuDevice->EmuIoThunk,
                       NULL
                       );
 
       if (EFI_ERROR (Status)) {
         gBS->OpenProtocol (
-              ControllerHandle,
-              &gEmuThunkProtocolGuid,
-              (VOID **) &EmuThunk   ,
-              This->DriverBindingHandle,
-              EmuDevice->Handle,
-              EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
-              );
+               ControllerHandle,
+               &gEmuThunkProtocolGuid,
+               (VOID **)&EmuThunk,
+               This->DriverBindingHandle,
+               EmuDevice->Handle,
+               EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+               );
       } else {
         //
         // Close the child handle
@@ -437,7 +434,6 @@ EmuBusDriverBindingStop (
 
   return EFI_SUCCESS;
 }
-
 
 /*++
 
@@ -467,8 +463,8 @@ EmuBusCreateDevicePath (
 {
   EMU_VENDOR_DEVICE_PATH_NODE  DevicePath;
 
-  DevicePath.VendorDevicePath.Header.Type     = HARDWARE_DEVICE_PATH;
-  DevicePath.VendorDevicePath.Header.SubType  = HW_VENDOR_DP;
+  DevicePath.VendorDevicePath.Header.Type    = HARDWARE_DEVICE_PATH;
+  DevicePath.VendorDevicePath.Header.SubType = HW_VENDOR_DP;
   SetDevicePathNodeLength (&DevicePath.VendorDevicePath.Header, sizeof (EMU_VENDOR_DEVICE_PATH_NODE));
 
   //
@@ -483,12 +479,10 @@ EmuBusCreateDevicePath (
   DevicePath.Instance = InstanceNumber;
 
   return AppendDevicePathNode (
-          RootDevicePath,
-          (EFI_DEVICE_PATH_PROTOCOL *) &DevicePath
-          );
+           RootDevicePath,
+           (EFI_DEVICE_PATH_PROTOCOL *)&DevicePath
+           );
 }
-
-
 
 /**
   The user Entry Point for module EmuBusDriver. The user code starts with this function.
@@ -503,11 +497,11 @@ EmuBusCreateDevicePath (
 EFI_STATUS
 EFIAPI
 InitializeEmuBusDriver (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   Status = EfiLibInstallAllDriverProtocols (
              ImageHandle,
@@ -520,10 +514,5 @@ InitializeEmuBusDriver (
              );
   ASSERT_EFI_ERROR (Status);
 
-
   return Status;
 }
-
-
-
-

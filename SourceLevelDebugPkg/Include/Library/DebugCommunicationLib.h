@@ -1,21 +1,14 @@
 /** @file
   Debug Communication Library definitions.
 
-  Copyright (c) 2010 - 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __DEBUG_COMMUNICATION_LIB_H__
-#define __DEBUG_COMMUNICATION_LIB_H__
+#pragma once
 
-typedef VOID *    DEBUG_PORT_HANDLE;
+typedef VOID *DEBUG_PORT_HANDLE;
 
 /**
   Caller provided function to be invoked at the end of DebugPortInitialize().
@@ -28,7 +21,7 @@ typedef VOID *    DEBUG_PORT_HANDLE;
 **/
 typedef
 VOID
-(EFIAPI * DEBUG_PORT_CONTINUE)(
+(EFIAPI *DEBUG_PORT_CONTINUE)(
   IN VOID                *Context,
   IN DEBUG_PORT_HANDLE   DebugPortHandle
   );
@@ -36,7 +29,7 @@ VOID
 /**
   Initialize the debug port.
 
-  This function will initialize debug port to get it ready for data transmition. If
+  This function will initialize debug port to get it ready for data transmission. If
   certain Debug Communication Library instance has to save some private data in the
   stack, this function must work on the mode that doesn't return to the caller, then
   the caller needs to wrap up all rest of logic after DebugPortInitialize() into one
@@ -76,9 +69,8 @@ DebugPortInitialize (
   IN DEBUG_PORT_CONTINUE  Function
   );
 
-
 /**
-  Read data from debug device and save the datas in buffer.
+  Read data from debug device and save the data in a buffer.
 
   Reads NumberOfBytes data bytes from a debug device into the buffer
   specified by Buffer. The number of bytes actually read is returned.
@@ -88,7 +80,7 @@ DebugPortInitialize (
   @param  Handle           Debug port handle.
   @param  Buffer           Pointer to the data buffer to store the data read from the debug device.
   @param  NumberOfBytes    Number of bytes which will be read.
-  @param  Timeout          Timeout value for reading from debug device. It unit is Microsecond.
+  @param  Timeout          Timeout value for reading from debug device. Its unit is Microsecond.
 
   @retval 0                Read data failed, no data is to be read.
   @retval >0               Actual number of bytes read from debug device.
@@ -97,12 +89,11 @@ DebugPortInitialize (
 UINTN
 EFIAPI
 DebugPortReadBuffer (
-  IN DEBUG_PORT_HANDLE     Handle,
-  IN UINT8                 *Buffer,
-  IN UINTN                 NumberOfBytes,
-  IN UINTN                 Timeout
+  IN DEBUG_PORT_HANDLE  Handle,
+  IN UINT8              *Buffer,
+  IN UINTN              NumberOfBytes,
+  IN UINTN              Timeout
   );
-
 
 /**
   Write data from buffer to debug device.
@@ -118,15 +109,15 @@ DebugPortReadBuffer (
 
   @retval 0                NumberOfBytes is 0.
   @retval >0               The number of bytes written to the debug device.
-                           If this value is less than NumberOfBytes, then the read operation failed.
+                           If this value is less than NumberOfBytes, then the write operation failed.
 
 **/
 UINTN
 EFIAPI
 DebugPortWriteBuffer (
-  IN DEBUG_PORT_HANDLE     Handle,
-  IN UINT8                 *Buffer,
-  IN UINTN                 NumberOfBytes
+  IN DEBUG_PORT_HANDLE  Handle,
+  IN UINT8              *Buffer,
+  IN UINTN              NumberOfBytes
   );
 
 /**
@@ -139,14 +130,11 @@ DebugPortWriteBuffer (
   @param  Handle           Debug port handle.
 
   @retval TRUE             Data is waiting to be read from the debug device.
-  @retval FALSE            There is no data waiting to be read from the serial device.
+  @retval FALSE            There is no data waiting to be read from the debug device.
 
 **/
 BOOLEAN
 EFIAPI
 DebugPortPollBuffer (
-  IN DEBUG_PORT_HANDLE     Handle
+  IN DEBUG_PORT_HANDLE  Handle
   );
-
-#endif
-

@@ -2,19 +2,11 @@
   Internal include file for Status Code Handler PEIM.
 
   Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __STATUS_CODE_HANDLER_PEI_H__
-#define __STATUS_CODE_HANDLER_PEI_H__
-
+#pragma once
 
 #include <Ppi/ReportStatusCodeHandler.h>
 
@@ -35,7 +27,7 @@
 //
 // Define the maximum message length
 //
-#define MAX_DEBUG_MESSAGE_LENGTH 0x100
+#define MAX_DEBUG_MESSAGE_LENGTH  0x100
 
 /**
   Convert status code value and extended data to readable ASCII string, send string to serial I/O device.
@@ -63,14 +55,13 @@
 EFI_STATUS
 EFIAPI
 SerialStatusCodeReportWorker (
-  IN CONST  EFI_PEI_SERVICES        **PeiServices,
-  IN EFI_STATUS_CODE_TYPE           CodeType,
-  IN EFI_STATUS_CODE_VALUE          Value,
-  IN UINT32                         Instance,
-  IN CONST EFI_GUID                 *CallerId,
-  IN CONST EFI_STATUS_CODE_DATA     *Data OPTIONAL
+  IN CONST  EFI_PEI_SERVICES     **PeiServices,
+  IN EFI_STATUS_CODE_TYPE        CodeType,
+  IN EFI_STATUS_CODE_VALUE       Value,
+  IN UINT32                      Instance,
+  IN CONST EFI_GUID              *CallerId,
+  IN CONST EFI_STATUS_CODE_DATA  *Data OPTIONAL
   );
-
 
 /**
   Create the first memory status code GUID'ed HOB as initialization for memory status code worker.
@@ -112,14 +103,10 @@ MemoryStatusCodeInitializeWorker (
 EFI_STATUS
 EFIAPI
 MemoryStatusCodeReportWorker (
-  IN CONST  EFI_PEI_SERVICES    **PeiServices,
-  IN EFI_STATUS_CODE_TYPE       CodeType,
-  IN EFI_STATUS_CODE_VALUE      Value,
-  IN UINT32                     Instance,
-  IN CONST EFI_GUID             *CallerId,
-  IN CONST EFI_STATUS_CODE_DATA *Data OPTIONAL
+  IN CONST  EFI_PEI_SERVICES     **PeiServices,
+  IN EFI_STATUS_CODE_TYPE        CodeType,
+  IN EFI_STATUS_CODE_VALUE       Value,
+  IN UINT32                      Instance,
+  IN CONST EFI_GUID              *CallerId,
+  IN CONST EFI_STATUS_CODE_DATA  *Data OPTIONAL
   );
-
-#endif
-
-

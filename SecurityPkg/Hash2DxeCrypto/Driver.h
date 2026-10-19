@@ -2,18 +2,11 @@
   This is definition for service binding for Hash driver.
 
 Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _HASH2_DRIVER_H_
-#define _HASH2_DRIVER_H_
+#pragma once
 
 #include <Uefi.h>
 
@@ -32,11 +25,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define HASH2_SERVICE_DATA_SIGNATURE  SIGNATURE_32 ('H', 'S', '2', 'S')
 
 typedef struct {
-  UINT32                        Signature;
-  EFI_HANDLE                    ServiceHandle;
-  EFI_SERVICE_BINDING_PROTOCOL  ServiceBinding;
+  UINT32                          Signature;
+  EFI_HANDLE                      ServiceHandle;
+  EFI_SERVICE_BINDING_PROTOCOL    ServiceBinding;
 
-  LIST_ENTRY                    ChildrenList;
+  LIST_ENTRY                      ChildrenList;
 } HASH2_SERVICE_DATA;
 
 #define HASH2_SERVICE_DATA_FROM_THIS(a) \
@@ -47,17 +40,17 @@ typedef struct {
   HASH2_SERVICE_DATA_SIGNATURE \
   )
 
-#define HASH2_INSTANCE_DATA_SIGNATURE   SIGNATURE_32 ('H', 's', '2', 'I')
+#define HASH2_INSTANCE_DATA_SIGNATURE  SIGNATURE_32 ('H', 's', '2', 'I')
 
 typedef struct {
-  UINT32                           Signature;
-  HASH2_SERVICE_DATA               *Hash2ServiceData;
-  EFI_HANDLE                       Handle;
-  LIST_ENTRY                       InstEntry;
-  EFI_HASH2_PROTOCOL               Hash2Protocol;
-  VOID                             *HashContext;
-  VOID                             *HashInfoContext;
-  BOOLEAN                          Updated;
+  UINT32                Signature;
+  HASH2_SERVICE_DATA    *Hash2ServiceData;
+  EFI_HANDLE            Handle;
+  LIST_ENTRY            InstEntry;
+  EFI_HASH2_PROTOCOL    Hash2Protocol;
+  VOID                  *HashContext;
+  VOID                  *HashInfoContext;
+  BOOLEAN               Updated;
 } HASH2_INSTANCE_DATA;
 
 #define HASH2_INSTANCE_DATA_FROM_THIS(a) \
@@ -85,7 +78,7 @@ typedef struct {
                                      it is not NULL, then the I/O services are added
                                      to the existing child handle.
 
-  @retval EFI_SUCCES                 The protocol was added to ChildHandle.
+  @retval EFI_SUCCESS                The protocol was added to ChildHandle.
   @retval EFI_INVALID_PARAMETER      ChildHandle is NULL.
   @retval EFI_OUT_OF_RESOURCES       There are not enough resources available to
                                      create the child.
@@ -95,8 +88,8 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 Hash2ServiceBindingCreateChild (
-  IN     EFI_SERVICE_BINDING_PROTOCOL    *This,
-  IN OUT EFI_HANDLE                      *ChildHandle
+  IN     EFI_SERVICE_BINDING_PROTOCOL  *This,
+  IN OUT EFI_HANDLE                    *ChildHandle
   );
 
 /**
@@ -110,7 +103,7 @@ Hash2ServiceBindingCreateChild (
                                  instance.
   @param[in]  ChildHandle        Handle of the child to destroy.
 
-  @retval EFI_SUCCES             The protocol was removed from ChildHandle.
+  @retval EFI_SUCCESS            The protocol was removed from ChildHandle.
   @retval EFI_UNSUPPORTED        ChildHandle does not support the protocol that
                                  is being removed.
   @retval EFI_INVALID_PARAMETER  ChildHandle is NULL.
@@ -123,10 +116,8 @@ Hash2ServiceBindingCreateChild (
 EFI_STATUS
 EFIAPI
 Hash2ServiceBindingDestroyChild (
-  IN EFI_SERVICE_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                      ChildHandle
+  IN EFI_SERVICE_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                    ChildHandle
   );
 
-extern EFI_HASH2_PROTOCOL mHash2Protocol;
-
-#endif
+extern EFI_HASH2_PROTOCOL  mHash2Protocol;

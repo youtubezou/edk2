@@ -714,7 +714,7 @@ Tree *MR_compute_pred_tree_ctxXX(p)
     if (p == NULL) return NULL;
 
 /* this appears strange: why do we OR the context
-   of and AND predicate ?  It is because of the way
+   of an AND predicate ?  It is because of the way
    that predicates are evaluated: if the context is
    wrong then it's the same as if the predicate was
    true.  That means that even when one leg of an
@@ -1531,7 +1531,7 @@ Predicate * MR_find_in_aSubBlk(alt)
  *      1.  if lookahead for alt i is contained in the lookahead for any
  *          alt j then ignore semantic predicate of alt i
  *      2.  if lookahead for alt i is not contained in the lookahead for
- *          any alt j then add add predicate i to the OR list to be hoisted
+ *          any alt j then add predicate i to the OR list to be hoisted
  *      3.  if lookahead for alt i overlaps the lookahead for some alt j then
  *          add a dummy semantic predicate for alt j
  *
@@ -2357,7 +2357,7 @@ NEXT_P:
  *      expression, such as "#pred NotA !A" or "#pred NotXY ! (X && Y) or
  *      "#pred XbarY !(X && Y)".  In particular, it cannot be set by any
  *      predicate expression occurring under any other circumstances.
- *      The #pred predicate expresssions are stored with in predEntry->pred
+ *      The #pred predicate expressions are stored with in predEntry->pred
  *      and do not normally appear anywhere else until the predicates are
  *      "unfolded" in order to recognize redundancies, conflicts, and
  *      tautologies.

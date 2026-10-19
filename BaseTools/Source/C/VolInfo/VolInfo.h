@@ -1,19 +1,12 @@
 /** @file
 Local Definitions for the VolInfo utility
 
-Copyright (c) 1999 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 1999 - 2016, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _VOLINFO_H_
-#define _VOLINFO_H_ 1
+#pragma once
 
 #define PI_SPECIFICATION_VERSION  0x00010000
 
@@ -28,7 +21,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define EFI_DEP_END       0x08
 #define EFI_DEP_SOR       0x09
 
-#define EFI_SECTION_LAST_LEAF_SECTION_TYPE  0x1B
-#define EFI_SECTION_LAST_SECTION_TYPE       0x1B
+#define EFI_SECTION_LAST_LEAF_SECTION_TYPE  0x1C
+#define EFI_SECTION_LAST_SECTION_TYPE       0x1C
 
-#endif
+#define OPENSSL_COMMAND_FORMAT_STRING       "%s sha1 -out %s %s"
+#define EXTRACT_COMMAND_FORMAT_STRING       "%s -d -o %s %s"

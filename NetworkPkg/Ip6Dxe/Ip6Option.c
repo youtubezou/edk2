@@ -3,13 +3,7 @@
 
   Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -23,7 +17,8 @@
   @param[in]  IpSb              The IP6 service data.
   @param[in]  Packet            The to be validated packet.
   @param[in]  Option            The first byte of the option.
-  @param[in]  OptionLen         The length of the whole option.
+  @param[in]  OptionLen         The length of all options, expressed in byte length of octets.
+                                Maximum length is 2046 bytes or ((n + 1) * 8) - 2 where n is 255.
   @param[in]  Pointer           Identifies the octet offset within
                                 the invoking packet where the error was detected.
 
@@ -34,15 +29,36 @@
 **/
 BOOLEAN
 Ip6IsOptionValid (
-  IN IP6_SERVICE            *IpSb,
-  IN NET_BUF                *Packet,
-  IN UINT8                  *Option,
-  IN UINT8                  OptionLen,
-  IN UINT32                 Pointer
+  IN IP6_SERVICE  *IpSb,
+  IN NET_BUF      *Packet,
+  IN UINT8        *Option,
+  IN UINT16       OptionLen,
+  IN UINT32       Pointer
   )
 {
-  UINT8                      Offset;
-  UINT8                      OptionType;
+  UINT16  Offset;
+  UINT8   OptionType;
+  UINT8   OptDataLen;
+
+  if (Option == NULL) {
+    ASSERT (Option != NULL);
+    return FALSE;
+  }
+
+  if ((OptionLen <= 0) || (OptionLen > IP6_MAX_EXT_DATA_LENGTH)) {
+    ASSERT (OptionLen > 0 && OptionLen <= IP6_MAX_EXT_DATA_LENGTH);
+    return FALSE;
+  }
+
+  if (Packet == NULL) {
+    ASSERT (Packet != NULL);
+    return FALSE;
+  }
+
+  if (IpSb == NULL) {
+    ASSERT (IpSb != NULL);
+    return FALSE;
+  }
 
   Offset = 0;
 
@@ -50,68 +66,69 @@ Ip6IsOptionValid (
     OptionType = *(Option + Offset);
 
     switch (OptionType) {
-    case Ip6OptionPad1:
-      //
-      // It is a Pad1 option
-      //
-      Offset++;
-      break;
-    case Ip6OptionPadN:
-      //
-      // It is a PadN option
-      //
-      Offset = (UINT8) (Offset + *(Option + Offset + 1) + 2);
-      break;
-    case Ip6OptionRouterAlert:
-      //
-      // It is a Router Alert Option
-      //
-      Offset += 4;
-      break;
-    default:
-      //
-      // The highest-order two bits specify the action must be taken if
-      // the processing IPv6 node does not recognize the option type.
-      //
-      switch (OptionType & Ip6OptionMask) {
-      case Ip6OptionSkip:
-        Offset = (UINT8) (Offset + *(Option + Offset + 1));
+      case Ip6OptionPad1:
+        //
+        // It is a Pad1 option
+        //
+        Offset++;
         break;
-      case Ip6OptionDiscard:
-        return FALSE;
-      case Ip6OptionParameterProblem:
-        Pointer = Pointer + Offset + sizeof (EFI_IP6_HEADER);
-        Ip6SendIcmpError (
-          IpSb,
-          Packet,
-          NULL,
-          &Packet->Ip.Ip6->SourceAddress,
-          ICMP_V6_PARAMETER_PROBLEM,
-          2,
-          &Pointer
-          );
-        return FALSE;
-      case Ip6OptionMask:
-        if (!IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
-          Pointer = Pointer + Offset + sizeof (EFI_IP6_HEADER);
-          Ip6SendIcmpError (
-            IpSb,
-            Packet,
-            NULL,
-            &Packet->Ip.Ip6->SourceAddress,
-            ICMP_V6_PARAMETER_PROBLEM,
-            2,
-            &Pointer
-            );
+      case Ip6OptionPadN:
+        //
+        // It is a PadN option
+        //
+        OptDataLen = ((IP6_OPTION_HEADER *)(Option + Offset))->Length;
+        Offset     = IP6_NEXT_OPTION_OFFSET (Offset, OptDataLen);
+        break;
+      case Ip6OptionRouterAlert:
+        //
+        // It is a Router Alert Option
+        //
+        Offset += 4;
+        break;
+      default:
+        //
+        // The highest-order two bits specify the action must be taken if
+        // the processing IPv6 node does not recognize the option type.
+        //
+        switch (OptionType & Ip6OptionMask) {
+          case Ip6OptionSkip:
+            OptDataLen = ((IP6_OPTION_HEADER *)(Option + Offset))->Length;
+            Offset     = IP6_NEXT_OPTION_OFFSET (Offset, OptDataLen);
+            break;
+          case Ip6OptionDiscard:
+            return FALSE;
+          case Ip6OptionParameterProblem:
+            Pointer = Pointer + Offset + sizeof (EFI_IP6_HEADER);
+            Ip6SendIcmpError (
+              IpSb,
+              Packet,
+              NULL,
+              &Packet->Ip.Ip6->SourceAddress,
+              ICMP_V6_PARAMETER_PROBLEM,
+              2,
+              &Pointer
+              );
+            return FALSE;
+          case Ip6OptionMask:
+            if (!IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
+              Pointer = Pointer + Offset + sizeof (EFI_IP6_HEADER);
+              Ip6SendIcmpError (
+                IpSb,
+                Packet,
+                NULL,
+                &Packet->Ip.Ip6->SourceAddress,
+                ICMP_V6_PARAMETER_PROBLEM,
+                2,
+                &Pointer
+                );
+            }
+
+            return FALSE;
+            break;
         }
 
-        return FALSE;
         break;
-      }
-
-      break;
     }
-
   }
 
   return TRUE;
@@ -131,54 +148,101 @@ Ip6IsOptionValid (
 **/
 BOOLEAN
 Ip6IsNDOptionValid (
-  IN UINT8                  *Option,
-  IN UINT16                 OptionLen
+  IN UINT8   *Option,
+  IN UINT16  OptionLen
   )
 {
-  UINT16                    Offset;
-  UINT8                     OptionType;
-  UINT16                    Length;
+  UINT32             Offset;
+  UINT16             Length;
+  IP6_OPTION_HEADER  *OptionHeader;
+
+  if (Option == NULL) {
+    ASSERT (Option != NULL);
+    return FALSE;
+  }
+
+  //
+  // Cannot process truncated options.
+  // Cannot process options with a length of 0 as there is no Type field.
+  //
+  if (OptionLen < sizeof (IP6_OPTION_HEADER)) {
+    return FALSE;
+  }
 
   Offset = 0;
 
-  while (Offset < OptionLen) {
-    OptionType = *(Option + Offset);
-     Length    = (UINT16) (*(Option + Offset + 1) * 8);
+  //
+  // RFC 4861 states that Neighbor Discovery packet can contain zero or more
+  // options. RFC 4861 Section 4.6 states that every ND option length is in
+  // units of 8 octets, so the smallest valid option is 8 bytes (Length
+  // field = 1). Only enter the loop when at least one complete minimum-size
+  // option can exist in the remaining buffer.
+  //
+  while (Offset + 8 <= (UINT32)OptionLen) {
+    OptionHeader = (IP6_OPTION_HEADER *)(Option + Offset);
+    Length       = (UINT16)OptionHeader->Length * 8;
 
-    switch (OptionType) {
-    case Ip6OptionPrefixInfo:
-      if (Length != 32) {
-        return FALSE;
-      }
+    switch (OptionHeader->Type) {
+      case Ip6OptionPrefixInfo:
+        if (Length != 32) {
+          return FALSE;
+        }
 
-      break;
+        break;
 
-    case Ip6OptionMtu:
-      if (Length != 8) {
-        return FALSE;
-      }
+      case Ip6OptionMtu:
+        if (Length != 8) {
+          return FALSE;
+        }
 
-      break;
+        break;
 
-    default:
-      //
-      // Check the length of Ip6OptionEtherSource, Ip6OptionEtherTarget, and
-      // Ip6OptionRedirected here. For unrecognized options, silently ignore
-      // and continue processsing the message.
-      //
-      if (Length == 0) {
-        return FALSE;
-      }
+      default:
+        // RFC 4861 states that Length field cannot be 0.
+        if (Length == 0) {
+          return FALSE;
+        }
 
-      break;
+        break;
     }
 
-    Offset = (UINT16) (Offset + Length);
+    //
+    // Check whether recognized options are within the input buffer's scope.
+    //
+    switch (OptionHeader->Type) {
+      case Ip6OptionEtherSource:
+      case Ip6OptionEtherTarget:
+      case Ip6OptionPrefixInfo:
+      case Ip6OptionRedirected:
+      case Ip6OptionMtu:
+        if (Offset + Length > (UINT32)OptionLen) {
+          return FALSE;
+        }
+
+        break;
+
+      default:
+        //
+        // Unrecognized options can be either valid (but unused) or invalid
+        // (garbage in between or right after valid options). Silently ignore.
+        //
+        break;
+    }
+
+    //
+    // Advance to the next option.
+    // Length already considers option header's Type + Length.
+    //
+    Offset += Length;
   }
 
-  return TRUE;
+  //
+  // Per RFC 4861 Section 4.6, a well-formed option region is an exact
+  // integer multiple of 8 octets. If any bytes remain after the loop,
+  // the option region contains a malformed trailing fragment.
+  //
+  return (Offset == (UINT32)OptionLen);
 }
-
 
 /**
   Validate whether the NextHeader is a known valid protocol or one of the user configured
@@ -193,18 +257,19 @@ Ip6IsNDOptionValid (
 **/
 BOOLEAN
 Ip6IsValidProtocol (
-  IN IP6_SERVICE            *IpSb,
-  IN UINT8                  NextHeader
+  IN IP6_SERVICE  *IpSb,
+  IN UINT8        NextHeader
   )
 {
-  LIST_ENTRY                *Entry;
-  IP6_PROTOCOL              *IpInstance;
+  LIST_ENTRY    *Entry;
+  IP6_PROTOCOL  *IpInstance;
 
-  if (NextHeader == EFI_IP_PROTO_TCP ||
-      NextHeader == EFI_IP_PROTO_UDP ||
-      NextHeader == IP6_ICMP ||
-      NextHeader == IP6_ESP
-      ) {
+  if ((NextHeader == EFI_IP_PROTO_TCP) ||
+      (NextHeader == EFI_IP_PROTO_UDP) ||
+      (NextHeader == IP6_ICMP) ||
+      (NextHeader == IP6_ESP)
+      )
+  {
     return TRUE;
   }
 
@@ -258,29 +323,29 @@ Ip6IsValidProtocol (
 **/
 BOOLEAN
 Ip6IsExtsValid (
-  IN IP6_SERVICE            *IpSb           OPTIONAL,
-  IN NET_BUF                *Packet         OPTIONAL,
-  IN UINT8                  *NextHeader,
-  IN UINT8                  *ExtHdrs,
-  IN UINT32                 ExtHdrsLen,
-  IN BOOLEAN                Rcvd,
-  OUT UINT32                *FormerHeader   OPTIONAL,
-  OUT UINT8                 **LastHeader,
-  OUT UINT32                *RealExtsLen    OPTIONAL,
-  OUT UINT32                *UnFragmentLen  OPTIONAL,
-  OUT BOOLEAN               *Fragmented     OPTIONAL
+  IN IP6_SERVICE  *IpSb           OPTIONAL,
+  IN NET_BUF      *Packet         OPTIONAL,
+  IN UINT8        *NextHeader,
+  IN UINT8        *ExtHdrs,
+  IN UINT32       ExtHdrsLen,
+  IN BOOLEAN      Rcvd,
+  OUT UINT32      *FormerHeader   OPTIONAL,
+  OUT UINT8       **LastHeader,
+  OUT UINT32      *RealExtsLen    OPTIONAL,
+  OUT UINT32      *UnFragmentLen  OPTIONAL,
+  OUT BOOLEAN     *Fragmented     OPTIONAL
   )
 {
-  UINT32                     Pointer;
-  UINT32                     Offset;
-  UINT8                      *Option;
-  UINT8                      OptionLen;
-  BOOLEAN                    Flag;
-  UINT8                      CountD;
-  UINT8                      CountA;
-  IP6_FRAGMENT_HEADER        *FragmentHead;
-  UINT16                     FragmentOffset;
-  IP6_ROUTING_HEADER         *RoutingHead;
+  UINT32               Pointer;
+  UINT32               Offset;
+  UINT8                *Option;
+  UINT16               OptionLen;
+  BOOLEAN              Flag;
+  UINT8                CountD;
+  UINT8                CountA;
+  IP6_FRAGMENT_HEADER  *FragmentHead;
+  UINT16               FragmentOffset;
+  IP6_ROUTING_HEADER   *RoutingHead;
 
   if (RealExtsLen != NULL) {
     *RealExtsLen = 0;
@@ -296,11 +361,11 @@ Ip6IsExtsValid (
 
   *LastHeader = NextHeader;
 
-  if (ExtHdrs == NULL && ExtHdrsLen == 0) {
+  if ((ExtHdrs == NULL) && (ExtHdrsLen == 0)) {
     return TRUE;
   }
 
-  if ((ExtHdrs == NULL && ExtHdrsLen != 0) || (ExtHdrs != NULL && ExtHdrsLen == 0)) {
+  if (((ExtHdrs == NULL) && (ExtHdrsLen != 0)) || ((ExtHdrs != NULL) && (ExtHdrsLen == 0))) {
     return FALSE;
   }
 
@@ -311,25 +376,258 @@ Ip6IsExtsValid (
   CountA  = 0;
 
   while (Offset <= ExtHdrsLen) {
-
     switch (*NextHeader) {
-    case IP6_HOP_BY_HOP:
-      if (Offset != 0) {
-        if (!Rcvd) {
+      case IP6_HOP_BY_HOP:
+        if (Offset != 0) {
+          if (!Rcvd) {
+            return FALSE;
+          }
+
+          //
+          // Hop-by-Hop Options header is restricted to appear immediately after an IPv6 header only.
+          // If not, generate a ICMP parameter problem message with code value of 1.
+          //
+          if (Pointer == 0) {
+            Pointer = sizeof (EFI_IP6_HEADER);
+          } else {
+            Pointer = Offset + sizeof (EFI_IP6_HEADER);
+          }
+
+          if ((IpSb != NULL) && (Packet != NULL) &&
+              !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress))
+          {
+            Ip6SendIcmpError (
+              IpSb,
+              Packet,
+              NULL,
+              &Packet->Ip.Ip6->SourceAddress,
+              ICMP_V6_PARAMETER_PROBLEM,
+              1,
+              &Pointer
+              );
+          }
+
           return FALSE;
         }
+
+        Flag = TRUE;
+
+      //
+      // Fall through
+      //
+      case IP6_DESTINATION:
         //
-        // Hop-by-Hop Options header is restricted to appear immediately after an IPv6 header only.
-        // If not, generate a ICMP parameter problem message with code value of 1.
+        // See https://www.rfc-editor.org/rfc/rfc2460#section-4.2 page 23
         //
-        if (Pointer == 0) {
-          Pointer = sizeof (EFI_IP6_HEADER);
+        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        // |  Next Header  |  Hdr Ext Len  |                               |
+        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+        // |                                                               |
+        // .                                                               .
+        // .                            Options                            .
+        // .                                                               .
+        // |                                                               |
+        // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        //
+        //
+        //   Next Header    8-bit selector.  Identifies the type of header
+        //                  immediately following the Destination Options
+        //                  header.  Uses the same values as the IPv4
+        //                  Protocol field [RFC-1700 et seq.].
+        //
+        //   Hdr Ext Len    8-bit unsigned integer.  Length of the
+        //                  Destination Options header in 8-octet units, not
+        //                  including the first 8 octets.
+        //
+        //   Options        Variable-length field, of length such that the
+        //                  complete Destination Options header is an
+        //                  integer multiple of 8 octets long.  Contains one
+        //                  or  more TLV-encoded options, as described in
+        //                  section 4.2.
+        //
+
+        if (*NextHeader == IP6_DESTINATION) {
+          CountD++;
+        }
+
+        if (CountD > 2) {
+          return FALSE;
+        }
+
+        NextHeader = ExtHdrs + Offset;
+        Pointer    = Offset;
+
+        Offset++;
+        Option    = ExtHdrs + Offset;
+        OptionLen = IP6_HDR_EXT_LEN (*Option) - sizeof (IP6_EXT_HDR);
+        Option++;
+        Offset++;
+
+        if ((IpSb != NULL) && (Packet != NULL) && !Ip6IsOptionValid (IpSb, Packet, Option, OptionLen, Offset)) {
+          return FALSE;
+        }
+
+        Offset = Offset + OptionLen;
+
+        if (Flag) {
+          if (UnFragmentLen != NULL) {
+            *UnFragmentLen = Offset;
+          }
+
+          Flag = FALSE;
+        }
+
+        break;
+
+      case IP6_ROUTING:
+        NextHeader  = ExtHdrs + Offset;
+        RoutingHead = (IP6_ROUTING_HEADER *)NextHeader;
+
+        //
+        // Type 0 routing header is defined in RFC2460 and deprecated in RFC5095.
+        // Thus all routing types are processed as unrecognized.
+        //
+        if (RoutingHead->SegmentsLeft == 0) {
+          //
+          // Ignore the routing header and proceed to process the next header.
+          //
+          Offset = Offset + IP6_HDR_EXT_LEN (RoutingHead->HeaderLen);
+
+          if (UnFragmentLen != NULL) {
+            *UnFragmentLen = Offset;
+          }
         } else {
-          Pointer = Offset + sizeof (EFI_IP6_HEADER);
+          //
+          // Discard the packet and send an ICMP Parameter Problem, Code 0, message
+          // to the packet's source address, pointing to the unrecognized routing
+          // type.
+          //
+          Pointer = Offset + sizeof (IP6_EXT_HDR) + sizeof (EFI_IP6_HEADER);
+          if ((IpSb != NULL) && (Packet != NULL) &&
+              !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress))
+          {
+            Ip6SendIcmpError (
+              IpSb,
+              Packet,
+              NULL,
+              &Packet->Ip.Ip6->SourceAddress,
+              ICMP_V6_PARAMETER_PROBLEM,
+              0,
+              &Pointer
+              );
+          }
+
+          return FALSE;
+        }
+
+        break;
+
+      case IP6_FRAGMENT:
+
+        //
+        // RFC2402, AH header should after fragment header.
+        //
+        if (CountA > 1) {
+          return FALSE;
+        }
+
+        //
+        // RFC2460, ICMP Parameter Problem message with code 0 should be sent
+        // if the length of a fragment is not a multiple of 8 octets and the M
+        // flag of that fragment is 1, pointing to the Payload length field of the
+        // fragment packet.
+        //
+        if ((IpSb != NULL) && (Packet != NULL) && ((ExtHdrsLen % 8) != 0)) {
+          //
+          // Check whether it is the last fragment.
+          //
+          FragmentHead = (IP6_FRAGMENT_HEADER *)(ExtHdrs + Offset);
+          if (FragmentHead == NULL) {
+            return FALSE;
+          }
+
+          FragmentOffset = NTOHS (FragmentHead->FragmentOffset);
+
+          if (((FragmentOffset & 0x1) == 0x1) &&
+              !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress))
+          {
+            Pointer = sizeof (UINT32);
+            Ip6SendIcmpError (
+              IpSb,
+              Packet,
+              NULL,
+              &Packet->Ip.Ip6->SourceAddress,
+              ICMP_V6_PARAMETER_PROBLEM,
+              0,
+              &Pointer
+              );
+            return FALSE;
+          }
+        }
+
+        if (Fragmented != NULL) {
+          *Fragmented = TRUE;
+        }
+
+        if (Rcvd && (FormerHeader != NULL)) {
+          *FormerHeader = (UINT32)(NextHeader - ExtHdrs);
+        }
+
+        NextHeader = ExtHdrs + Offset;
+        Offset     = Offset + 8;
+        break;
+
+      case IP6_AH:
+        if (++CountA > 1) {
+          return FALSE;
+        }
+
+        Option     = ExtHdrs + Offset;
+        NextHeader = Option;
+        Option++;
+        //
+        // RFC2402, Payload length is specified in 32-bit words, minus "2".
+        //
+        OptionLen = ((UINT16)(*Option + 2) * 4);
+        Offset    = Offset + OptionLen;
+        break;
+
+      case IP6_NO_NEXT_HEADER:
+        *LastHeader = NextHeader;
+        return FALSE;
+        break;
+
+      default:
+        if (Ip6IsValidProtocol (IpSb, *NextHeader)) {
+          *LastHeader = NextHeader;
+
+          if (RealExtsLen != NULL) {
+            *RealExtsLen = Offset;
+          }
+
+          return TRUE;
+        }
+
+        //
+        // The Next Header value is unrecognized by the node, discard the packet and
+        // send an ICMP parameter problem message with code value of 1.
+        //
+        if (Offset == 0) {
+          //
+          // The Next Header directly follows IPv6 basic header.
+          //
+          Pointer = 6;
+        } else {
+          if (Pointer == 0) {
+            Pointer = sizeof (EFI_IP6_HEADER);
+          } else {
+            Pointer = Offset + sizeof (EFI_IP6_HEADER);
+          }
         }
 
         if ((IpSb != NULL) && (Packet != NULL) &&
-            !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
+            !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress))
+        {
           Ip6SendIcmpError (
             IpSb,
             Packet,
@@ -340,207 +638,8 @@ Ip6IsExtsValid (
             &Pointer
             );
         }
-        return FALSE;
-      }
-
-      Flag = TRUE;
-
-    //
-    // Fall through
-    //
-    case IP6_DESTINATION:
-      if (*NextHeader == IP6_DESTINATION) {
-        CountD++;
-      }
-
-      if (CountD > 2) {
-        return FALSE;
-      }
-
-      NextHeader = ExtHdrs + Offset;
-      Pointer    = Offset;
-
-      Offset++;
-      Option     = ExtHdrs + Offset;
-      OptionLen  = (UINT8) ((*Option + 1) * 8 - 2);
-      Option++;
-      Offset++;
-
-      if (IpSb != NULL && Packet != NULL && !Ip6IsOptionValid (IpSb, Packet, Option, OptionLen, Offset)) {
-        return FALSE;
-      }
-
-      Offset = Offset + OptionLen;
-
-      if (Flag) {
-        if (UnFragmentLen != NULL) {
-          *UnFragmentLen = Offset;
-        }
-
-        Flag = FALSE;
-      }
-
-      break;
-
-    case IP6_ROUTING:
-      NextHeader = ExtHdrs + Offset;
-      RoutingHead = (IP6_ROUTING_HEADER *) NextHeader;
-
-      //
-      // Type 0 routing header is defined in RFC2460 and deprecated in RFC5095.
-      // Thus all routing types are processed as unrecognized.
-      //
-      if (RoutingHead->SegmentsLeft == 0) {
-        //
-        // Ignore the routing header and proceed to process the next header.
-        //
-        Offset = Offset + (RoutingHead->HeaderLen + 1) * 8;
-
-        if (UnFragmentLen != NULL) {
-          *UnFragmentLen = Offset;
-        }
-
-      } else {
-        //
-        // Discard the packet and send an ICMP Parameter Problem, Code 0, message
-        // to the packet's source address, pointing to the unrecognized routing
-        // type.
-        //
-        Pointer = Offset + 2 + sizeof (EFI_IP6_HEADER);
-        if ((IpSb != NULL) && (Packet != NULL) &&
-            !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
-          Ip6SendIcmpError (
-            IpSb,
-            Packet,
-            NULL,
-            &Packet->Ip.Ip6->SourceAddress,
-            ICMP_V6_PARAMETER_PROBLEM,
-            0,
-            &Pointer
-            );
-        }
 
         return FALSE;
-      }
-
-      break;
-
-    case IP6_FRAGMENT:
-
-      //
-      // RFC2402, AH header should after fragment header.
-      //
-      if (CountA > 1) {
-        return FALSE;
-      }
-
-      //
-      // RFC2460, ICMP Parameter Problem message with code 0 should be sent
-      // if the length of a fragment is not a multiple of 8 octets and the M
-      // flag of that fragment is 1, pointing to the Payload length field of the
-      // fragment packet.
-      //
-      if (IpSb != NULL && Packet != NULL && (ExtHdrsLen % 8) != 0) {
-        //
-        // Check whether it is the last fragment.
-        //
-        FragmentHead = (IP6_FRAGMENT_HEADER *) (ExtHdrs + Offset);
-        if (FragmentHead == NULL) {
-          return FALSE;
-        }
-
-        FragmentOffset = NTOHS (FragmentHead->FragmentOffset);
-
-        if (((FragmentOffset & 0x1) == 0x1) &&
-            !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
-          Pointer = sizeof (UINT32);
-          Ip6SendIcmpError (
-            IpSb,
-            Packet,
-            NULL,
-            &Packet->Ip.Ip6->SourceAddress,
-            ICMP_V6_PARAMETER_PROBLEM,
-            0,
-            &Pointer
-            );
-          return FALSE;
-        }
-      }
-
-      if (Fragmented != NULL) {
-        *Fragmented = TRUE;
-      }
-
-      if (Rcvd && FormerHeader != NULL) {
-        *FormerHeader = (UINT32) (NextHeader - ExtHdrs);
-      }
-
-      NextHeader = ExtHdrs + Offset;
-      Offset     = Offset + 8;
-      break;
-
-    case IP6_AH:
-      if (++CountA > 1) {
-        return FALSE;
-      }
-
-      Option     = ExtHdrs + Offset;
-      NextHeader = Option;
-      Option++;
-      //
-      // RFC2402, Payload length is specified in 32-bit words, minus "2".
-      //
-      OptionLen  = (UINT8) ((*Option + 2) * 4);
-      Offset     = Offset + OptionLen;
-      break;
-
-    case IP6_NO_NEXT_HEADER:
-      *LastHeader = NextHeader;
-      return FALSE;
-      break;
-
-    default:
-      if (Ip6IsValidProtocol (IpSb, *NextHeader)) {
-
-        *LastHeader = NextHeader;
-
-        if (RealExtsLen != NULL) {
-          *RealExtsLen = Offset;
-        }
-
-        return TRUE;
-      }
-
-      //
-      // The Next Header value is unrecognized by the node, discard the packet and
-      // send an ICMP parameter problem message with code value of 1.
-      //
-      if (Offset == 0) {
-        //
-        // The Next Header directly follows IPv6 basic header.
-        //
-        Pointer = 6;
-      } else {
-        if (Pointer == 0) {
-          Pointer = sizeof (EFI_IP6_HEADER);
-        } else {
-          Pointer = Offset + sizeof (EFI_IP6_HEADER);
-        }
-      }
-
-      if ((IpSb != NULL) && (Packet != NULL) &&
-          !IP6_IS_MULTICAST (&Packet->Ip.Ip6->DestinationAddress)) {
-        Ip6SendIcmpError (
-          IpSb,
-          Packet,
-          NULL,
-          &Packet->Ip.Ip6->SourceAddress,
-          ICMP_V6_PARAMETER_PROBLEM,
-          1,
-          &Pointer
-          );
-      }
-      return FALSE;
     }
   }
 
@@ -569,12 +668,12 @@ Ip6IsExtsValid (
 **/
 EFI_STATUS
 Ip6FillHopByHop (
-  OUT UINT8                  *Buffer,
-  IN OUT UINTN               *BufferLen,
-  IN UINT8                   NextHeader
+  OUT UINT8     *Buffer,
+  IN OUT UINTN  *BufferLen,
+  IN UINT8      NextHeader
   )
 {
-  UINT8                      BufferArray[8];
+  UINT8  BufferArray[8];
 
   if (*BufferLen < 8) {
     *BufferLen = 8;
@@ -617,23 +716,23 @@ Ip6FillHopByHop (
 **/
 EFI_STATUS
 Ip6FillFragmentHeader (
-  IN  IP6_SERVICE           *IpSb,
-  IN  UINT8                 NextHeader,
-  IN  UINT8                 LastHeader,
-  IN  UINT8                 *ExtHdrs,
-  IN  UINT32                ExtHdrsLen,
-  IN  UINT16                FragmentOffset,
-  OUT UINT8                 **UpdatedExtHdrs
+  IN  IP6_SERVICE  *IpSb,
+  IN  UINT8        NextHeader,
+  IN  UINT8        LastHeader,
+  IN  UINT8        *ExtHdrs,
+  IN  UINT32       ExtHdrsLen,
+  IN  UINT16       FragmentOffset,
+  OUT UINT8        **UpdatedExtHdrs
   )
 {
-  UINT32                    Length;
-  UINT8                     *Buffer;
-  UINT32                    FormerHeader;
-  UINT32                    Offset;
-  UINT32                    Part1Len;
-  UINT32                    HeaderLen;
-  UINT8                     Current;
-  IP6_FRAGMENT_HEADER       FragmentHead;
+  UINT32               Length;
+  UINT8                *Buffer;
+  UINT32               FormerHeader;
+  UINT32               Offset;
+  UINT32               Part1Len;
+  UINT32               HeaderLen;
+  UINT8                Current;
+  IP6_FRAGMENT_HEADER  FragmentHead;
 
   if (UpdatedExtHdrs == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -645,82 +744,81 @@ Ip6FillFragmentHeader (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Offset         = 0;
-  Part1Len       = 0;
-  FormerHeader   = 0;
-  Current        = NextHeader;
+  Offset       = 0;
+  Part1Len     = 0;
+  FormerHeader = 0;
+  Current      = NextHeader;
 
   while ((ExtHdrs != NULL) && (Offset <= ExtHdrsLen)) {
     switch (NextHeader) {
-    case IP6_ROUTING:
-    case IP6_HOP_BY_HOP:
-    case IP6_DESTINATION:
-      Current      = NextHeader;
-      NextHeader   = *(ExtHdrs + Offset);
+      case IP6_ROUTING:
+      case IP6_HOP_BY_HOP:
+      case IP6_DESTINATION:
+        Current    = NextHeader;
+        NextHeader = *(ExtHdrs + Offset);
 
-      if ((Current == IP6_DESTINATION) && (NextHeader != IP6_ROUTING)) {
-        //
-        // Destination Options header should occur at most twice, once before
-        // a Routing header and once before the upper-layer header. Here we
-        // find the one before the upper-layer header. Insert the Fragment
-        // Header before it.
-        //
-        CopyMem (Buffer, ExtHdrs, Part1Len);
-        *(Buffer + FormerHeader) = IP6_FRAGMENT;
-        //
-        // Exit the loop.
-        //
-        Offset = ExtHdrsLen + 1;
+        if ((Current == IP6_DESTINATION) && (NextHeader != IP6_ROUTING)) {
+          //
+          // Destination Options header should occur at most twice, once before
+          // a Routing header and once before the upper-layer header. Here we
+          // find the one before the upper-layer header. Insert the Fragment
+          // Header before it.
+          //
+          CopyMem (Buffer, ExtHdrs, Part1Len);
+          *(Buffer + FormerHeader) = IP6_FRAGMENT;
+          //
+          // Exit the loop.
+          //
+          Offset = ExtHdrsLen + 1;
+          break;
+        }
+
+        FormerHeader = Offset;
+        HeaderLen    = (*(ExtHdrs + Offset + 1) + 1) * 8;
+        Part1Len     = Part1Len + HeaderLen;
+        Offset       = Offset + HeaderLen;
         break;
-      }
 
-
-      FormerHeader = Offset;
-      HeaderLen    = (*(ExtHdrs + Offset + 1) + 1) * 8;
-      Part1Len     = Part1Len + HeaderLen;
-      Offset       = Offset + HeaderLen;
-      break;
-
-    case IP6_FRAGMENT:
-      Current    = NextHeader;
-
-      if (Part1Len != 0) {
-        CopyMem (Buffer, ExtHdrs, Part1Len);
-      }
-
-      *(Buffer + FormerHeader) = IP6_FRAGMENT;
-
-      //
-      // Exit the loop.
-      //
-      Offset = ExtHdrsLen + 1;
-      break;
-
-    case IP6_AH:
-      Current    = NextHeader;
-      NextHeader = *(ExtHdrs + Offset);
-      //
-      // RFC2402, Payload length is specified in 32-bit words, minus "2".
-      //
-      HeaderLen  = (*(ExtHdrs + Offset + 1) + 2) * 4;
-      Part1Len   = Part1Len + HeaderLen;
-      Offset     = Offset + HeaderLen;
-      break;
-
-    default:
-      if (Ip6IsValidProtocol (IpSb, NextHeader)) {
+      case IP6_FRAGMENT:
         Current = NextHeader;
-        CopyMem (Buffer, ExtHdrs, Part1Len);
+
+        if (Part1Len != 0) {
+          CopyMem (Buffer, ExtHdrs, Part1Len);
+        }
+
         *(Buffer + FormerHeader) = IP6_FRAGMENT;
+
         //
         // Exit the loop.
         //
         Offset = ExtHdrsLen + 1;
         break;
-      }
 
-      FreePool (Buffer);
-      return EFI_UNSUPPORTED;
+      case IP6_AH:
+        Current    = NextHeader;
+        NextHeader = *(ExtHdrs + Offset);
+        //
+        // RFC2402, Payload length is specified in 32-bit words, minus "2".
+        //
+        HeaderLen = (*(ExtHdrs + Offset + 1) + 2) * 4;
+        Part1Len  = Part1Len + HeaderLen;
+        Offset    = Offset + HeaderLen;
+        break;
+
+      default:
+        if (Ip6IsValidProtocol (IpSb, NextHeader)) {
+          Current = NextHeader;
+          CopyMem (Buffer, ExtHdrs, Part1Len);
+          *(Buffer + FormerHeader) = IP6_FRAGMENT;
+          //
+          // Exit the loop.
+          //
+          Offset = ExtHdrsLen + 1;
+          break;
+        }
+
+        FreePool (Buffer);
+        return EFI_UNSUPPORTED;
     }
   }
 
@@ -755,4 +853,3 @@ Ip6FillFragmentHeader (
 
   return EFI_SUCCESS;
 }
-

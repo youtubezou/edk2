@@ -1,19 +1,12 @@
 /** @file
   Command header of for Debug Agent library instance.
 
-  Copyright (c) 2010 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _DEBUG_AGENT_H_
-#define _DEBUG_AGENT_H_
+#pragma once
 
 #include <Register/LocalApic.h>
 #include <Guid/DebugAgentGuid.h>
@@ -47,32 +40,32 @@
 //
 // These macros may be already defined in DebugAgentLib.h
 //
-#define DEBUG_AGENT_INIT_PEI                     9
-#define DEBUG_AGENT_INIT_DXE_LOAD               10
-#define DEBUG_AGENT_INIT_DXE_UNLOAD             11
-#define DEBUG_AGENT_INIT_THUNK_PEI_IA32TOX64    12
+#define DEBUG_AGENT_INIT_PEI                  9
+#define DEBUG_AGENT_INIT_DXE_LOAD             10
+#define DEBUG_AGENT_INIT_DXE_UNLOAD           11
+#define DEBUG_AGENT_INIT_THUNK_PEI_IA32TOX64  12
 
-#define DEBUG_INT1_VECTOR               DEBUG_EXCEPT_DEBUG
-#define DEBUG_INT3_VECTOR               DEBUG_EXCEPT_BREAKPOINT
-#define DEBUG_TIMER_VECTOR              32
-#define DEBUG_MAILBOX_VECTOR            33
+#define DEBUG_INT1_VECTOR     DEBUG_EXCEPT_DEBUG
+#define DEBUG_INT3_VECTOR     DEBUG_EXCEPT_BREAKPOINT
+#define DEBUG_TIMER_VECTOR    32
+#define DEBUG_MAILBOX_VECTOR  33
 
 //
 //  Timeout value for reading packet (unit is microsecond)
 //
-#define READ_PACKET_TIMEOUT     (500 * 1000)
-#define DEBUG_TIMER_INTERVAL    (100 * 1000)
+#define READ_PACKET_TIMEOUT   (500 * 1000)
+#define DEBUG_TIMER_INTERVAL  (100 * 1000)
 
-#define SOFT_INTERRUPT_SIGNATURE    SIGNATURE_32('S','O','F','T')
-#define SYSTEM_RESET_SIGNATURE      SIGNATURE_32('S','Y','S','R')
-#define MEMORY_READY_SIGNATURE      SIGNATURE_32('M','E','M','R')
+#define SOFT_INTERRUPT_SIGNATURE  SIGNATURE_32('S','O','F','T')
+#define SYSTEM_RESET_SIGNATURE    SIGNATURE_32('S','Y','S','R')
+#define MEMORY_READY_SIGNATURE    SIGNATURE_32('M','E','M','R')
 
-extern UINTN  Exception0Handle;
-extern UINTN  TimerInterruptHandle;
-extern UINT32 ExceptionStubHeaderSize;
-extern BOOLEAN mSkipBreakpoint;
-extern EFI_VECTOR_HANDOFF_INFO mVectorHandoffInfoDebugAgent[];
-extern UINTN                   mVectorHandoffInfoCount;
+extern UINTN                    Exception0Handle;
+extern UINTN                    TimerInterruptHandle;
+extern UINT32                   ExceptionStubHeaderSize;
+extern BOOLEAN                  mSkipBreakpoint;
+extern EFI_VECTOR_HANDOFF_INFO  mVectorHandoffInfoDebugAgent[];
+extern UINTN                    mVectorHandoffInfoCount;
 
 //
 // CPU exception information issued by debug agent
@@ -81,11 +74,11 @@ typedef struct {
   //
   // This field is used to save CPU content before executing HOST command
   //
-  BASE_LIBRARY_JUMP_BUFFER            JumpBuffer;
+  BASE_LIBRARY_JUMP_BUFFER             JumpBuffer;
   //
   // This field returns the exception information issued by the HOST command
   //
-  DEBUG_DATA_RESPONSE_GET_EXCEPTION   ExceptionContent;
+  DEBUG_DATA_RESPONSE_GET_EXCEPTION    ExceptionContent;
 } DEBUG_AGENT_EXCEPTION_BUFFER;
 
 #define DEBUG_AGENT_FLAG_HOST_ATTACHED         BIT0
@@ -113,38 +106,38 @@ typedef union {
     //
     // Lower 32 bits to store the status of DebugAgent
     //
-    UINT32  HostAttached      : 1;   // 1: HOST is attached
-    UINT32  AgentInProgress   : 1;   // 1: Debug Agent is communicating with HOST
-    UINT32  MemoryReady       : 1;   // 1: Memory is ready
-    UINT32  SteppingFlag      : 1;   // 1: Agent is running stepping command
-    UINT32  CheckMailboxInHob : 1;   // 1: Need to check mailbox saved in HOB
-    UINT32  InitArch          : 2;   // value of DEBUG_DATA_RESPONSE_ARCH_MODE
-    UINT32  InterruptFlag     : 1;   // 1: EFLAGS.IF is set
-    UINT32  Reserved1         : 24;
+    UINT32    HostAttached      : 1; // 1: HOST is attached
+    UINT32    AgentInProgress   : 1; // 1: Debug Agent is communicating with HOST
+    UINT32    MemoryReady       : 1; // 1: Memory is ready
+    UINT32    SteppingFlag      : 1; // 1: Agent is running stepping command
+    UINT32    CheckMailboxInHob : 1; // 1: Need to check mailbox saved in HOB
+    UINT32    InitArch          : 2; // value of DEBUG_DATA_RESPONSE_ARCH_MODE
+    UINT32    InterruptFlag     : 1; // 1: EFLAGS.IF is set
+    UINT32    Reserved1         : 24;
     //
     // Higher 32bits to control the behavior of DebugAgent
     //
-    UINT32  BreakOnNextSmi    : 1;   // 1: Break on next SMI
-    UINT32  PrintErrorLevel   : 4;   // Bitmask of print error level for debug message
-    UINT32  BreakOnBootScript : 1;   // 1: Break before executing boot script 
-    UINT32  Reserved2         : 26;
+    UINT32    BreakOnNextSmi    : 1; // 1: Break on next SMI
+    UINT32    PrintErrorLevel   : 4; // Bitmask of print error level for debug message
+    UINT32    BreakOnBootScript : 1; // 1: Break before executing boot script
+    UINT32    Reserved2         : 26;
   } Bits;
-  UINT64  Uint64;
+  UINT64    Uint64;
 } DEBUG_AGENT_FLAG;
 
 typedef struct {
-  DEBUG_AGENT_FLAG           DebugFlag;
-  UINT64                     DebugPortHandle;
+  DEBUG_AGENT_FLAG    DebugFlag;
+  UINT64              DebugPortHandle;
   //
   // Pointer to DEBUG_AGENT_EXCEPTION_BUFFER
   //
-  UINT64                     ExceptionBufferPointer;
-  UINT8                      LastAck;      // The last ack packet type
-  UINT8                      SequenceNo;
-  UINT8                      HostSequenceNo;
-  UINT32                     DebugTimerFrequency;
-  UINT8                      CheckSum;     // Mailbox checksum
-  UINT8                      ToBeCheckSum; // To be Mailbox checksum at the next
+  UINT64              ExceptionBufferPointer;
+  UINT8               LastAck;             // The last ack packet type
+  UINT8               SequenceNo;
+  UINT8               HostSequenceNo;
+  UINT32              DebugTimerFrequency;
+  UINT8               CheckSum;            // Mailbox checksum
+  UINT8               ToBeCheckSum;        // To be Mailbox checksum at the next
 } DEBUG_AGENT_MAILBOX;
 #pragma pack()
 
@@ -153,33 +146,32 @@ typedef struct {
 ///
 typedef union {
   struct {
-    UINT32  OffsetLow:16;   ///< Offset bits 15..0.
-    UINT32  Selector:16;    ///< Selector.
-    UINT32  Reserved_0:8;   ///< Reserved.
-    UINT32  GateType:8;     ///< Gate Type.  See #defines above.
-    UINT32  OffsetHigh:16;  ///< Offset bits 31..16.
+    UINT32    OffsetLow  : 16; ///< Offset bits 15..0.
+    UINT32    Selector   : 16; ///< Selector.
+    UINT32    Reserved_0 : 8;  ///< Reserved.
+    UINT32    GateType   : 8;  ///< Gate Type.  See #defines above.
+    UINT32    OffsetHigh : 16; ///< Offset bits 31..16.
   } Bits;
-  UINT64  Uint64;
+  UINT64    Uint64;
 } IA32_IDT_ENTRY;
-
 
 typedef union {
   struct {
-    UINT32  LimitLow    : 16;
-    UINT32  BaseLow     : 16;
-    UINT32  BaseMid     : 8;
-    UINT32  Type        : 4;
-    UINT32  System      : 1;
-    UINT32  Dpl         : 2;
-    UINT32  Present     : 1;
-    UINT32  LimitHigh   : 4;
-    UINT32  Software    : 1;
-    UINT32  Reserved    : 1;
-    UINT32  DefaultSize : 1;
-    UINT32  Granularity : 1;
-    UINT32  BaseHigh    : 8;
+    UINT32    LimitLow    : 16;
+    UINT32    BaseLow     : 16;
+    UINT32    BaseMid     : 8;
+    UINT32    Type        : 4;
+    UINT32    System      : 1;
+    UINT32    Dpl         : 2;
+    UINT32    Present     : 1;
+    UINT32    LimitHigh   : 4;
+    UINT32    Software    : 1;
+    UINT32    Reserved    : 1;
+    UINT32    DefaultSize : 1;
+    UINT32    Granularity : 1;
+    UINT32    BaseHigh    : 8;
   } Bits;
-  UINT64  Uint64;
+  UINT64    Uint64;
 } IA32_GDT;
 
 /**
@@ -203,9 +195,9 @@ InitializeDebugIdt (
 **/
 UINT8 *
 ArchReadRegisterBuffer (
-  IN DEBUG_CPU_CONTEXT               *CpuContext,
-  IN UINT8                           Index,
-  IN UINT8                           *Width
+  IN DEBUG_CPU_CONTEXT  *CpuContext,
+  IN UINT8              Index,
+  IN UINT8              *Width
   );
 
 /**
@@ -222,9 +214,9 @@ ArchReadRegisterBuffer (
 **/
 RETURN_STATUS
 SendDataResponsePacket (
-  IN UINT8                   *Data,
-  IN UINT16                  DataSize,
-  IN OUT DEBUG_PACKET_HEADER *DebugHeader
+  IN UINT8                    *Data,
+  IN UINT16                   DataSize,
+  IN OUT DEBUG_PACKET_HEADER  *DebugHeader
   );
 
 /**
@@ -273,8 +265,8 @@ GetDebugPortHandle (
 **/
 EFI_STATUS
 DebugReadBreakSymbol (
-  IN  DEBUG_PORT_HANDLE      Handle,
-  OUT UINT8                  *BreakSymbol
+  IN  DEBUG_PORT_HANDLE  Handle,
+  OUT UINT8              *BreakSymbol
   );
 
 /**
@@ -285,15 +277,15 @@ DebugReadBreakSymbol (
 
   @param[in] ErrorLevel  The error level of the debug message.
   @param[in] Format      Format string for the debug message to print.
-  @param[in] ...         Variable argument list whose contents are accessed 
+  @param[in] ...         Variable argument list whose contents are accessed
                          based on the format string specified by Format.
 
 **/
 VOID
 EFIAPI
 DebugAgentMsgPrint (
-  IN UINT8         ErrorLevel,
-  IN CHAR8         *Format,
+  IN UINT8  ErrorLevel,
+  IN CHAR8  *Format,
   ...
   );
 
@@ -305,7 +297,7 @@ DebugAgentMsgPrint (
 **/
 VOID
 TriggerSoftInterrupt (
-  IN UINT32                 Signature
+  IN UINT32  Signature
   );
 
 /**
@@ -322,13 +314,13 @@ MultiProcessorDebugSupport (
 
 /**
   Find and report module image info to HOST.
-  
+
   @param[in] AlignSize      Image aligned size.
-  
+
 **/
-VOID 
+VOID
 FindAndReportModuleImageInfo (
-  IN UINTN          AlignSize                   
+  IN UINTN  AlignSize
   );
 
 /**
@@ -338,7 +330,7 @@ FindAndReportModuleImageInfo (
   @retval  FALSE    IDT entries were not setup by Debug Agent.
 
 **/
-BOOLEAN 
+BOOLEAN
 IsDebugAgentInitialzed (
   VOID
   );
@@ -351,7 +343,7 @@ IsDebugAgentInitialzed (
 **/
 VOID
 UpdateMailboxChecksum (
-  IN DEBUG_AGENT_MAILBOX    *Mailbox
+  IN DEBUG_AGENT_MAILBOX  *Mailbox
   );
 
 /**
@@ -362,9 +354,9 @@ UpdateMailboxChecksum (
   @param[in]  Mailbox  Debug Agent Mailbox pointer.
 
 **/
-VOID 
+VOID
 VerifyMailboxChecksum (
-  IN DEBUG_AGENT_MAILBOX    *Mailbox
+  IN DEBUG_AGENT_MAILBOX  *Mailbox
   );
 
 /**
@@ -374,23 +366,23 @@ VerifyMailboxChecksum (
   @param[in]  FlagValue     Debug flag value.
 
 **/
-VOID 
+VOID
 SetDebugFlag (
-  IN UINT64                 FlagMask,
-  IN UINT32                 FlagValue                          
+  IN UINT64  FlagMask,
+  IN UINT32  FlagValue
   );
 
 /**
   Get debug flag in mailbox.
 
   @param[in]  FlagMask      Debug flag mask value.
-  
+
   @return Debug flag value.
 
 **/
 UINT32
 GetDebugFlag (
-  IN UINT64                 FlagMask
+  IN UINT64  FlagMask
   );
 
 /**
@@ -399,67 +391,67 @@ GetDebugFlag (
   @param[in]  Mailbox  Debug Agent Mailbox pointer.
   @param[in]  Index    Mailbox content index.
   @param[in]  Value    Value to be set into mail box.
-  
+
 **/
 VOID
-UpdateMailboxContent ( 
-  IN DEBUG_AGENT_MAILBOX    *Mailbox,
-  IN UINTN                  Index,
-  IN UINT64                 Value
+UpdateMailboxContent (
+  IN DEBUG_AGENT_MAILBOX  *Mailbox,
+  IN UINTN                Index,
+  IN UINT64               Value
   );
 
 /**
   Retrieve exception handler from IDT table by ExceptionNum.
 
   @param[in]  ExceptionNum    Exception number
- 
+
   @return Exception handler
 
 **/
 VOID *
 GetExceptionHandlerInIdtEntry (
-  IN UINTN             ExceptionNum
+  IN UINTN  ExceptionNum
   );
 
 /**
   Set exception handler in IDT table by ExceptionNum.
 
   @param[in]  ExceptionNum      Exception number
-  @param[in]  ExceptionHandler  Exception Handler to be set 
+  @param[in]  ExceptionHandler  Exception Handler to be set
 
 **/
 VOID
 SetExceptionHandlerInIdtEntry (
-  IN UINTN             ExceptionNum,
-  IN VOID              *ExceptionHandler
+  IN UINTN  ExceptionNum,
+  IN VOID   *ExceptionHandler
   );
 
 /**
   Prints a debug message to the debug output device if the specified error level is enabled.
 
-  If any bit in ErrorLevel is also set in DebugPrintErrorLevelLib function 
-  GetDebugPrintErrorLevel (), then print the message specified by Format and the 
+  If any bit in ErrorLevel is also set in DebugPrintErrorLevelLib function
+  GetDebugPrintErrorLevel (), then print the message specified by Format and the
   associated variable argument list to the debug output device.
 
   If Format is NULL, then ASSERT().
 
   @param[in] ErrorLevel  The error level of the debug message.
   @param[in] IsSend      Flag of debug message to declare that the data is being sent or being received.
-  @param[in] Data        Variable argument list whose contents are accessed 
+  @param[in] Data        Variable argument list whose contents are accessed
   @param[in] Length      based on the format string specified by Format.
 
 **/
 VOID
 EFIAPI
 DebugAgentDataMsgPrint (
-  IN UINT8             ErrorLevel,
-  IN BOOLEAN           IsSend,
-  IN UINT8             *Data,
-  IN UINT8             Length  
+  IN UINT8    ErrorLevel,
+  IN BOOLEAN  IsSend,
+  IN UINT8    *Data,
+  IN UINT8    Length
   );
 
 /**
-  Read remaing debug packet except for the start symbol
+  Read remaining debug packet except for the start symbol
 
   @param[in]      Handle        Pointer to Debug Port handle.
   @param[in, out] DebugHeader   Debug header buffer including start symbol.
@@ -471,8 +463,8 @@ DebugAgentDataMsgPrint (
 **/
 EFI_STATUS
 ReadRemainingBreakPacket (
-  IN     DEBUG_PORT_HANDLE      Handle,
-  IN OUT DEBUG_PACKET_HEADER    *DebugHeader
+  IN     DEBUG_PORT_HANDLE    Handle,
+  IN OUT DEBUG_PACKET_HEADER  *DebugHeader
   );
 
 /**
@@ -494,11 +486,8 @@ ReadRemainingBreakPacket (
 **/
 UINTN
 DebugAgentReadBuffer (
-  IN     DEBUG_PORT_HANDLE     Handle,
-  IN OUT UINT8                 *Buffer,
-  IN     UINTN                 NumberOfBytes,
-  IN     UINTN                 Timeout
+  IN     DEBUG_PORT_HANDLE  Handle,
+  IN OUT UINT8              *Buffer,
+  IN     UINTN              NumberOfBytes,
+  IN     UINTN              Timeout
   );
-
-#endif
-

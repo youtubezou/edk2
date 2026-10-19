@@ -1,21 +1,13 @@
 /** @file
   EBC Simple Debugger protocol for debug EBC code.
 
-Copyright (c) 2011, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EBC_SIMPLE_DEBUGGER_PROTOCOL_H_
-#define _EBC_SIMPLE_DEBUGGER_PROTOCOL_H_
+#pragma once
 
 #include <Protocol/DebugSupport.h>
 #include <Protocol/EbcVmTest.h>
@@ -43,7 +35,7 @@ typedef struct _EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL EFI_EBC_SIMPLE_DEBUGGER_PROTOCO
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EBC_DEBUGGER_SIGNAL_EXCEPTION) (
+(EFIAPI *EBC_DEBUGGER_SIGNAL_EXCEPTION)(
   IN EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL           *This,
   IN VM_CONTEXT                                 *VmPtr,
   IN EFI_EXCEPTION_TYPE                         ExceptionType
@@ -61,7 +53,7 @@ EFI_STATUS
 **/
 typedef
 VOID
-(EFIAPI *EBC_DEBUGGER_DEBUG) (
+(EFIAPI *EBC_DEBUGGER_DEBUG)(
   IN EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL           *This,
   IN VM_CONTEXT                                 *VmPtr
   );
@@ -71,7 +63,7 @@ VOID
 
   @param[in] This           A pointer to the EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL structure.
   @param[in] VmPtr          A pointer to a VM context.
-  @param[in] DasmString     Dump string buffer. 
+  @param[in] DasmString     Dump string buffer.
   @param[in] DasmStringSize Dump string size.
 
   @retval EFI_UNSUPPORTED       No support for it.
@@ -80,7 +72,7 @@ VOID
 **/
 typedef
 UINT32
-(EFIAPI *EBC_DEBUGGER_DASM) (
+(EFIAPI *EBC_DEBUGGER_DASM)(
   IN EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL           *This,
   IN VM_CONTEXT                                 *VmPtr,
   IN UINT16                                     *DasmString OPTIONAL,
@@ -103,7 +95,7 @@ UINT32
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EBC_DEBUGGER_CONFIGURE) (
+(EFIAPI *EBC_DEBUGGER_CONFIGURE)(
   IN EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL           *This,
   IN UINT32                                     ConfigId,
   IN UINTN                                      ConfigValue
@@ -113,12 +105,10 @@ EFI_STATUS
 // Prototype for the actual EBC debug support protocol interface
 //
 struct _EFI_EBC_SIMPLE_DEBUGGER_PROTOCOL {
-  EBC_DEBUGGER_DEBUG            Debugger;
-  EBC_DEBUGGER_SIGNAL_EXCEPTION SignalException;
-  EBC_DEBUGGER_DASM             Dasm;
-  EBC_DEBUGGER_CONFIGURE        Configure;
+  EBC_DEBUGGER_DEBUG               Debugger;
+  EBC_DEBUGGER_SIGNAL_EXCEPTION    SignalException;
+  EBC_DEBUGGER_DASM                Dasm;
+  EBC_DEBUGGER_CONFIGURE           Configure;
 };
 
-extern EFI_GUID gEfiEbcSimpleDebuggerProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiEbcSimpleDebuggerProtocolGuid;

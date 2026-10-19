@@ -3,23 +3,7 @@
  *
  * Event channels between domains.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to
- * deal in the Software without restriction, including without limitation the
- * rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
- * sell copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * SPDX-License-Identifier: MIT
  *
  * Copyright (c) 2003-2004, K A Fraser.
  */
@@ -60,13 +44,13 @@
  */
 
 /* ` enum event_channel_op { // EVTCHNOP_* => struct evtchn_* */
-#define EVTCHNOP_close            3
-#define EVTCHNOP_send             4
-#define EVTCHNOP_alloc_unbound    6
+#define EVTCHNOP_close          3
+#define EVTCHNOP_send           4
+#define EVTCHNOP_alloc_unbound  6
 /* ` } */
 
 typedef UINT32 evtchn_port_t;
-DEFINE_XEN_GUEST_HANDLE(evtchn_port_t);
+DEFINE_XEN_GUEST_HANDLE (evtchn_port_t);
 
 /*
  * EVTCHNOP_alloc_unbound: Allocate a port in domain <dom> and mark as
@@ -77,11 +61,12 @@ DEFINE_XEN_GUEST_HANDLE(evtchn_port_t);
  *  2. <rdom> may be DOMID_SELF, allowing loopback connections.
  */
 struct evtchn_alloc_unbound {
-    /* IN parameters */
-    domid_t dom, remote_dom;
-    /* OUT parameters */
-    evtchn_port_t port;
+  /* IN parameters */
+  domid_t          dom, remote_dom;
+  /* OUT parameters */
+  evtchn_port_t    port;
 };
+
 typedef struct evtchn_alloc_unbound evtchn_alloc_unbound_t;
 
 /*
@@ -90,9 +75,10 @@ typedef struct evtchn_alloc_unbound evtchn_alloc_unbound_t;
  * (EVTCHNSTAT_unbound), awaiting a new connection.
  */
 struct evtchn_close {
-    /* IN parameters. */
-    evtchn_port_t port;
+  /* IN parameters. */
+  evtchn_port_t    port;
 };
+
 typedef struct evtchn_close evtchn_close_t;
 
 /*
@@ -100,9 +86,10 @@ typedef struct evtchn_close evtchn_close_t;
  * endpoint is <port>.
  */
 struct evtchn_send {
-    /* IN parameters. */
-    evtchn_port_t port;
+  /* IN parameters. */
+  evtchn_port_t    port;
 };
+
 typedef struct evtchn_send evtchn_send_t;
 
 #endif /* __XEN_PUBLIC_EVENT_CHANNEL_H__ */

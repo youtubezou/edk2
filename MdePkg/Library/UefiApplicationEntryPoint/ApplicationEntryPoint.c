@@ -1,14 +1,8 @@
 /** @file
   Entry point library instance to a UEFI application.
 
-Copyright (c) 2007 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,14 +12,13 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/DebugLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-
 /**
   Entry point to UEFI Application.
 
   This function is the entry point for a UEFI Application. This function must call
   ProcessLibraryConstructorList(), ProcessModuleEntryPointList(), and ProcessLibraryDestructorList().
   The return value from ProcessModuleEntryPointList() is returned.
-  If _gUefiDriverRevision is not zero and SystemTable->Hdr.Revision is less than _gUefiDriverRevison,
+  If _gUefiDriverRevision is not zero and SystemTable->Hdr.Revision is less than _gUefiDriverRevision,
   then return EFI_INCOMPATIBLE_VERSION.
 
   @param  ImageHandle                The image handle of the UEFI Application.
@@ -43,7 +36,7 @@ _ModuleEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                 Status;
+  EFI_STATUS  Status;
 
   if (_gUefiDriverRevision != 0) {
     //
@@ -75,16 +68,15 @@ _ModuleEntryPoint (
   return Status;
 }
 
-
 /**
   Invokes the library destructors for all dependent libraries and terminates
-  the UEFI Application. 
+  the UEFI Application.
 
   This function calls ProcessLibraryDestructorList() and the EFI Boot Service Exit()
   with a status specified by Status.
 
   @param  Status  Status returned by the application that is exiting.
-  
+
 **/
 VOID
 EFIAPI
@@ -98,9 +90,8 @@ Exit (
   gBS->Exit (gImageHandle, Status, 0, NULL);
 }
 
-
 /**
-  Required by the EBC compiler and identical in functionality to _ModuleEntryPoint(). 
+  Required by the EBC compiler and identical in functionality to _ModuleEntryPoint().
 
   @param  ImageHandle  The image handle of the UEFI Application.
   @param  SystemTable  A pointer to the EFI System Table.

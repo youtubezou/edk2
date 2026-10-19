@@ -1,32 +1,24 @@
 /** @file
-  Functions declaration for Bus Specific Driver Override protoocl.
+  Functions declaration for Bus Specific Driver Override protocol.
 
-Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#pragma once
 
-#ifndef _EFI_PCI_DRIVER_OVERRRIDE_H_
-#define _EFI_PCI_DRIVER_OVERRRIDE_H_
-
-#define DRIVER_OVERRIDE_SIGNATURE SIGNATURE_32 ('d', 'r', 'o', 'v')
+#define DRIVER_OVERRIDE_SIGNATURE  SIGNATURE_32 ('d', 'r', 'o', 'v')
 
 //
 // PCI driver override driver image list
 //
 typedef struct {
-  UINT32          Signature;
-  LIST_ENTRY      Link;
-  EFI_HANDLE      DriverImageHandle;
+  UINT32                      Signature;
+  LIST_ENTRY                  Link;
+  EFI_HANDLE                  DriverImageHandle;
+  EFI_DEVICE_PATH_PROTOCOL    *DriverImagePath;
 } PCI_DRIVER_OVERRIDE_LIST;
-
 
 #define DRIVER_OVERRIDE_FROM_LINK(a) \
   CR (a, PCI_DRIVER_OVERRIDE_LIST, Link, DRIVER_OVERRIDE_SIGNATURE)
@@ -39,14 +31,15 @@ typedef struct {
 **/
 VOID
 InitializePciDriverOverrideInstance (
-  IN OUT PCI_IO_DEVICE          *PciIoDevice
+  IN OUT PCI_IO_DEVICE  *PciIoDevice
   );
 
 /**
   Add an overriding driver image.
 
   @param PciIoDevice        Instance of PciIo device.
-  @param DriverImageHandle  new added driver image.
+  @param DriverImageHandle  Image handle of newly added driver image.
+  @param DriverImagePath    Device path of newly added driver image.
 
   @retval EFI_SUCCESS          Successfully added driver.
   @retval EFI_OUT_OF_RESOURCES No memory resource for new driver instance.
@@ -55,10 +48,10 @@ InitializePciDriverOverrideInstance (
 **/
 EFI_STATUS
 AddDriver (
-  IN PCI_IO_DEVICE     *PciIoDevice,
-  IN EFI_HANDLE        DriverImageHandle
+  IN PCI_IO_DEVICE             *PciIoDevice,
+  IN EFI_HANDLE                DriverImageHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL  *DriverImagePath
   );
-
 
 /**
   Uses a bus specific algorithm to retrieve a driver image handle for a controller.
@@ -79,8 +72,6 @@ AddDriver (
 EFI_STATUS
 EFIAPI
 GetDriver (
-  IN EFI_BUS_SPECIFIC_DRIVER_OVERRIDE_PROTOCOL              *This,
-  IN OUT EFI_HANDLE                                         *DriverImageHandle
+  IN EFI_BUS_SPECIFIC_DRIVER_OVERRIDE_PROTOCOL  *This,
+  IN OUT EFI_HANDLE                             *DriverImageHandle
   );
-
-#endif

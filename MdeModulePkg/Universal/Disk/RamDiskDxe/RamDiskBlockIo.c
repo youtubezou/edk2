@@ -1,14 +1,8 @@
 /** @file
   Produce EFI_BLOCK_IO_PROTOCOL on a RAM disk device.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2016 - 2019, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,7 +14,7 @@
 //
 EFI_BLOCK_IO_PROTOCOL  mRamDiskBlockIoTemplate = {
   EFI_BLOCK_IO_PROTOCOL_REVISION,
-  (EFI_BLOCK_IO_MEDIA *) 0,
+  (EFI_BLOCK_IO_MEDIA *)0,
   RamDiskBlkIoReset,
   RamDiskBlkIoReadBlocks,
   RamDiskBlkIoWriteBlocks,
@@ -32,13 +26,12 @@ EFI_BLOCK_IO_PROTOCOL  mRamDiskBlockIoTemplate = {
 // for newly registered RAM disks
 //
 EFI_BLOCK_IO2_PROTOCOL  mRamDiskBlockIo2Template = {
-  (EFI_BLOCK_IO_MEDIA *) 0,
+  (EFI_BLOCK_IO_MEDIA *)0,
   RamDiskBlkIo2Reset,
   RamDiskBlkIo2ReadBlocksEx,
   RamDiskBlkIo2WriteBlocksEx,
   RamDiskBlkIo2FlushBlocksEx
 };
-
 
 /**
   Initialize the BlockIO & BlockIO2 protocol of a RAM disk device.
@@ -48,12 +41,13 @@ EFI_BLOCK_IO2_PROTOCOL  mRamDiskBlockIo2Template = {
 **/
 VOID
 RamDiskInitBlockIo (
-  IN     RAM_DISK_PRIVATE_DATA    *PrivateData
+  IN     RAM_DISK_PRIVATE_DATA  *PrivateData
   )
 {
-  EFI_BLOCK_IO_PROTOCOL           *BlockIo;
-  EFI_BLOCK_IO2_PROTOCOL          *BlockIo2;
-  EFI_BLOCK_IO_MEDIA              *Media;
+  EFI_BLOCK_IO_PROTOCOL   *BlockIo;
+  EFI_BLOCK_IO2_PROTOCOL  *BlockIo2;
+  EFI_BLOCK_IO_MEDIA      *Media;
+  UINT32                  Remainder;
 
   BlockIo  = &PrivateData->BlockIo;
   BlockIo2 = &PrivateData->BlockIo2;
@@ -69,13 +63,21 @@ RamDiskInitBlockIo (
   Media->LogicalPartition = FALSE;
   Media->ReadOnly         = FALSE;
   Media->WriteCaching     = FALSE;
-  Media->BlockSize        = RAM_DISK_BLOCK_SIZE;
-  Media->LastBlock        = DivU64x32 (
-                              PrivateData->Size + RAM_DISK_BLOCK_SIZE - 1,
-                              RAM_DISK_BLOCK_SIZE
-                              ) - 1;
-}
 
+  for (Media->BlockSize = RAM_DISK_DEFAULT_BLOCK_SIZE;
+       Media->BlockSize >= 1;
+       Media->BlockSize = Media->BlockSize >> 1)
+  {
+    Media->LastBlock = DivU64x32Remainder (PrivateData->Size, Media->BlockSize, &Remainder) - 1;
+    if (Remainder == 0) {
+      break;
+    }
+  }
+
+  ASSERT (Media->BlockSize != 0);
+
+  return;
+}
 
 /**
   Reset the Block Device.
@@ -91,13 +93,12 @@ RamDiskInitBlockIo (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIoReset (
-  IN EFI_BLOCK_IO_PROTOCOL        *This,
-  IN BOOLEAN                      ExtendedVerification
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN BOOLEAN                ExtendedVerification
   )
 {
   return EFI_SUCCESS;
 }
-
 
 /**
   Read BufferSize bytes from Lba into Buffer.
@@ -127,15 +128,21 @@ RamDiskBlkIoReset (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIoReadBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL        *This,
-  IN UINT32                       MediaId,
-  IN EFI_LBA                      Lba,
-  IN UINTN                        BufferSize,
-  OUT VOID                        *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN UINT32                 MediaId,
+  IN EFI_LBA                Lba,
+  IN UINTN                  BufferSize,
+  OUT VOID                  *Buffer
   )
 {
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
-  UINTN                           NumberOfBlocks;
+  RAM_DISK_PRIVATE_DATA  *PrivateData;
+  UINTN                  NumberOfBlocks;
+
+  PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO (This);
+
+  if (MediaId != PrivateData->Media.MediaId) {
+    return EFI_MEDIA_CHANGED;
+  }
 
   if (Buffer == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -143,12 +150,6 @@ RamDiskBlkIoReadBlocks (
 
   if (BufferSize == 0) {
     return EFI_SUCCESS;
-  }
-
-  PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO (This);
-
-  if (MediaId != PrivateData->Media.MediaId) {
-    return EFI_MEDIA_CHANGED;
   }
 
   if ((BufferSize % PrivateData->Media.BlockSize) != 0) {
@@ -172,7 +173,6 @@ RamDiskBlkIoReadBlocks (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Write BufferSize bytes from Lba into Buffer.
@@ -202,23 +202,15 @@ RamDiskBlkIoReadBlocks (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIoWriteBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL        *This,
-  IN UINT32                       MediaId,
-  IN EFI_LBA                      Lba,
-  IN UINTN                        BufferSize,
-  IN VOID                         *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN UINT32                 MediaId,
+  IN EFI_LBA                Lba,
+  IN UINTN                  BufferSize,
+  IN VOID                   *Buffer
   )
 {
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
-  UINTN                           NumberOfBlocks;
-
-  if (Buffer == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  if (BufferSize == 0) {
-    return EFI_SUCCESS;
-  }
+  RAM_DISK_PRIVATE_DATA  *PrivateData;
+  UINTN                  NumberOfBlocks;
 
   PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO (This);
 
@@ -228,6 +220,14 @@ RamDiskBlkIoWriteBlocks (
 
   if (TRUE == PrivateData->Media.ReadOnly) {
     return EFI_WRITE_PROTECTED;
+  }
+
+  if (Buffer == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (BufferSize == 0) {
+    return EFI_SUCCESS;
   }
 
   if ((BufferSize % PrivateData->Media.BlockSize) != 0) {
@@ -252,7 +252,6 @@ RamDiskBlkIoWriteBlocks (
   return EFI_SUCCESS;
 }
 
-
 /**
   Flush the Block Device.
 
@@ -267,12 +266,11 @@ RamDiskBlkIoWriteBlocks (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIoFlushBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL        *This
+  IN EFI_BLOCK_IO_PROTOCOL  *This
   )
 {
   return EFI_SUCCESS;
 }
-
 
 /**
   Resets the block device hardware.
@@ -288,13 +286,12 @@ RamDiskBlkIoFlushBlocks (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIo2Reset (
-  IN EFI_BLOCK_IO2_PROTOCOL       *This,
-  IN BOOLEAN                      ExtendedVerification
+  IN EFI_BLOCK_IO2_PROTOCOL  *This,
+  IN BOOLEAN                 ExtendedVerification
   )
 {
   return EFI_SUCCESS;
 }
-
 
 /**
   Reads the requested number of blocks from the device.
@@ -332,26 +329,26 @@ RamDiskBlkIo2Reset (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIo2ReadBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL   *This,
-  IN     UINT32                   MediaId,
-  IN     EFI_LBA                  Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN      *Token,
-  IN     UINTN                    BufferSize,
-     OUT VOID                     *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
+  IN     UINT32                  MediaId,
+  IN     EFI_LBA                 Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
+  IN     UINTN                   BufferSize,
+  OUT VOID                       *Buffer
   )
 {
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
-  EFI_STATUS                      Status;
+  RAM_DISK_PRIVATE_DATA  *PrivateData;
+  EFI_STATUS             Status;
 
   PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO2 (This);
 
   Status = RamDiskBlkIoReadBlocks (
-              &PrivateData->BlockIo,
-              MediaId,
-              Lba,
-              BufferSize,
-              Buffer
-              );
+             &PrivateData->BlockIo,
+             MediaId,
+             Lba,
+             BufferSize,
+             Buffer
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -366,7 +363,6 @@ RamDiskBlkIo2ReadBlocksEx (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Writes a specified number of blocks to the device.
@@ -403,26 +399,26 @@ RamDiskBlkIo2ReadBlocksEx (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIo2WriteBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL   *This,
-  IN     UINT32                   MediaId,
-  IN     EFI_LBA                  Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN      *Token,
-  IN     UINTN                    BufferSize,
-  IN     VOID                     *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
+  IN     UINT32                  MediaId,
+  IN     EFI_LBA                 Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
+  IN     UINTN                   BufferSize,
+  IN     VOID                    *Buffer
   )
 {
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
-  EFI_STATUS                      Status;
+  RAM_DISK_PRIVATE_DATA  *PrivateData;
+  EFI_STATUS             Status;
 
   PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO2 (This);
 
   Status = RamDiskBlkIoWriteBlocks (
-              &PrivateData->BlockIo,
-              MediaId,
-              Lba,
-              BufferSize,
-              Buffer
-              );
+             &PrivateData->BlockIo,
+             MediaId,
+             Lba,
+             BufferSize,
+             Buffer
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -437,7 +433,6 @@ RamDiskBlkIo2WriteBlocksEx (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Flushes all modified data to a physical block device.
@@ -461,11 +456,11 @@ RamDiskBlkIo2WriteBlocksEx (
 EFI_STATUS
 EFIAPI
 RamDiskBlkIo2FlushBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL   *This,
-  IN OUT EFI_BLOCK_IO2_TOKEN      *Token
+  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
+  IN OUT EFI_BLOCK_IO2_TOKEN     *Token
   )
 {
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
+  RAM_DISK_PRIVATE_DATA  *PrivateData;
 
   PrivateData = RAM_DISK_PRIVATE_FROM_BLKIO2 (This);
 

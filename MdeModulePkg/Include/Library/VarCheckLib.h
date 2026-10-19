@@ -2,31 +2,24 @@
   Provides variable check services and database management.
 
 Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _VARIABLE_CHECK_LIB_H_
-#define _VARIABLE_CHECK_LIB_H_
+#pragma once
 
 #include <Protocol/VarCheck.h>
 
 typedef enum {
   VarCheckRequestReserved0 = 0,
   VarCheckRequestReserved1 = 1,
-  VarCheckFromTrusted = 2,
-  VarCheckFromUntrusted = 3,
+  VarCheckFromTrusted      = 2,
+  VarCheckFromUntrusted    = 3,
 } VAR_CHECK_REQUEST_SOURCE;
 
 typedef
 VOID
-(EFIAPI *VAR_CHECK_END_OF_DXE_CALLBACK) (
+(EFIAPI *VAR_CHECK_END_OF_DXE_CALLBACK)(
   VOID
   );
 
@@ -64,7 +57,7 @@ VarCheckLibRegisterEndOfDxeCallback (
 VOID ***
 EFIAPI
 VarCheckLibInitializeAtEndOfDxe (
-  IN OUT UINTN                  *AddressPointerCount OPTIONAL
+  IN OUT UINTN  *AddressPointerCount OPTIONAL
   );
 
 /**
@@ -83,7 +76,7 @@ VarCheckLibInitializeAtEndOfDxe (
 EFI_STATUS
 EFIAPI
 VarCheckLibRegisterAddressPointer (
-  IN VOID                       **AddressPointer
+  IN VOID  **AddressPointer
   );
 
 /**
@@ -103,7 +96,7 @@ VarCheckLibRegisterAddressPointer (
 EFI_STATUS
 EFIAPI
 VarCheckLibRegisterSetVariableCheckHandler (
-  IN VAR_CHECK_SET_VARIABLE_CHECK_HANDLER   Handler
+  IN VAR_CHECK_SET_VARIABLE_CHECK_HANDLER  Handler
   );
 
 /**
@@ -124,9 +117,9 @@ VarCheckLibRegisterSetVariableCheckHandler (
 EFI_STATUS
 EFIAPI
 VarCheckLibVariablePropertySet (
-  IN CHAR16                         *Name,
-  IN EFI_GUID                       *Guid,
-  IN VAR_CHECK_VARIABLE_PROPERTY    *VariableProperty
+  IN CHAR16                       *Name,
+  IN EFI_GUID                     *Guid,
+  IN VAR_CHECK_VARIABLE_PROPERTY  *VariableProperty
   );
 
 /**
@@ -144,9 +137,9 @@ VarCheckLibVariablePropertySet (
 EFI_STATUS
 EFIAPI
 VarCheckLibVariablePropertyGet (
-  IN CHAR16                         *Name,
-  IN EFI_GUID                       *Guid,
-  OUT VAR_CHECK_VARIABLE_PROPERTY   *VariableProperty
+  IN CHAR16                        *Name,
+  IN EFI_GUID                      *Guid,
+  OUT VAR_CHECK_VARIABLE_PROPERTY  *VariableProperty
   );
 
 /**
@@ -169,12 +162,10 @@ VarCheckLibVariablePropertyGet (
 EFI_STATUS
 EFIAPI
 VarCheckLibSetVariableCheck (
-  IN CHAR16                     *VariableName,
-  IN EFI_GUID                   *VendorGuid,
-  IN UINT32                     Attributes,
-  IN UINTN                      DataSize,
-  IN VOID                       *Data,
-  IN VAR_CHECK_REQUEST_SOURCE   RequestSource
+  IN CHAR16                    *VariableName,
+  IN EFI_GUID                  *VendorGuid,
+  IN UINT32                    Attributes,
+  IN UINTN                     DataSize,
+  IN VOID                      *Data,
+  IN VAR_CHECK_REQUEST_SOURCE  RequestSource
   );
-
-#endif

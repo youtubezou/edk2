@@ -3,19 +3,11 @@
 
   Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_DHCP6_IO_H__
-#define __EFI_DHCP6_IO_H__
-
+#pragma once
 
 /**
   Clean up the specific nodes in the retry list.
@@ -26,8 +18,8 @@
 **/
 VOID
 Dhcp6CleanupRetry (
-  IN DHCP6_INSTANCE         *Instance,
-  IN UINT32                 Scope
+  IN DHCP6_INSTANCE  *Instance,
+  IN UINT32          Scope
   );
 
 /**
@@ -39,8 +31,8 @@ Dhcp6CleanupRetry (
 **/
 VOID
 Dhcp6CleanupSession (
-  IN OUT DHCP6_INSTANCE          *Instance,
-  IN     EFI_STATUS              Status
+  IN OUT DHCP6_INSTANCE  *Instance,
+  IN     EFI_STATUS      Status
   );
 
 /**
@@ -55,7 +47,7 @@ Dhcp6CleanupSession (
 **/
 EFI_STATUS
 Dhcp6SendSolicitMsg (
-  IN DHCP6_INSTANCE         *Instance
+  IN DHCP6_INSTANCE  *Instance
   );
 
 /**
@@ -71,7 +63,7 @@ Dhcp6SendSolicitMsg (
 **/
 EFI_STATUS
 Dhcp6SendRequestMsg (
-  IN DHCP6_INSTANCE         *Instance
+  IN DHCP6_INSTANCE  *Instance
   );
 
 /**
@@ -89,8 +81,8 @@ Dhcp6SendRequestMsg (
 **/
 EFI_STATUS
 Dhcp6SendRenewRebindMsg (
-  IN DHCP6_INSTANCE         *Instance,
-  IN BOOLEAN                RebindRequest
+  IN DHCP6_INSTANCE  *Instance,
+  IN BOOLEAN         RebindRequest
   );
 
 /**
@@ -107,8 +99,8 @@ Dhcp6SendRenewRebindMsg (
 **/
 EFI_STATUS
 Dhcp6SendDeclineMsg (
-  IN DHCP6_INSTANCE            *Instance,
-  IN EFI_DHCP6_IA              *DecIa
+  IN DHCP6_INSTANCE  *Instance,
+  IN EFI_DHCP6_IA    *DecIa
   );
 
 /**
@@ -125,8 +117,8 @@ Dhcp6SendDeclineMsg (
 **/
 EFI_STATUS
 Dhcp6SendReleaseMsg (
-  IN DHCP6_INSTANCE            *Instance,
-  IN EFI_DHCP6_IA              *RelIa
+  IN DHCP6_INSTANCE  *Instance,
+  IN EFI_DHCP6_IA    *RelIa
   );
 
 /**
@@ -204,10 +196,10 @@ Dhcp6SendInfoRequestMsg (
 VOID
 EFIAPI
 Dhcp6ReceivePacket (
-  IN NET_BUF                *Udp6Wrap,
-  IN UDP_END_POINT          *EndPoint,
-  IN EFI_STATUS             IoStatus,
-  IN VOID                   *Context
+  IN NET_BUF        *Udp6Wrap,
+  IN UDP_END_POINT  *EndPoint,
+  IN EFI_STATUS     IoStatus,
+  IN VOID           *Context
   );
 
 /**
@@ -220,8 +212,28 @@ Dhcp6ReceivePacket (
 VOID
 EFIAPI
 Dhcp6OnTimerTick (
-  IN EFI_EVENT              Event,
-  IN VOID                   *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
 
-#endif
+/**
+  Seeks the Inner Options from a DHCP6 Option
+
+  @param[in]  IaType          The type of the IA option.
+  @param[in]  Option          The pointer to the DHCP6 Option.
+  @param[in]  OptionLen       The length of the DHCP6 Option.
+  @param[out] IaInnerOpt      The pointer to the IA inner option.
+  @param[out] IaInnerLen      The length of the IA inner option.
+
+  @retval EFI_SUCCESS         Seek the inner option successfully.
+  @retval EFI_DEVICE_ERROR    The OptionLen is invalid. On Error,
+                              the pointers are not modified
+**/
+EFI_STATUS
+Dhcp6SeekInnerOptionSafe (
+  IN  UINT16  IaType,
+  IN  UINT8   *Option,
+  IN  UINT32  OptionLen,
+  OUT UINT8   **IaInnerOpt,
+  OUT UINT16  *IaInnerLen
+  );

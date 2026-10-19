@@ -1,25 +1,18 @@
 /** @file
   I2C Host Protocol as defined in the PI 1.3 specification.
 
-  This protocol provides callers with the ability to do I/O transactions 
+  This protocol provides callers with the ability to do I/O transactions
   to all of the devices on the I2C bus.
 
-  Copyright (c) 2013 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This protocol is from PI Version 1.3.
 
 **/
 
-#ifndef __I2C_HOST_H__
-#define __I2C_HOST_H__
+#pragma once
 
 #include <Pi/PiI2c.h>
 
@@ -43,14 +36,13 @@
 ///
 typedef struct _EFI_I2C_HOST_PROTOCOL EFI_I2C_HOST_PROTOCOL;
 
-
 /**
   Queue an I2C transaction for execution on the I2C controller.
 
   This routine must be called at or below TPL_NOTIFY.  For
   synchronous requests this routine must be called at or below
   TPL_CALLBACK.
-  
+
   The I2C host protocol uses the concept of I2C bus configurations
   to describe the I2C bus.  An I2C bus configuration is defined as
   a unique setting of the multiplexers and switches in the I2C bus
@@ -119,7 +111,7 @@ typedef struct _EFI_I2C_HOST_PROTOCOL EFI_I2C_HOST_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_I2C_HOST_PROTOCOL_QUEUE_REQUEST) (
+(EFIAPI *EFI_I2C_HOST_PROTOCOL_QUEUE_REQUEST)(
   IN CONST EFI_I2C_HOST_PROTOCOL *This,
   IN UINTN                       I2cBusConfiguration,
   IN UINTN                       SlaveAddress,
@@ -135,18 +127,16 @@ struct _EFI_I2C_HOST_PROTOCOL {
   ///
   /// Queue an I2C transaction for execution on the I2C bus
   ///
-  EFI_I2C_HOST_PROTOCOL_QUEUE_REQUEST     QueueRequest;
+  EFI_I2C_HOST_PROTOCOL_QUEUE_REQUEST      QueueRequest;
 
   ///
   /// Pointer to an EFI_I2C_CONTROLLER_CAPABILITIES data structure
   /// containing the capabilities of the I2C host controller.
   ///
-  CONST EFI_I2C_CONTROLLER_CAPABILITIES   *I2cControllerCapabilities;
+  CONST EFI_I2C_CONTROLLER_CAPABILITIES    *I2cControllerCapabilities;
 };
 
 ///
 /// Reference to variable defined in the .DEC file
 ///
-extern EFI_GUID gEfiI2cHostProtocolGuid;
-
-#endif  //  __I2C_HOST_H__
+extern EFI_GUID  gEfiI2cHostProtocolGuid;

@@ -1,20 +1,12 @@
 /** @file
   Internal include file for Report Status Code Router Driver.
 
-  Copyright (c) 2009, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __REPORT_STATUS_CODE_ROUTER_RUNTIME_DXE_H__
-#define __REPORT_STATUS_CODE_ROUTER_RUNTIME_DXE_H__
-
+#pragma once
 
 #include <Protocol/ReportStatusCodeHandler.h>
 #include <Protocol/StatusCode.h>
@@ -35,28 +27,28 @@
 #define RSC_HANDLER_CALLBACK_ENTRY_SIGNATURE  SIGNATURE_32 ('r', 'h', 'c', 'e')
 
 typedef struct {
-  UINTN                     Signature;
-  EFI_RSC_HANDLER_CALLBACK  RscHandlerCallback;
-  EFI_TPL                   Tpl;
-  EFI_EVENT                 Event;
-  EFI_PHYSICAL_ADDRESS      StatusCodeDataBuffer;
-  UINTN                     BufferSize;
-  EFI_PHYSICAL_ADDRESS      EndPointer;
-  LIST_ENTRY                Node;
+  UINTN                       Signature;
+  EFI_RSC_HANDLER_CALLBACK    RscHandlerCallback;
+  EFI_TPL                     Tpl;
+  EFI_EVENT                   Event;
+  EFI_PHYSICAL_ADDRESS        StatusCodeDataBuffer;
+  UINTN                       BufferSize;
+  EFI_PHYSICAL_ADDRESS        EndPointer;
+  LIST_ENTRY                  Node;
 } RSC_HANDLER_CALLBACK_ENTRY;
 
 typedef struct {
-  EFI_STATUS_CODE_TYPE      Type;
-  EFI_STATUS_CODE_VALUE     Value;
-  UINT32                    Instance;
-  UINT32                    Reserved;
-  EFI_GUID                  CallerId;
-  EFI_STATUS_CODE_DATA      Data;
+  EFI_STATUS_CODE_TYPE     Type;
+  EFI_STATUS_CODE_VALUE    Value;
+  UINT32                   Instance;
+  UINT32                   Reserved;
+  EFI_GUID                 CallerId;
+  EFI_STATUS_CODE_DATA     Data;
 } RSC_DATA_ENTRY;
 
 /**
   Register the callback function for ReportStatusCode() notification.
-  
+
   When this function is called the function pointer is added to an internal list and any future calls to
   ReportStatusCode() will be forwarded to the Callback function. During the bootservices,
   this is the callback for which this service can be invoked. The report status code router
@@ -70,11 +62,11 @@ typedef struct {
   2. not unregister at exit boot services so that the router will still have its callback address
   3. the caller must be self-contained (eg. Not call out into any boot-service interfaces) and be
   runtime safe, in general.
-  
+
   @param[in] Callback   A pointer to a function of type EFI_RSC_HANDLER_CALLBACK that is called when
                         a call to ReportStatusCode() occurs.
-  @param[in] Tpl        TPL at which callback can be safely invoked.   
-  
+  @param[in] Tpl        TPL at which callback can be safely invoked.
+
   @retval  EFI_SUCCESS              Function was successfully registered.
   @retval  EFI_INVALID_PARAMETER    The callback function was NULL.
   @retval  EFI_OUT_OF_RESOURCES     The internal buffer ran out of space. No more functions can be
@@ -85,19 +77,19 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 Register (
-  IN EFI_RSC_HANDLER_CALLBACK   Callback,
-  IN EFI_TPL                    Tpl
+  IN EFI_RSC_HANDLER_CALLBACK  Callback,
+  IN EFI_TPL                   Tpl
   );
 
 /**
   Remove a previously registered callback function from the notification list.
-  
+
   A callback function must be unregistered before it is deallocated. It is important that any registered
   callbacks that are not runtime complaint be unregistered when ExitBootServices() is called.
-  
+
   @param[in]  Callback  A pointer to a function of type EFI_RSC_HANDLER_CALLBACK that is to be
                         unregistered.
-                        
+
   @retval EFI_SUCCESS           The function was successfully unregistered.
   @retval EFI_INVALID_PARAMETER The callback function was NULL.
   @retval EFI_NOT_FOUND         The callback function was not found to be unregistered.
@@ -106,7 +98,7 @@ Register (
 EFI_STATUS
 EFIAPI
 Unregister (
-  IN EFI_RSC_HANDLER_CALLBACK Callback
+  IN EFI_RSC_HANDLER_CALLBACK  Callback
   );
 
 /**
@@ -130,13 +122,9 @@ Unregister (
 EFI_STATUS
 EFIAPI
 ReportDispatcher (
-  IN EFI_STATUS_CODE_TYPE     Type,
-  IN EFI_STATUS_CODE_VALUE    Value,
-  IN UINT32                   Instance,
-  IN EFI_GUID                 *CallerId  OPTIONAL,
-  IN EFI_STATUS_CODE_DATA     *Data      OPTIONAL
+  IN EFI_STATUS_CODE_TYPE   Type,
+  IN EFI_STATUS_CODE_VALUE  Value,
+  IN UINT32                 Instance,
+  IN EFI_GUID               *CallerId  OPTIONAL,
+  IN EFI_STATUS_CODE_DATA   *Data      OPTIONAL
   );
-
-#endif
-
-

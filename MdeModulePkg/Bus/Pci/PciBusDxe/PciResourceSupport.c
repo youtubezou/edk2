@@ -1,14 +1,9 @@
 /** @file
-  PCI resouces support functions implemntation for PCI Bus module.
+  PCI resources support functions implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2026, American Megatrends International LLC. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -17,9 +12,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // The default policy for the PCI bus driver is NOT to reserve I/O ranges for both ISA aliases and VGA aliases.
 //
-BOOLEAN mReserveIsaAliases = FALSE;
-BOOLEAN mReserveVgaAliases = FALSE;
-BOOLEAN mPolicyDetermined  = FALSE;
+BOOLEAN  mReserveIsaAliases = FALSE;
+BOOLEAN  mReserveVgaAliases = FALSE;
+BOOLEAN  mPolicyDetermined  = FALSE;
 
 /**
   The function is used to skip VGA range.
@@ -30,8 +25,8 @@ BOOLEAN mPolicyDetermined  = FALSE;
 **/
 VOID
 SkipVGAAperture (
-  OUT UINT64   *Start,
-  IN  UINT64   Length
+  OUT UINT64  *Start,
+  IN  UINT64  Length
   )
 {
   UINT64  Original;
@@ -43,7 +38,7 @@ SkipVGAAperture (
   //
   // For legacy VGA, bit 10 to bit 15 is not decoded
   //
-  Mask        = 0x3FF;
+  Mask = 0x3FF;
 
   Original    = *Start;
   StartOffset = Original & Mask;
@@ -62,11 +57,10 @@ SkipVGAAperture (
 **/
 VOID
 SkipIsaAliasAperture (
-  OUT UINT64   *Start,
-  IN  UINT64   Length
+  OUT UINT64  *Start,
+  IN  UINT64  Length
   )
 {
-
   UINT64  Original;
   UINT64  Mask;
   UINT64  StartOffset;
@@ -77,7 +71,7 @@ SkipIsaAliasAperture (
   //
   // For legacy ISA, bit 10 to bit 15 is not decoded
   //
-  Mask        = 0x3FF;
+  Mask = 0x3FF;
 
   Original    = *Start;
   StartOffset = Original & Mask;
@@ -90,7 +84,12 @@ SkipIsaAliasAperture (
 
 /**
   This function inserts a resource node into the resource list.
-  The resource list is sorted in descend order.
+  The resource list is sorted in descending order of alignment. Resource
+  nodes with the same alignment are sorted by the remainder of their
+  length modulo the alignment: nodes without a remainder come first,
+  followed by the others in descending order of the remainder. Resource
+  nodes that rank equal, such as BARs of the same size, keep their
+  insertion order.
 
   @param Bridge  PCI resource node for bridge.
   @param ResNode Resource node want to be inserted.
@@ -98,47 +97,47 @@ SkipIsaAliasAperture (
 **/
 VOID
 InsertResourceNode (
-  IN OUT PCI_RESOURCE_NODE   *Bridge,
-  IN     PCI_RESOURCE_NODE   *ResNode
+  IN OUT PCI_RESOURCE_NODE  *Bridge,
+  IN     PCI_RESOURCE_NODE  *ResNode
   )
 {
-  LIST_ENTRY        *CurrentLink;
-  PCI_RESOURCE_NODE *Temp;
-  UINT64            ResNodeAlignRest;
-  UINT64            TempAlignRest;
+  LIST_ENTRY         *CurrentLink;
+  PCI_RESOURCE_NODE  *Temp;
+  UINT64             ResNodeAlignRest;
+  UINT64             TempAlignRest;
 
   ASSERT (Bridge  != NULL);
   ASSERT (ResNode != NULL);
 
-  InsertHeadList (&Bridge->ChildList, &ResNode->Link);
+  InsertTailList (&Bridge->ChildList, &ResNode->Link);
 
-  CurrentLink = Bridge->ChildList.ForwardLink->ForwardLink;
+  CurrentLink = ResNode->Link.BackLink;
   while (CurrentLink != &Bridge->ChildList) {
     Temp = RESOURCE_NODE_FROM_LINK (CurrentLink);
 
-    if (ResNode->Alignment > Temp->Alignment) {
+    if (Temp->Alignment > ResNode->Alignment) {
       break;
-    } else if (ResNode->Alignment == Temp->Alignment) {
-      ResNodeAlignRest  = ResNode->Length & ResNode->Alignment;
-      TempAlignRest     = Temp->Length & Temp->Alignment;
-      if ((ResNodeAlignRest == 0) || (ResNodeAlignRest >= TempAlignRest)) {
+    } else if (Temp->Alignment == ResNode->Alignment) {
+      ResNodeAlignRest = ResNode->Length & ResNode->Alignment;
+      TempAlignRest    = Temp->Length & Temp->Alignment;
+      if ((TempAlignRest == 0) || ((ResNodeAlignRest != 0) && (TempAlignRest >= ResNodeAlignRest))) {
         break;
       }
     }
 
-    SwapListEntries (&ResNode->Link, CurrentLink);
+    SwapListEntries (CurrentLink, &ResNode->Link);
 
-    CurrentLink = ResNode->Link.ForwardLink;
+    CurrentLink = ResNode->Link.BackLink;
   }
 }
 
 /**
   This routine is used to merge two different resource trees in need of
-  resoure degradation.
+  resource degradation.
 
   For example, if an upstream PPB doesn't support,
   prefetchable memory decoding, the PCI bus driver will choose to call this function
-  to merge prefectchable memory resource list into normal memory list.
+  to merge prefetchable memory resource list into normal memory list.
 
   If the TypeMerge is TRUE, Res resource type is changed to the type of destination resource
   type.
@@ -152,14 +151,13 @@ InsertResourceNode (
 **/
 VOID
 MergeResourceTree (
-  IN PCI_RESOURCE_NODE   *Dst,
-  IN PCI_RESOURCE_NODE   *Res,
-  IN BOOLEAN             TypeMerge
+  IN PCI_RESOURCE_NODE  *Dst,
+  IN PCI_RESOURCE_NODE  *Res,
+  IN BOOLEAN            TypeMerge
   )
 {
-
-  LIST_ENTRY        *CurrentLink;
-  PCI_RESOURCE_NODE *Temp;
+  LIST_ENTRY         *CurrentLink;
+  PCI_RESOURCE_NODE  *Temp;
 
   ASSERT (Dst != NULL);
   ASSERT (Res != NULL);
@@ -167,7 +165,7 @@ MergeResourceTree (
   while (!IsListEmpty (&Res->ChildList)) {
     CurrentLink = Res->ChildList.ForwardLink;
 
-    Temp        = RESOURCE_NODE_FROM_LINK (CurrentLink);
+    Temp = RESOURCE_NODE_FROM_LINK (CurrentLink);
 
     if (TypeMerge) {
       Temp->ResType = Dst->ResType;
@@ -187,22 +185,22 @@ MergeResourceTree (
 **/
 VOID
 CalculateApertureIo16 (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   )
 {
-  EFI_STATUS              Status;
-  UINT64                  Aperture;
-  LIST_ENTRY              *CurrentLink;
-  PCI_RESOURCE_NODE       *Node;
-  UINT64                  Offset;
-  EFI_PCI_PLATFORM_POLICY PciPolicy;
-  UINT64                  PaddingAperture;
+  EFI_STATUS               Status;
+  UINT64                   Aperture;
+  LIST_ENTRY               *CurrentLink;
+  PCI_RESOURCE_NODE        *Node;
+  UINT64                   Offset;
+  EFI_PCI_PLATFORM_POLICY  PciPolicy;
+  UINT64                   PaddingAperture;
 
   if (!mPolicyDetermined) {
     //
     // Check PciPlatform policy
     //
-    Status = EFI_NOT_FOUND;
+    Status    = EFI_NOT_FOUND;
     PciPolicy = 0;
     if (gPciPlatformProtocol != NULL) {
       Status = gPciPlatformProtocol->GetPlatformPolicy (
@@ -211,7 +209,7 @@ CalculateApertureIo16 (
                                        );
     }
 
-    if (EFI_ERROR (Status) && gPciOverrideProtocol != NULL) {
+    if (EFI_ERROR (Status) && (gPciOverrideProtocol != NULL)) {
       Status = gPciOverrideProtocol->GetPlatformPolicy (
                                        gPciOverrideProtocol,
                                        &PciPolicy
@@ -222,10 +220,12 @@ CalculateApertureIo16 (
       if ((PciPolicy & EFI_RESERVE_ISA_IO_ALIAS) != 0) {
         mReserveIsaAliases = TRUE;
       }
+
       if ((PciPolicy & EFI_RESERVE_VGA_IO_ALIAS) != 0) {
         mReserveVgaAliases = TRUE;
       }
     }
+
     mPolicyDetermined = TRUE;
   }
 
@@ -233,32 +233,31 @@ CalculateApertureIo16 (
   PaddingAperture = 0;
 
   if (Bridge == NULL) {
-    return ;
+    return;
   }
 
   //
   // Assume the bridge is aligned
   //
   for ( CurrentLink = GetFirstNode (&Bridge->ChildList)
-      ; !IsNull (&Bridge->ChildList, CurrentLink)
-      ; CurrentLink = GetNextNode (&Bridge->ChildList, CurrentLink)
-      ) {
-
+        ; !IsNull (&Bridge->ChildList, CurrentLink)
+        ; CurrentLink = GetNextNode (&Bridge->ChildList, CurrentLink)
+        )
+  {
     Node = RESOURCE_NODE_FROM_LINK (CurrentLink);
     if (Node->ResourceUsage == PciResUsagePadding) {
       ASSERT (PaddingAperture == 0);
       PaddingAperture = Node->Length;
       continue;
     }
+
     //
     // Consider the aperture alignment
     //
     Offset = Aperture & (Node->Alignment);
 
     if (Offset != 0) {
-
       Aperture = Aperture + (Node->Alignment + 1) - Offset;
-
     }
 
     //
@@ -335,92 +334,75 @@ CalculateApertureIo16 (
   This function is used to calculate the resource aperture
   for a given bridge device.
 
-  @param Bridge      PCI resouce node for given bridge device.
+  @param Bridge      PCI resource node for given bridge device.
 
 **/
 VOID
 CalculateResourceAperture (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   )
 {
-  UINT64            Aperture;
-  LIST_ENTRY        *CurrentLink;
-  PCI_RESOURCE_NODE *Node;
-  UINT64            PaddingAperture;
-  UINT64            Offset;
-
-  Aperture        = 0;
-  PaddingAperture = 0;
+  UINT64             Aperture[2];
+  LIST_ENTRY         *CurrentLink;
+  PCI_RESOURCE_NODE  *Node;
 
   if (Bridge == NULL) {
-    return ;
+    return;
   }
 
   if (Bridge->ResType == PciBarTypeIo16) {
-
     CalculateApertureIo16 (Bridge);
-    return ;
+    return;
   }
 
+  Aperture[PciResUsageTypical] = 0;
+  Aperture[PciResUsagePadding] = 0;
   //
   // Assume the bridge is aligned
   //
   for ( CurrentLink = GetFirstNode (&Bridge->ChildList)
-      ; !IsNull (&Bridge->ChildList, CurrentLink)
-      ; CurrentLink = GetNextNode (&Bridge->ChildList, CurrentLink)
-      ) {
-
+        ; !IsNull (&Bridge->ChildList, CurrentLink)
+        ; CurrentLink = GetNextNode (&Bridge->ChildList, CurrentLink)
+        )
+  {
     Node = RESOURCE_NODE_FROM_LINK (CurrentLink);
-    if (Node->ResourceUsage == PciResUsagePadding) {
-      ASSERT (PaddingAperture == 0);
-      PaddingAperture = Node->Length;
-      continue;
-    }
 
     //
-    // Apply padding resource if available
+    // It's possible for a bridge to contain multiple padding resource
+    // nodes due to DegradeResource().
     //
-    Offset = Aperture & (Node->Alignment);
-
-    if (Offset != 0) {
-
-      Aperture = Aperture + (Node->Alignment + 1) - Offset;
-
-    }
-
+    ASSERT (
+      (Node->ResourceUsage == PciResUsageTypical) ||
+      (Node->ResourceUsage == PciResUsagePadding)
+      );
+    ASSERT (Node->ResourceUsage < ARRAY_SIZE (Aperture));
     //
     // Recode current aperture as a offset
-    // this offset will be used in future real allocation
+    // Apply padding resource to meet alignment requirement
+    // Node offset will be used in future real allocation
     //
-    Node->Offset = Aperture;
+    Node->Offset = ALIGN_VALUE (Aperture[Node->ResourceUsage], Node->Alignment + 1);
 
     //
-    // Increment aperture by the length of node
+    // Record the total aperture.
     //
-    Aperture += Node->Length;
+    Aperture[Node->ResourceUsage] = Node->Offset + Node->Length;
   }
 
   //
-  // At last, adjust the aperture with the bridge's
-  // alignment
+  // Adjust the aperture with the bridge's alignment
   //
-  Offset = Aperture & (Bridge->Alignment);
-  if (Offset != 0) {
-    Aperture = Aperture + (Bridge->Alignment + 1) - Offset;
-  }
+  Aperture[PciResUsageTypical] = ALIGN_VALUE (Aperture[PciResUsageTypical], Bridge->Alignment + 1);
+  Aperture[PciResUsagePadding] = ALIGN_VALUE (Aperture[PciResUsagePadding], Bridge->Alignment + 1);
 
   //
-  // If the bridge has already padded the resource and the
-  // amount of padded resource is larger, then keep the
-  // padded resource
+  // Hotplug controller needs padding resources.
+  // Use the larger one between the padding resource and actual occupied resource.
   //
-  if (Bridge->Length < Aperture) {
-    Bridge->Length = Aperture;
-  }
+  Bridge->Length = MAX (Aperture[PciResUsageTypical], Aperture[PciResUsagePadding]);
 
   //
-  // Adjust the bridge's alignment to the first child's alignment
-  // if the bridge has at least one child
+  // Adjust the bridge's alignment to the MAX (first) alignment of all children.
   //
   CurrentLink = Bridge->ChildList.ForwardLink;
   if (CurrentLink != &Bridge->ChildList) {
@@ -429,16 +411,10 @@ CalculateResourceAperture (
       Bridge->Alignment = Node->Alignment;
     }
   }
-
-  //
-  // Hotplug controller needs padding resources.
-  // Use the larger one between the padding resource and actual occupied resource.
-  //
-  Bridge->Length = MAX (Bridge->Length, PaddingAperture);
 }
 
 /**
-  Get IO/Memory resource infor for given PCI device.
+  Get IO/Memory resource info for given PCI device.
 
   @param PciDev     Pci device instance.
   @param IoNode     Resource info node for IO .
@@ -450,125 +426,107 @@ CalculateResourceAperture (
 **/
 VOID
 GetResourceFromDevice (
-  IN     PCI_IO_DEVICE     *PciDev,
-  IN OUT PCI_RESOURCE_NODE *IoNode,
-  IN OUT PCI_RESOURCE_NODE *Mem32Node,
-  IN OUT PCI_RESOURCE_NODE *PMem32Node,
-  IN OUT PCI_RESOURCE_NODE *Mem64Node,
-  IN OUT PCI_RESOURCE_NODE *PMem64Node
+  IN     PCI_IO_DEVICE      *PciDev,
+  IN OUT PCI_RESOURCE_NODE  *IoNode,
+  IN OUT PCI_RESOURCE_NODE  *Mem32Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem32Node,
+  IN OUT PCI_RESOURCE_NODE  *Mem64Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem64Node
   )
 {
-
-  UINT8             Index;
-  PCI_RESOURCE_NODE *Node;
-  BOOLEAN           ResourceRequested;
+  UINT8              Index;
+  PCI_RESOURCE_NODE  *Node;
+  PCI_RESOURCE_NODE  *DestNode;
+  BOOLEAN            ResourceRequested;
 
   Node              = NULL;
   ResourceRequested = FALSE;
 
   for (Index = 0; Index < PCI_MAX_BAR; Index++) {
-
+    DestNode = NULL;
+    Node     = NULL;
     switch ((PciDev->PciBar)[Index].BarType) {
+      case PciBarTypeMem32:
+      case PciBarTypeOpRom:
 
-    case PciBarTypeMem32:
+        Node = CreateResourceNode (
+                 PciDev,
+                 (PciDev->PciBar)[Index].Length,
+                 (PciDev->PciBar)[Index].Alignment,
+                 Index,
+                 (PciDev->PciBar)[Index].BarType,
+                 PciResUsageTypical
+                 );
+        DestNode = Mem32Node;
 
-      Node = CreateResourceNode (
-              PciDev,
-              (PciDev->PciBar)[Index].Length,
-              (PciDev->PciBar)[Index].Alignment,
-              Index,
-              PciBarTypeMem32,
-              PciResUsageTypical
-              );
+        break;
 
-      InsertResourceNode (
-        Mem32Node,
-        Node
-        );
+      case PciBarTypeMem64:
 
+        Node = CreateResourceNode (
+                 PciDev,
+                 (PciDev->PciBar)[Index].Length,
+                 (PciDev->PciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypeMem64,
+                 PciResUsageTypical
+                 );
+        DestNode = Mem64Node;
+
+        break;
+
+      case PciBarTypePMem64:
+
+        Node = CreateResourceNode (
+                 PciDev,
+                 (PciDev->PciBar)[Index].Length,
+                 (PciDev->PciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypePMem64,
+                 PciResUsageTypical
+                 );
+        DestNode = PMem64Node;
+
+        break;
+
+      case PciBarTypePMem32:
+
+        Node = CreateResourceNode (
+                 PciDev,
+                 (PciDev->PciBar)[Index].Length,
+                 (PciDev->PciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypePMem32,
+                 PciResUsageTypical
+                 );
+        DestNode = PMem32Node;
+        break;
+
+      case PciBarTypeIo16:
+      case PciBarTypeIo32:
+
+        Node = CreateResourceNode (
+                 PciDev,
+                 (PciDev->PciBar)[Index].Length,
+                 (PciDev->PciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypeIo16,
+                 PciResUsageTypical
+                 );
+        DestNode = IoNode;
+
+        break;
+
+      case PciBarTypeUnknown:
+        break;
+
+      default:
+        break;
+    }
+
+    if ((DestNode != NULL) && (Node != NULL)) {
+      InsertResourceNode (DestNode, Node);
       ResourceRequested = TRUE;
-      break;
-
-    case PciBarTypeMem64:
-
-      Node = CreateResourceNode (
-              PciDev,
-              (PciDev->PciBar)[Index].Length,
-              (PciDev->PciBar)[Index].Alignment,
-              Index,
-              PciBarTypeMem64,
-              PciResUsageTypical
-              );
-
-      InsertResourceNode (
-        Mem64Node,
-        Node
-        );
-
-      ResourceRequested = TRUE;
-      break;
-
-    case PciBarTypePMem64:
-
-      Node = CreateResourceNode (
-              PciDev,
-              (PciDev->PciBar)[Index].Length,
-              (PciDev->PciBar)[Index].Alignment,
-              Index,
-              PciBarTypePMem64,
-              PciResUsageTypical
-              );
-
-      InsertResourceNode (
-        PMem64Node,
-        Node
-        );
-
-      ResourceRequested = TRUE;
-      break;
-
-    case PciBarTypePMem32:
-
-      Node = CreateResourceNode (
-              PciDev,
-              (PciDev->PciBar)[Index].Length,
-              (PciDev->PciBar)[Index].Alignment,
-              Index,
-              PciBarTypePMem32,
-              PciResUsageTypical
-              );
-
-      InsertResourceNode (
-        PMem32Node,
-        Node
-        );
-      ResourceRequested = TRUE;
-      break;
-
-    case PciBarTypeIo16:
-    case PciBarTypeIo32:
-
-      Node = CreateResourceNode (
-              PciDev,
-              (PciDev->PciBar)[Index].Length,
-              (PciDev->PciBar)[Index].Alignment,
-              Index,
-              PciBarTypeIo16,
-              PciResUsageTypical
-              );
-
-      InsertResourceNode (
-        IoNode,
-        Node
-        );
-      ResourceRequested = TRUE;
-      break;
-
-    case PciBarTypeUnknown:
-      break;
-
-    default:
-      break;
     }
   }
 
@@ -576,91 +534,81 @@ GetResourceFromDevice (
   // Add VF resource
   //
   for (Index = 0; Index < PCI_MAX_BAR; Index++) {
+    DestNode = NULL;
+    Node     = NULL;
 
     switch ((PciDev->VfPciBar)[Index].BarType) {
+      case PciBarTypeMem32:
 
-    case PciBarTypeMem32:
+        Node = CreateVfResourceNode (
+                 PciDev,
+                 (PciDev->VfPciBar)[Index].Length,
+                 (PciDev->VfPciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypeMem32,
+                 PciResUsageTypical
+                 );
+        DestNode = Mem32Node;
 
-      Node = CreateVfResourceNode (
-              PciDev,
-              (PciDev->VfPciBar)[Index].Length,
-              (PciDev->VfPciBar)[Index].Alignment,
-              Index,
-              PciBarTypeMem32,
-              PciResUsageTypical
-              );
+        break;
 
-      InsertResourceNode (
-        Mem32Node,
-        Node
-        );
+      case PciBarTypeMem64:
 
-      break;
+        Node = CreateVfResourceNode (
+                 PciDev,
+                 (PciDev->VfPciBar)[Index].Length,
+                 (PciDev->VfPciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypeMem64,
+                 PciResUsageTypical
+                 );
+        DestNode = Mem64Node;
 
-    case PciBarTypeMem64:
+        break;
 
-      Node = CreateVfResourceNode (
-              PciDev,
-              (PciDev->VfPciBar)[Index].Length,
-              (PciDev->VfPciBar)[Index].Alignment,
-              Index,
-              PciBarTypeMem64,
-              PciResUsageTypical
-              );
+      case PciBarTypePMem64:
 
-      InsertResourceNode (
-        Mem64Node,
-        Node
-        );
+        Node = CreateVfResourceNode (
+                 PciDev,
+                 (PciDev->VfPciBar)[Index].Length,
+                 (PciDev->VfPciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypePMem64,
+                 PciResUsageTypical
+                 );
+        DestNode = PMem64Node;
+        break;
 
-      break;
+      case PciBarTypePMem32:
 
-    case PciBarTypePMem64:
+        Node = CreateVfResourceNode (
+                 PciDev,
+                 (PciDev->VfPciBar)[Index].Length,
+                 (PciDev->VfPciBar)[Index].Alignment,
+                 Index,
+                 PciBarTypePMem32,
+                 PciResUsageTypical
+                 );
+        DestNode = PMem32Node;
 
-      Node = CreateVfResourceNode (
-              PciDev,
-              (PciDev->VfPciBar)[Index].Length,
-              (PciDev->VfPciBar)[Index].Alignment,
-              Index,
-              PciBarTypePMem64,
-              PciResUsageTypical
-              );
+        break;
 
-      InsertResourceNode (
-        PMem64Node,
-        Node
-        );
+      case PciBarTypeIo16:
+      case PciBarTypeIo32:
+        break;
 
-      break;
+      case PciBarTypeUnknown:
+        break;
 
-    case PciBarTypePMem32:
+      default:
+        break;
+    }
 
-      Node = CreateVfResourceNode (
-              PciDev,
-              (PciDev->VfPciBar)[Index].Length,
-              (PciDev->VfPciBar)[Index].Alignment,
-              Index,
-              PciBarTypePMem32,
-              PciResUsageTypical
-              );
-
-      InsertResourceNode (
-        PMem32Node,
-        Node
-        );
-      break;
-
-    case PciBarTypeIo16:
-    case PciBarTypeIo32:
-      break;
-
-    case PciBarTypeUnknown:
-      break;
-
-    default:
-      break;
+    if ((DestNode != NULL) && (Node != NULL)) {
+      InsertResourceNode (DestNode, Node);
     }
   }
+
   // If there is no resource requested from this device,
   // then we indicate this device has been allocated naturally.
   //
@@ -685,19 +633,19 @@ GetResourceFromDevice (
 **/
 PCI_RESOURCE_NODE *
 CreateResourceNode (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN UINT64                Length,
-  IN UINT64                Alignment,
-  IN UINT8                 Bar,
-  IN PCI_BAR_TYPE          ResType,
-  IN PCI_RESOURCE_USAGE    ResUsage
+  IN PCI_IO_DEVICE       *PciDev,
+  IN UINT64              Length,
+  IN UINT64              Alignment,
+  IN UINT8               Bar,
+  IN PCI_BAR_TYPE        ResType,
+  IN PCI_RESOURCE_USAGE  ResUsage
   )
 {
-  PCI_RESOURCE_NODE *Node;
+  PCI_RESOURCE_NODE  *Node;
 
-  Node    = NULL;
+  Node = NULL;
 
-  Node    = AllocateZeroPool (sizeof (PCI_RESOURCE_NODE));
+  Node = AllocateZeroPool (sizeof (PCI_RESOURCE_NODE));
   ASSERT (Node != NULL);
   if (Node == NULL) {
     return NULL;
@@ -732,15 +680,15 @@ CreateResourceNode (
 **/
 PCI_RESOURCE_NODE *
 CreateVfResourceNode (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN UINT64                Length,
-  IN UINT64                Alignment,
-  IN UINT8                 Bar,
-  IN PCI_BAR_TYPE          ResType,
-  IN PCI_RESOURCE_USAGE    ResUsage
+  IN PCI_IO_DEVICE       *PciDev,
+  IN UINT64              Length,
+  IN UINT64              Alignment,
+  IN UINT8               Bar,
+  IN PCI_BAR_TYPE        ResType,
+  IN PCI_RESOURCE_USAGE  ResUsage
   )
 {
-  PCI_RESOURCE_NODE *Node;
+  PCI_RESOURCE_NODE  *Node;
 
   Node = CreateResourceNode (PciDev, Length, Alignment, Bar, ResType, ResUsage);
   if (Node == NULL) {
@@ -766,26 +714,25 @@ CreateVfResourceNode (
 **/
 VOID
 CreateResourceMap (
-  IN     PCI_IO_DEVICE     *Bridge,
-  IN OUT PCI_RESOURCE_NODE *IoNode,
-  IN OUT PCI_RESOURCE_NODE *Mem32Node,
-  IN OUT PCI_RESOURCE_NODE *PMem32Node,
-  IN OUT PCI_RESOURCE_NODE *Mem64Node,
-  IN OUT PCI_RESOURCE_NODE *PMem64Node
+  IN     PCI_IO_DEVICE      *Bridge,
+  IN OUT PCI_RESOURCE_NODE  *IoNode,
+  IN OUT PCI_RESOURCE_NODE  *Mem32Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem32Node,
+  IN OUT PCI_RESOURCE_NODE  *Mem64Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem64Node
   )
 {
-  PCI_IO_DEVICE     *Temp;
-  PCI_RESOURCE_NODE *IoBridge;
-  PCI_RESOURCE_NODE *Mem32Bridge;
-  PCI_RESOURCE_NODE *PMem32Bridge;
-  PCI_RESOURCE_NODE *Mem64Bridge;
-  PCI_RESOURCE_NODE *PMem64Bridge;
-  LIST_ENTRY        *CurrentLink;
+  PCI_IO_DEVICE      *Temp;
+  PCI_RESOURCE_NODE  *IoBridge;
+  PCI_RESOURCE_NODE  *Mem32Bridge;
+  PCI_RESOURCE_NODE  *PMem32Bridge;
+  PCI_RESOURCE_NODE  *Mem64Bridge;
+  PCI_RESOURCE_NODE  *PMem64Bridge;
+  LIST_ENTRY         *CurrentLink;
 
   CurrentLink = Bridge->ChildList.ForwardLink;
 
   while (CurrentLink != NULL && CurrentLink != &Bridge->ChildList) {
-
     Temp = PCI_IO_DEVICE_FROM_LINK (CurrentLink);
 
     //
@@ -804,7 +751,6 @@ CreateResourceMap (
       );
 
     if (IS_PCI_BRIDGE (&Temp->Pci)) {
-
       //
       // If the device has children, create a bridge resource node for this PPB
       // Note: For PPB, memory aperture is aligned with 1MB and IO aperture
@@ -818,6 +764,9 @@ CreateResourceMap (
                    PciBarTypeIo16,
                    PciResUsageTypical
                    );
+      if (IoBridge == NULL) {
+        return;
+      }
 
       Mem32Bridge = CreateResourceNode (
                       Temp,
@@ -827,6 +776,10 @@ CreateResourceMap (
                       PciBarTypeMem32,
                       PciResUsageTypical
                       );
+      if (Mem32Bridge == NULL) {
+        FreePool (IoBridge);
+        return;
+      }
 
       PMem32Bridge = CreateResourceNode (
                        Temp,
@@ -836,6 +789,11 @@ CreateResourceMap (
                        PciBarTypePMem32,
                        PciResUsageTypical
                        );
+      if (PMem32Bridge == NULL) {
+        FreePool (Mem32Bridge);
+        FreePool (IoBridge);
+        return;
+      }
 
       Mem64Bridge = CreateResourceNode (
                       Temp,
@@ -845,6 +803,12 @@ CreateResourceMap (
                       PciBarTypeMem64,
                       PciResUsageTypical
                       );
+      if (Mem64Bridge == NULL) {
+        FreePool (PMem32Bridge);
+        FreePool (Mem32Bridge);
+        FreePool (IoBridge);
+        return;
+      }
 
       PMem64Bridge = CreateResourceNode (
                        Temp,
@@ -854,9 +818,16 @@ CreateResourceMap (
                        PciBarTypePMem64,
                        PciResUsageTypical
                        );
+      if (PMem64Bridge == NULL) {
+        FreePool (Mem64Bridge);
+        FreePool (PMem32Bridge);
+        FreePool (Mem32Bridge);
+        FreePool (IoBridge);
+        return;
+      }
 
       //
-      // Recursively create resouce map on this bridge
+      // Recursively create resource map on this bridge
       //
       CreateResourceMap (
         Temp,
@@ -940,7 +911,6 @@ CreateResourceMap (
         FreePool (PMem64Bridge);
         PMem64Bridge = NULL;
       }
-
     }
 
     //
@@ -1006,12 +976,12 @@ CreateResourceMap (
 **/
 VOID
 ResourcePaddingPolicy (
-  IN PCI_IO_DEVICE     *PciDev,
-  IN PCI_RESOURCE_NODE *IoNode,
-  IN PCI_RESOURCE_NODE *Mem32Node,
-  IN PCI_RESOURCE_NODE *PMem32Node,
-  IN PCI_RESOURCE_NODE *Mem64Node,
-  IN PCI_RESOURCE_NODE *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   )
 {
   //
@@ -1045,18 +1015,18 @@ ResourcePaddingPolicy (
 **/
 VOID
 DegradeResource (
-  IN PCI_IO_DEVICE     *Bridge,
-  IN PCI_RESOURCE_NODE *Mem32Node,
-  IN PCI_RESOURCE_NODE *PMem32Node,
-  IN PCI_RESOURCE_NODE *Mem64Node,
-  IN PCI_RESOURCE_NODE *PMem64Node
+  IN PCI_IO_DEVICE      *Bridge,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   )
 {
-  PCI_IO_DEVICE        *PciIoDevice;
-  LIST_ENTRY           *ChildDeviceLink;
-  LIST_ENTRY           *ChildNodeLink;
-  LIST_ENTRY           *NextChildNodeLink;
-  PCI_RESOURCE_NODE    *ResourceNode;
+  PCI_IO_DEVICE      *PciIoDevice;
+  LIST_ENTRY         *ChildDeviceLink;
+  LIST_ENTRY         *ChildNodeLink;
+  LIST_ENTRY         *NextChildNodeLink;
+  PCI_RESOURCE_NODE  *ResourceNode;
 
   if (FeaturePcdGet (PcdPciDegradeResourceForOptionRom)) {
     //
@@ -1070,15 +1040,17 @@ DegradeResource (
         if (!IsListEmpty (&Mem64Node->ChildList)) {
           ChildNodeLink = Mem64Node->ChildList.ForwardLink;
           while (ChildNodeLink != &Mem64Node->ChildList) {
-            ResourceNode = RESOURCE_NODE_FROM_LINK (ChildNodeLink);
+            ResourceNode      = RESOURCE_NODE_FROM_LINK (ChildNodeLink);
             NextChildNodeLink = ChildNodeLink->ForwardLink;
 
             if ((ResourceNode->PciDev == PciIoDevice) &&
                 (ResourceNode->Virtual || !PciIoDevice->PciBar[ResourceNode->Bar].BarTypeFixed)
-                ) {
+                )
+            {
               RemoveEntryList (ChildNodeLink);
               InsertResourceNode (Mem32Node, ResourceNode);
             }
+
             ChildNodeLink = NextChildNodeLink;
           }
         }
@@ -1086,20 +1058,22 @@ DegradeResource (
         if (!IsListEmpty (&PMem64Node->ChildList)) {
           ChildNodeLink = PMem64Node->ChildList.ForwardLink;
           while (ChildNodeLink != &PMem64Node->ChildList) {
-            ResourceNode = RESOURCE_NODE_FROM_LINK (ChildNodeLink);
+            ResourceNode      = RESOURCE_NODE_FROM_LINK (ChildNodeLink);
             NextChildNodeLink = ChildNodeLink->ForwardLink;
 
             if ((ResourceNode->PciDev == PciIoDevice) &&
                 (ResourceNode->Virtual || !PciIoDevice->PciBar[ResourceNode->Bar].BarTypeFixed)
-                ) {
+                )
+            {
               RemoveEntryList (ChildNodeLink);
               InsertResourceNode (PMem32Node, ResourceNode);
             }
+
             ChildNodeLink = NextChildNodeLink;
           }
         }
-
       }
+
       ChildDeviceLink = ChildDeviceLink->ForwardLink;
     }
   }
@@ -1125,11 +1099,11 @@ DegradeResource (
     // if the bridge does not support MEM64, degrade MEM64 to MEM32
     //
     if (!BridgeSupportResourceDecode (Bridge, EFI_BRIDGE_MEM64_DECODE_SUPPORTED)) {
-        MergeResourceTree (
-          Mem32Node,
-          Mem64Node,
-          TRUE
-          );
+      MergeResourceTree (
+        Mem32Node,
+        Mem64Node,
+        TRUE
+        );
     }
 
     //
@@ -1141,13 +1115,13 @@ DegradeResource (
         PMem64Node,
         TRUE
         );
-    } 
+    }
 
     //
     // if both PMEM64 and PMEM32 requests from child devices, which can not be satisfied
     // by a P2P bridge simultaneously, keep PMEM64 and degrade PMEM32 to MEM32.
     //
-    if (!IsListEmpty (&PMem64Node->ChildList) && Bridge->Parent != NULL) {
+    if (!IsListEmpty (&PMem64Node->ChildList) && (Bridge->Parent != NULL)) {
       MergeResourceTree (
         Mem32Node,
         PMem32Node,
@@ -1204,8 +1178,8 @@ DegradeResource (
 **/
 BOOLEAN
 BridgeSupportResourceDecode (
-  IN PCI_IO_DEVICE *Bridge,
-  IN UINT32        Decode
+  IN PCI_IO_DEVICE  *Bridge,
+  IN UINT32         Decode
   )
 {
   if (((Bridge->Decodes) & Decode) != 0) {
@@ -1219,23 +1193,23 @@ BridgeSupportResourceDecode (
   This function is used to program the resource allocated
   for each resource node under specified bridge.
 
-  @param Base     Base address of resource to be progammed.
+  @param Base     Base address of resource to be programmed.
   @param Bridge   PCI resource node for the bridge device.
 
-  @retval EFI_SUCCESS            Successfully to program all resouces
+  @retval EFI_SUCCESS            Successfully to program all resources
                                  on given PCI bridge device.
   @retval EFI_OUT_OF_RESOURCES   Base is all one.
 
 **/
 EFI_STATUS
 ProgramResource (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Bridge
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Bridge
   )
 {
-  LIST_ENTRY        *CurrentLink;
-  PCI_RESOURCE_NODE *Node;
-  EFI_STATUS        Status;
+  LIST_ENTRY         *CurrentLink;
+  PCI_RESOURCE_NODE  *Node;
+  EFI_STATUS         Status;
 
   if (Base == gAllOne) {
     return EFI_OUT_OF_RESOURCES;
@@ -1244,11 +1218,9 @@ ProgramResource (
   CurrentLink = Bridge->ChildList.ForwardLink;
 
   while (CurrentLink != &Bridge->ChildList) {
-
     Node = RESOURCE_NODE_FROM_LINK (CurrentLink);
 
     if (!IS_PCI_BRIDGE (&(Node->PciDev->Pci))) {
-
       if (IS_CARDBUS_BRIDGE (&(Node->PciDev->Pci))) {
         //
         // Program the PCI Card Bus device
@@ -1281,19 +1253,19 @@ ProgramResource (
 /**
   Program Bar register for PCI device.
 
-  @param Base  Base address for PCI device resource to be progammed.
-  @param Node  Point to resoure node structure.
+  @param Base  Base address for PCI device resource to be programmed.
+  @param Node  Point to resource node structure.
 
 **/
 VOID
 ProgramBar (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   )
 {
-  EFI_PCI_IO_PROTOCOL *PciIo;
-  UINT64              Address;
-  UINT32              Address32;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINT64               Address;
+  UINT32               Address32;
 
   ASSERT (Node->Bar < PCI_MAX_BAR);
 
@@ -1319,72 +1291,77 @@ ProgramBar (
   Node->PciDev->Allocated = TRUE;
 
   switch ((Node->PciDev->PciBar[Node->Bar]).BarType) {
+    case PciBarTypeIo16:
+    case PciBarTypeIo32:
+    case PciBarTypeMem32:
+    case PciBarTypePMem32:
 
-  case PciBarTypeIo16:
-  case PciBarTypeIo32:
-  case PciBarTypeMem32:
-  case PciBarTypePMem32:
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   (Node->PciDev->PciBar[Node->Bar]).Offset,
+                   1,
+                   &Address
+                   );
+    //
+    // Continue to the case PciBarTypeOpRom to set the BaseAddress.
+    // PciBarTypeOpRom is a virtual BAR only in root bridge, to capture
+    // the MEM32 resource requirement for Option ROM shadow.
+    //
 
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (Node->PciDev->PciBar[Node->Bar]).Offset,
-                 1,
-                 &Address
-                 );
+    case PciBarTypeOpRom:
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      break;
 
-    break;
+    case PciBarTypeMem64:
+    case PciBarTypePMem64:
 
-  case PciBarTypeMem64:
-  case PciBarTypePMem64:
+      Address32 = (UINT32)(Address & 0x00000000FFFFFFFF);
 
-    Address32 = (UINT32) (Address & 0x00000000FFFFFFFF);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   (Node->PciDev->PciBar[Node->Bar]).Offset,
+                   1,
+                   &Address32
+                   );
 
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (Node->PciDev->PciBar[Node->Bar]).Offset,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)RShiftU64 (Address, 32);
 
-    Address32 = (UINT32) RShiftU64 (Address, 32);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   (UINT8)((Node->PciDev->PciBar[Node->Bar]).Offset + 4),
+                   1,
+                   &Address32
+                   );
 
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (UINT8) ((Node->PciDev->PciBar[Node->Bar]).Offset + 4),
-                 1,
-                 &Address32
-                 );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      break;
 
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 }
 
 /**
   Program IOV VF Bar register for PCI device.
 
-  @param Base  Base address for PCI device resource to be progammed.
-  @param Node  Point to resoure node structure.
+  @param Base  Base address for PCI device resource to be programmed.
+  @param Node  Point to resource node structure.
 
 **/
 EFI_STATUS
 ProgramVfBar (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   )
 {
-  EFI_PCI_IO_PROTOCOL *PciIo;
-  UINT64              Address;
-  UINT32              Address32;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINT64               Address;
+  UINT32               Address32;
 
   ASSERT (Node->Bar < PCI_MAX_BAR);
   ASSERT (Node->Virtual);
@@ -1403,85 +1380,84 @@ ProgramVfBar (
   Node->PciDev->Allocated = TRUE;
 
   switch ((Node->PciDev->VfPciBar[Node->Bar]).BarType) {
+    case PciBarTypeMem32:
+    case PciBarTypePMem32:
 
-  case PciBarTypeMem32:
-  case PciBarTypePMem32:
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   (Node->PciDev->VfPciBar[Node->Bar]).Offset,
+                   1,
+                   &Address
+                   );
 
-    PciIo->Pci.Write (
-                PciIo,
-                EfiPciIoWidthUint32,
-                (Node->PciDev->VfPciBar[Node->Bar]).Offset,
-                1,
-                &Address
-                );
+      Node->PciDev->VfPciBar[Node->Bar].BaseAddress = Address;
+      break;
 
-    Node->PciDev->VfPciBar[Node->Bar].BaseAddress = Address;
-    break;
+    case PciBarTypeMem64:
+    case PciBarTypePMem64:
 
-  case PciBarTypeMem64:
-  case PciBarTypePMem64:
+      Address32 = (UINT32)(Address & 0x00000000FFFFFFFF);
 
-    Address32 = (UINT32) (Address & 0x00000000FFFFFFFF);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   (Node->PciDev->VfPciBar[Node->Bar]).Offset,
+                   1,
+                   &Address32
+                   );
 
-    PciIo->Pci.Write (
-                PciIo,
-                EfiPciIoWidthUint32,
-                (Node->PciDev->VfPciBar[Node->Bar]).Offset,
-                1,
-                &Address32
-                );
+      Address32 = (UINT32)RShiftU64 (Address, 32);
 
-    Address32 = (UINT32) RShiftU64 (Address, 32);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   ((Node->PciDev->VfPciBar[Node->Bar]).Offset + 4),
+                   1,
+                   &Address32
+                   );
 
-    PciIo->Pci.Write (
-                PciIo,
-                EfiPciIoWidthUint32,
-                ((Node->PciDev->VfPciBar[Node->Bar]).Offset + 4),
-                1,
-                &Address32
-                );
+      Node->PciDev->VfPciBar[Node->Bar].BaseAddress = Address;
+      break;
 
-    Node->PciDev->VfPciBar[Node->Bar].BaseAddress = Address;
-    break;
+    case PciBarTypeIo16:
+    case PciBarTypeIo32:
+      break;
 
-  case PciBarTypeIo16:
-  case PciBarTypeIo32:
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 
   return EFI_SUCCESS;
 }
 
 /**
-  Program PCI-PCI bridge apperture.
+  Program PCI-PCI bridge aperture.
 
   @param Base  Base address for resource.
-  @param Node  Point to resoure node structure.
+  @param Node  Point to resource node structure.
 
 **/
 VOID
 ProgramPpbApperture (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   )
 {
-  EFI_PCI_IO_PROTOCOL *PciIo;
-  UINT64              Address;
-  UINT32              Address32;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINT64               Address;
+  UINT32               Address32;
 
   Address = 0;
   //
   // If no device resource of this PPB, return anyway
-  // Apperture is set default in the initialization code
+  // Aperture is set default in the initialization code
   //
-  if (Node->Length == 0 || Node->ResourceUsage == PciResUsagePadding) {
+  if ((Node->Length == 0) || (Node->ResourceUsage == PciResUsagePadding)) {
     //
     // For padding resource node, just ignore when programming
     //
-    return ;
+    return;
   }
 
   PciIo   = &(Node->PciDev->PciIo);
@@ -1493,219 +1469,239 @@ ProgramPpbApperture (
   Node->PciDev->Allocated = TRUE;
 
   switch (Node->Bar) {
+    case PPB_BAR_0:
+    case PPB_BAR_1:
+      switch ((Node->PciDev->PciBar[Node->Bar]).BarType) {
+        case PciBarTypeIo16:
+        case PciBarTypeIo32:
+        case PciBarTypeMem32:
+        case PciBarTypePMem32:
 
-  case PPB_BAR_0:
-  case PPB_BAR_1:
-    switch ((Node->PciDev->PciBar[Node->Bar]).BarType) {
+          PciIo->Pci.Write (
+                       PciIo,
+                       EfiPciIoWidthUint32,
+                       (Node->PciDev->PciBar[Node->Bar]).Offset,
+                       1,
+                       &Address
+                       );
 
-      case PciBarTypeIo16:
-      case PciBarTypeIo32:
-      case PciBarTypeMem32:
-      case PciBarTypePMem32:
+          Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+          Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+          break;
 
-        PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (Node->PciDev->PciBar[Node->Bar]).Offset,
-                 1,
-                 &Address
-                 );
+        case PciBarTypeMem64:
+        case PciBarTypePMem64:
 
-        Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-        Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-        break;
+          Address32 = (UINT32)(Address & 0x00000000FFFFFFFF);
 
-      case PciBarTypeMem64:
-      case PciBarTypePMem64:
+          PciIo->Pci.Write (
+                       PciIo,
+                       EfiPciIoWidthUint32,
+                       (Node->PciDev->PciBar[Node->Bar]).Offset,
+                       1,
+                       &Address32
+                       );
 
-        Address32 = (UINT32) (Address & 0x00000000FFFFFFFF);
+          Address32 = (UINT32)RShiftU64 (Address, 32);
 
-        PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (Node->PciDev->PciBar[Node->Bar]).Offset,
-                 1,
-                 &Address32
-                 );
+          PciIo->Pci.Write (
+                       PciIo,
+                       EfiPciIoWidthUint32,
+                       (UINT8)((Node->PciDev->PciBar[Node->Bar]).Offset + 4),
+                       1,
+                       &Address32
+                       );
 
-        Address32 = (UINT32) RShiftU64 (Address, 32);
+          Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+          Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+          break;
 
-        PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (UINT8) ((Node->PciDev->PciBar[Node->Bar]).Offset + 4),
-                 1,
-                 &Address32
-                 );
+        default:
+          break;
+      }
 
-        Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-        Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-        break;
+      break;
 
-      default:
-        break;
-    }
-    break;
+    case PPB_IO_RANGE:
 
-  case PPB_IO_RANGE:
+      Address32 = ((UINT32)(Address)) >> 8;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint8,
+                   PCI_BRIDGE_IO_BASE_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = ((UINT32) (Address)) >> 8;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint8,
-                 0x1C,
-                 1,
-                 &Address32
-                 );
+      Address32 >>= 8;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_IO_BASE_UPPER_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 >>= 8;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x30,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)(Address + Node->Length - 1);
+      Address32 = ((UINT32)(Address32)) >> 8;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint8,
+                   PCI_BRIDGE_IO_LIMIT_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = (UINT32) (Address + Node->Length - 1);
-    Address32 = ((UINT32) (Address32)) >> 8;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint8,
-                 0x1D,
-                 1,
-                 &Address32
-                 );
+      Address32 >>= 8;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_IO_LIMIT_UPPER_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 >>= 8;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x32,
-                 1,
-                 &Address32
-                 );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      break;
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    break;
+    case PPB_MEM32_RANGE:
 
-  case PPB_MEM32_RANGE:
+      Address32 = ((UINT32)(Address)) >> 16;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_MEMORY_BASE_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = ((UINT32) (Address)) >> 16;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x20,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)(Address + Node->Length - 1);
+      Address32 = ((UINT32)(Address32)) >> 16;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_MEMORY_LIMIT_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = (UINT32) (Address + Node->Length - 1);
-    Address32 = ((UINT32) (Address32)) >> 16;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x22,
-                 1,
-                 &Address32
-                 );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      break;
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    break;
+    case PPB_PMEM32_RANGE:
+    case PPB_PMEM64_RANGE:
 
-  case PPB_PMEM32_RANGE:
-  case PPB_PMEM64_RANGE:
+      Address32 = ((UINT32)(Address)) >> 16;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_64BIT_MEMORY_BASE_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = ((UINT32) (Address)) >> 16;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x24,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)(Address + Node->Length - 1);
+      Address32 = ((UINT32)(Address32)) >> 16;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint16,
+                   PCI_BRIDGE_64BIT_MEMORY_LIMIT_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = (UINT32) (Address + Node->Length - 1);
-    Address32 = ((UINT32) (Address32)) >> 16;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint16,
-                 0x26,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)RShiftU64 (Address, 32);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_BRIDGE_64BIT_MEMORY_BASE_UPPER_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = (UINT32) RShiftU64 (Address, 32);
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 0x28,
-                 1,
-                 &Address32
-                 );
+      Address32 = (UINT32)RShiftU64 ((Address + Node->Length - 1), 32);
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_BRIDGE_64BIT_MEMORY_LIMIT_UPPER_REGISTER_OFFSET,
+                   1,
+                   &Address32
+                   );
 
-    Address32 = (UINT32) RShiftU64 ((Address + Node->Length - 1), 32);
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 0x2C,
-                 1,
-                 &Address32
-                 );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      break;
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    break;
-
-  default:
-    break;
+    default:
+      break;
   }
 }
 
 /**
   Program parent bridge for Option Rom.
 
-  @param PciDevice      Pci deivce instance.
-  @param OptionRomBase  Base address for Optiona Rom.
+  @param PciDevice      Pci device instance.
+  @param OptionRomBase  Base address for Option Rom.
   @param Enable         Enable or disable PCI memory.
 
 **/
 VOID
-ProgrameUpstreamBridgeForRom (
-  IN PCI_IO_DEVICE   *PciDevice,
-  IN UINT32          OptionRomBase,
-  IN BOOLEAN         Enable
+ProgramUpstreamBridgeForRom (
+  IN PCI_IO_DEVICE  *PciDevice,
+  IN UINT32         OptionRomBase,
+  IN BOOLEAN        Enable
   )
 {
-  PCI_IO_DEVICE     *Parent;
-  PCI_RESOURCE_NODE Node;
+  PCI_IO_DEVICE        *Parent;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINT16               Base;
+  UINT16               Limit;
+
   //
   // For root bridge, just return.
   //
   Parent = PciDevice->Parent;
-  ZeroMem (&Node, sizeof (Node));
   while (Parent != NULL) {
     if (!IS_PCI_BRIDGE (&Parent->Pci)) {
       break;
     }
 
-    Node.PciDev     = Parent;
-    Node.Length     = PciDevice->RomSize;
-    Node.Alignment  = 0;
-    Node.Bar        = PPB_MEM32_RANGE;
-    Node.ResType    = PciBarTypeMem32;
-    Node.Offset     = 0;
+    PciIo = &Parent->PciIo;
 
     //
-    // Program PPB to only open a single <= 16MB apperture
+    // Program PPB to only open a single <= 16MB aperture
     //
     if (Enable) {
-      ProgramPpbApperture (OptionRomBase, &Node);
+      //
+      // Only cover MMIO for Option ROM.
+      //
+      Base  = (UINT16)(OptionRomBase >> 16);
+      Limit = (UINT16)((OptionRomBase + PciDevice->RomSize - 1) >> 16);
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint16, OFFSET_OF (PCI_TYPE01, Bridge.MemoryBase), 1, &Base);
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint16, OFFSET_OF (PCI_TYPE01, Bridge.MemoryLimit), 1, &Limit);
+
       PCI_ENABLE_COMMAND_REGISTER (Parent, EFI_PCI_COMMAND_MEMORY_SPACE);
     } else {
-      InitializePpb (Parent);
+      //
+      // Cover 32bit MMIO for devices below the bridge.
+      //
+      if (Parent->PciBar[PPB_MEM32_RANGE].Length == 0) {
+        //
+        // When devices under the bridge contains Option ROM and doesn't require 32bit MMIO.
+        //
+        Base  = (UINT16)gAllOne;
+        Limit = (UINT16)gAllZero;
+      } else {
+        Base  = (UINT16)((UINT32)Parent->PciBar[PPB_MEM32_RANGE].BaseAddress >> 16);
+        Limit = (UINT16)((UINT32)(Parent->PciBar[PPB_MEM32_RANGE].BaseAddress
+                                  + Parent->PciBar[PPB_MEM32_RANGE].Length - 1) >> 16);
+      }
+
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint16, OFFSET_OF (PCI_TYPE01, Bridge.MemoryBase), 1, &Base);
+      PciIo->Pci.Write (PciIo, EfiPciIoWidthUint16, OFFSET_OF (PCI_TYPE01, Bridge.MemoryLimit), 1, &Limit);
+
       PCI_DISABLE_COMMAND_REGISTER (Parent, EFI_PCI_COMMAND_MEMORY_SPACE);
     }
 
@@ -1724,11 +1720,11 @@ ProgrameUpstreamBridgeForRom (
 **/
 BOOLEAN
 ResourceRequestExisted (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   )
 {
   if (Bridge != NULL) {
-    if (!IsListEmpty (&Bridge->ChildList) || Bridge->Length != 0) {
+    if (!IsListEmpty (&Bridge->ChildList) || (Bridge->Length != 0)) {
       return TRUE;
     }
   }
@@ -1746,8 +1742,8 @@ ResourceRequestExisted (
 **/
 VOID
 InitializeResourcePool (
-  IN OUT PCI_RESOURCE_NODE   *ResourcePool,
-  IN     PCI_BAR_TYPE        ResourceType
+  IN OUT PCI_RESOURCE_NODE  *ResourcePool,
+  IN     PCI_BAR_TYPE       ResourceType
   )
 {
   ZeroMem (ResourcePool, sizeof (PCI_RESOURCE_NODE));
@@ -1757,24 +1753,23 @@ InitializeResourcePool (
 }
 
 /**
-  Destory given resource tree.
+  Destroy given resource tree.
 
   @param Bridge  PCI resource root node of resource tree.
 
 **/
 VOID
 DestroyResourceTree (
-  IN PCI_RESOURCE_NODE *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   )
 {
-  PCI_RESOURCE_NODE *Temp;
-  LIST_ENTRY        *CurrentLink;
+  PCI_RESOURCE_NODE  *Temp;
+  LIST_ENTRY         *CurrentLink;
 
   while (!IsListEmpty (&Bridge->ChildList)) {
-
     CurrentLink = Bridge->ChildList.ForwardLink;
 
-    Temp        = RESOURCE_NODE_FROM_LINK (CurrentLink);
+    Temp = RESOURCE_NODE_FROM_LINK (CurrentLink);
     ASSERT (Temp);
 
     RemoveEntryList (CurrentLink);
@@ -1800,21 +1795,21 @@ DestroyResourceTree (
 **/
 VOID
 ResourcePaddingForCardBusBridge (
-  IN PCI_IO_DEVICE        *PciDev,
-  IN PCI_RESOURCE_NODE    *IoNode,
-  IN PCI_RESOURCE_NODE    *Mem32Node,
-  IN PCI_RESOURCE_NODE    *PMem32Node,
-  IN PCI_RESOURCE_NODE    *Mem64Node,
-  IN PCI_RESOURCE_NODE    *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   )
 {
-  PCI_RESOURCE_NODE *Node;
+  PCI_RESOURCE_NODE  *Node;
 
   Node = NULL;
 
   //
   // Memory Base/Limit Register 0
-  // Bar 1 denodes memory range 0
+  // Bar 1 decodes memory range 0
   //
   Node = CreateResourceNode (
            PciDev,
@@ -1824,15 +1819,14 @@ ResourcePaddingForCardBusBridge (
            PciBarTypeMem32,
            PciResUsagePadding
            );
+  if (Node == NULL) {
+    return;
+  }
 
-  InsertResourceNode (
-    Mem32Node,
-    Node
-    );
-
+  InsertResourceNode (Mem32Node, Node);
   //
   // Memory Base/Limit Register 1
-  // Bar 2 denodes memory range1
+  // Bar 2 decodes memory range1
   //
   Node = CreateResourceNode (
            PciDev,
@@ -1842,15 +1836,15 @@ ResourcePaddingForCardBusBridge (
            PciBarTypePMem32,
            PciResUsagePadding
            );
+  if (Node == NULL) {
+    return;
+  }
 
-  InsertResourceNode (
-    PMem32Node,
-    Node
-    );
+  InsertResourceNode (PMem32Node, Node);
 
   //
   // Io Base/Limit
-  // Bar 3 denodes io range 0
+  // Bar 3 decodes io range 0
   //
   Node = CreateResourceNode (
            PciDev,
@@ -1861,14 +1855,15 @@ ResourcePaddingForCardBusBridge (
            PciResUsagePadding
            );
 
-  InsertResourceNode (
-    IoNode,
-    Node
-    );
+  if (Node == NULL) {
+    return;
+  }
+
+  InsertResourceNode (IoNode, Node);
 
   //
   // Io Base/Limit
-  // Bar 4 denodes io range 0
+  // Bar 4 decodes io range 0
   //
   Node = CreateResourceNode (
            PciDev,
@@ -1878,11 +1873,11 @@ ResourcePaddingForCardBusBridge (
            PciBarTypeIo16,
            PciResUsagePadding
            );
+  if (Node == NULL) {
+    return;
+  }
 
-  InsertResourceNode (
-    IoNode,
-    Node
-    );
+  InsertResourceNode (IoNode, Node);
 }
 
 /**
@@ -1894,14 +1889,14 @@ ResourcePaddingForCardBusBridge (
 **/
 VOID
 ProgramP2C (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   )
 {
-  EFI_PCI_IO_PROTOCOL *PciIo;
-  UINT64              Address;
-  UINT64              TempAddress;
-  UINT16              BridgeControl;
+  EFI_PCI_IO_PROTOCOL  *PciIo;
+  UINT64               Address;
+  UINT64               TempAddress;
+  UINT16               BridgeControl;
 
   Address = 0;
   PciIo   = &(Node->PciDev->PciIo);
@@ -1917,205 +1912,200 @@ ProgramP2C (
   Node->PciDev->Allocated = TRUE;
 
   switch (Node->Bar) {
-
-  case P2C_BAR_0:
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 (Node->PciDev->PciBar[Node->Bar]).Offset,
-                 1,
-                 &Address
-                 );
-
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    break;
-
-  case P2C_MEM_1:
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_MEMORY_BASE_0,
-                 1,
-                 &Address
-                 );
-
-    TempAddress = Address + Node->Length - 1;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_MEMORY_LIMIT_0,
-                 1,
-                 &TempAddress
-                 );
-
-    if (Node->ResType == PciBarTypeMem32) {
-      //
-      // Set non-prefetchable bit
-      //
-      PciIo->Pci.Read (
-                   PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
-                   1,
-                   &BridgeControl
-                   );
-
-      BridgeControl &= (UINT16) ~PCI_CARD_PREFETCHABLE_MEMORY_0_ENABLE;
+    case P2C_BAR_0:
       PciIo->Pci.Write (
                    PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
+                   EfiPciIoWidthUint32,
+                   (Node->PciDev->PciBar[Node->Bar]).Offset,
                    1,
-                   &BridgeControl
+                   &Address
                    );
 
-    } else {
-      //
-      // Set pre-fetchable bit
-      //
-      PciIo->Pci.Read (
-                   PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
-                   1,
-                   &BridgeControl
-                   );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      break;
 
-      BridgeControl |= PCI_CARD_PREFETCHABLE_MEMORY_0_ENABLE;
+    case P2C_MEM_1:
       PciIo->Pci.Write (
                    PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_MEMORY_BASE_0,
                    1,
-                   &BridgeControl
-                   );
-    }
-
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
-
-    break;
-
-  case P2C_MEM_2:
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_MEMORY_BASE_1,
-                 1,
-                 &Address
-                 );
-
-    TempAddress = Address + Node->Length - 1;
-
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_MEMORY_LIMIT_1,
-                 1,
-                 &TempAddress
-                 );
-
-    if (Node->ResType == PciBarTypeMem32) {
-
-      //
-      // Set non-prefetchable bit
-      //
-      PciIo->Pci.Read (
-                   PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
-                   1,
-                   &BridgeControl
+                   &Address
                    );
 
-      BridgeControl &= (UINT16) ~(PCI_CARD_PREFETCHABLE_MEMORY_1_ENABLE);
+      TempAddress = Address + Node->Length - 1;
       PciIo->Pci.Write (
                    PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_MEMORY_LIMIT_0,
                    1,
-                   &BridgeControl
+                   &TempAddress
                    );
 
-    } else {
+      if (Node->ResType == PciBarTypeMem32) {
+        //
+        // Set non-prefetchable bit
+        //
+        PciIo->Pci.Read (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
 
-      //
-      // Set pre-fetchable bit
-      //
-      PciIo->Pci.Read (
-                   PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
-                   1,
-                   &BridgeControl
-                   );
+        BridgeControl &= (UINT16) ~PCI_CARD_PREFETCHABLE_MEMORY_0_ENABLE;
+        PciIo->Pci.Write (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
+      } else {
+        //
+        // Set prefetchable bit
+        //
+        PciIo->Pci.Read (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
 
-      BridgeControl |= PCI_CARD_PREFETCHABLE_MEMORY_1_ENABLE;
+        BridgeControl |= PCI_CARD_PREFETCHABLE_MEMORY_0_ENABLE;
+        PciIo->Pci.Write (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
+      }
+
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
+
+      break;
+
+    case P2C_MEM_2:
       PciIo->Pci.Write (
                    PciIo,
-                   EfiPciIoWidthUint16,
-                   PCI_CARD_BRIDGE_CONTROL,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_MEMORY_BASE_1,
                    1,
-                   &BridgeControl
+                   &Address
                    );
-    }
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
-    break;
+      TempAddress = Address + Node->Length - 1;
 
-  case P2C_IO_1:
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_IO_BASE_0_LOWER,
-                 1,
-                 &Address
-                 );
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_MEMORY_LIMIT_1,
+                   1,
+                   &TempAddress
+                   );
 
-    TempAddress = Address + Node->Length - 1;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_IO_LIMIT_0_LOWER,
-                 1,
-                 &TempAddress
-                 );
+      if (Node->ResType == PciBarTypeMem32) {
+        //
+        // Set non-prefetchable bit
+        //
+        PciIo->Pci.Read (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
+        BridgeControl &= (UINT16) ~(PCI_CARD_PREFETCHABLE_MEMORY_1_ENABLE);
+        PciIo->Pci.Write (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
+      } else {
+        //
+        // Set prefetchable bit
+        //
+        PciIo->Pci.Read (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
 
-    break;
+        BridgeControl |= PCI_CARD_PREFETCHABLE_MEMORY_1_ENABLE;
+        PciIo->Pci.Write (
+                     PciIo,
+                     EfiPciIoWidthUint16,
+                     PCI_CARD_BRIDGE_CONTROL,
+                     1,
+                     &BridgeControl
+                     );
+      }
 
-  case P2C_IO_2:
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_IO_BASE_1_LOWER,
-                 1,
-                 &Address
-                 );
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
+      break;
 
-    TempAddress = Address + Node->Length - 1;
-    PciIo->Pci.Write (
-                 PciIo,
-                 EfiPciIoWidthUint32,
-                 PCI_CARD_IO_LIMIT_1_LOWER,
-                 1,
-                 &TempAddress
-                 );
+    case P2C_IO_1:
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_IO_BASE_0_LOWER,
+                   1,
+                   &Address
+                   );
 
-    Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
-    Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
-    Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
-    break;
+      TempAddress = Address + Node->Length - 1;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_IO_LIMIT_0_LOWER,
+                   1,
+                   &TempAddress
+                   );
 
-  default:
-    break;
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
+
+      break;
+
+    case P2C_IO_2:
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_IO_BASE_1_LOWER,
+                   1,
+                   &Address
+                   );
+
+      TempAddress = Address + Node->Length - 1;
+      PciIo->Pci.Write (
+                   PciIo,
+                   EfiPciIoWidthUint32,
+                   PCI_CARD_IO_LIMIT_1_LOWER,
+                   1,
+                   &TempAddress
+                   );
+
+      Node->PciDev->PciBar[Node->Bar].BaseAddress = Address;
+      Node->PciDev->PciBar[Node->Bar].Length      = Node->Length;
+      Node->PciDev->PciBar[Node->Bar].BarType     = Node->ResType;
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -2132,65 +2122,66 @@ ProgramP2C (
 **/
 VOID
 ApplyResourcePadding (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN PCI_RESOURCE_NODE     *IoNode,
-  IN PCI_RESOURCE_NODE     *Mem32Node,
-  IN PCI_RESOURCE_NODE     *PMem32Node,
-  IN PCI_RESOURCE_NODE     *Mem64Node,
-  IN PCI_RESOURCE_NODE     *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   )
 {
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Ptr;
-  PCI_RESOURCE_NODE                 *Node;
-  UINT8                             DummyBarIndex;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Ptr;
+  PCI_RESOURCE_NODE                  *Node;
+  UINT8                              DummyBarIndex;
 
   DummyBarIndex = 0;
   Ptr           = PciDev->ResourcePaddingDescriptors;
 
-  while (((EFI_ACPI_END_TAG_DESCRIPTOR *) Ptr)->Desc != ACPI_END_TAG_DESCRIPTOR) {
-
-    if (Ptr->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR && Ptr->ResType == ACPI_ADDRESS_SPACE_TYPE_IO) {
+  while (((EFI_ACPI_END_TAG_DESCRIPTOR *)Ptr)->Desc != ACPI_END_TAG_DESCRIPTOR) {
+    if ((Ptr->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR) && (Ptr->ResType == ACPI_ADDRESS_SPACE_TYPE_IO)) {
       if (Ptr->AddrLen != 0) {
-
         Node = CreateResourceNode (
-                PciDev,
-                Ptr->AddrLen,
-                Ptr->AddrRangeMax,
-                DummyBarIndex,
-                PciBarTypeIo16,
-                PciResUsagePadding
-                );
-        InsertResourceNode (
-          IoNode,
-          Node
-          );
+                 PciDev,
+                 Ptr->AddrLen,
+                 Ptr->AddrRangeMax,
+                 DummyBarIndex,
+                 PciBarTypeIo16,
+                 PciResUsagePadding
+                 );
+
+        if (Node != NULL) {
+          InsertResourceNode (
+            IoNode,
+            Node
+            );
+        }
       }
 
       Ptr++;
       continue;
     }
 
-    if (Ptr->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR && Ptr->ResType == ACPI_ADDRESS_SPACE_TYPE_MEM) {
-
+    if ((Ptr->Desc == ACPI_ADDRESS_SPACE_DESCRIPTOR) && (Ptr->ResType == ACPI_ADDRESS_SPACE_TYPE_MEM)) {
       if (Ptr->AddrSpaceGranularity == 32) {
-
         //
-        // prefechable
+        // prefetchable
         //
         if (Ptr->SpecificFlag == 0x6) {
           if (Ptr->AddrLen != 0) {
             Node = CreateResourceNode (
-                    PciDev,
-                    Ptr->AddrLen,
-                    Ptr->AddrRangeMax,
-                    DummyBarIndex,
-                    PciBarTypePMem32,
-                    PciResUsagePadding
-                    );
-            InsertResourceNode (
-              PMem32Node,
-              Node
-              );
+                     PciDev,
+                     Ptr->AddrLen,
+                     Ptr->AddrRangeMax,
+                     DummyBarIndex,
+                     PciBarTypePMem32,
+                     PciResUsagePadding
+                     );
+            if (Node != NULL) {
+              InsertResourceNode (
+                PMem32Node,
+                Node
+                );
+            }
           }
 
           Ptr++;
@@ -2198,22 +2189,24 @@ ApplyResourcePadding (
         }
 
         //
-        // Non-prefechable
+        // Non-prefetchable
         //
         if (Ptr->SpecificFlag == 0) {
           if (Ptr->AddrLen != 0) {
             Node = CreateResourceNode (
-                    PciDev,
-                    Ptr->AddrLen,
-                    Ptr->AddrRangeMax,
-                    DummyBarIndex,
-                    PciBarTypeMem32,
-                    PciResUsagePadding
-                    );
-            InsertResourceNode (
-              Mem32Node,
-              Node
-              );
+                     PciDev,
+                     Ptr->AddrLen,
+                     Ptr->AddrRangeMax,
+                     DummyBarIndex,
+                     PciBarTypeMem32,
+                     PciResUsagePadding
+                     );
+            if (Node != NULL) {
+              InsertResourceNode (
+                Mem32Node,
+                Node
+                );
+            }
           }
 
           Ptr++;
@@ -2222,24 +2215,25 @@ ApplyResourcePadding (
       }
 
       if (Ptr->AddrSpaceGranularity == 64) {
-
         //
-        // prefechable
+        // prefetchable
         //
         if (Ptr->SpecificFlag == 0x6) {
           if (Ptr->AddrLen != 0) {
             Node = CreateResourceNode (
-                    PciDev,
-                    Ptr->AddrLen,
-                    Ptr->AddrRangeMax,
-                    DummyBarIndex,
-                    PciBarTypePMem64,
-                    PciResUsagePadding
-                    );
-            InsertResourceNode (
-              PMem64Node,
-              Node
-              );
+                     PciDev,
+                     Ptr->AddrLen,
+                     Ptr->AddrRangeMax,
+                     DummyBarIndex,
+                     PciBarTypePMem64,
+                     PciResUsagePadding
+                     );
+            if (Node != NULL) {
+              InsertResourceNode (
+                PMem64Node,
+                Node
+                );
+            }
           }
 
           Ptr++;
@@ -2247,22 +2241,24 @@ ApplyResourcePadding (
         }
 
         //
-        // Non-prefechable
+        // Non-prefetchable
         //
         if (Ptr->SpecificFlag == 0) {
           if (Ptr->AddrLen != 0) {
             Node = CreateResourceNode (
-                    PciDev,
-                    Ptr->AddrLen,
-                    Ptr->AddrRangeMax,
-                    DummyBarIndex,
-                    PciBarTypeMem64,
-                    PciResUsagePadding
-                    );
-            InsertResourceNode (
-              Mem64Node,
-              Node
-              );
+                     PciDev,
+                     Ptr->AddrLen,
+                     Ptr->AddrRangeMax,
+                     DummyBarIndex,
+                     PciBarTypeMem64,
+                     PciResUsagePadding
+                     );
+            if (Node != NULL) {
+              InsertResourceNode (
+                Mem64Node,
+                Node
+                );
+            }
           }
 
           Ptr++;
@@ -2285,13 +2281,12 @@ ApplyResourcePadding (
 **/
 VOID
 GetResourcePaddingPpb (
-  IN  PCI_IO_DEVICE                  *PciIoDevice
+  IN  PCI_IO_DEVICE  *PciIoDevice
   )
 {
-  if (gPciHotPlugInit != NULL && FeaturePcdGet (PcdPciBusHotplugDeviceSupport)) {
+  if ((gPciHotPlugInit != NULL) && FeaturePcdGet (PcdPciBusHotplugDeviceSupport)) {
     if (PciIoDevice->ResourcePaddingDescriptors == NULL) {
       GetResourcePaddingForHpb (PciIoDevice);
     }
   }
 }
-

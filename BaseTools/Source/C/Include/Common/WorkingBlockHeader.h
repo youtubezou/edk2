@@ -6,18 +6,11 @@
 
   Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution.  The full text of the license may be found at
-    http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_WORKING_BLOCK_HEADER_H__
-#define __EFI_WORKING_BLOCK_HEADER_H__
+#pragma once
 
 //
 // EFI Fault tolerant working block header
@@ -37,5 +30,3 @@ typedef struct {
   // UINT8                WriteQueue[WriteQueueSize];
   //
 } EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER;
-
-#endif

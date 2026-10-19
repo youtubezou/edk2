@@ -5,18 +5,11 @@
 
   Copyright (C) 2012, Red Hat, Inc.
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _VIRTIO_BLK_DXE_H_
-#define _VIRTIO_BLK_DXE_H_
+#pragma once
 
 #include <Protocol/BlockIo.h>
 #include <Protocol/ComponentName.h>
@@ -24,8 +17,7 @@
 
 #include <IndustryStandard/Virtio.h>
 
-
-#define VBLK_SIG SIGNATURE_32 ('V', 'B', 'L', 'K')
+#define VBLK_SIG  SIGNATURE_32 ('V', 'B', 'L', 'K')
 
 typedef struct {
   //
@@ -35,17 +27,17 @@ typedef struct {
   //
   //                     field                    init function       init dpth
   //                     ---------------------    ------------------  ---------
-  UINT32                 Signature;            // DriverBindingStart  0
-  VIRTIO_DEVICE_PROTOCOL *VirtIo;              // DriverBindingStart  0
-  EFI_EVENT              ExitBoot;             // DriverBindingStart  0
-  VRING                  Ring;                 // VirtioRingInit      2
-  EFI_BLOCK_IO_PROTOCOL  BlockIo;              // VirtioBlkInit       1
-  EFI_BLOCK_IO_MEDIA     BlockIoMedia;         // VirtioBlkInit       1
+  UINT32                    Signature;         // DriverBindingStart  0
+  VIRTIO_DEVICE_PROTOCOL    *VirtIo;           // DriverBindingStart  0
+  EFI_EVENT                 ExitBoot;          // DriverBindingStart  0
+  VRING                     Ring;              // VirtioRingInit      2
+  EFI_BLOCK_IO_PROTOCOL     BlockIo;           // VirtioBlkInit       1
+  EFI_BLOCK_IO_MEDIA        BlockIoMedia;      // VirtioBlkInit       1
+  VOID                      *RingMap;          // VirtioRingMap       2
 } VBLK_DEV;
 
 #define VIRTIO_BLK_FROM_BLOCK_IO(BlockIoPointer) \
         CR (BlockIoPointer, VBLK_DEV, BlockIo, VBLK_SIG)
-
 
 /**
 
@@ -86,11 +78,10 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
-
 
 /**
 
@@ -124,11 +115,10 @@ VirtioBlkDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
-
 
 /**
 
@@ -156,12 +146,11 @@ VirtioBlkDriverBindingStart (
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN UINTN                       NumberOfChildren,
-  IN EFI_HANDLE                  *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   );
-
 
 //
 // UEFI Spec 2.3.1 + Errata C, 12.8 EFI Block I/O Protocol
@@ -171,10 +160,9 @@ VirtioBlkDriverBindingStop (
 EFI_STATUS
 EFIAPI
 VirtioBlkReset (
-  IN EFI_BLOCK_IO_PROTOCOL *This,
-  IN BOOLEAN               ExtendedVerification
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN BOOLEAN                ExtendedVerification
   );
-
 
 /**
 
@@ -197,13 +185,12 @@ VirtioBlkReset (
 EFI_STATUS
 EFIAPI
 VirtioBlkReadBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL *This,
-  IN  UINT32                MediaId,
-  IN  EFI_LBA               Lba,
-  IN  UINTN                 BufferSize,
-  OUT VOID                  *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL  *This,
+  IN  UINT32                 MediaId,
+  IN  EFI_LBA                Lba,
+  IN  UINTN                  BufferSize,
+  OUT VOID                   *Buffer
   );
-
 
 /**
 
@@ -226,13 +213,12 @@ VirtioBlkReadBlocks (
 EFI_STATUS
 EFIAPI
 VirtioBlkWriteBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL *This,
-  IN UINT32                MediaId,
-  IN EFI_LBA               Lba,
-  IN UINTN                 BufferSize,
-  IN VOID                  *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN UINT32                 MediaId,
+  IN EFI_LBA                Lba,
+  IN UINTN                  BufferSize,
+  IN VOID                   *Buffer
   );
-
 
 /**
 
@@ -254,9 +240,8 @@ VirtioBlkWriteBlocks (
 EFI_STATUS
 EFIAPI
 VirtioBlkFlushBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL *This
+  IN EFI_BLOCK_IO_PROTOCOL  *This
   );
-
 
 //
 // The purpose of the following scaffolding (EFI_COMPONENT_NAME_PROTOCOL and
@@ -273,19 +258,17 @@ VirtioBlkFlushBlocks (
 EFI_STATUS
 EFIAPI
 VirtioBlkGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **DriverName
   );
 
 EFI_STATUS
 EFIAPI
 VirtioBlkGetDeviceName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  EFI_HANDLE                  DeviceHandle,
-  IN  EFI_HANDLE                  ChildHandle,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   DeviceHandle,
+  IN  EFI_HANDLE                   ChildHandle,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
-
-#endif // _VIRTIO_BLK_DXE_H_

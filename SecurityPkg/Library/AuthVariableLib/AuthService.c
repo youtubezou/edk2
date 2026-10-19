@@ -18,42 +18,156 @@
   They will do basic validation for authentication data structure, then call crypto library
   to verify the signature.
 
-Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
+Copyright (c) Microsoft Corporation.
+(c) Copyright 2025 HP Development Company, L.P.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "AuthServiceInternal.h"
 
+#include <Protocol/VariablePolicy.h>
+#include <Library/VariablePolicyLib.h>
+
+#define SHA_DIGEST_SIZE_MAX  SHA512_DIGEST_SIZE
+
+/**
+  Retrieves the size, in bytes, of the context buffer required for hash operations.
+
+  If this interface is not supported, then return zero.
+
+  @return  The size, in bytes, of the context buffer required for hash operations.
+  @retval  0   This interface is not supported.
+
+**/
+typedef
+UINTN
+(EFIAPI *EFI_HASH_GET_CONTEXT_SIZE)(
+  VOID
+  );
+
+/**
+  Initializes user-supplied memory pointed by Sha1Context as hash context for
+  subsequent use.
+
+  If HashContext is NULL, then return FALSE.
+  If this interface is not supported, then return FALSE.
+
+  @param[out]  HashContext  Pointer to Hashcontext being initialized.
+
+  @retval TRUE   Hash context initialization succeeded.
+  @retval FALSE  Hash context initialization failed.
+  @retval FALSE  This interface is not supported.
+
+**/
+typedef
+BOOLEAN
+(EFIAPI *EFI_HASH_INIT)(
+  OUT  VOID  *HashContext
+  );
+
+/**
+  Digests the input data and updates Hash context.
+
+  This function performs Hash digest on a data buffer of the specified size.
+  It can be called multiple times to compute the digest of long or discontinuous data streams.
+  Hash context should be already correctly initialized by HashInit(), and should not be finalized
+  by HashFinal(). Behavior with invalid context is undefined.
+
+  If HashContext is NULL, then return FALSE.
+  If this interface is not supported, then return FALSE.
+
+  @param[in, out]  HashContext  Pointer to the Hash context.
+  @param[in]       Data         Pointer to the buffer containing the data to be hashed.
+  @param[in]       DataSize     Size of Data buffer in bytes.
+
+  @retval TRUE   SHA-1 data digest succeeded.
+  @retval FALSE  SHA-1 data digest failed.
+  @retval FALSE  This interface is not supported.
+
+**/
+typedef
+BOOLEAN
+(EFIAPI *EFI_HASH_UPDATE)(
+  IN OUT  VOID        *HashContext,
+  IN      CONST VOID  *Data,
+  IN      UINTN       DataSize
+  );
+
+/**
+  Completes computation of the Hash digest value.
+
+  This function completes hash computation and retrieves the digest value into
+  the specified memory. After this function has been called, the Hash context cannot
+  be used again.
+  Hash context should be already correctly initialized by HashInit(), and should not be
+  finalized by HashFinal(). Behavior with invalid Hash context is undefined.
+
+  If HashContext is NULL, then return FALSE.
+  If HashValue is NULL, then return FALSE.
+  If this interface is not supported, then return FALSE.
+
+  @param[in, out]  HashContext  Pointer to the Hash context.
+  @param[out]      HashValue    Pointer to a buffer that receives the Hash digest
+                                value.
+
+  @retval TRUE   Hash digest computation succeeded.
+  @retval FALSE  Hash digest computation failed.
+  @retval FALSE  This interface is not supported.
+
+**/
+typedef
+BOOLEAN
+(EFIAPI *EFI_HASH_FINAL)(
+  IN OUT  VOID   *HashContext,
+  OUT     UINT8  *HashValue
+  );
+
+typedef struct {
+  UINT32                       HashSize;
+  EFI_HASH_GET_CONTEXT_SIZE    GetContextSize;
+  EFI_HASH_INIT                Init;
+  EFI_HASH_UPDATE              Update;
+  EFI_HASH_FINAL               Final;
+  VOID                         **HashShaCtx;
+  UINT8                        *OidValue;
+  UINTN                        OidLength;
+} EFI_HASH_INFO;
+
 //
 // Public Exponent of RSA Key.
 //
-CONST UINT8 mRsaE[] = { 0x01, 0x00, 0x01 };
+CONST UINT8  mRsaE[] = { 0x01, 0x00, 0x01 };
+
+UINT8  mSha256OidValue[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x01 };
+UINT8  mSha384OidValue[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x02 };
+UINT8  mSha512OidValue[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02, 0x03 };
+
+EFI_HASH_INFO  mHashInfo[] = {
+  { SHA256_DIGEST_SIZE, Sha256GetContextSize, Sha256Init, Sha256Update, Sha256Final, &mHashSha256Ctx, mSha256OidValue, 9 },
+  { SHA384_DIGEST_SIZE, Sha384GetContextSize, Sha384Init, Sha384Update, Sha384Final, &mHashSha384Ctx, mSha384OidValue, 9 },
+  { SHA512_DIGEST_SIZE, Sha512GetContextSize, Sha512Init, Sha512Update, Sha512Final, &mHashSha512Ctx, mSha512OidValue, 9 },
+};
 
 //
 // Requirement for different signature type which have been defined in UEFI spec.
 // These data are used to perform SignatureList format check while setting PK/KEK variable.
 //
-EFI_SIGNATURE_ITEM mSupportSigItem[] = {
-//{SigType,                       SigHeaderSize,   SigDataSize  }
-  {EFI_CERT_SHA256_GUID,          0,               32           },
-  {EFI_CERT_RSA2048_GUID,         0,               256          },
-  {EFI_CERT_RSA2048_SHA256_GUID,  0,               256          },
-  {EFI_CERT_SHA1_GUID,            0,               20           },
-  {EFI_CERT_RSA2048_SHA1_GUID,    0,               256          },
-  {EFI_CERT_X509_GUID,            0,               ((UINT32) ~0)},
-  {EFI_CERT_SHA224_GUID,          0,               28           },
-  {EFI_CERT_SHA384_GUID,          0,               48           },
-  {EFI_CERT_SHA512_GUID,          0,               64           },
-  {EFI_CERT_X509_SHA256_GUID,     0,               48           },
-  {EFI_CERT_X509_SHA384_GUID,     0,               64           },
-  {EFI_CERT_X509_SHA512_GUID,     0,               80           }
+EFI_SIGNATURE_ITEM  mSupportSigItem[] = {
+  // {SigType,                       SigHeaderSize,   SigDataSize  }
+  { EFI_CERT_SHA256_GUID,         0, 32            },
+  { EFI_CERT_RSA2048_GUID,        0, 256           },
+  { EFI_CERT_RSA2048_SHA256_GUID, 0, 256           },
+  { EFI_CERT_SHA1_GUID,           0, 20            },
+  { EFI_CERT_RSA2048_SHA1_GUID,   0, 256           },
+  { EFI_CERT_X509_GUID,           0, ((UINT32) ~0) },
+  { EFI_CERT_SHA224_GUID,         0, 28            },
+  { EFI_CERT_SHA384_GUID,         0, 48            },
+  { EFI_CERT_SHA512_GUID,         0, 64            },
+  { EFI_CERT_X509_SHA256_GUID,    0, 48            },
+  { EFI_CERT_X509_SHA384_GUID,    0, 64            },
+  { EFI_CERT_X509_SHA512_GUID,    0, 80            }
 };
 
 /**
@@ -76,22 +190,22 @@ EFI_SIGNATURE_ITEM mSupportSigItem[] = {
 **/
 EFI_STATUS
 AuthServiceInternalFindVariable (
-  IN  CHAR16            *VariableName,
-  IN  EFI_GUID          *VendorGuid,
-  OUT VOID              **Data,
-  OUT UINTN             *DataSize
+  IN  CHAR16    *VariableName,
+  IN  EFI_GUID  *VendorGuid,
+  OUT VOID      **Data,
+  OUT UINTN     *DataSize
   )
 {
-  EFI_STATUS            Status;
-  AUTH_VARIABLE_INFO    AuthVariableInfo;
+  EFI_STATUS          Status;
+  AUTH_VARIABLE_INFO  AuthVariableInfo;
 
   ZeroMem (&AuthVariableInfo, sizeof (AuthVariableInfo));
   Status = mAuthVarLibContextIn->FindVariable (
-           VariableName,
-           VendorGuid,
-           &AuthVariableInfo
-           );
-  *Data = AuthVariableInfo.Data;
+                                   VariableName,
+                                   VendorGuid,
+                                   &AuthVariableInfo
+                                   );
+  *Data     = AuthVariableInfo.Data;
   *DataSize = AuthVariableInfo.DataSize;
   return Status;
 }
@@ -113,69 +227,25 @@ AuthServiceInternalFindVariable (
 **/
 EFI_STATUS
 AuthServiceInternalUpdateVariable (
-  IN CHAR16             *VariableName,
-  IN EFI_GUID           *VendorGuid,
-  IN VOID               *Data,
-  IN UINTN              DataSize,
-  IN UINT32             Attributes
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN VOID      *Data,
+  IN UINTN     DataSize,
+  IN UINT32    Attributes
   )
 {
-  AUTH_VARIABLE_INFO    AuthVariableInfo;
+  AUTH_VARIABLE_INFO  AuthVariableInfo;
 
   ZeroMem (&AuthVariableInfo, sizeof (AuthVariableInfo));
   AuthVariableInfo.VariableName = VariableName;
-  AuthVariableInfo.VendorGuid = VendorGuid;
-  AuthVariableInfo.Data = Data;
-  AuthVariableInfo.DataSize = DataSize;
-  AuthVariableInfo.Attributes = Attributes;
+  AuthVariableInfo.VendorGuid   = VendorGuid;
+  AuthVariableInfo.Data         = Data;
+  AuthVariableInfo.DataSize     = DataSize;
+  AuthVariableInfo.Attributes   = Attributes;
 
   return mAuthVarLibContextIn->UpdateVariable (
-           &AuthVariableInfo
-           );
-}
-
-/**
-  Update the variable region with Variable information.
-
-  @param[in] VariableName           Name of variable.
-  @param[in] VendorGuid             Guid of variable.
-  @param[in] Data                   Data pointer.
-  @param[in] DataSize               Size of Data.
-  @param[in] Attributes             Attribute value of the variable.
-  @param[in] KeyIndex               Index of associated public key.
-  @param[in] MonotonicCount         Value of associated monotonic count.
-
-  @retval EFI_SUCCESS               The update operation is success.
-  @retval EFI_INVALID_PARAMETER     Invalid parameter.
-  @retval EFI_WRITE_PROTECTED       Variable is write-protected.
-  @retval EFI_OUT_OF_RESOURCES      There is not enough resource.
-
-**/
-EFI_STATUS
-AuthServiceInternalUpdateVariableWithMonotonicCount (
-  IN CHAR16             *VariableName,
-  IN EFI_GUID           *VendorGuid,
-  IN VOID               *Data,
-  IN UINTN              DataSize,
-  IN UINT32             Attributes,
-  IN UINT32             KeyIndex,
-  IN UINT64             MonotonicCount
-  )
-{
-  AUTH_VARIABLE_INFO    AuthVariableInfo;
-
-  ZeroMem (&AuthVariableInfo, sizeof (AuthVariableInfo));
-  AuthVariableInfo.VariableName = VariableName;
-  AuthVariableInfo.VendorGuid = VendorGuid;
-  AuthVariableInfo.Data = Data;
-  AuthVariableInfo.DataSize = DataSize;
-  AuthVariableInfo.Attributes = Attributes;
-  AuthVariableInfo.PubKeyIndex = KeyIndex;
-  AuthVariableInfo.MonotonicCount = MonotonicCount;
-
-  return mAuthVarLibContextIn->UpdateVariable (
-           &AuthVariableInfo
-           );
+                                 &AuthVariableInfo
+                                 );
 }
 
 /**
@@ -196,18 +266,19 @@ AuthServiceInternalUpdateVariableWithMonotonicCount (
 **/
 EFI_STATUS
 AuthServiceInternalUpdateVariableWithTimeStamp (
-  IN CHAR16             *VariableName,
-  IN EFI_GUID           *VendorGuid,
-  IN VOID               *Data,
-  IN UINTN              DataSize,
-  IN UINT32             Attributes,
-  IN EFI_TIME           *TimeStamp
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN VOID      *Data,
+  IN UINTN     DataSize,
+  IN UINT32    Attributes,
+  IN EFI_TIME  *TimeStamp
   )
 {
-  EFI_STATUS            FindStatus;
-  VOID                  *OrgData;
-  UINTN                 OrgDataSize;
-  AUTH_VARIABLE_INFO    AuthVariableInfo;
+  EFI_STATUS          Status;
+  EFI_STATUS          FindStatus;
+  VOID                *OrgData;
+  UINTN               OrgDataSize;
+  AUTH_VARIABLE_INFO  AuthVariableInfo;
 
   FindStatus = AuthServiceInternalFindVariable (
                  VariableName,
@@ -221,32 +292,36 @@ AuthServiceInternalUpdateVariableWithTimeStamp (
   //
   if (!EFI_ERROR (FindStatus) && ((Attributes & EFI_VARIABLE_APPEND_WRITE) != 0)) {
     if ((CompareGuid (VendorGuid, &gEfiImageSecurityDatabaseGuid) &&
-        ((StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE) == 0) || (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE1) == 0) ||
-        (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE2) == 0))) ||
-        (CompareGuid (VendorGuid, &gEfiGlobalVariableGuid) && (StrCmp (VariableName, EFI_KEY_EXCHANGE_KEY_NAME) == 0))) {
+         ((StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE) == 0) || (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE1) == 0) ||
+          (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE2) == 0))) ||
+        (CompareGuid (VendorGuid, &gEfiGlobalVariableGuid) && (StrCmp (VariableName, EFI_KEY_EXCHANGE_KEY_NAME) == 0)))
+    {
       //
       // For variables with formatted as EFI_SIGNATURE_LIST, the driver shall not perform an append of
       // EFI_SIGNATURE_DATA values that are already part of the existing variable value.
       //
-      FilterSignatureList (
-        OrgData,
-        OrgDataSize,
-        Data,
-        &DataSize
-        );
+      Status = FilterSignatureList (
+                 OrgData,
+                 OrgDataSize,
+                 Data,
+                 &DataSize
+                 );
+      if (EFI_ERROR (Status)) {
+        return Status;
+      }
     }
   }
 
   ZeroMem (&AuthVariableInfo, sizeof (AuthVariableInfo));
   AuthVariableInfo.VariableName = VariableName;
-  AuthVariableInfo.VendorGuid = VendorGuid;
-  AuthVariableInfo.Data = Data;
-  AuthVariableInfo.DataSize = DataSize;
-  AuthVariableInfo.Attributes = Attributes;
-  AuthVariableInfo.TimeStamp = TimeStamp;
+  AuthVariableInfo.VendorGuid   = VendorGuid;
+  AuthVariableInfo.Data         = Data;
+  AuthVariableInfo.DataSize     = DataSize;
+  AuthVariableInfo.Attributes   = Attributes;
+  AuthVariableInfo.TimeStamp    = TimeStamp;
   return mAuthVarLibContextIn->UpdateVariable (
-           &AuthVariableInfo
-           );
+                                 &AuthVariableInfo
+                                 );
 }
 
 /**
@@ -260,14 +335,18 @@ AuthServiceInternalUpdateVariableWithTimeStamp (
 
 **/
 BOOLEAN
-NeedPhysicallyPresent(
-  IN     CHAR16         *VariableName,
-  IN     EFI_GUID       *VendorGuid
+NeedPhysicallyPresent (
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid
   )
 {
-  if ((CompareGuid (VendorGuid, &gEfiSecureBootEnableDisableGuid) && (StrCmp (VariableName, EFI_SECURE_BOOT_ENABLE_NAME) == 0))
-    || (CompareGuid (VendorGuid, &gEfiCustomModeEnableGuid) && (StrCmp (VariableName, EFI_CUSTOM_MODE_NAME) == 0))) {
-    return TRUE;
+  // If the VariablePolicy engine is disabled, allow deletion of any authenticated variables.
+  if (IsVariablePolicyEnabled ()) {
+    if (  (CompareGuid (VendorGuid, &gEfiSecureBootEnableDisableGuid) && (StrCmp (VariableName, EFI_SECURE_BOOT_ENABLE_NAME) == 0))
+       || (CompareGuid (VendorGuid, &gEfiCustomModeEnableGuid) && (StrCmp (VariableName, EFI_CUSTOM_MODE_NAME) == 0)))
+    {
+      return TRUE;
+    }
   }
 
   return FALSE;
@@ -285,316 +364,16 @@ InCustomMode (
   VOID
   )
 {
-  EFI_STATUS    Status;
-  VOID          *Data;
-  UINTN         DataSize;
+  EFI_STATUS  Status;
+  VOID        *Data;
+  UINTN       DataSize;
 
   Status = AuthServiceInternalFindVariable (EFI_CUSTOM_MODE_NAME, &gEfiCustomModeEnableGuid, &Data, &DataSize);
-  if (!EFI_ERROR (Status) && (*(UINT8 *) Data == CUSTOM_SECURE_BOOT_MODE)) {
+  if (!EFI_ERROR (Status) && (*(UINT8 *)Data == CUSTOM_SECURE_BOOT_MODE)) {
     return TRUE;
   }
 
   return FALSE;
-}
-
-/**
-  Get available public key index.
-
-  @param[in] PubKey     Pointer to Public Key data.
-
-  @return Public key index, 0 if no any public key index available.
-
-**/
-UINT32
-GetAvailableKeyIndex (
-  IN  UINT8             *PubKey
-  )
-{
-  EFI_STATUS            Status;
-  UINT8                 *Data;
-  UINTN                 DataSize;
-  UINT8                 *Ptr;
-  UINT32                Index;
-  BOOLEAN               IsFound;
-  EFI_GUID              VendorGuid;
-  CHAR16                Name[1];
-  AUTH_VARIABLE_INFO    AuthVariableInfo;
-  UINT32                KeyIndex;
-
-  Status = AuthServiceInternalFindVariable (
-             AUTHVAR_KEYDB_NAME,
-             &gEfiAuthenticatedVariableGuid,
-             (VOID **) &Data,
-             &DataSize
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Get public key database variable failure, Status = %r\n", Status));
-    return 0;
-  }
-
-  if (mPubKeyNumber == mMaxKeyNumber) {
-    Name[0] = 0;
-    AuthVariableInfo.VariableName = Name;
-    ZeroMem (&VendorGuid, sizeof (VendorGuid));
-    AuthVariableInfo.VendorGuid = &VendorGuid;
-    mPubKeyNumber = 0;
-    //
-    // Collect valid key data.
-    //
-    do {
-      Status = mAuthVarLibContextIn->FindNextVariable (AuthVariableInfo.VariableName, AuthVariableInfo.VendorGuid, &AuthVariableInfo);
-      if (!EFI_ERROR (Status)) {
-        if (AuthVariableInfo.PubKeyIndex != 0) {
-          for (Ptr = Data; Ptr < (Data + DataSize); Ptr += sizeof (AUTHVAR_KEY_DB_DATA)) {
-            if (ReadUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) Ptr)->KeyIndex)) == AuthVariableInfo.PubKeyIndex) {
-              //
-              // Check if the key data has been collected.
-              //
-              for (Index = 0; Index < mPubKeyNumber; Index++) {
-                if (ReadUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + Index)->KeyIndex)) == AuthVariableInfo.PubKeyIndex) {
-                  break;
-                }
-              }
-              if (Index == mPubKeyNumber) {
-                //
-                // New key data.
-                //
-                CopyMem ((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + mPubKeyNumber, Ptr, sizeof (AUTHVAR_KEY_DB_DATA));
-                mPubKeyNumber++;
-              }
-              break;
-            }
-          }
-        }
-      }
-    } while (Status != EFI_NOT_FOUND);
-
-    //
-    // No available space to add new public key.
-    //
-    if (mPubKeyNumber == mMaxKeyNumber) {
-      return 0;
-    }
-  }
-
-  //
-  // Find available public key index.
-  //
-  for (KeyIndex = 1; KeyIndex <= mMaxKeyNumber; KeyIndex++) {
-    IsFound = FALSE;
-    for (Ptr = mPubKeyStore; Ptr < (mPubKeyStore + mPubKeyNumber * sizeof (AUTHVAR_KEY_DB_DATA)); Ptr += sizeof (AUTHVAR_KEY_DB_DATA)) {
-      if (ReadUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) Ptr)->KeyIndex)) == KeyIndex) {
-        IsFound = TRUE;
-        break;
-      }
-    }
-    if (!IsFound) {
-      break;
-    }
-  }
-
-  return KeyIndex;
-}
-
-/**
-  Add public key in store and return its index.
-
-  @param[in] PubKey             Input pointer to Public Key data.
-  @param[in] VariableDataEntry  The variable data entry.
-
-  @return Index of new added public key.
-
-**/
-UINT32
-AddPubKeyInStore (
-  IN  UINT8                        *PubKey,
-  IN  VARIABLE_ENTRY_CONSISTENCY   *VariableDataEntry
-  )
-{
-  EFI_STATUS                       Status;
-  UINT32                           Index;
-  VARIABLE_ENTRY_CONSISTENCY       PublicKeyEntry;
-  UINT32                           Attributes;
-  UINT32                           KeyIndex;
-
-  if (PubKey == NULL) {
-    return 0;
-  }
-
-  //
-  // Check whether the public key entry does exist.
-  //
-  for (Index = 0; Index < mPubKeyNumber; Index++) {
-    if (CompareMem (((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + Index)->KeyData, PubKey, EFI_CERT_TYPE_RSA2048_SIZE) == 0) {
-      return ReadUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + Index)->KeyIndex));
-    }
-  }
-
-  KeyIndex = GetAvailableKeyIndex (PubKey);
-  if (KeyIndex == 0) {
-    return 0;
-  }
-
-  //
-  // Check the variable space for both public key and variable data.
-  //
-  PublicKeyEntry.VariableSize = (mPubKeyNumber + 1) * sizeof (AUTHVAR_KEY_DB_DATA);
-  PublicKeyEntry.Guid         = &gEfiAuthenticatedVariableGuid;
-  PublicKeyEntry.Name         = AUTHVAR_KEYDB_NAME;
-  Attributes = VARIABLE_ATTRIBUTE_NV_BS_RT | EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS;
-
-  if (!mAuthVarLibContextIn->CheckRemainingSpaceForConsistency (Attributes, &PublicKeyEntry, VariableDataEntry, NULL)) {
-    //
-    // No enough variable space.
-    //
-    return 0;
-  }
-
-  WriteUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + mPubKeyNumber)->KeyIndex), KeyIndex);
-  CopyMem (((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + mPubKeyNumber)->KeyData, PubKey, EFI_CERT_TYPE_RSA2048_SIZE);
-  mPubKeyNumber++;
-
-  //
-  // Update public key database variable.
-  //
-  Status = AuthServiceInternalUpdateVariable (
-             AUTHVAR_KEYDB_NAME,
-             &gEfiAuthenticatedVariableGuid,
-             mPubKeyStore,
-             mPubKeyNumber * sizeof (AUTHVAR_KEY_DB_DATA),
-             Attributes
-             );
-  if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "Update public key database variable failure, Status = %r\n", Status));
-    return 0;
-  }
-
-  return KeyIndex;
-}
-
-/**
-  Verify data payload with AuthInfo in EFI_CERT_TYPE_RSA2048_SHA256_GUID type.
-  Follow the steps in UEFI2.2.
-
-  Caution: This function may receive untrusted input.
-  This function may be invoked in SMM mode, and datasize and data are external input.
-  This function will do basic validation, before parse the data.
-  This function will parse the authentication carefully to avoid security issues, like
-  buffer overflow, integer overflow.
-
-  @param[in]      Data                    Pointer to data with AuthInfo.
-  @param[in]      DataSize                Size of Data.
-  @param[in]      PubKey                  Public key used for verification.
-
-  @retval EFI_INVALID_PARAMETER       Invalid parameter.
-  @retval EFI_SECURITY_VIOLATION      If authentication failed.
-  @retval EFI_SUCCESS                 Authentication successful.
-
-**/
-EFI_STATUS
-VerifyCounterBasedPayload (
-  IN     UINT8          *Data,
-  IN     UINTN          DataSize,
-  IN     UINT8          *PubKey
-  )
-{
-  BOOLEAN                         Status;
-  EFI_VARIABLE_AUTHENTICATION     *CertData;
-  EFI_CERT_BLOCK_RSA_2048_SHA256  *CertBlock;
-  UINT8                           Digest[SHA256_DIGEST_SIZE];
-  VOID                            *Rsa;
-  UINTN                           PayloadSize;
-
-  PayloadSize = DataSize - AUTHINFO_SIZE;
-  Rsa         = NULL;
-  CertData    = NULL;
-  CertBlock   = NULL;
-
-  if (Data == NULL || PubKey == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  CertData  = (EFI_VARIABLE_AUTHENTICATION *) Data;
-  CertBlock = (EFI_CERT_BLOCK_RSA_2048_SHA256 *) (CertData->AuthInfo.CertData);
-
-  //
-  // wCertificateType should be WIN_CERT_TYPE_EFI_GUID.
-  // Cert type should be EFI_CERT_TYPE_RSA2048_SHA256_GUID.
-  //
-  if ((CertData->AuthInfo.Hdr.wCertificateType != WIN_CERT_TYPE_EFI_GUID) ||
-      !CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertTypeRsa2048Sha256Guid)) {
-    //
-    // Invalid AuthInfo type, return EFI_SECURITY_VIOLATION.
-    //
-    return EFI_SECURITY_VIOLATION;
-  }
-  //
-  // Hash data payload with SHA256.
-  //
-  ZeroMem (Digest, SHA256_DIGEST_SIZE);
-  Status  = Sha256Init (mHashCtx);
-  if (!Status) {
-    goto Done;
-  }
-  Status  = Sha256Update (mHashCtx, Data + AUTHINFO_SIZE, PayloadSize);
-  if (!Status) {
-    goto Done;
-  }
-  //
-  // Hash Size.
-  //
-  Status  = Sha256Update (mHashCtx, &PayloadSize, sizeof (UINTN));
-  if (!Status) {
-    goto Done;
-  }
-  //
-  // Hash Monotonic Count.
-  //
-  Status  = Sha256Update (mHashCtx, &CertData->MonotonicCount, sizeof (UINT64));
-  if (!Status) {
-    goto Done;
-  }
-  Status  = Sha256Final (mHashCtx, Digest);
-  if (!Status) {
-    goto Done;
-  }
-  //
-  // Generate & Initialize RSA Context.
-  //
-  Rsa = RsaNew ();
-  ASSERT (Rsa != NULL);
-  //
-  // Set RSA Key Components.
-  // NOTE: Only N and E are needed to be set as RSA public key for signature verification.
-  //
-  Status = RsaSetKey (Rsa, RsaKeyN, PubKey, EFI_CERT_TYPE_RSA2048_SIZE);
-  if (!Status) {
-    goto Done;
-  }
-  Status = RsaSetKey (Rsa, RsaKeyE, mRsaE, sizeof (mRsaE));
-  if (!Status) {
-    goto Done;
-  }
-  //
-  // Verify the signature.
-  //
-  Status = RsaPkcs1Verify (
-             Rsa,
-             Digest,
-             SHA256_DIGEST_SIZE,
-             CertBlock->Signature,
-             EFI_CERT_TYPE_RSA2048_SHA256_SIZE
-             );
-
-Done:
-  if (Rsa != NULL) {
-    RsaFree (Rsa);
-  }
-  if (Status) {
-    return EFI_SUCCESS;
-  } else {
-    return EFI_SECURITY_VIOLATION;
-  }
 }
 
 /**
@@ -608,15 +387,15 @@ Done:
 **/
 EFI_STATUS
 UpdatePlatformMode (
-  IN  UINT32                    Mode
+  IN  UINT32  Mode
   )
 {
-  EFI_STATUS              Status;
-  VOID                    *Data;
-  UINTN                   DataSize;
-  UINT8                   SecureBootMode;
-  UINT8                   SecureBootEnable;
-  UINTN                   VariableDataSize;
+  EFI_STATUS  Status;
+  VOID        *Data;
+  UINTN       DataSize;
+  UINT8       SecureBootMode;
+  UINT8       SecureBootEnable;
+  UINTN       VariableDataSize;
 
   Status = AuthServiceInternalFindVariable (
              EFI_SETUP_MODE_NAME,
@@ -632,8 +411,8 @@ UpdatePlatformMode (
   // Update the value of SetupMode variable by a simple mem copy, this could avoid possible
   // variable storage reclaim at runtime.
   //
-  mPlatformMode = (UINT8) Mode;
-  CopyMem (Data, &mPlatformMode, sizeof(UINT8));
+  mPlatformMode = (UINT8)Mode;
+  CopyMem (Data, &mPlatformMode, sizeof (UINT8));
 
   if (mAuthVarLibContextIn->AtRuntime ()) {
     //
@@ -672,13 +451,13 @@ UpdatePlatformMode (
     }
   }
 
-  Status  = AuthServiceInternalUpdateVariable (
-              EFI_SECURE_BOOT_MODE_NAME,
-              &gEfiGlobalVariableGuid,
-              &SecureBootMode,
-              sizeof(UINT8),
-              EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS
-              );
+  Status = AuthServiceInternalUpdateVariable (
+             EFI_SECURE_BOOT_MODE_NAME,
+             &gEfiGlobalVariableGuid,
+             &SecureBootMode,
+             sizeof (UINT8),
+             EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS
+             );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -707,6 +486,7 @@ UpdatePlatformMode (
     if (EFI_ERROR (Status)) {
       return EFI_SUCCESS;
     }
+
     SecureBootEnable = SECURE_BOOT_DISABLE;
     VariableDataSize = 0;
   }
@@ -734,21 +514,21 @@ UpdatePlatformMode (
 
 **/
 EFI_STATUS
-CheckSignatureListFormat(
-  IN  CHAR16                    *VariableName,
-  IN  EFI_GUID                  *VendorGuid,
-  IN  VOID                      *Data,
-  IN  UINTN                     DataSize
+CheckSignatureListFormat (
+  IN  CHAR16    *VariableName,
+  IN  EFI_GUID  *VendorGuid,
+  IN  VOID      *Data,
+  IN  UINTN     DataSize
   )
 {
-  EFI_SIGNATURE_LIST     *SigList;
-  UINTN                  SigDataSize;
-  UINT32                 Index;
-  UINT32                 SigCount;
-  BOOLEAN                IsPk;
-  VOID                   *RsaContext;
-  EFI_SIGNATURE_DATA     *CertData;
-  UINTN                  CertLen;
+  EFI_SIGNATURE_LIST  *SigList;
+  UINTN               SigDataSize;
+  UINT32              Index;
+  UINT32              SigCount;
+  BOOLEAN             IsPk;
+  VOID                *RsaContext;
+  EFI_SIGNATURE_DATA  *CertData;
+  UINTN               CertLen;
 
   if (DataSize == 0) {
     return EFI_SUCCESS;
@@ -756,41 +536,46 @@ CheckSignatureListFormat(
 
   ASSERT (VariableName != NULL && VendorGuid != NULL && Data != NULL);
 
-  if (CompareGuid (VendorGuid, &gEfiGlobalVariableGuid) && (StrCmp (VariableName, EFI_PLATFORM_KEY_NAME) == 0)){
+  if (CompareGuid (VendorGuid, &gEfiGlobalVariableGuid) && (StrCmp (VariableName, EFI_PLATFORM_KEY_NAME) == 0)) {
     IsPk = TRUE;
   } else if ((CompareGuid (VendorGuid, &gEfiGlobalVariableGuid) && (StrCmp (VariableName, EFI_KEY_EXCHANGE_KEY_NAME) == 0)) ||
              (CompareGuid (VendorGuid, &gEfiImageSecurityDatabaseGuid) &&
-             ((StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE) == 0) || (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE1) == 0) ||
-              (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE2) == 0)))) {
+              ((StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE) == 0) || (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE1) == 0) ||
+               (StrCmp (VariableName, EFI_IMAGE_SECURITY_DATABASE2) == 0))))
+  {
     IsPk = FALSE;
   } else {
     return EFI_SUCCESS;
   }
 
-  SigCount = 0;
-  SigList  = (EFI_SIGNATURE_LIST *) Data;
-  SigDataSize  = DataSize;
-  RsaContext = NULL;
+  SigCount    = 0;
+  SigList     = (EFI_SIGNATURE_LIST *)Data;
+  SigDataSize = DataSize;
+  RsaContext  = NULL;
 
   //
-  // Walk throuth the input signature list and check the data format.
+  // Walk through the input signature list and check the data format.
   // If any signature is incorrectly formed, the whole check will fail.
   //
-  while ((SigDataSize > 0) && (SigDataSize >= SigList->SignatureListSize)) {
+  while ((SigDataSize > 0) && (SigDataSize >= (UINTN)SigList->SignatureListSize)) {
     for (Index = 0; Index < (sizeof (mSupportSigItem) / sizeof (EFI_SIGNATURE_ITEM)); Index++ ) {
       if (CompareGuid (&SigList->SignatureType, &mSupportSigItem[Index].SigType)) {
         //
         // The value of SignatureSize should always be 16 (size of SignatureOwner
         // component) add the data length according to signature type.
         //
-        if (mSupportSigItem[Index].SigDataSize != ((UINT32) ~0) &&
-          (SigList->SignatureSize - sizeof (EFI_GUID)) != mSupportSigItem[Index].SigDataSize) {
+        if ((mSupportSigItem[Index].SigDataSize != ((UINT32) ~0)) &&
+            ((SigList->SignatureSize - sizeof (EFI_GUID)) != mSupportSigItem[Index].SigDataSize))
+        {
           return EFI_INVALID_PARAMETER;
         }
-        if (mSupportSigItem[Index].SigHeaderSize != ((UINT32) ~0) &&
-          SigList->SignatureHeaderSize != mSupportSigItem[Index].SigHeaderSize) {
+
+        if ((mSupportSigItem[Index].SigHeaderSize != ((UINT32) ~0)) &&
+            (SigList->SignatureHeaderSize != mSupportSigItem[Index].SigHeaderSize))
+        {
           return EFI_INVALID_PARAMETER;
         }
+
         break;
       }
     }
@@ -807,33 +592,31 @@ CheckSignatureListFormat(
       // Try to retrieve the RSA public key from the X.509 certificate.
       // If this operation fails, it's not a valid certificate.
       //
-      RsaContext = RsaNew ();
-      if (RsaContext == NULL) {
+      CertData   = (EFI_SIGNATURE_DATA *)((UINT8 *)SigList + sizeof (EFI_SIGNATURE_LIST) + SigList->SignatureHeaderSize);
+      CertLen    = SigList->SignatureSize - sizeof (EFI_GUID);
+      RsaContext = NULL;
+      if ((CertLen > 0) && !RsaGetPublicKeyFromX509 (CertData->SignatureData, CertLen, &RsaContext)) {
         return EFI_INVALID_PARAMETER;
       }
-      CertData = (EFI_SIGNATURE_DATA *) ((UINT8 *) SigList + sizeof (EFI_SIGNATURE_LIST) + SigList->SignatureHeaderSize);
-      CertLen = SigList->SignatureSize - sizeof (EFI_GUID);
-      if (!RsaGetPublicKeyFromX509 (CertData->SignatureData, CertLen, &RsaContext)) {
-        RsaFree (RsaContext);
-        return EFI_INVALID_PARAMETER;
-      }
+
       RsaFree (RsaContext);
     }
 
     if ((SigList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - SigList->SignatureHeaderSize) % SigList->SignatureSize != 0) {
       return EFI_INVALID_PARAMETER;
     }
+
     SigCount += (SigList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - SigList->SignatureHeaderSize) / SigList->SignatureSize;
 
     SigDataSize -= SigList->SignatureListSize;
-    SigList = (EFI_SIGNATURE_LIST *) ((UINT8 *) SigList + SigList->SignatureListSize);
+    SigList      = (EFI_SIGNATURE_LIST *)((UINT8 *)SigList + SigList->SignatureListSize);
   }
 
-  if (((UINTN) SigList - (UINTN) Data) != DataSize) {
+  if (((UINTN)SigList - (UINTN)Data) != DataSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (IsPk && SigCount > 1) {
+  if (IsPk && (SigCount > 1)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -852,11 +635,12 @@ VendorKeyIsModified (
   VOID
   )
 {
-  EFI_STATUS              Status;
+  EFI_STATUS  Status;
 
   if (mVendorKeyState == VENDOR_KEYS_MODIFIED) {
     return EFI_SUCCESS;
   }
+
   mVendorKeyState = VENDOR_KEYS_MODIFIED;
 
   Status = AuthServiceInternalUpdateVariable (
@@ -905,21 +689,22 @@ VendorKeyIsModified (
 **/
 EFI_STATUS
 ProcessVarWithPk (
-  IN  CHAR16                    *VariableName,
-  IN  EFI_GUID                  *VendorGuid,
-  IN  VOID                      *Data,
-  IN  UINTN                     DataSize,
-  IN  UINT32                    Attributes OPTIONAL,
-  IN  BOOLEAN                   IsPk
+  IN  CHAR16    *VariableName,
+  IN  EFI_GUID  *VendorGuid,
+  IN  VOID      *Data,
+  IN  UINTN     DataSize,
+  IN  UINT32    Attributes OPTIONAL,
+  IN  BOOLEAN   IsPk
   )
 {
-  EFI_STATUS                  Status;
-  BOOLEAN                     Del;
-  UINT8                       *Payload;
-  UINTN                       PayloadSize;
+  EFI_STATUS  Status;
+  BOOLEAN     Del;
+  UINT8       *Payload;
+  UINTN       PayloadSize;
 
-  if ((Attributes & EFI_VARIABLE_NON_VOLATILE) == 0 ||
-      (Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0) {
+  if (((Attributes & EFI_VARIABLE_NON_VOLATILE) == 0) ||
+      ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0))
+  {
     //
     // PK, KEK and db/dbx/dbt should set EFI_VARIABLE_NON_VOLATILE attribute and should be a time-based
     // authenticated variable.
@@ -931,14 +716,17 @@ ProcessVarWithPk (
   // Init state of Del. State may change due to secure check
   //
   Del = FALSE;
-  if ((InCustomMode() && UserPhysicalPresent()) || (mPlatformMode == SETUP_MODE && !IsPk)) {
-    Payload = (UINT8 *) Data + AUTHINFO2_SIZE (Data);
+  if (  (InCustomMode () && UserPhysicalPresent ())
+     || (  (mPlatformMode == SETUP_MODE)
+        && !(FeaturePcdGet (PcdRequireSelfSignedPk) && IsPk)))
+  {
+    Payload     = (UINT8 *)Data + AUTHINFO2_SIZE (Data);
     PayloadSize = DataSize - AUTHINFO2_SIZE (Data);
     if (PayloadSize == 0) {
       Del = TRUE;
     }
 
-    Status = CheckSignatureListFormat(VariableName, VendorGuid, Payload, PayloadSize);
+    Status = CheckSignatureListFormat (VariableName, VendorGuid, Payload, PayloadSize);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -949,13 +737,15 @@ ProcessVarWithPk (
                Payload,
                PayloadSize,
                Attributes,
-               &((EFI_VARIABLE_AUTHENTICATION_2 *) Data)->TimeStamp
+               &((EFI_VARIABLE_AUTHENTICATION_2 *)Data)->TimeStamp
                );
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    if ((mPlatformMode != SETUP_MODE) || IsPk) {
+    if (  (mPlatformMode != SETUP_MODE)
+       || (FeaturePcdGet (PcdRequireSelfSignedPk) && IsPk))
+    {
       Status = VendorKeyIsModified ();
     }
   } else if (mPlatformMode == USER_MODE) {
@@ -986,13 +776,13 @@ ProcessVarWithPk (
                );
   }
 
-  if (!EFI_ERROR(Status) && IsPk) {
-    if (mPlatformMode == SETUP_MODE && !Del) {
+  if (!EFI_ERROR (Status) && IsPk) {
+    if ((mPlatformMode == SETUP_MODE) && !Del) {
       //
       // If enroll PK in setup mode, need change to user mode.
       //
       Status = UpdatePlatformMode (USER_MODE);
-    } else if (mPlatformMode == USER_MODE && Del){
+    } else if ((mPlatformMode == USER_MODE) && Del) {
       //
       // If delete PK in user mode, need change to setup mode.
       //
@@ -1028,19 +818,20 @@ ProcessVarWithPk (
 **/
 EFI_STATUS
 ProcessVarWithKek (
-  IN  CHAR16                               *VariableName,
-  IN  EFI_GUID                             *VendorGuid,
-  IN  VOID                                 *Data,
-  IN  UINTN                                DataSize,
-  IN  UINT32                               Attributes OPTIONAL
+  IN  CHAR16    *VariableName,
+  IN  EFI_GUID  *VendorGuid,
+  IN  VOID      *Data,
+  IN  UINTN     DataSize,
+  IN  UINT32    Attributes OPTIONAL
   )
 {
-  EFI_STATUS                      Status;
-  UINT8                           *Payload;
-  UINTN                           PayloadSize;
+  EFI_STATUS  Status;
+  UINT8       *Payload;
+  UINTN       PayloadSize;
 
-  if ((Attributes & EFI_VARIABLE_NON_VOLATILE) == 0 ||
-      (Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0) {
+  if (((Attributes & EFI_VARIABLE_NON_VOLATILE) == 0) ||
+      ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0))
+  {
     //
     // DB, DBX and DBT should set EFI_VARIABLE_NON_VOLATILE attribute and should be a time-based
     // authenticated variable.
@@ -1049,7 +840,7 @@ ProcessVarWithKek (
   }
 
   Status = EFI_SUCCESS;
-  if (mPlatformMode == USER_MODE && !(InCustomMode() && UserPhysicalPresent())) {
+  if ((mPlatformMode == USER_MODE) && !(InCustomMode () && UserPhysicalPresent ())) {
     //
     // Time-based, verify against X509 Cert KEK.
     //
@@ -1066,10 +857,10 @@ ProcessVarWithKek (
     //
     // If in setup mode or custom secure boot mode, no authentication needed.
     //
-    Payload = (UINT8 *) Data + AUTHINFO2_SIZE (Data);
+    Payload     = (UINT8 *)Data + AUTHINFO2_SIZE (Data);
     PayloadSize = DataSize - AUTHINFO2_SIZE (Data);
 
-    Status = CheckSignatureListFormat(VariableName, VendorGuid, Payload, PayloadSize);
+    Status = CheckSignatureListFormat (VariableName, VendorGuid, Payload, PayloadSize);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -1080,7 +871,7 @@ ProcessVarWithKek (
                Payload,
                PayloadSize,
                Attributes,
-               &((EFI_VARIABLE_AUTHENTICATION_2 *) Data)->TimeStamp
+               &((EFI_VARIABLE_AUTHENTICATION_2 *)Data)->TimeStamp
                );
     if (EFI_ERROR (Status)) {
       return Status;
@@ -1108,14 +899,14 @@ ProcessVarWithKek (
 **/
 BOOLEAN
 IsDeleteAuthVariable (
-  IN  UINT32                    OrgAttributes,
-  IN  VOID                      *Data,
-  IN  UINTN                     DataSize,
-  IN  UINT32                    Attributes
+  IN  UINT32  OrgAttributes,
+  IN  VOID    *Data,
+  IN  UINTN   DataSize,
+  IN  UINT32  Attributes
   )
 {
-  BOOLEAN                       Del;
-  UINTN                         PayloadSize;
+  BOOLEAN  Del;
+  UINTN    PayloadSize;
 
   Del = FALSE;
 
@@ -1126,7 +917,8 @@ IsDeleteAuthVariable (
   // and the DataSize set to the size of the AuthInfo descriptor.
   //
   if ((Attributes == OrgAttributes) &&
-      ((Attributes & (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) != 0)) {
+      ((Attributes & (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) != 0))
+  {
     if ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0) {
       PayloadSize = DataSize - AUTHINFO2_SIZE (Data);
       if (PayloadSize == 0) {
@@ -1144,7 +936,7 @@ IsDeleteAuthVariable (
 }
 
 /**
-  Process variable with EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS/EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS set
+  Process variable with EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS set
 
   Caution: This function may receive untrusted input.
   This function may be invoked in SMM mode, and datasize and data are external input.
@@ -1161,9 +953,9 @@ IsDeleteAuthVariable (
 
   @return EFI_INVALID_PARAMETER           Invalid parameter.
   @return EFI_WRITE_PROTECTED             Variable is write-protected and needs authentication with
-                                          EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS set.
+                                          EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS or EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS set.
   @return EFI_OUT_OF_RESOURCES            The Database to save the public key is full.
-  @return EFI_SECURITY_VIOLATION          The variable is with EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS
+  @return EFI_SECURITY_VIOLATION          The variable is with EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS
                                           set, but the AuthInfo does NOT pass the validation
                                           check carried out by the firmware.
   @return EFI_SUCCESS                     Variable is not write-protected or pass validation successfully.
@@ -1171,50 +963,37 @@ IsDeleteAuthVariable (
 **/
 EFI_STATUS
 ProcessVariable (
-  IN     CHAR16                             *VariableName,
-  IN     EFI_GUID                           *VendorGuid,
-  IN     VOID                               *Data,
-  IN     UINTN                              DataSize,
-  IN     UINT32                             Attributes
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid,
+  IN     VOID      *Data,
+  IN     UINTN     DataSize,
+  IN     UINT32    Attributes
   )
 {
-  EFI_STATUS                      Status;
-  BOOLEAN                         IsDeletion;
-  BOOLEAN                         IsFirstTime;
-  UINT8                           *PubKey;
-  EFI_VARIABLE_AUTHENTICATION     *CertData;
-  EFI_CERT_BLOCK_RSA_2048_SHA256  *CertBlock;
-  UINT32                          KeyIndex;
-  UINT64                          MonotonicCount;
-  VARIABLE_ENTRY_CONSISTENCY      VariableDataEntry;
-  UINT32                          Index;
-  AUTH_VARIABLE_INFO              OrgVariableInfo;
+  EFI_STATUS          Status;
+  AUTH_VARIABLE_INFO  OrgVariableInfo;
 
-  KeyIndex    = 0;
-  CertData    = NULL;
-  CertBlock   = NULL;
-  PubKey      = NULL;
-  IsDeletion  = FALSE;
-  Status      = EFI_SUCCESS;
+  Status = EFI_SUCCESS;
 
   ZeroMem (&OrgVariableInfo, sizeof (OrgVariableInfo));
   Status = mAuthVarLibContextIn->FindVariable (
-             VariableName,
-             VendorGuid,
-             &OrgVariableInfo
-             );
+                                   VariableName,
+                                   VendorGuid,
+                                   &OrgVariableInfo
+                                   );
 
-  if ((!EFI_ERROR (Status)) && IsDeleteAuthVariable (OrgVariableInfo.Attributes, Data, DataSize, Attributes) && UserPhysicalPresent()) {
+  // If the VariablePolicy engine is disabled, allow deletion of any authenticated variables.
+  if ((!EFI_ERROR (Status)) && IsDeleteAuthVariable (OrgVariableInfo.Attributes, Data, DataSize, Attributes) && (UserPhysicalPresent () || !IsVariablePolicyEnabled ())) {
     //
-    // Allow the delete operation of common authenticated variable at user physical presence.
+    // Allow the delete operation of common authenticated variable(AT or AW) at user physical presence.
     //
     Status = AuthServiceInternalUpdateVariable (
-              VariableName,
-              VendorGuid,
-              NULL,
-              0,
-              0
-              );
+               VariableName,
+               VendorGuid,
+               NULL,
+               0,
+               0
+               );
     if (!EFI_ERROR (Status) && ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0)) {
       Status = DeleteCertsFromDb (VariableName, VendorGuid, Attributes);
     }
@@ -1222,7 +1001,7 @@ ProcessVariable (
     return Status;
   }
 
-  if (NeedPhysicallyPresent (VariableName, VendorGuid) && !UserPhysicalPresent()) {
+  if (NeedPhysicallyPresent (VariableName, VendorGuid) && !UserPhysicalPresent ()) {
     //
     // This variable is protected, only physical present user could modify its value.
     //
@@ -1230,25 +1009,15 @@ ProcessVariable (
   }
 
   //
-  // A time-based authenticated variable and a count-based authenticated variable
-  // can't be updated by each other.
-  //
-  if (OrgVariableInfo.Data != NULL) {
-    if (((Attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS) != 0) &&
-        ((OrgVariableInfo.Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0)) {
-      return EFI_SECURITY_VIOLATION;
-    }
-
-    if (((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0) &&
-        ((OrgVariableInfo.Attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS) != 0)) {
-      return EFI_SECURITY_VIOLATION;
-    }
-  }
-
-  //
-  // Process Time-based Authenticated variable.
-  //
-  if ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0) {
+  if ((Attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS) != 0) {
+    //
+    // Reject Counter Based Auth Variable processing request.
+    //
+    return EFI_UNSUPPORTED;
+  } else if ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0) {
+    //
+    // Process Time-based Authenticated variable.
+    //
     return VerifyTimeBasedPayloadAndUpdate (
              VariableName,
              VendorGuid,
@@ -1260,117 +1029,75 @@ ProcessVariable (
              );
   }
 
-  //
-  // Determine if first time SetVariable with the EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS.
-  //
-  if ((Attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS) != 0) {
-    //
-    // Determine current operation type.
-    //
-    if (DataSize == AUTHINFO_SIZE) {
-      IsDeletion = TRUE;
-    }
-    //
-    // Determine whether this is the first time with EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS set.
-    //
-    if (OrgVariableInfo.Data == NULL) {
-      IsFirstTime = TRUE;
-    } else if ((OrgVariableInfo.Attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS) == 0) {
-      IsFirstTime = TRUE;
-    } else {
-      KeyIndex   = OrgVariableInfo.PubKeyIndex;
-      IsFirstTime = FALSE;
-    }
-  } else if ((OrgVariableInfo.Data != NULL) &&
-             ((OrgVariableInfo.Attributes & (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) != 0)
-            ) {
+  if ((OrgVariableInfo.Data != NULL) &&
+      ((OrgVariableInfo.Attributes & (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) != 0))
+  {
     //
     // If the variable is already write-protected, it always needs authentication before update.
     //
     return EFI_WRITE_PROTECTED;
-  } else {
-    //
-    // If without EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS, set and attributes collision.
-    // That means it is not authenticated variable, just update variable as usual.
-    //
-    Status = AuthServiceInternalUpdateVariable (VariableName, VendorGuid, Data, DataSize, Attributes);
-    return Status;
   }
 
   //
-  // Get PubKey and check Monotonic Count value corresponding to the variable.
+  // Not authenticated variable, just update variable as usual.
   //
-  CertData  = (EFI_VARIABLE_AUTHENTICATION *) Data;
-  CertBlock = (EFI_CERT_BLOCK_RSA_2048_SHA256 *) (CertData->AuthInfo.CertData);
-  PubKey    = CertBlock->PublicKey;
+  Status = AuthServiceInternalUpdateVariable (VariableName, VendorGuid, Data, DataSize, Attributes);
+  return Status;
+}
 
-  //
-  // Update Monotonic Count value.
-  //
-  MonotonicCount = CertData->MonotonicCount;
+/**
+  Validate that an EFI_SIGNATURE_LIST can be traversed safely.
 
-  if (!IsFirstTime) {
-    //
-    // 2 cases need to check here
-    //   1. Internal PubKey variable. PubKeyIndex is always 0
-    //   2. Other counter-based AuthVariable. Check input PubKey.
-    //
-    if (KeyIndex == 0) {
-      return EFI_SECURITY_VIOLATION;
-    }
-    for (Index = 0; Index < mPubKeyNumber; Index++) {
-      if (ReadUnaligned32 (&(((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + Index)->KeyIndex)) == KeyIndex) {
-        if (CompareMem (((AUTHVAR_KEY_DB_DATA *) mPubKeyStore + Index)->KeyData, PubKey, EFI_CERT_TYPE_RSA2048_SIZE) == 0) {
-          break;
-        } else {
-          return EFI_SECURITY_VIOLATION;
-        }
-      }
-    }
-    if (Index == mPubKeyNumber) {
-      return EFI_SECURITY_VIOLATION;
-    }
+  This helper performs only the structural checks needed by FilterSignatureList()
+  before walking list entries. Callers still perform the full semantic validation
+  through CheckSignatureListFormat().
 
-    //
-    // Compare the current monotonic count and ensure that it is greater than the last SetVariable
-    // operation with the EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS attribute set.
-    //
-    if (MonotonicCount <= OrgVariableInfo.MonotonicCount) {
-      //
-      // Monotonic count check fail, suspicious replay attack, return EFI_SECURITY_VIOLATION.
-      //
-      return EFI_SECURITY_VIOLATION;
-    }
-  }
-  //
-  // Verify the certificate in Data payload.
-  //
-  Status = VerifyCounterBasedPayload (Data, DataSize, PubKey);
-  if (EFI_ERROR (Status)) {
-    return Status;
+  @param[in]  SigList       Pointer to the EFI_SIGNATURE_LIST header.
+  @param[in]  BufferSize    Bytes available starting at SigList.
+  @param[out] SigCount      Number of signature entries in SigList.
+
+  @retval EFI_SUCCESS            The signature list layout is self-consistent.
+  @retval EFI_INVALID_PARAMETER  The signature list header is malformed.
+
+**/
+STATIC
+EFI_STATUS
+GetSignatureListEntryCount (
+  IN  EFI_SIGNATURE_LIST  *SigList,
+  IN  UINTN               BufferSize,
+  OUT UINTN               *SigCount
+  )
+{
+  UINTN  HeaderSize;
+  UINTN  PayloadSize;
+
+  if ((SigList == NULL) || (SigCount == NULL)) {
+    return EFI_INVALID_PARAMETER;
   }
 
-  //
-  // Now, the signature has been verified!
-  //
-  if (IsFirstTime && !IsDeletion) {
-    VariableDataEntry.VariableSize = DataSize - AUTHINFO_SIZE;
-    VariableDataEntry.Guid         = VendorGuid;
-    VariableDataEntry.Name         = VariableName;
-
-    //
-    // Update public key database variable if need.
-    //
-    KeyIndex = AddPubKeyInStore (PubKey, &VariableDataEntry);
-    if (KeyIndex == 0) {
-      return EFI_OUT_OF_RESOURCES;
-    }
+  if ((BufferSize < sizeof (EFI_SIGNATURE_LIST)) ||
+      (SigList->SignatureListSize < sizeof (EFI_SIGNATURE_LIST)) ||
+      (SigList->SignatureListSize > BufferSize))
+  {
+    return EFI_INVALID_PARAMETER;
   }
 
-  //
-  // Verification pass.
-  //
-  return AuthServiceInternalUpdateVariableWithMonotonicCount (VariableName, VendorGuid, (UINT8*)Data + AUTHINFO_SIZE, DataSize - AUTHINFO_SIZE, Attributes, KeyIndex, MonotonicCount);
+  HeaderSize = sizeof (EFI_SIGNATURE_LIST) + SigList->SignatureHeaderSize;
+  if ((HeaderSize < sizeof (EFI_SIGNATURE_LIST)) || (HeaderSize > SigList->SignatureListSize)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (SigList->SignatureSize == 0) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  PayloadSize = SigList->SignatureListSize - HeaderSize;
+  if ((PayloadSize % SigList->SignatureSize) != 0) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *SigCount = PayloadSize / SigList->SignatureSize;
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1381,60 +1108,72 @@ ProcessVariable (
   @param[in, out]   NewData       Pointer to new EFI_SIGNATURE_LIST.
   @param[in, out]   NewDataSize   Size of NewData buffer.
 
+  @retval EFI_SUCCESS            Duplicated signatures were filtered successfully.
+  @retval EFI_INVALID_PARAMETER  Input signature list data is malformed.
+  @retval EFI_OUT_OF_RESOURCES   Failed to allocate scratch buffer.
+
 **/
 EFI_STATUS
 FilterSignatureList (
-  IN     VOID       *Data,
-  IN     UINTN      DataSize,
-  IN OUT VOID       *NewData,
-  IN OUT UINTN      *NewDataSize
+  IN     VOID   *Data,
+  IN     UINTN  DataSize,
+  IN OUT VOID   *NewData,
+  IN OUT UINTN  *NewDataSize
   )
 {
-  EFI_SIGNATURE_LIST    *CertList;
-  EFI_SIGNATURE_DATA    *Cert;
-  UINTN                 CertCount;
-  EFI_SIGNATURE_LIST    *NewCertList;
-  EFI_SIGNATURE_DATA    *NewCert;
-  UINTN                 NewCertCount;
-  UINTN                 Index;
-  UINTN                 Index2;
-  UINTN                 Size;
-  UINT8                 *Tail;
-  UINTN                 CopiedCount;
-  UINTN                 SignatureListSize;
-  BOOLEAN               IsNewCert;
-  UINT8                 *TempData;
-  UINTN                 TempDataSize;
-  EFI_STATUS            Status;
+  EFI_SIGNATURE_LIST  *CertList;
+  EFI_SIGNATURE_DATA  *Cert;
+  UINTN               CertCount;
+  EFI_SIGNATURE_LIST  *NewCertList;
+  EFI_SIGNATURE_DATA  *NewCert;
+  UINTN               NewCertCount;
+  UINTN               Index;
+  UINTN               Index2;
+  UINTN               Size;
+  UINT8               *Tail;
+  UINTN               CopiedCount;
+  UINTN               SignatureListSize;
+  BOOLEAN             IsNewCert;
+  UINT8               *TempData;
+  UINTN               TempDataSize;
+  EFI_STATUS          Status;
 
   if (*NewDataSize == 0) {
     return EFI_SUCCESS;
   }
 
   TempDataSize = *NewDataSize;
-  Status = mAuthVarLibContextIn->GetScratchBuffer (&TempDataSize, (VOID **) &TempData);
+  Status       = mAuthVarLibContextIn->GetScratchBuffer (&TempDataSize, (VOID **)&TempData);
   if (EFI_ERROR (Status)) {
     return EFI_OUT_OF_RESOURCES;
   }
 
   Tail = TempData;
 
-  NewCertList = (EFI_SIGNATURE_LIST *) NewData;
-  while ((*NewDataSize > 0) && (*NewDataSize >= NewCertList->SignatureListSize)) {
-    NewCert      = (EFI_SIGNATURE_DATA *) ((UINT8 *) NewCertList + sizeof (EFI_SIGNATURE_LIST) + NewCertList->SignatureHeaderSize);
-    NewCertCount = (NewCertList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - NewCertList->SignatureHeaderSize) / NewCertList->SignatureSize;
+  NewCertList = (EFI_SIGNATURE_LIST *)NewData;
+  while (*NewDataSize > 0) {
+    Status = GetSignatureListEntryCount (NewCertList, *NewDataSize, &NewCertCount);
+    if (EFI_ERROR (Status)) {
+      return Status;
+    }
 
+    NewCert     = (EFI_SIGNATURE_DATA *)((UINT8 *)NewCertList + sizeof (EFI_SIGNATURE_LIST) + NewCertList->SignatureHeaderSize);
     CopiedCount = 0;
     for (Index = 0; Index < NewCertCount; Index++) {
       IsNewCert = TRUE;
 
-      Size = DataSize;
-      CertList = (EFI_SIGNATURE_LIST *) Data;
-      while ((Size > 0) && (Size >= CertList->SignatureListSize)) {
+      Size     = DataSize;
+      CertList = (EFI_SIGNATURE_LIST *)Data;
+      while (Size > 0) {
+        Status = GetSignatureListEntryCount (CertList, Size, &CertCount);
+        if (EFI_ERROR (Status)) {
+          return Status;
+        }
+
         if (CompareGuid (&CertList->SignatureType, &NewCertList->SignatureType) &&
-           (CertList->SignatureSize == NewCertList->SignatureSize)) {
-          Cert      = (EFI_SIGNATURE_DATA *) ((UINT8 *) CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
-          CertCount = (CertList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - CertList->SignatureHeaderSize) / CertList->SignatureSize;
+            (CertList->SignatureSize == NewCertList->SignatureSize))
+        {
+          Cert = (EFI_SIGNATURE_DATA *)((UINT8 *)CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
           for (Index2 = 0; Index2 < CertCount; Index2++) {
             //
             // Iterate each Signature Data in this Signature List.
@@ -1443,15 +1182,17 @@ FilterSignatureList (
               IsNewCert = FALSE;
               break;
             }
-            Cert = (EFI_SIGNATURE_DATA *) ((UINT8 *) Cert + CertList->SignatureSize);
+
+            Cert = (EFI_SIGNATURE_DATA *)((UINT8 *)Cert + CertList->SignatureSize);
           }
         }
 
         if (!IsNewCert) {
           break;
         }
-        Size -= CertList->SignatureListSize;
-        CertList = (EFI_SIGNATURE_LIST *) ((UINT8 *) CertList + CertList->SignatureListSize);
+
+        Size    -= CertList->SignatureListSize;
+        CertList = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
       }
 
       if (IsNewCert) {
@@ -1471,23 +1212,23 @@ FilterSignatureList (
         CopiedCount++;
       }
 
-      NewCert = (EFI_SIGNATURE_DATA *) ((UINT8 *) NewCert + NewCertList->SignatureSize);
+      NewCert = (EFI_SIGNATURE_DATA *)((UINT8 *)NewCert + NewCertList->SignatureSize);
     }
 
     //
     // Update SignatureListSize in the kept EFI_SIGNATURE_LIST.
     //
     if (CopiedCount != 0) {
-      SignatureListSize = sizeof (EFI_SIGNATURE_LIST) + NewCertList->SignatureHeaderSize + (CopiedCount * NewCertList->SignatureSize);
-      CertList = (EFI_SIGNATURE_LIST *) (Tail - SignatureListSize);
-      CertList->SignatureListSize = (UINT32) SignatureListSize;
+      SignatureListSize           = sizeof (EFI_SIGNATURE_LIST) + NewCertList->SignatureHeaderSize + (CopiedCount * NewCertList->SignatureSize);
+      CertList                    = (EFI_SIGNATURE_LIST *)(Tail - SignatureListSize);
+      CertList->SignatureListSize = (UINT32)SignatureListSize;
     }
 
     *NewDataSize -= NewCertList->SignatureListSize;
-    NewCertList = (EFI_SIGNATURE_LIST *) ((UINT8 *) NewCertList + NewCertList->SignatureListSize);
+    NewCertList   = (EFI_SIGNATURE_LIST *)((UINT8 *)NewCertList + NewCertList->SignatureListSize);
   }
 
-  TempDataSize = (Tail - (UINT8 *) TempData);
+  TempDataSize = (Tail - (UINT8 *)TempData);
 
   CopyMem (NewData, TempData, TempDataSize);
   *NewDataSize = TempDataSize;
@@ -1508,23 +1249,113 @@ FilterSignatureList (
 **/
 BOOLEAN
 AuthServiceInternalCompareTimeStamp (
-  IN EFI_TIME               *FirstTime,
-  IN EFI_TIME               *SecondTime
+  IN EFI_TIME  *FirstTime,
+  IN EFI_TIME  *SecondTime
   )
 {
   if (FirstTime->Year != SecondTime->Year) {
-    return (BOOLEAN) (FirstTime->Year < SecondTime->Year);
+    return (BOOLEAN)(FirstTime->Year < SecondTime->Year);
   } else if (FirstTime->Month != SecondTime->Month) {
-    return (BOOLEAN) (FirstTime->Month < SecondTime->Month);
+    return (BOOLEAN)(FirstTime->Month < SecondTime->Month);
   } else if (FirstTime->Day != SecondTime->Day) {
-    return (BOOLEAN) (FirstTime->Day < SecondTime->Day);
+    return (BOOLEAN)(FirstTime->Day < SecondTime->Day);
   } else if (FirstTime->Hour != SecondTime->Hour) {
-    return (BOOLEAN) (FirstTime->Hour < SecondTime->Hour);
+    return (BOOLEAN)(FirstTime->Hour < SecondTime->Hour);
   } else if (FirstTime->Minute != SecondTime->Minute) {
-    return (BOOLEAN) (FirstTime->Minute < SecondTime->Minute);
+    return (BOOLEAN)(FirstTime->Minute < SecondTime->Minute);
   }
 
-  return (BOOLEAN) (FirstTime->Second <= SecondTime->Second);
+  return (BOOLEAN)(FirstTime->Second <= SecondTime->Second);
+}
+
+/**
+  Calculate SHA digest of SignerCert CommonName + ToplevelCert tbsCertificate.
+  SignerCert and ToplevelCert are inside the signer certificate chain.
+
+  @param[in]  HashAlgId           Hash algorithm index.
+  @param[in]  SignerCert          A pointer to SignerCert data.
+  @param[in]  SignerCertSize      Length of SignerCert data.
+  @param[in]  TopLevelCert        A pointer to TopLevelCert data.
+  @param[in]  TopLevelCertSize    Length of TopLevelCert data.
+  @param[out] ShaDigest           Sha digest calculated.
+
+  @return EFI_ABORTED          Digest process failed.
+  @return EFI_SUCCESS          SHA Digest is successfully calculated.
+
+**/
+EFI_STATUS
+CalculatePrivAuthVarSignChainSHADigest (
+  IN     UINT8  HashAlgId,
+  IN     UINT8  *SignerCert,
+  IN     UINTN  SignerCertSize,
+  IN     UINT8  *TopLevelCert,
+  IN     UINTN  TopLevelCertSize,
+  OUT    UINT8  *ShaDigest
+  )
+{
+  UINT8       *TbsCert;
+  UINTN       TbsCertSize;
+  CHAR8       CertCommonName[128];
+  UINTN       CertCommonNameSize;
+  BOOLEAN     CryptoStatus;
+  EFI_STATUS  Status;
+
+  if (HashAlgId >= (sizeof (mHashInfo) / sizeof (EFI_HASH_INFO))) {
+    DEBUG ((DEBUG_INFO, "%a Unsupported Hash Algorithm %d\n", __func__, HashAlgId));
+    return EFI_ABORTED;
+  }
+
+  CertCommonNameSize = sizeof (CertCommonName);
+
+  //
+  // Get SignerCert CommonName
+  //
+  Status = X509GetCommonName (SignerCert, SignerCertSize, CertCommonName, &CertCommonNameSize);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_INFO, "%a Get SignerCert CommonName failed with status %x\n", __func__, Status));
+    return EFI_ABORTED;
+  }
+
+  //
+  // Get TopLevelCert tbsCertificate
+  //
+  if (!X509GetTBSCert (TopLevelCert, TopLevelCertSize, &TbsCert, &TbsCertSize)) {
+    DEBUG ((DEBUG_INFO, "%a Get Top-level Cert tbsCertificate failed!\n", __func__));
+    return EFI_ABORTED;
+  }
+
+  //
+  // Digest SignerCert CN + TopLevelCert tbsCertificate
+  //
+  ZeroMem (ShaDigest, mHashInfo[HashAlgId].HashSize);
+  CryptoStatus = mHashInfo[HashAlgId].Init (*(mHashInfo[HashAlgId].HashShaCtx));
+  if (!CryptoStatus) {
+    return EFI_ABORTED;
+  }
+
+  //
+  // '\0' is forced in CertCommonName. No overflow issue
+  //
+  CryptoStatus = mHashInfo[HashAlgId].Update (
+                                        *(mHashInfo[HashAlgId].HashShaCtx),
+                                        CertCommonName,
+                                        AsciiStrLen (CertCommonName)
+                                        );
+  if (!CryptoStatus) {
+    return EFI_ABORTED;
+  }
+
+  CryptoStatus = mHashInfo[HashAlgId].Update (*(mHashInfo[HashAlgId].HashShaCtx), TbsCert, TbsCertSize);
+  if (!CryptoStatus) {
+    return EFI_ABORTED;
+  }
+
+  CryptoStatus = mHashInfo[HashAlgId].Final (*(mHashInfo[HashAlgId].HashShaCtx), ShaDigest);
+  if (!CryptoStatus) {
+    return EFI_ABORTED;
+  }
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -1557,22 +1388,22 @@ AuthServiceInternalCompareTimeStamp (
 **/
 EFI_STATUS
 FindCertsFromDb (
-  IN     CHAR16           *VariableName,
-  IN     EFI_GUID         *VendorGuid,
-  IN     UINT8            *Data,
-  IN     UINTN            DataSize,
-  OUT    UINT32           *CertOffset,    OPTIONAL
-  OUT    UINT32           *CertDataSize,  OPTIONAL
-  OUT    UINT32           *CertNodeOffset,OPTIONAL
-  OUT    UINT32           *CertNodeSize   OPTIONAL
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid,
+  IN     UINT8     *Data,
+  IN     UINTN     DataSize,
+  OUT    UINT32    *CertOffset     OPTIONAL,
+  OUT    UINT32    *CertDataSize   OPTIONAL,
+  OUT    UINT32    *CertNodeOffset OPTIONAL,
+  OUT    UINT32    *CertNodeSize   OPTIONAL
   )
 {
-  UINT32                  Offset;
-  AUTH_CERT_DB_DATA       *Ptr;
-  UINT32                  CertSize;
-  UINT32                  NameSize;
-  UINT32                  NodeSize;
-  UINT32                  CertDbListSize;
+  UINT32             Offset;
+  AUTH_CERT_DB_DATA  *Ptr;
+  UINT32             CertSize;
+  UINT32             NameSize;
+  UINT32             NodeSize;
+  UINT32             CertDbListSize;
 
   if ((VariableName == NULL) || (VendorGuid == NULL) || (Data == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -1585,9 +1416,9 @@ FindCertsFromDb (
     return EFI_INVALID_PARAMETER;
   }
 
-  CertDbListSize = ReadUnaligned32 ((UINT32 *) Data);
+  CertDbListSize = ReadUnaligned32 ((UINT32 *)Data);
 
-  if (CertDbListSize != (UINT32) DataSize) {
+  if (CertDbListSize != (UINT32)DataSize) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1596,8 +1427,8 @@ FindCertsFromDb (
   //
   // Get corresponding certificates by VendorGuid and VariableName.
   //
-  while (Offset < (UINT32) DataSize) {
-    Ptr = (AUTH_CERT_DB_DATA *) (Data + Offset);
+  while (Offset < (UINT32)DataSize) {
+    Ptr = (AUTH_CERT_DB_DATA *)(Data + Offset);
     //
     // Check whether VendorGuid matches.
     //
@@ -1607,7 +1438,8 @@ FindCertsFromDb (
       CertSize = ReadUnaligned32 (&Ptr->CertDataSize);
 
       if (NodeSize != sizeof (EFI_GUID) + sizeof (UINT32) * 3 + CertSize +
-          sizeof (CHAR16) * NameSize) {
+          sizeof (CHAR16) * NameSize)
+      {
         return EFI_INVALID_PARAMETER;
       }
 
@@ -1616,7 +1448,8 @@ FindCertsFromDb (
       // Check whether VariableName matches.
       //
       if ((NameSize == StrLen (VariableName)) &&
-          (CompareMem (Data + Offset, VariableName, NameSize * sizeof (CHAR16)) == 0)) {
+          (CompareMem (Data + Offset, VariableName, NameSize * sizeof (CHAR16)) == 0))
+      {
         Offset = Offset + NameSize * sizeof (CHAR16);
 
         if (CertOffset != NULL) {
@@ -1628,7 +1461,7 @@ FindCertsFromDb (
         }
 
         if (CertNodeOffset != NULL) {
-          *CertNodeOffset = (UINT32) ((UINT8 *) Ptr - Data);
+          *CertNodeOffset = (UINT32)((UINT8 *)Ptr - Data);
         }
 
         if (CertNodeSize != NULL) {
@@ -1666,24 +1499,23 @@ FindCertsFromDb (
 **/
 EFI_STATUS
 GetCertsFromDb (
-  IN     CHAR16           *VariableName,
-  IN     EFI_GUID         *VendorGuid,
-  IN     UINT32           Attributes,
-  OUT    UINT8            **CertData,
-  OUT    UINT32           *CertDataSize
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid,
+  IN     UINT32    Attributes,
+  OUT    UINT8     **CertData,
+  OUT    UINT32    *CertDataSize
   )
 {
-  EFI_STATUS              Status;
-  UINT8                   *Data;
-  UINTN                   DataSize;
-  UINT32                  CertOffset;
-  CHAR16                  *DbName;
+  EFI_STATUS  Status;
+  UINT8       *Data;
+  UINTN       DataSize;
+  UINT32      CertOffset;
+  CHAR16      *DbName;
 
   if ((VariableName == NULL) || (VendorGuid == NULL) || (CertData == NULL) || (CertDataSize == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  
   if ((Attributes & EFI_VARIABLE_NON_VOLATILE) != 0) {
     //
     // Get variable "certdb".
@@ -1702,7 +1534,7 @@ GetCertsFromDb (
   Status = AuthServiceInternalFindVariable (
              DbName,
              &gEfiCertDbGuid,
-             (VOID **) &Data,
+             (VOID **)&Data,
              &DataSize
              );
   if (EFI_ERROR (Status)) {
@@ -1735,7 +1567,7 @@ GetCertsFromDb (
 
 /**
   Delete matching signer's certificates when deleting common authenticated
-  variable by corresponding VariableName and VendorGuid from "certdb" or 
+  variable by corresponding VariableName and VendorGuid from "certdb" or
   "certdbv" according to authenticated variable attributes.
 
   @param[in]  VariableName   Name of authenticated Variable.
@@ -1750,20 +1582,20 @@ GetCertsFromDb (
 **/
 EFI_STATUS
 DeleteCertsFromDb (
-  IN     CHAR16           *VariableName,
-  IN     EFI_GUID         *VendorGuid,
-  IN     UINT32           Attributes
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid,
+  IN     UINT32    Attributes
   )
 {
-  EFI_STATUS              Status;
-  UINT8                   *Data;
-  UINTN                   DataSize;
-  UINT32                  VarAttr;
-  UINT32                  CertNodeOffset;
-  UINT32                  CertNodeSize;
-  UINT8                   *NewCertDb;
-  UINT32                  NewCertDbSize;
-  CHAR16                  *DbName;
+  EFI_STATUS  Status;
+  UINT8       *Data;
+  UINTN       DataSize;
+  UINT32      VarAttr;
+  UINT32      CertNodeOffset;
+  UINT32      CertNodeSize;
+  UINT8       *NewCertDb;
+  UINT32      NewCertDbSize;
+  CHAR16      *DbName;
 
   if ((VariableName == NULL) || (VendorGuid == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -1773,20 +1605,20 @@ DeleteCertsFromDb (
     //
     // Get variable "certdb".
     //
-    DbName = EFI_CERT_DB_NAME;
-    VarAttr  = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+    DbName  = EFI_CERT_DB_NAME;
+    VarAttr = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
   } else {
     //
     // Get variable "certdbv".
     //
-    DbName = EFI_CERT_DB_VOLATILE_NAME;
+    DbName  = EFI_CERT_DB_VOLATILE_NAME;
     VarAttr = EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
   }
 
   Status = AuthServiceInternalFindVariable (
              DbName,
              &gEfiCertDbGuid,
-             (VOID **) &Data,
+             (VOID **)&Data,
              &DataSize
              );
 
@@ -1831,8 +1663,8 @@ DeleteCertsFromDb (
   //
   // Construct new data content of variable "certdb" or "certdbv".
   //
-  NewCertDbSize = (UINT32) DataSize - CertNodeSize;
-  NewCertDb     = (UINT8*) mCertDbStore;
+  NewCertDbSize = (UINT32)DataSize - CertNodeSize;
+  NewCertDb     = (UINT8 *)mCertDbStore;
 
   //
   // Copy the DB entries before deleting node.
@@ -1856,13 +1688,13 @@ DeleteCertsFromDb (
   //
   // Set "certdb" or "certdbv".
   //
-  Status   = AuthServiceInternalUpdateVariable (
-               DbName,
-               &gEfiCertDbGuid,
-               NewCertDb,
-               NewCertDbSize,
-               VarAttr
-               );
+  Status = AuthServiceInternalUpdateVariable (
+             DbName,
+             &gEfiCertDbGuid,
+             NewCertDb,
+             NewCertDbSize,
+             VarAttr
+             );
 
   return Status;
 }
@@ -1870,13 +1702,17 @@ DeleteCertsFromDb (
 /**
   Insert signer's certificates for common authenticated variable with VariableName
   and VendorGuid in AUTH_CERT_DB_DATA to "certdb" or "certdbv" according to
-  time based authenticated variable attributes.
+  time based authenticated variable attributes. CertData is the SHA digest of
+  SignerCert CommonName + TopLevelCert tbsCertificate.
 
-  @param[in]  VariableName   Name of authenticated Variable.
-  @param[in]  VendorGuid     Vendor GUID of authenticated Variable.
-  @param[in]  Attributes     Attributes of authenticated variable.
-  @param[in]  CertData       Pointer to signer's certificates.
-  @param[in]  CertDataSize   Length of CertData in bytes.
+  @param[in]  HashAlgId         Hash algorithm index.
+  @param[in]  VariableName      Name of authenticated Variable.
+  @param[in]  VendorGuid        Vendor GUID of authenticated Variable.
+  @param[in]  Attributes        Attributes of authenticated variable.
+  @param[in]  SignerCert        Signer certificate data.
+  @param[in]  SignerCertSize    Length of signer certificate.
+  @param[in]  TopLevelCert      Top-level certificate data.
+  @param[in]  TopLevelCertSize  Length of top-level certificate.
 
   @retval  EFI_INVALID_PARAMETER Any input parameter is invalid.
   @retval  EFI_ACCESS_DENIED     An AUTH_CERT_DB_DATA entry with same VariableName
@@ -1887,25 +1723,34 @@ DeleteCertsFromDb (
 **/
 EFI_STATUS
 InsertCertsToDb (
-  IN     CHAR16           *VariableName,
-  IN     EFI_GUID         *VendorGuid,
-  IN     UINT32           Attributes,
-  IN     UINT8            *CertData,
-  IN     UINTN            CertDataSize
+  IN     UINT8     HashAlgId,
+  IN     CHAR16    *VariableName,
+  IN     EFI_GUID  *VendorGuid,
+  IN     UINT32    Attributes,
+  IN     UINT8     *SignerCert,
+  IN     UINTN     SignerCertSize,
+  IN     UINT8     *TopLevelCert,
+  IN     UINTN     TopLevelCertSize
   )
 {
-  EFI_STATUS              Status;
-  UINT8                   *Data;
-  UINTN                   DataSize;
-  UINT32                  VarAttr;
-  UINT8                   *NewCertDb;
-  UINT32                  NewCertDbSize;
-  UINT32                  CertNodeSize;
-  UINT32                  NameSize;
-  AUTH_CERT_DB_DATA       *Ptr;
-  CHAR16                  *DbName;
+  EFI_STATUS         Status;
+  UINT8              *Data;
+  UINTN              DataSize;
+  UINT32             VarAttr;
+  UINT8              *NewCertDb;
+  UINT32             NewCertDbSize;
+  UINT32             CertNodeSize;
+  UINT32             NameSize;
+  UINT32             CertDataSize;
+  AUTH_CERT_DB_DATA  *Ptr;
+  CHAR16             *DbName;
+  UINT8              ShaDigest[SHA_DIGEST_SIZE_MAX];
 
-  if ((VariableName == NULL) || (VendorGuid == NULL) || (CertData == NULL)) {
+  if ((VariableName == NULL) || (VendorGuid == NULL) || (SignerCert == NULL) || (TopLevelCert == NULL)) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  if (HashAlgId >= (sizeof (mHashInfo) / sizeof (EFI_HASH_INFO))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1913,13 +1758,13 @@ InsertCertsToDb (
     //
     // Get variable "certdb".
     //
-    DbName = EFI_CERT_DB_NAME;
-    VarAttr  = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+    DbName  = EFI_CERT_DB_NAME;
+    VarAttr = EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
   } else {
     //
     // Get variable "certdbv".
     //
-    DbName = EFI_CERT_DB_VOLATILE_NAME;
+    DbName  = EFI_CERT_DB_VOLATILE_NAME;
     VarAttr = EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
   }
 
@@ -1929,7 +1774,7 @@ InsertCertsToDb (
   Status = AuthServiceInternalFindVariable (
              DbName,
              &gEfiCertDbGuid,
-             (VOID **) &Data,
+             (VOID **)&Data,
              &DataSize
              );
   if (EFI_ERROR (Status)) {
@@ -1964,13 +1809,28 @@ InsertCertsToDb (
   //
   // Construct new data content of variable "certdb" or "certdbv".
   //
-  NameSize      = (UINT32) StrLen (VariableName);
-  CertNodeSize  = sizeof (AUTH_CERT_DB_DATA) + (UINT32) CertDataSize + NameSize * sizeof (CHAR16);
-  NewCertDbSize = (UINT32) DataSize + CertNodeSize;
+  NameSize      = (UINT32)StrLen (VariableName);
+  CertDataSize  = mHashInfo[HashAlgId].HashSize;
+  CertNodeSize  = sizeof (AUTH_CERT_DB_DATA) + (UINT32)CertDataSize + NameSize * sizeof (CHAR16);
+  NewCertDbSize = (UINT32)DataSize + CertNodeSize;
   if (NewCertDbSize > mMaxCertDbSize) {
     return EFI_OUT_OF_RESOURCES;
   }
-  NewCertDb     = (UINT8*) mCertDbStore;
+
+  Status = CalculatePrivAuthVarSignChainSHADigest (
+             HashAlgId,
+             SignerCert,
+             SignerCertSize,
+             TopLevelCert,
+             TopLevelCertSize,
+             ShaDigest
+             );
+
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+
+  NewCertDb = (UINT8 *)mCertDbStore;
 
   //
   // Copy the DB entries before inserting node.
@@ -1983,34 +1843,34 @@ InsertCertsToDb (
   //
   // Construct new cert node.
   //
-  Ptr = (AUTH_CERT_DB_DATA *) (NewCertDb + DataSize);
+  Ptr = (AUTH_CERT_DB_DATA *)(NewCertDb + DataSize);
   CopyGuid (&Ptr->VendorGuid, VendorGuid);
   CopyMem (&Ptr->CertNodeSize, &CertNodeSize, sizeof (UINT32));
   CopyMem (&Ptr->NameSize, &NameSize, sizeof (UINT32));
   CopyMem (&Ptr->CertDataSize, &CertDataSize, sizeof (UINT32));
 
   CopyMem (
-    (UINT8 *) Ptr + sizeof (AUTH_CERT_DB_DATA),
+    (UINT8 *)Ptr + sizeof (AUTH_CERT_DB_DATA),
     VariableName,
     NameSize * sizeof (CHAR16)
     );
 
   CopyMem (
-    (UINT8 *) Ptr +  sizeof (AUTH_CERT_DB_DATA) + NameSize * sizeof (CHAR16),
-    CertData,
+    (UINT8 *)Ptr +  sizeof (AUTH_CERT_DB_DATA) + NameSize * sizeof (CHAR16),
+    ShaDigest,
     CertDataSize
     );
 
   //
   // Set "certdb" or "certdbv".
   //
-  Status   = AuthServiceInternalUpdateVariable (
-               DbName,
-               &gEfiCertDbGuid,
-               NewCertDb,
-               NewCertDbSize,
-               VarAttr
-               );
+  Status = AuthServiceInternalUpdateVariable (
+             DbName,
+             &gEfiCertDbGuid,
+             NewCertDb,
+             NewCertDbSize,
+             VarAttr
+             );
 
   return Status;
 }
@@ -2032,17 +1892,17 @@ CleanCertsFromDb (
   VOID
   )
 {
-  UINT32                  Offset;
-  AUTH_CERT_DB_DATA       *Ptr;
-  UINT32                  NameSize;
-  UINT32                  NodeSize;
-  CHAR16                  *VariableName;
-  EFI_STATUS              Status;
-  BOOLEAN                 CertCleaned;
-  UINT8                   *Data;
-  UINTN                   DataSize;
-  EFI_GUID                AuthVarGuid;
-  AUTH_VARIABLE_INFO      AuthVariableInfo;
+  UINT32              Offset;
+  AUTH_CERT_DB_DATA   *Ptr;
+  UINT32              NameSize;
+  UINT32              NodeSize;
+  CHAR16              *VariableName;
+  EFI_STATUS          Status;
+  BOOLEAN             CertCleaned;
+  UINT8               *Data;
+  UINTN               DataSize;
+  EFI_GUID            AuthVarGuid;
+  AUTH_VARIABLE_INFO  AuthVariableInfo;
 
   Status = EFI_SUCCESS;
 
@@ -2058,7 +1918,7 @@ CleanCertsFromDb (
     Status = AuthServiceInternalFindVariable (
                EFI_CERT_DB_NAME,
                &gEfiCertDbGuid,
-               (VOID **) &Data,
+               (VOID **)&Data,
                &DataSize
                );
     if (EFI_ERROR (Status)) {
@@ -2072,23 +1932,24 @@ CleanCertsFromDb (
 
     Offset = sizeof (UINT32);
 
-    while (Offset < (UINT32) DataSize) {
-      Ptr = (AUTH_CERT_DB_DATA *) (Data + Offset);
+    while (Offset < (UINT32)DataSize) {
+      Ptr      = (AUTH_CERT_DB_DATA *)(Data + Offset);
       NodeSize = ReadUnaligned32 (&Ptr->CertNodeSize);
       NameSize = ReadUnaligned32 (&Ptr->NameSize);
 
       //
       // Get VarName tailed with '\0'
       //
-      VariableName = AllocateZeroPool((NameSize + 1) * sizeof(CHAR16));
+      VariableName = AllocateZeroPool ((NameSize + 1) * sizeof (CHAR16));
       if (VariableName == NULL) {
         return EFI_OUT_OF_RESOURCES;
       }
-      CopyMem (VariableName, (UINT8 *) Ptr + sizeof (AUTH_CERT_DB_DATA), NameSize * sizeof(CHAR16));
+
+      CopyMem (VariableName, (UINT8 *)Ptr + sizeof (AUTH_CERT_DB_DATA), NameSize * sizeof (CHAR16));
       //
       // Keep VarGuid  aligned
       //
-      CopyMem (&AuthVarGuid, &Ptr->VendorGuid, sizeof(EFI_GUID));
+      CopyMem (&AuthVarGuid, &Ptr->VendorGuid, sizeof (EFI_GUID));
 
       //
       // Find corresponding time auth variable
@@ -2100,24 +1961,58 @@ CleanCertsFromDb (
                                        &AuthVariableInfo
                                        );
 
-      if (EFI_ERROR(Status) || (AuthVariableInfo.Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0) {
-        Status      = DeleteCertsFromDb(
-                        VariableName,
-                        &AuthVarGuid,
-                        AuthVariableInfo.Attributes
-                        );
+      if (EFI_ERROR (Status) || ((AuthVariableInfo.Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) == 0)) {
+        //
+        // While cleaning certdb, always delete the variable in certdb regardless of it attributes.
+        //
+        Status = DeleteCertsFromDb (
+                   VariableName,
+                   &AuthVarGuid,
+                   AuthVariableInfo.Attributes | EFI_VARIABLE_NON_VOLATILE
+                   );
         CertCleaned = TRUE;
-        DEBUG((EFI_D_INFO, "Recovery!! Cert for Auth Variable %s Guid %g is removed for consistency\n", VariableName, &AuthVarGuid));
-        FreePool(VariableName);
+        DEBUG ((DEBUG_INFO, "Recovery!! Cert for Auth Variable %s Guid %g is removed for consistency\n", VariableName, &AuthVarGuid));
+        FreePool (VariableName);
         break;
       }
 
-      FreePool(VariableName);
+      FreePool (VariableName);
       Offset = Offset + NodeSize;
     }
   } while (CertCleaned);
 
   return Status;
+}
+
+/**
+  Find hash algorithm index.
+
+  @param[in]  SigData      Pointer to the PKCS#7 message.
+  @param[in]  SigDataSize  Length of the PKCS#7 message.
+
+  @retval UINT8        Hash Algorithm Index.
+**/
+UINT8
+FindHashAlgorithmIndex (
+  IN     UINT8   *SigData,
+  IN     UINT32  SigDataSize
+  )
+{
+  UINT8  i;
+
+  for (i = 0; i < (sizeof (mHashInfo) / sizeof (EFI_HASH_INFO)); i++) {
+    if (  (  (SigDataSize >= (13 + mHashInfo[i].OidLength))
+          && (  ((*(SigData + 1) & TWO_BYTE_ENCODE) == TWO_BYTE_ENCODE)
+             && (CompareMem (SigData + 13, mHashInfo[i].OidValue, mHashInfo[i].OidLength) == 0)))
+       || (  ((SigDataSize >= (32 +  mHashInfo[i].OidLength)))
+          && (  ((*(SigData + 20) & TWO_BYTE_ENCODE) == TWO_BYTE_ENCODE)
+             && (CompareMem (SigData + 32, mHashInfo[i].OidValue, mHashInfo[i].OidLength) == 0))))
+    {
+      break;
+    }
+  }
+
+  return i;
 }
 
 /**
@@ -2151,48 +2046,59 @@ CleanCertsFromDb (
 **/
 EFI_STATUS
 VerifyTimeBasedPayload (
-  IN     CHAR16                             *VariableName,
-  IN     EFI_GUID                           *VendorGuid,
-  IN     VOID                               *Data,
-  IN     UINTN                              DataSize,
-  IN     UINT32                             Attributes,
-  IN     AUTHVAR_TYPE                       AuthVarType,
-  IN     EFI_TIME                           *OrgTimeStamp,
-  OUT    UINT8                              **VarPayloadPtr,
-  OUT    UINTN                              *VarPayloadSize
+  IN     CHAR16        *VariableName,
+  IN     EFI_GUID      *VendorGuid,
+  IN     VOID          *Data,
+  IN     UINTN         DataSize,
+  IN     UINT32        Attributes,
+  IN     AUTHVAR_TYPE  AuthVarType,
+  IN     EFI_TIME      *OrgTimeStamp,
+  OUT    UINT8         **VarPayloadPtr,
+  OUT    UINTN         *VarPayloadSize
   )
 {
-  EFI_VARIABLE_AUTHENTICATION_2    *CertData;
-  UINT8                            *SigData;
-  UINT32                           SigDataSize;
-  UINT8                            *PayloadPtr;
-  UINTN                            PayloadSize;
-  UINT32                           Attr;
-  BOOLEAN                          VerifyStatus;
-  EFI_STATUS                       Status;
-  EFI_SIGNATURE_LIST               *CertList;
-  EFI_SIGNATURE_DATA               *Cert;
-  UINTN                            Index;
-  UINTN                            CertCount;
-  UINT32                           KekDataSize;
-  UINT8                            *NewData;
-  UINTN                            NewDataSize;
-  UINT8                            *Buffer;
-  UINTN                            Length;
-  UINT8                            *RootCert;
-  UINTN                            RootCertSize;
-  UINT8                            *SignerCerts;
-  UINTN                            CertStackSize;
-  UINT8                            *CertsInCertDb;
-  UINT32                           CertsSizeinDb;
+  EFI_VARIABLE_AUTHENTICATION_2  *CertData;
+  UINT8                          *SigData;
+  UINT32                         SigDataSize;
+  UINT8                          *PayloadPtr;
+  UINTN                          PayloadSize;
+  UINT32                         Attr;
+  BOOLEAN                        VerifyStatus;
+  EFI_STATUS                     Status;
+  EFI_SIGNATURE_LIST             *CertList;
+  EFI_SIGNATURE_DATA             *Cert;
+  UINTN                          Index;
+  UINTN                          CertCount;
+  UINT32                         KekDataSize;
+  UINT8                          *NewData;
+  UINTN                          NewDataSize;
+  UINT8                          *Buffer;
+  UINTN                          Length;
+  UINT8                          *TopLevelCert;
+  UINTN                          TopLevelCertSize;
+  UINT8                          *TrustedCert;
+  UINTN                          TrustedCertSize;
+  UINT8                          *SignerCerts;
+  UINTN                          CertStackSize;
+  UINT8                          *CertsInCertDb;
+  UINT32                         CertsSizeinDb;
+  UINT8                          ShaDigest[SHA_DIGEST_SIZE_MAX];
+  EFI_CERT_DATA                  *CertDataPtr;
+  UINT8                          HashAlgId;
 
-  VerifyStatus           = FALSE;
-  CertData               = NULL;
-  NewData                = NULL;
-  Attr                   = Attributes;
-  SignerCerts            = NULL;
-  RootCert               = NULL;
-  CertsInCertDb          = NULL;
+  //
+  // 1. TopLevelCert is the top-level issuer certificate in signature Signer Cert Chain
+  // 2. TrustedCert is the certificate which firmware trusts. It could be saved in protected
+  //     storage or PK payload on PK init
+  //
+  VerifyStatus  = FALSE;
+  CertData      = NULL;
+  NewData       = NULL;
+  Attr          = Attributes;
+  SignerCerts   = NULL;
+  TopLevelCert  = NULL;
+  CertsInCertDb = NULL;
+  CertDataPtr   = NULL;
 
   //
   // When the attribute EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS is
@@ -2202,7 +2108,7 @@ VerifyTimeBasedPayload (
   // variable value. The authentication descriptor is not part of the variable data and is not
   // returned by subsequent calls to GetVariable().
   //
-  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *) Data;
+  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)Data;
 
   //
   // Verify that Pad1, Nanosecond, TimeZone, Daylight and Pad2 components of the
@@ -2212,7 +2118,8 @@ VerifyTimeBasedPayload (
       (CertData->TimeStamp.Nanosecond != 0) ||
       (CertData->TimeStamp.TimeZone != 0) ||
       (CertData->TimeStamp.Daylight != 0) ||
-      (CertData->TimeStamp.Pad2 != 0)) {
+      (CertData->TimeStamp.Pad2 != 0))
+  {
     return EFI_SECURITY_VIOLATION;
   }
 
@@ -2230,7 +2137,8 @@ VerifyTimeBasedPayload (
   // Cert type should be EFI_CERT_TYPE_PKCS7_GUID.
   //
   if ((CertData->AuthInfo.Hdr.wCertificateType != WIN_CERT_TYPE_EFI_GUID) ||
-      !CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertPkcs7Guid)) {
+      !CompareGuid (&CertData->AuthInfo.CertType, &gEfiCertPkcs7Guid))
+  {
     //
     // Invalid AuthInfo type, return EFI_SECURITY_VIOLATION.
     //
@@ -2241,14 +2149,73 @@ VerifyTimeBasedPayload (
   // Find out Pkcs7 SignedData which follows the EFI_VARIABLE_AUTHENTICATION_2 descriptor.
   // AuthInfo.Hdr.dwLength is the length of the entire certificate, including the length of the header.
   //
-  SigData = CertData->AuthInfo.CertData;
-  SigDataSize = CertData->AuthInfo.Hdr.dwLength - (UINT32) (OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
+  SigData     = CertData->AuthInfo.CertData;
+  SigDataSize = CertData->AuthInfo.Hdr.dwLength - (UINT32)(OFFSET_OF (WIN_CERTIFICATE_UEFI_GUID, CertData));
+
+  //
+  // SignedData.digestAlgorithms shall contain the digest algorithm used when preparing the
+  // signature. Only a digest algorithm of SHA-256, SHA-384 or SHA-512 is accepted.
+  //
+  //    According to PKCS#7 Definition (https://www.rfc-editor.org/rfc/rfc2315):
+  //        SignedData ::= SEQUENCE {
+  //            version Version,
+  //            digestAlgorithms DigestAlgorithmIdentifiers,
+  //            contentInfo ContentInfo,
+  //            .... }
+  //    The DigestAlgorithmIdentifiers can be used to determine the hash algorithm
+  //    in VARIABLE_AUTHENTICATION_2 descriptor.
+  //    This field has the fixed offset (+13) or (+32) based on whether the DER-encoded
+  //    ContentInfo structure is present or not, and can be calculated based on two
+  //    bytes of length encoding.
+  //
+  //    Both condition can be handled in WrapPkcs7Data() in CryptPkcs7VerifyCommon.c.
+  //
+  //    See below examples:
+  //
+  // 1. Without ContentInfo
+  //    30 82 0c da // SEQUENCE (5 element) (3294 BYTES) -- SignedData
+  //       02 01 01 // INTEGER 1 -- Version
+  //       31 0f // SET (1 element) (15 BYTES) -- DigestAlgorithmIdentifiers
+  //          30 0d // SEQUENCE (2 element) (13 BYTES) -- AlgorithmIdentifier
+  //             06 09 // OBJECT-IDENTIFIER (9 BYTES) -- algorithm
+  //                60 86 48 01 65 03 04 02 01 // sha256 [2.16.840.1.101.3.4.2.1]
+  //             05 00 // NULL (0 BYTES) -- parameters
+  //
+  // Example from: https://uefi.org/revocationlistfile
+  //
+  // 2. With ContentInfo
+  //    30 82 05 90 // SEQUENCE (1424 BYTES) -- ContentInfo
+  //       06 09 // OBJECT-IDENTIFIER (9 BYTES) -- ContentType
+  //          2a 86 48 86 f7 0d 01 07 02 // signedData [1.2.840.113549.1.7.2]
+  //       a0 82 05 81 // CONTEXT-SPECIFIC CONSTRUCTED TAG 0 (1409 BYTES) -- content
+  //          30 82 05 7d // SEQUENCE (1405 BYTES) -- SignedData
+  //             02 01 01 // INTEGER 1 -- Version
+  //             31 0f // SET (1 element) (15 BYTES) -- DigestAlgorithmIdentifiers
+  //                30 0d // SEQUENCE (13 BYTES) -- AlgorithmIdentifier
+  //                   06 09 // OBJECT-IDENTIFIER (9 BYTES) -- algorithm
+  //                      60 86 48 01 65 03 04 02 01 // sha256 [2.16.840.1.101.3.4.2.1]
+  //                   05 00 // NULL (0 BYTES) -- parameters
+  //
+  // Example generated with: https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Manual_process
+  //
+  HashAlgId = FindHashAlgorithmIndex (SigData, SigDataSize);
+  if ((Attributes & EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) != 0) {
+    if (HashAlgId >= (sizeof (mHashInfo) / sizeof (EFI_HASH_INFO))) {
+      return EFI_SECURITY_VIOLATION;
+    }
+  }
 
   //
   // Find out the new data payload which follows Pkcs7 SignedData directly.
   //
-  PayloadPtr = SigData + SigDataSize;
-  PayloadSize = DataSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN) SigDataSize;
+  PayloadPtr  = SigData + SigDataSize;
+  PayloadSize = DataSize - OFFSET_OF_AUTHINFO2_CERT_DATA - (UINTN)SigDataSize;
+
+  // If the VariablePolicy engine is disabled, allow deletion of any authenticated variables.
+  if ((PayloadSize == 0) && ((Attributes & EFI_VARIABLE_APPEND_WRITE) == 0) && !IsVariablePolicyEnabled ()) {
+    VerifyStatus = TRUE;
+    goto Exit;
+  }
 
   //
   // Construct a serialization buffer of the values of the VariableName, VendorGuid and Attributes
@@ -2266,7 +2233,7 @@ VerifyTimeBasedPayload (
   // because it is only used at here to do verification temporarily first
   // and then used in UpdateVariable() for a time based auth variable set.
   //
-  Status = mAuthVarLibContextIn->GetScratchBuffer (&NewDataSize, (VOID **) &NewData);
+  Status = mAuthVarLibContextIn->GetScratchBuffer (&NewDataSize, (VOID **)&NewData);
   if (EFI_ERROR (Status)) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -2300,8 +2267,8 @@ VerifyTimeBasedPayload (
                      SigDataSize,
                      &SignerCerts,
                      &CertStackSize,
-                     &RootCert,
-                     &RootCertSize
+                     &TopLevelCert,
+                     &TopLevelCertSize
                      );
     if (!VerifyStatus) {
       goto Exit;
@@ -2321,10 +2288,12 @@ VerifyTimeBasedPayload (
       VerifyStatus = FALSE;
       goto Exit;
     }
-    CertList = (EFI_SIGNATURE_LIST *) Data;
-    Cert     = (EFI_SIGNATURE_DATA *) ((UINT8 *) CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
-    if ((RootCertSize != (CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1))) ||
-        (CompareMem (Cert->SignatureData, RootCert, RootCertSize) != 0)) {
+
+    CertList = (EFI_SIGNATURE_LIST *)Data;
+    Cert     = (EFI_SIGNATURE_DATA *)((UINT8 *)CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
+    if ((TopLevelCertSize != (CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1))) ||
+        (CompareMem (Cert->SignatureData, TopLevelCert, TopLevelCertSize) != 0))
+    {
       VerifyStatus = FALSE;
       goto Exit;
     }
@@ -2335,14 +2304,12 @@ VerifyTimeBasedPayload (
     VerifyStatus = Pkcs7Verify (
                      SigData,
                      SigDataSize,
-                     RootCert,
-                     RootCertSize,
+                     TopLevelCert,
+                     TopLevelCertSize,
                      NewData,
                      NewDataSize
                      );
-
   } else if (AuthVarType == AuthVarTypeKek) {
-
     //
     // Get KEK database from variable.
     //
@@ -2359,18 +2326,18 @@ VerifyTimeBasedPayload (
     //
     // Ready to verify Pkcs7 SignedData. Go through KEK Signature Database to find out X.509 CertList.
     //
-    KekDataSize      = (UINT32) DataSize;
-    CertList         = (EFI_SIGNATURE_LIST *) Data;
+    KekDataSize = (UINT32)DataSize;
+    CertList    = (EFI_SIGNATURE_LIST *)Data;
     while ((KekDataSize > 0) && (KekDataSize >= CertList->SignatureListSize)) {
       if (CompareGuid (&CertList->SignatureType, &gEfiCertX509Guid)) {
-        Cert       = (EFI_SIGNATURE_DATA *) ((UINT8 *) CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
-        CertCount  = (CertList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - CertList->SignatureHeaderSize) / CertList->SignatureSize;
+        Cert      = (EFI_SIGNATURE_DATA *)((UINT8 *)CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
+        CertCount = (CertList->SignatureListSize - sizeof (EFI_SIGNATURE_LIST) - CertList->SignatureHeaderSize) / CertList->SignatureSize;
         for (Index = 0; Index < CertCount; Index++) {
           //
           // Iterate each Signature Data Node within this CertList for a verify
           //
-          RootCert      = Cert->SignatureData;
-          RootCertSize  = CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1);
+          TrustedCert     = Cert->SignatureData;
+          TrustedCertSize = CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1);
 
           //
           // Verify Pkcs7 SignedData via Pkcs7Verify library.
@@ -2378,22 +2345,23 @@ VerifyTimeBasedPayload (
           VerifyStatus = Pkcs7Verify (
                            SigData,
                            SigDataSize,
-                           RootCert,
-                           RootCertSize,
+                           TrustedCert,
+                           TrustedCertSize,
                            NewData,
                            NewDataSize
                            );
           if (VerifyStatus) {
             goto Exit;
           }
-          Cert = (EFI_SIGNATURE_DATA *) ((UINT8 *) Cert + CertList->SignatureSize);
+
+          Cert = (EFI_SIGNATURE_DATA *)((UINT8 *)Cert + CertList->SignatureSize);
         }
       }
+
       KekDataSize -= CertList->SignatureListSize;
-      CertList = (EFI_SIGNATURE_LIST *) ((UINT8 *) CertList + CertList->SignatureListSize);
+      CertList     = (EFI_SIGNATURE_LIST *)((UINT8 *)CertList + CertList->SignatureListSize);
     }
   } else if (AuthVarType == AuthVarTypePriv) {
-
     //
     // Process common authenticated variable except PK/KEK/DB/DBX/DBT.
     // Get signer's certificates from SignedData.
@@ -2403,8 +2371,8 @@ VerifyTimeBasedPayload (
                      SigDataSize,
                      &SignerCerts,
                      &CertStackSize,
-                     &RootCert,
-                     &RootCertSize
+                     &TopLevelCert,
+                     &TopLevelCertSize
                      );
     if (!VerifyStatus) {
       goto Exit;
@@ -2423,17 +2391,39 @@ VerifyTimeBasedPayload (
         goto Exit;
       }
 
-      if ((CertStackSize != CertsSizeinDb) ||
-          (CompareMem (SignerCerts, CertsInCertDb, CertsSizeinDb) != 0)) {
-        goto Exit;
+      if ((HashAlgId < (sizeof (mHashInfo) / sizeof (EFI_HASH_INFO))) && (CertsSizeinDb == mHashInfo[HashAlgId].HashSize)) {
+        //
+        // Check hash of signer cert CommonName + Top-level issuer tbsCertificate against data in CertDb
+        //
+        CertDataPtr = (EFI_CERT_DATA *)(SignerCerts + 1);
+        Status      = CalculatePrivAuthVarSignChainSHADigest (
+                        HashAlgId,
+                        CertDataPtr->CertDataBuffer,
+                        ReadUnaligned32 ((UINT32 *)&(CertDataPtr->CertDataLength)),
+                        TopLevelCert,
+                        TopLevelCertSize,
+                        ShaDigest
+                        );
+        if (EFI_ERROR (Status) || (CompareMem (ShaDigest, CertsInCertDb, CertsSizeinDb) != 0)) {
+          goto Exit;
+        }
+      } else {
+        //
+        // Keep backward compatible with previous solution which saves whole signer certs stack in CertDb
+        //
+        if ((CertStackSize != CertsSizeinDb) ||
+            (CompareMem (SignerCerts, CertsInCertDb, CertsSizeinDb) != 0))
+        {
+          goto Exit;
+        }
       }
     }
 
     VerifyStatus = Pkcs7Verify (
                      SigData,
                      SigDataSize,
-                     RootCert,
-                     RootCertSize,
+                     TopLevelCert,
+                     TopLevelCertSize,
                      NewData,
                      NewDataSize
                      );
@@ -2443,27 +2433,37 @@ VerifyTimeBasedPayload (
 
     if ((OrgTimeStamp == NULL) && (PayloadSize != 0)) {
       //
-      // Insert signer's certificates when adding a new common authenticated variable.
+      // When adding a new common authenticated variable, always save Hash of cn of signer cert + tbsCertificate of Top-level issuer
       //
-      Status = InsertCertsToDb (VariableName, VendorGuid, Attributes, SignerCerts, CertStackSize);
+      CertDataPtr = (EFI_CERT_DATA *)(SignerCerts + 1);
+      Status      = InsertCertsToDb (
+                      HashAlgId,
+                      VariableName,
+                      VendorGuid,
+                      Attributes,
+                      CertDataPtr->CertDataBuffer,
+                      ReadUnaligned32 ((UINT32 *)&(CertDataPtr->CertDataLength)),
+                      TopLevelCert,
+                      TopLevelCertSize
+                      );
       if (EFI_ERROR (Status)) {
         VerifyStatus = FALSE;
         goto Exit;
       }
     }
   } else if (AuthVarType == AuthVarTypePayload) {
-    CertList = (EFI_SIGNATURE_LIST *) PayloadPtr;
-    Cert     = (EFI_SIGNATURE_DATA *) ((UINT8 *) CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
-    RootCert      = Cert->SignatureData;
-    RootCertSize  = CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1);
+    CertList        = (EFI_SIGNATURE_LIST *)PayloadPtr;
+    Cert            = (EFI_SIGNATURE_DATA *)((UINT8 *)CertList + sizeof (EFI_SIGNATURE_LIST) + CertList->SignatureHeaderSize);
+    TrustedCert     = Cert->SignatureData;
+    TrustedCertSize = CertList->SignatureSize - (sizeof (EFI_SIGNATURE_DATA) - 1);
     //
     // Verify Pkcs7 SignedData via Pkcs7Verify library.
     //
     VerifyStatus = Pkcs7Verify (
                      SigData,
                      SigDataSize,
-                     RootCert,
-                     RootCertSize,
+                     TrustedCert,
+                     TrustedCertSize,
                      NewData,
                      NewDataSize
                      );
@@ -2473,21 +2473,26 @@ VerifyTimeBasedPayload (
 
 Exit:
 
-  if (AuthVarType == AuthVarTypePk || AuthVarType == AuthVarTypePriv) {
-    Pkcs7FreeSigners (RootCert);
-    Pkcs7FreeSigners (SignerCerts);
+  if ((AuthVarType == AuthVarTypePk) || (AuthVarType == AuthVarTypePriv)) {
+    if (TopLevelCert != NULL) {
+      Pkcs7FreeSigners (TopLevelCert);
+    }
+
+    if (SignerCerts != NULL) {
+      Pkcs7FreeSigners (SignerCerts);
+    }
   }
 
   if (!VerifyStatus) {
     return EFI_SECURITY_VIOLATION;
   }
 
-  Status = CheckSignatureListFormat(VariableName, VendorGuid, PayloadPtr, PayloadSize);
+  Status = CheckSignatureListFormat (VariableName, VendorGuid, PayloadPtr, PayloadSize);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  *VarPayloadPtr = PayloadPtr;
+  *VarPayloadPtr  = PayloadPtr;
   *VarPayloadSize = PayloadSize;
 
   return EFI_SUCCESS;
@@ -2521,29 +2526,29 @@ Exit:
 **/
 EFI_STATUS
 VerifyTimeBasedPayloadAndUpdate (
-  IN     CHAR16                             *VariableName,
-  IN     EFI_GUID                           *VendorGuid,
-  IN     VOID                               *Data,
-  IN     UINTN                              DataSize,
-  IN     UINT32                             Attributes,
-  IN     AUTHVAR_TYPE                       AuthVarType,
-  OUT    BOOLEAN                            *VarDel
+  IN     CHAR16        *VariableName,
+  IN     EFI_GUID      *VendorGuid,
+  IN     VOID          *Data,
+  IN     UINTN         DataSize,
+  IN     UINT32        Attributes,
+  IN     AUTHVAR_TYPE  AuthVarType,
+  OUT    BOOLEAN       *VarDel
   )
 {
-  EFI_STATUS                       Status;
-  EFI_STATUS                       FindStatus;
-  UINT8                            *PayloadPtr;
-  UINTN                            PayloadSize;
-  EFI_VARIABLE_AUTHENTICATION_2    *CertData;
-  AUTH_VARIABLE_INFO               OrgVariableInfo;
-  BOOLEAN                          IsDel;
+  EFI_STATUS                     Status;
+  EFI_STATUS                     FindStatus;
+  UINT8                          *PayloadPtr;
+  UINTN                          PayloadSize;
+  EFI_VARIABLE_AUTHENTICATION_2  *CertData;
+  AUTH_VARIABLE_INFO             OrgVariableInfo;
+  BOOLEAN                        IsDel;
 
   ZeroMem (&OrgVariableInfo, sizeof (OrgVariableInfo));
   FindStatus = mAuthVarLibContextIn->FindVariable (
-             VariableName,
-             VendorGuid,
-             &OrgVariableInfo
-             );
+                                       VariableName,
+                                       VendorGuid,
+                                       &OrgVariableInfo
+                                       );
 
   Status = VerifyTimeBasedPayload (
              VariableName,
@@ -2560,15 +2565,16 @@ VerifyTimeBasedPayloadAndUpdate (
     return Status;
   }
 
-  if (!EFI_ERROR(FindStatus)
-   && (PayloadSize == 0)
-   && ((Attributes & EFI_VARIABLE_APPEND_WRITE) == 0)) {
+  if (  !EFI_ERROR (FindStatus)
+     && (PayloadSize == 0)
+     && ((Attributes & EFI_VARIABLE_APPEND_WRITE) == 0))
+  {
     IsDel = TRUE;
   } else {
     IsDel = FALSE;
   }
 
-  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *) Data;
+  CertData = (EFI_VARIABLE_AUTHENTICATION_2 *)Data;
 
   //
   // Final step: Update/Append Variable if it pass Pkcs7Verify
@@ -2585,12 +2591,12 @@ VerifyTimeBasedPayloadAndUpdate (
   //
   // Delete signer's certificates when delete the common authenticated variable.
   //
-  if (IsDel && AuthVarType == AuthVarTypePriv && !EFI_ERROR(Status) ) {
+  if (IsDel && (AuthVarType == AuthVarTypePriv) && !EFI_ERROR (Status)) {
     Status = DeleteCertsFromDb (VariableName, VendorGuid, Attributes);
   }
 
   if (VarDel != NULL) {
-    if (IsDel && !EFI_ERROR(Status)) {
+    if (IsDel && !EFI_ERROR (Status)) {
       *VarDel = TRUE;
     } else {
       *VarDel = FALSE;

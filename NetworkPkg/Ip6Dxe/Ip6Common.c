@@ -1,15 +1,9 @@
 /** @file
   The implementation of common functions shared by IP6 driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -107,16 +101,16 @@ Ip6BuildEfiAddressList (
 **/
 EFI_STATUS
 Ip6SetToAllNodeMulticast (
-  IN  BOOLEAN          Router,
-  IN  UINT8            Scope,
-  OUT EFI_IPv6_ADDRESS *Ip6Addr
+  IN  BOOLEAN           Router,
+  IN  UINT8             Scope,
+  OUT EFI_IPv6_ADDRESS  *Ip6Addr
   )
 {
   if (Ip6Addr == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (!Router && Scope == IP6_SITE_LOCAL_SCOPE) {
+  if (!Router && (Scope == IP6_SITE_LOCAL_SCOPE)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -146,13 +140,13 @@ Ip6SetToAllNodeMulticast (
 **/
 UINT8 *
 Ip6CreateInterfaceID (
-  IN OUT IP6_SERVICE         *IpSb
+  IN OUT IP6_SERVICE  *IpSb
   )
 {
-  UINT8                      InterfaceId[8];
-  UINT8                      Byte;
-  EFI_MAC_ADDRESS            *MacAddr;
-  UINT32                     AddrLen;
+  UINT8            InterfaceId[8];
+  UINT8            Byte;
+  EFI_MAC_ADDRESS  *MacAddr;
+  UINT32           AddrLen;
 
   NET_CHECK_SIGNATURE (IpSb, IP6_SERVICE_SIGNATURE);
 
@@ -161,7 +155,7 @@ Ip6CreateInterfaceID (
   //
   // Currently only IEEE 802 48-bit MACs are supported to create link local address.
   //
-  if (AddrLen != IP6_MAC_LEN || IpSb->InterfaceIdLen != IP6_IF_ID_LEN) {
+  if ((AddrLen != IP6_MAC_LEN) || (IpSb->InterfaceIdLen != IP6_IF_ID_LEN)) {
     return NULL;
   }
 
@@ -177,7 +171,7 @@ Ip6CreateInterfaceID (
   InterfaceId[4] = 0xFE;
   CopyMem (&InterfaceId[5], &MacAddr->Addr[3], 3);
 
-  Byte = (UINT8) (InterfaceId[0] & IP6_U_BIT);
+  Byte = (UINT8)(InterfaceId[0] & IP6_U_BIT);
   if (Byte == IP6_U_BIT) {
     InterfaceId[0] &= ~IP6_U_BIT;
   } else {
@@ -204,7 +198,7 @@ Ip6CreateInterfaceID (
 **/
 EFI_IPv6_ADDRESS *
 Ip6CreateLinkLocalAddr (
-  IN OUT IP6_SERVICE           *IpSb
+  IN OUT IP6_SERVICE  *IpSb
   )
 {
   EFI_IPv6_ADDRESS             *Ip6Addr;
@@ -220,7 +214,7 @@ Ip6CreateLinkLocalAddr (
   }
 
   //
-  // Get the interface id if it is manully configured.
+  // Get the interface id if it is manually configured.
   //
   Ip6Config = &IpSb->Ip6ConfigInstance.Ip6Config;
   DataSize  = sizeof (EFI_IP6_CONFIG_INTERFACE_ID);
@@ -295,8 +289,8 @@ Ip6CreateLinkLocalAddr (
 **/
 VOID
 Ip6CreateSNMulticastAddr (
-  IN EFI_IPv6_ADDRESS  *Ip6Addr,
-  OUT EFI_IPv6_ADDRESS *MulticastAddr
+  IN EFI_IPv6_ADDRESS   *Ip6Addr,
+  OUT EFI_IPv6_ADDRESS  *MulticastAddr
   )
 {
   ASSERT (Ip6Addr != NULL && MulticastAddr != NULL);
@@ -320,8 +314,8 @@ Ip6CreateSNMulticastAddr (
 **/
 VOID
 Ip6AddAddr (
-  IN OUT IP6_INTERFACE *IpIf,
-  IN IP6_ADDRESS_INFO  *AddrInfo
+  IN OUT IP6_INTERFACE  *IpIf,
+  IN IP6_ADDRESS_INFO   *AddrInfo
   )
 {
   InsertHeadList (&IpIf->AddressList, &AddrInfo->Link);
@@ -330,7 +324,7 @@ Ip6AddAddr (
 
 /**
   Callback function which provided by user to remove one node in NetDestroyLinkList process.
-  
+
   @param[in]    Entry           The entry to be removed.
   @param[in]    Context         Pointer to the callback context corresponds to the Context in NetDestroyLinkList.
 
@@ -341,22 +335,22 @@ Ip6AddAddr (
 EFI_STATUS
 EFIAPI
 Ip6DestroyChildEntryByAddr (
-  IN LIST_ENTRY         *Entry,
-  IN VOID               *Context
+  IN LIST_ENTRY  *Entry,
+  IN VOID        *Context
   )
 {
   IP6_PROTOCOL                  *Instance;
   EFI_SERVICE_BINDING_PROTOCOL  *ServiceBinding;
   EFI_IPv6_ADDRESS              *Address;
-  
-  Instance = NET_LIST_USER_STRUCT_S (Entry, IP6_PROTOCOL, Link, IP6_PROTOCOL_SIGNATURE);
-  ServiceBinding = ((IP6_DESTROY_CHILD_BY_ADDR_CALLBACK_CONTEXT*) Context)->ServiceBinding;
-  Address = ((IP6_DESTROY_CHILD_BY_ADDR_CALLBACK_CONTEXT*) Context)->Address;
+
+  Instance       = NET_LIST_USER_STRUCT_S (Entry, IP6_PROTOCOL, Link, IP6_PROTOCOL_SIGNATURE);
+  ServiceBinding = ((IP6_DESTROY_CHILD_BY_ADDR_CALLBACK_CONTEXT *)Context)->ServiceBinding;
+  Address        = ((IP6_DESTROY_CHILD_BY_ADDR_CALLBACK_CONTEXT *)Context)->Address;
 
   if ((Instance->State == IP6_STATE_CONFIGED) && EFI_IP6_EQUAL (&Instance->ConfigData.StationAddress, Address)) {
     return ServiceBinding->DestroyChild (ServiceBinding, Instance->Handle);
   }
-  
+
   return EFI_SUCCESS;
 }
 
@@ -374,14 +368,14 @@ Ip6DestroyInstanceByAddress (
   IN EFI_IPv6_ADDRESS  *Address
   )
 {
-  LIST_ENTRY                    *List;
+  LIST_ENTRY                                  *List;
   IP6_DESTROY_CHILD_BY_ADDR_CALLBACK_CONTEXT  Context;
 
   NET_CHECK_SIGNATURE (IpSb, IP6_SERVICE_SIGNATURE);
 
-  List = &IpSb->Children;
+  List                   = &IpSb->Children;
   Context.ServiceBinding = &IpSb->ServiceBinding;
-  Context.Address = Address;
+  Context.Address        = Address;
   NetDestroyLinkList (
     List,
     Ip6DestroyChildEntryByAddr,
@@ -422,13 +416,13 @@ Ip6RemoveAddr (
   IN UINT8             PrefixLength
   )
 {
-  EFI_STATUS           Status;
-  LIST_ENTRY           *Entry;
-  LIST_ENTRY           *Next;
-  IP6_ADDRESS_INFO     *AddrInfo;
-  EFI_IPv6_ADDRESS     SnMCastAddr;
+  EFI_STATUS        Status;
+  LIST_ENTRY        *Entry;
+  LIST_ENTRY        *Next;
+  IP6_ADDRESS_INFO  *AddrInfo;
+  EFI_IPv6_ADDRESS  SnMCastAddr;
 
-  if (IsListEmpty (AddressList) || *AddressCount < 1 || PrefixLength > IP6_PREFIX_MAX) {
+  if (IsListEmpty (AddressList) || (*AddressCount < 1) || (PrefixLength > IP6_PREFIX_MAX)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -437,10 +431,11 @@ Ip6RemoveAddr (
   NET_LIST_FOR_EACH_SAFE (Entry, Next, AddressList) {
     AddrInfo = NET_LIST_USER_STRUCT_S (Entry, IP6_ADDRESS_INFO, Link, IP6_ADDR_INFO_SIGNATURE);
 
-    if (Prefix == NULL ||
-        (PrefixLength == 128 && EFI_IP6_EQUAL (Prefix, &AddrInfo->Address)) ||
-        (PrefixLength == AddrInfo->PrefixLength && NetIp6IsNetEqual (Prefix, &AddrInfo->Address, PrefixLength))
-        ) {
+    if ((Prefix == NULL) ||
+        ((PrefixLength == 128) && EFI_IP6_EQUAL (Prefix, &AddrInfo->Address)) ||
+        ((PrefixLength == AddrInfo->PrefixLength) && NetIp6IsNetEqual (Prefix, &AddrInfo->Address, PrefixLength))
+        )
+    {
       if (IpSb != NULL) {
         NET_CHECK_SIGNATURE (IpSb, IP6_SERVICE_SIGNATURE);
         Ip6CreateSNMulticastAddr (&AddrInfo->Address, &SnMCastAddr);
@@ -474,11 +469,11 @@ Ip6RemoveAddr (
 **/
 BOOLEAN
 Ip6IsSNMulticastAddr (
-  IN EFI_IPv6_ADDRESS *Ip6
+  IN EFI_IPv6_ADDRESS  *Ip6
   )
 {
-  EFI_IPv6_ADDRESS    Sn;
-  BOOLEAN             Flag;
+  EFI_IPv6_ADDRESS  Sn;
+  BOOLEAN           Flag;
 
   Ip6CreateSNMulticastAddr (Ip6, &Sn);
   Flag = FALSE;
@@ -507,16 +502,16 @@ Ip6IsSNMulticastAddr (
 **/
 BOOLEAN
 Ip6IsOneOfSetAddress (
-  IN  IP6_SERVICE           *IpSb,
-  IN  EFI_IPv6_ADDRESS      *Address,
-  OUT IP6_INTERFACE         **Interface   OPTIONAL,
-  OUT IP6_ADDRESS_INFO      **AddressInfo OPTIONAL
+  IN  IP6_SERVICE       *IpSb,
+  IN  EFI_IPv6_ADDRESS  *Address,
+  OUT IP6_INTERFACE     **Interface   OPTIONAL,
+  OUT IP6_ADDRESS_INFO  **AddressInfo OPTIONAL
   )
 {
-  LIST_ENTRY                *Entry;
-  LIST_ENTRY                *Entry2;
-  IP6_INTERFACE             *IpIf;
-  IP6_ADDRESS_INFO          *TmpAddressInfo;
+  LIST_ENTRY        *Entry;
+  LIST_ENTRY        *Entry2;
+  IP6_INTERFACE     *IpIf;
+  IP6_ADDRESS_INFO  *TmpAddressInfo;
 
   //
   // Check link-local address first
@@ -572,7 +567,7 @@ Ip6IsValidLinkAddress (
   IN  EFI_MAC_ADDRESS  *LinkAddress
   )
 {
-  UINT32               Index;
+  UINT32  Index;
 
   //
   // TODO: might be updated later to be more acceptable.
@@ -596,29 +591,29 @@ Ip6IsValidLinkAddress (
 **/
 VOID
 Ip6CopyAddressByPrefix (
-  OUT EFI_IPv6_ADDRESS *Dest,
-  IN  EFI_IPv6_ADDRESS *Src,
-  IN  UINT8            PrefixLength
+  OUT EFI_IPv6_ADDRESS  *Dest,
+  IN  EFI_IPv6_ADDRESS  *Src,
+  IN  UINT8             PrefixLength
   )
 {
-  UINT8 Byte;
-  UINT8 Bit;
-  UINT8 Mask;
+  UINT8  Byte;
+  UINT8  Bit;
+  UINT8  Mask;
 
   ASSERT (Dest != NULL && Src != NULL);
   ASSERT (PrefixLength <= IP6_PREFIX_MAX);
 
-  Byte = (UINT8) (PrefixLength / 8);
-  Bit  = (UINT8) (PrefixLength % 8);
+  Byte = (UINT8)(PrefixLength / 8);
+  Bit  = (UINT8)(PrefixLength % 8);
 
   ZeroMem (Dest, sizeof (EFI_IPv6_ADDRESS));
 
   CopyMem (Dest, Src, Byte);
 
   if (Bit > 0) {
-    Mask = (UINT8) (0xFF << (8 - Bit));
+    Mask = (UINT8)(0xFF << (8 - Bit));
     ASSERT (Byte < 16);
-    Dest->Addr[Byte] = (UINT8) (Src->Addr[Byte] & Mask);
+    Dest->Addr[Byte] = (UINT8)(Src->Addr[Byte] & Mask);
   }
 }
 
@@ -638,12 +633,12 @@ Ip6CopyAddressByPrefix (
 **/
 EFI_STATUS
 Ip6GetMulticastMac (
-  IN  EFI_MANAGED_NETWORK_PROTOCOL *Mnp,
-  IN  EFI_IPv6_ADDRESS             *Multicast,
-  OUT EFI_MAC_ADDRESS              *Mac
+  IN  EFI_MANAGED_NETWORK_PROTOCOL  *Mnp,
+  IN  EFI_IPv6_ADDRESS              *Multicast,
+  OUT EFI_MAC_ADDRESS               *Mac
   )
 {
-  EFI_IP_ADDRESS        EfiIp;
+  EFI_IP_ADDRESS  EfiIp;
 
   IP6_COPY_ADDRESS (&EfiIp.v6, Multicast);
 
@@ -662,7 +657,7 @@ Ip6GetMulticastMac (
 **/
 EFI_IP6_HEADER *
 Ip6NtohHead (
-  IN OUT EFI_IP6_HEADER *Head
+  IN OUT EFI_IP6_HEADER  *Head
   )
 {
   Head->FlowLabelL    = NTOHS (Head->FlowLabelL);
@@ -670,4 +665,3 @@ Ip6NtohHead (
 
   return Head;
 }
-

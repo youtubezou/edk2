@@ -1,23 +1,15 @@
 /** @file
   General purpose supporting routines for FAT recovery PEIM
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "FatLitePeim.h"
 
-
 #define CHAR_FAT_VALID  0x01
-
 
 /**
   Converts a union code character to upper case.
@@ -25,47 +17,46 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
   If the input Letter is not a lower-cased letter,
   the original value is returned.
 
-  @param  Letter            The input unicode character. 
+  @param  Letter            The input unicode character.
 
   @return The upper cased letter.
 
 **/
 CHAR16
 ToUpper (
-  IN CHAR16                    Letter
+  IN CHAR16  Letter
   )
 {
-  if ('a' <= Letter && Letter <= 'z') {
-    Letter = (CHAR16) (Letter - 0x20);
+  if (('a' <= Letter) && (Letter <= 'z')) {
+    Letter = (CHAR16)(Letter - 0x20);
   }
 
   return Letter;
 }
 
-
 /**
   Reads a block of data from the block device by calling
   underlying Block I/O service.
 
-  @param  PrivateData       Global memory map for accessing global variables 
-  @param  BlockDeviceNo     The index for the block device number. 
-  @param  Lba               The logic block address to read data from. 
-  @param  BufferSize        The size of data in byte to read. 
-  @param  Buffer            The buffer of the 
+  @param  PrivateData       Global memory map for accessing global variables
+  @param  BlockDeviceNo     The index for the block device number.
+  @param  Lba               The logic block address to read data from.
+  @param  BufferSize        The size of data in byte to read.
+  @param  Buffer            The buffer of the
 
-  @retval EFI_DEVICE_ERROR  The specified block device number exceeds the maximum 
-                            device number. 
-  @retval EFI_DEVICE_ERROR  The maximum address has exceeded the maximum address 
+  @retval EFI_DEVICE_ERROR  The specified block device number exceeds the maximum
+                            device number.
+  @retval EFI_DEVICE_ERROR  The maximum address has exceeded the maximum address
                             of the block device.
 
 **/
 EFI_STATUS
 FatReadBlock (
-  IN  PEI_FAT_PRIVATE_DATA   *PrivateData,
-  IN  UINTN                  BlockDeviceNo,
-  IN  EFI_PEI_LBA            Lba,
-  IN  UINTN                  BufferSize,
-  OUT VOID                   *Buffer
+  IN  PEI_FAT_PRIVATE_DATA  *PrivateData,
+  IN  UINTN                 BlockDeviceNo,
+  IN  EFI_PEI_LBA           Lba,
+  IN  UINTN                 BufferSize,
+  OUT VOID                  *Buffer
   )
 {
   EFI_STATUS            Status;
@@ -75,8 +66,8 @@ FatReadBlock (
     return EFI_DEVICE_ERROR;
   }
 
-  Status    = EFI_SUCCESS;
-  BlockDev  = &(PrivateData->BlockDevice[BlockDeviceNo]);
+  Status   = EFI_SUCCESS;
+  BlockDev = &(PrivateData->BlockDevice[BlockDeviceNo]);
 
   if (BufferSize > MultU64x32 (BlockDev->LastBlock - Lba + 1, BlockDev->BlockSize)) {
     return EFI_DEVICE_ERROR;
@@ -89,47 +80,45 @@ FatReadBlock (
     //
     if (BlockDev->BlockIo2 != NULL) {
       Status = BlockDev->BlockIo2->ReadBlocks (
-                                    (EFI_PEI_SERVICES **) GetPeiServicesTablePointer (),
-                                    BlockDev->BlockIo2,
+                                     (EFI_PEI_SERVICES **)GetPeiServicesTablePointer (),
+                                     BlockDev->BlockIo2,
+                                     BlockDev->PhysicalDevNo,
+                                     Lba,
+                                     BufferSize,
+                                     Buffer
+                                     );
+    } else {
+      Status = BlockDev->BlockIo->ReadBlocks (
+                                    (EFI_PEI_SERVICES **)GetPeiServicesTablePointer (),
+                                    BlockDev->BlockIo,
                                     BlockDev->PhysicalDevNo,
                                     Lba,
                                     BufferSize,
                                     Buffer
                                     );
-    } else {
-      Status = BlockDev->BlockIo->ReadBlocks (
-                                  (EFI_PEI_SERVICES **) GetPeiServicesTablePointer (),
-                                  BlockDev->BlockIo,
-                                  BlockDev->PhysicalDevNo,
-                                  Lba,
-                                  BufferSize,
-                                  Buffer
-                                  );
     }
-
   } else {
     Status = FatReadDisk (
-              PrivateData,
-              BlockDev->ParentDevNo,
-              BlockDev->StartingPos + MultU64x32 (Lba, BlockDev->BlockSize),
-              BufferSize,
-              Buffer
-              );
+               PrivateData,
+               BlockDev->ParentDevNo,
+               BlockDev->StartingPos + MultU64x32 (Lba, BlockDev->BlockSize),
+               BufferSize,
+               Buffer
+               );
   }
 
   return Status;
 }
 
-
 /**
   Find a cache block designated to specific Block device and Lba.
   If not found, invalidate an oldest one and use it. (LRU cache)
 
-  @param  PrivateData       the global memory map. 
-  @param  BlockDeviceNo     the Block device. 
-  @param  Lba               the Logical Block Address 
-  @param  CachePtr          Ptr to the starting address of the memory holding the 
-                            data; 
+  @param  PrivateData       the global memory map.
+  @param  BlockDeviceNo     the Block device.
+  @param  Lba               the Logical Block Address
+  @param  CachePtr          Ptr to the starting address of the memory holding the
+                            data;
 
   @retval EFI_SUCCESS       The function completed successfully.
   @retval EFI_DEVICE_ERROR  Something error while accessing media.
@@ -156,15 +145,16 @@ FatGetCacheBlock (
   //
   for (Index = 0; Index < PEI_FAT_CACHE_SIZE; Index++) {
     CacheBuffer = &(PrivateData->CacheBuffer[Index]);
-    if (CacheBuffer->Valid && CacheBuffer->BlockDeviceNo == BlockDeviceNo && CacheBuffer->Lba == Lba) {
+    if (CacheBuffer->Valid && (CacheBuffer->BlockDeviceNo == BlockDeviceNo) && (CacheBuffer->Lba == Lba)) {
       break;
     }
   }
 
   if (Index < PEI_FAT_CACHE_SIZE) {
-    *CachePtr = (CHAR8 *) CacheBuffer->Buffer;
+    *CachePtr = (CHAR8 *)CacheBuffer->Buffer;
     return EFI_SUCCESS;
   }
+
   //
   // We have to find an invalid cache buffer
   //
@@ -173,55 +163,55 @@ FatGetCacheBlock (
       break;
     }
   }
+
   //
   // Use the cache buffer
   //
   if (Index == PEI_FAT_CACHE_SIZE) {
     Index = (Seed++) % PEI_FAT_CACHE_SIZE;
   }
-  
+
   //
-  // Current device ID should be less than maximum device ID. 
+  // Current device ID should be less than maximum device ID.
   //
   if (BlockDeviceNo >= PEI_FAT_MAX_BLOCK_DEVICE) {
     return EFI_DEVICE_ERROR;
   }
 
-  CacheBuffer                 = &(PrivateData->CacheBuffer[Index]);
+  CacheBuffer = &(PrivateData->CacheBuffer[Index]);
 
-  CacheBuffer->BlockDeviceNo  = BlockDeviceNo;
-  CacheBuffer->Lba            = Lba;
-  CacheBuffer->Size           = PrivateData->BlockDevice[BlockDeviceNo].BlockSize;
+  CacheBuffer->BlockDeviceNo = BlockDeviceNo;
+  CacheBuffer->Lba           = Lba;
+  CacheBuffer->Size          = PrivateData->BlockDevice[BlockDeviceNo].BlockSize;
 
   //
   // Read in the data
   //
   Status = FatReadBlock (
-            PrivateData,
-            BlockDeviceNo,
-            Lba,
-            CacheBuffer->Size,
-            CacheBuffer->Buffer
-            );
+             PrivateData,
+             BlockDeviceNo,
+             Lba,
+             CacheBuffer->Size,
+             CacheBuffer->Buffer
+             );
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
 
-  CacheBuffer->Valid  = TRUE;
-  *CachePtr           = (CHAR8 *) CacheBuffer->Buffer;
+  CacheBuffer->Valid = TRUE;
+  *CachePtr          = (CHAR8 *)CacheBuffer->Buffer;
 
   return Status;
 }
 
-
 /**
   Disk reading.
 
-  @param  PrivateData       the global memory map; 
-  @param  BlockDeviceNo     the block device to read; 
-  @param  StartingAddress   the starting address. 
-  @param  Size              the amount of data to read. 
-  @param  Buffer            the buffer holding the data 
+  @param  PrivateData       the global memory map;
+  @param  BlockDeviceNo     the block device to read;
+  @param  StartingAddress   the starting address.
+  @param  Size              the amount of data to read.
+  @param  Buffer            the buffer holding the data
 
   @retval EFI_SUCCESS       The function completed successfully.
   @retval EFI_DEVICE_ERROR  Something error.
@@ -252,8 +242,8 @@ FatReadDisk (
   //
   // Read underrun
   //
-  Lba     = DivU64x32Remainder (StartingAddress, BlockSize, &Offset);
-  Status  = FatGetCacheBlock (PrivateData, BlockDeviceNo, Lba, &CachePtr);
+  Lba    = DivU64x32Remainder (StartingAddress, BlockSize, &Offset);
+  Status = FatGetCacheBlock (PrivateData, BlockDeviceNo, Lba, &CachePtr);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
@@ -265,17 +255,17 @@ FatReadDisk (
     return EFI_SUCCESS;
   }
 
-  Size -= Amount;
-  BufferPtr += Amount;
+  Size            -= Amount;
+  BufferPtr       += Amount;
   StartingAddress += Amount;
-  Lba += 1;
+  Lba             += 1;
 
   //
   // Read aligned parts
   //
   OverRunLba = Lba + DivU64x32Remainder (Size, BlockSize, &Offset);
 
-  Size -= Offset;
+  Size  -= Offset;
   Status = FatReadBlock (PrivateData, BlockDeviceNo, Lba, Size, BufferPtr);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
@@ -298,7 +288,6 @@ FatReadDisk (
   return Status;
 }
 
-
 /**
   This version is different from the version in Unicode collation
   protocol in that this version strips off trailing blanks.
@@ -306,19 +295,19 @@ FatReadDisk (
   to a Null-terminated Unicode string.
   Here does not expand DBCS FAT chars.
 
-  @param  FatSize           The size of the string Fat in bytes. 
-  @param  Fat               A pointer to a Null-terminated string that contains 
-                            an 8.3 file name using an OEM character set. 
-  @param  Str               A pointer to a Null-terminated Unicode string. The 
-                            string must be allocated in advance to hold FatSize 
+  @param  FatSize           The size of the string Fat in bytes.
+  @param  Fat               A pointer to a Null-terminated string that contains
+                            an 8.3 file name using an OEM character set.
+  @param  Str               A pointer to a Null-terminated Unicode string. The
+                            string must be allocated in advance to hold FatSize
                             Unicode characters
 
 **/
 VOID
 EngFatToStr (
-  IN UINTN                            FatSize,
-  IN CHAR8                            *Fat,
-  OUT CHAR16                          *Str
+  IN UINTN    FatSize,
+  IN CHAR8    *Fat,
+  OUT CHAR16  *Str
   )
 {
   CHAR16  *String;
@@ -331,21 +320,21 @@ EngFatToStr (
     if (*Fat == ' ') {
       break;
     }
-    *String = *Fat;
-    String += 1;
-    Fat += 1;
+
+    *String  = *Fat;
+    String  += 1;
+    Fat     += 1;
     FatSize -= 1;
   }
 
   *String = 0;
 }
 
-
 /**
   Performs a case-insensitive comparison of two Null-terminated Unicode strings.
 
-  @param  PrivateData       Global memory map for accessing global variables 
-  @param  Str1              First string to perform case insensitive comparison. 
+  @param  PrivateData       Global memory map for accessing global variables
+  @param  Str1              First string to perform case insensitive comparison.
   @param  Str2              Second string to perform case insensitive comparison.
 
 **/
@@ -372,5 +361,5 @@ EngStriColl (
     UpperS2 = ToUpper (*Str2);
   }
 
-  return (BOOLEAN) ((*Str2 != 0) ? FALSE : TRUE);
+  return (BOOLEAN)((*Str2 != 0) ? FALSE : TRUE);
 }

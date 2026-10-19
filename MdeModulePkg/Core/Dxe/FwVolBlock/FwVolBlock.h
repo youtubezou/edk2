@@ -3,26 +3,17 @@
   Consumes FV hobs and creates appropriate block protocols.
 
 Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _FWVOL_BLOCK_H_
-#define _FWVOL_BLOCK_H_
+#pragma once
 
-
-#define FVB_DEVICE_SIGNATURE       SIGNATURE_32('_','F','V','B')
-
+#define FVB_DEVICE_SIGNATURE  SIGNATURE_32('_','F','V','B')
 
 typedef struct {
-  UINTN                       Base;
-  UINTN                       Length;
+  UINTN    Base;
+  UINTN    Length;
 } LBA_CACHE;
 
 typedef struct {
@@ -50,10 +41,8 @@ typedef struct {
   UINT32                                AuthenticationStatus;
 } EFI_FW_VOL_BLOCK_DEVICE;
 
-
 #define FVB_DEVICE_FROM_THIS(a) \
   CR(a, EFI_FW_VOL_BLOCK_DEVICE, FwVolBlockInstance, FVB_DEVICE_SIGNATURE)
-
 
 /**
   Retrieves Volume attributes.  No polarity translations are done.
@@ -70,8 +59,6 @@ FwVolBlockGetAttributes (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
   OUT       EFI_FVB_ATTRIBUTES_2                *Attributes
   );
-
-
 
 /**
   Modifies the current settings of the firmware volume according to the input parameter.
@@ -92,8 +79,6 @@ FwVolBlockSetAttributes (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
   IN CONST  EFI_FVB_ATTRIBUTES_2                *Attributes
   );
-
-
 
 /**
   The EraseBlock() function erases one or more blocks as denoted by the
@@ -121,11 +106,9 @@ FwVolBlockSetAttributes (
 EFI_STATUS
 EFIAPI
 FwVolBlockEraseBlock (
-  IN EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL    *This,
+  IN EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
   ...
   );
-
-
 
 /**
   Read the specified number of bytes from the block to the input buffer.
@@ -150,14 +133,12 @@ FwVolBlockEraseBlock (
 EFI_STATUS
 EFIAPI
 FwVolBlockReadBlock (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL   *This,
-  IN CONST  EFI_LBA                              Lba,
-  IN CONST  UINTN                                Offset,
-  IN OUT    UINTN                                *NumBytes,
-  IN OUT    UINT8                                *Buffer
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
+  IN CONST  EFI_LBA                             Lba,
+  IN CONST  UINTN                               Offset,
+  IN OUT    UINTN                               *NumBytes,
+  IN OUT    UINT8                               *Buffer
   );
-
-
 
 /**
   Writes the specified number of bytes from the input buffer to the block.
@@ -186,14 +167,12 @@ FwVolBlockReadBlock (
 EFI_STATUS
 EFIAPI
 FwVolBlockWriteBlock (
-  IN     EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL   *This,
-  IN     EFI_LBA                              Lba,
-  IN     UINTN                                Offset,
-  IN OUT UINTN                                *NumBytes,
-  IN     UINT8                                *Buffer
+  IN     EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
+  IN     EFI_LBA                             Lba,
+  IN     UINTN                               Offset,
+  IN OUT UINTN                               *NumBytes,
+  IN     UINT8                               *Buffer
   );
-
-
 
 /**
   Get Fvb's base address.
@@ -211,8 +190,6 @@ FwVolBlockGetPhysicalAddress (
   IN CONST  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *This,
   OUT       EFI_PHYSICAL_ADDRESS                *Address
   );
-
-
 
 /**
   Retrieves the size in bytes of a specific block within a firmware volume.
@@ -239,6 +216,3 @@ FwVolBlockGetBlockSize (
   IN OUT    UINTN                               *BlockSize,
   IN OUT    UINTN                               *NumberOfBlocks
   );
-
-
-#endif

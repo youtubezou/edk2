@@ -1,27 +1,22 @@
 /** @file
 Elf64 convert solution
 
-Copyright (c) 2010 - 2014, Intel Corporation. All rights reserved.<BR>
-Portions copyright (c) 2013-2014, ARM Ltd. All rights reserved.<BR>
+Copyright (c) 2010 - 2021, Intel Corporation. All rights reserved.<BR>
+Portions copyright (c) 2013-2022, ARM Ltd. All rights reserved.<BR>
+Portions Copyright (c) 2020, Hewlett Packard Enterprise Development LP. All rights reserved.<BR>
+Portions Copyright (c) 2022, Loongson Technology Corporation Limited. All rights reserved.<BR>
 
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "WinNtInclude.h"
-
 #ifndef __GNUC__
+#define RUNTIME_FUNCTION  _WINNT_DUP_RUNTIME_FUNCTION
 #include <windows.h>
+#undef RUNTIME_FUNCTION
 #include <io.h>
 #endif
 #include <assert.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -64,6 +59,12 @@ WriteDebug64 (
 
 STATIC
 VOID
+WriteExport64 (
+  VOID
+  );
+
+STATIC
+VOID
 SetImageSize64 (
   VOID
   );
@@ -75,7 +76,7 @@ CleanUp64 (
   );
 
 //
-// Rename ELF32 strucutres to common names to help when porting to ELF64.
+// Rename ELF32 structures to common names to help when porting to ELF64.
 //
 typedef Elf64_Shdr Elf_Shdr;
 typedef Elf64_Ehdr Elf_Ehdr;
@@ -96,6 +97,15 @@ STATIC Elf_Shdr *mShdrBase;
 STATIC Elf_Phdr *mPhdrBase;
 
 //
+// GOT information
+//
+STATIC Elf_Shdr *mGOTShdr = NULL;
+STATIC UINT32   mGOTShindex = 0;
+STATIC UINT32   *mGOTCoffEntries = NULL;
+STATIC UINT32   mGOTMaxCoffEntries = 0;
+STATIC UINT32   mGOTNumCoffEntries = 0;
+
+//
 // Coff information
 //
 STATIC UINT32 mCoffAlignment = 0x20;
@@ -103,7 +113,7 @@ STATIC UINT32 mCoffAlignment = 0x20;
 //
 // PE section alignment.
 //
-STATIC const UINT16 mCoffNbrSections = 4;
+STATIC UINT16 mCoffNbrSections = 4;
 
 //
 // ELF sections to offset in Coff file.
@@ -119,6 +129,25 @@ STATIC UINT32 mDataOffset;
 STATIC UINT32 mHiiRsrcOffset;
 STATIC UINT32 mRelocOffset;
 STATIC UINT32 mDebugOffset;
+STATIC UINT32 mExportOffset;
+STATIC UINT32 mBuildIdOffset;
+STATIC BOOLEAN mBuildIdFound;
+//
+// Used for RISC-V relocations.
+//
+STATIC UINT8       *mRiscVPass1Targ = NULL;
+STATIC Elf_Shdr    *mRiscVPass1Sym = NULL;
+STATIC Elf64_Half  mRiscVPass1SymSecIndex = 0;
+STATIC INT32       mRiscVPass1Offset;
+STATIC INT32       mRiscVPass1GotFixup;
+
+//
+// Used for Export section.
+//
+STATIC UINT32      mExportSize;
+STATIC UINT32      mExportRVA[PRM_MODULE_EXPORT_SYMBOL_NUM];
+STATIC UINT32      mExportSymNum;
+STATIC CHAR8       mExportSymName[PRM_MODULE_EXPORT_SYMBOL_NUM][PRM_HANDLER_NAME_MAXIMUM_LENGTH];
 
 //
 // Initialization Function
@@ -151,13 +180,19 @@ InitializeElf64 (
     Error (NULL, 0, 3000, "Unsupported", "ELF e_type not ET_EXEC or ET_DYN");
     return FALSE;
   }
-  if (!((mEhdr->e_machine == EM_X86_64) || (mEhdr->e_machine == EM_AARCH64))) {
-    Error (NULL, 0, 3000, "Unsupported", "ELF e_machine not EM_X86_64 or EM_AARCH64");
-    return FALSE;
+  if (!((mEhdr->e_machine == EM_X86_64) || (mEhdr->e_machine == EM_AARCH64) || (mEhdr->e_machine == EM_RISCV64) || (mEhdr->e_machine == EM_LOONGARCH))) {
+    Warning (NULL, 0, 3000, "Unsupported", "ELF e_machine is not Elf64 machine.");
   }
   if (mEhdr->e_version != EV_CURRENT) {
     Error (NULL, 0, 3000, "Unsupported", "ELF e_version (%u) not EV_CURRENT (%d)", (unsigned) mEhdr->e_version, EV_CURRENT);
     return FALSE;
+  }
+
+  if (mExportFlag) {
+    if ((mEhdr->e_machine != EM_X86_64) && (mEhdr->e_machine != EM_AARCH64)) {
+      Error (NULL, 0, 3000, "Unsupported", "--prm option currently only supports X64 and AArch64 archs.");
+      return FALSE;
+    }
   }
 
   //
@@ -172,6 +207,10 @@ InitializeElf64 (
   //
   VerboseMsg ("Create COFF Section Offset Buffer");
   mCoffSectionsOffset = (UINT32 *)malloc(mEhdr->e_shnum * sizeof (UINT32));
+  if (mCoffSectionsOffset == NULL) {
+    Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+    return FALSE;
+  }
   memset(mCoffSectionsOffset, 0, mEhdr->e_shnum * sizeof(UINT32));
 
   //
@@ -184,6 +223,15 @@ InitializeElf64 (
   ElfFunctions->WriteDebug = WriteDebug64;
   ElfFunctions->SetImageSize = SetImageSize64;
   ElfFunctions->CleanUp = CleanUp64;
+
+  if (mExportFlag) {
+    mCoffNbrSections ++;
+    ElfFunctions->WriteExport = WriteExport64;
+  }
+
+  if (mBuildIdFlag) {
+    mCoffNbrSections++;
+  }
 
   return TRUE;
 }
@@ -233,7 +281,8 @@ IsTextShdr (
   Elf_Shdr *Shdr
   )
 {
-  return (BOOLEAN) ((Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == SHF_ALLOC);
+  return (BOOLEAN) (((Shdr->sh_flags & (SHF_EXECINSTR | SHF_ALLOC)) == (SHF_EXECINSTR | SHF_ALLOC)) ||
+                   ((Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == SHF_ALLOC));
 }
 
 STATIC
@@ -249,6 +298,33 @@ IsHiiRsrcShdr (
 
 STATIC
 BOOLEAN
+IsBuildIdShdr (
+  Elf_Shdr *Shdr
+  )
+{
+  Elf_Shdr *Namedr = GetShdrByIndex(mEhdr->e_shstrndx);
+
+  if (Namedr->sh_offset + Shdr->sh_name >= mFileBufferSize) {
+    Error (NULL, 0, 3000, "Invalid", "IsBuildIdShdr: Name offset %lu is larger then file size %lu", mEhdr->e_shstrndx, mFileBufferSize);
+    exit(EXIT_FAILURE);
+  }
+
+  return (BOOLEAN) (strcmp((CHAR8*)mEhdr + Namedr->sh_offset + Shdr->sh_name, ELF_BUILD_ID_SECTION_NAME) == 0);
+}
+
+STATIC
+BOOLEAN
+IsSymbolShdr (
+  Elf_Shdr *Shdr
+  )
+{
+  Elf_Shdr *Namehdr = GetShdrByIndex(mEhdr->e_shstrndx);
+
+  return (BOOLEAN) (strcmp((CHAR8*)mEhdr + Namehdr->sh_offset + Shdr->sh_name, ELF_SYMBOL_SECTION_NAME) == 0);
+}
+
+STATIC
+BOOLEAN
 IsDataShdr (
   Elf_Shdr *Shdr
   )
@@ -256,7 +332,7 @@ IsDataShdr (
   if (IsHiiRsrcShdr(Shdr)) {
     return FALSE;
   }
-  return (BOOLEAN) (Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == (SHF_ALLOC | SHF_WRITE);
+  return (BOOLEAN) (Shdr->sh_flags & (SHF_EXECINSTR | SHF_WRITE | SHF_ALLOC)) == (SHF_ALLOC | SHF_WRITE);
 }
 
 STATIC
@@ -292,27 +368,477 @@ GetSymName (
   Elf_Sym *Sym
   )
 {
+  Elf_Shdr *StrtabShdr;
+  UINT8    *StrtabContents;
+  BOOLEAN  foundEnd;
+  UINT32   i;
+
   if (Sym->st_name == 0) {
     return NULL;
   }
 
-  Elf_Shdr *StrtabShdr = FindStrtabShdr();
+  StrtabShdr = FindStrtabShdr();
   if (StrtabShdr == NULL) {
     return NULL;
   }
 
   assert(Sym->st_name < StrtabShdr->sh_size);
 
-  UINT8* StrtabContents = (UINT8*)mEhdr + StrtabShdr->sh_offset;
+  StrtabContents = (UINT8*)mEhdr + StrtabShdr->sh_offset;
 
-  bool foundEnd = false;
-  UINT32 i;
+  foundEnd = FALSE;
   for (i= Sym->st_name; (i < StrtabShdr->sh_size) && !foundEnd; i++) {
-    foundEnd = StrtabContents[i] == 0;
+    foundEnd = (BOOLEAN)(StrtabContents[i] == 0);
   }
   assert(foundEnd);
 
   return StrtabContents + Sym->st_name;
+}
+
+//
+// Get Prm Handler number and name
+//
+STATIC
+VOID
+FindPrmHandler (
+  UINT64 Offset
+  )
+{
+  PRM_MODULE_EXPORT_DESCRIPTOR_STRUCT_HEADER *PrmExport;
+  PRM_HANDLER_EXPORT_DESCRIPTOR_STRUCT       *PrmHandler;
+  UINT32   HandlerNum;
+
+  PrmExport = (PRM_MODULE_EXPORT_DESCRIPTOR_STRUCT_HEADER*)((UINT8*)mEhdr + Offset);
+  PrmHandler = (PRM_HANDLER_EXPORT_DESCRIPTOR_STRUCT *)(PrmExport + 1);
+
+  for (HandlerNum = 0; HandlerNum < PrmExport->NumberPrmHandlers; HandlerNum++) {
+    snprintf(mExportSymName[mExportSymNum], PRM_HANDLER_NAME_MAXIMUM_LENGTH, "%s", PrmHandler->PrmHandlerName);
+
+    mExportSymNum ++;
+    PrmHandler += 1;
+
+    //
+    // Check if PRM handler number is larger than (PRM_MODULE_EXPORT_SYMBOL_NUM - 1)
+    //
+    if (mExportSymNum >= (PRM_MODULE_EXPORT_SYMBOL_NUM - 1)) {
+      Error (NULL, 0, 3000, "Invalid", "FindPrmHandler: Number %u is too high.", mExportSymNum);
+      exit(EXIT_FAILURE);
+    }
+  }
+}
+
+//
+// Find the ELF section hosting the GOT from an ELF Rva
+//   of a single GOT entry.  Normally, GOT is placed in
+//   ELF .text section, so assume once we find in which
+//   section the GOT is, all GOT entries are there, and
+//   just verify this.
+//
+STATIC
+VOID
+FindElfGOTSectionFromGOTEntryElfRva (
+  Elf64_Addr GOTEntryElfRva
+  )
+{
+  UINT32 i;
+  if (mGOTShdr != NULL) {
+    if (GOTEntryElfRva >= mGOTShdr->sh_addr &&
+        GOTEntryElfRva <  mGOTShdr->sh_addr + mGOTShdr->sh_size) {
+      return;
+    }
+    Error (NULL, 0, 3000, "Unsupported", "FindElfGOTSectionFromGOTEntryElfRva: GOT entries found in multiple sections.");
+    exit(EXIT_FAILURE);
+  }
+  for (i = 0; i < mEhdr->e_shnum; i++) {
+    Elf_Shdr *shdr = GetShdrByIndex(i);
+    if (GOTEntryElfRva >= shdr->sh_addr &&
+        GOTEntryElfRva <  shdr->sh_addr + shdr->sh_size) {
+      mGOTShdr = shdr;
+      mGOTShindex = i;
+      return;
+    }
+  }
+  Error (NULL, 0, 3000, "Invalid", "FindElfGOTSectionFromGOTEntryElfRva: ElfRva 0x%016LX for GOT entry not found in any section.", GOTEntryElfRva);
+  exit(EXIT_FAILURE);
+}
+
+//
+// Stores locations of GOT entries in COFF image.
+//   Returns TRUE if GOT entry is new.
+//   Simple implementation as number of GOT
+//   entries is expected to be low.
+//
+
+STATIC
+BOOLEAN
+AccumulateCoffGOTEntries (
+  UINT32 GOTCoffEntry
+  )
+{
+  UINT32 i;
+  if (mGOTCoffEntries != NULL) {
+    for (i = 0; i < mGOTNumCoffEntries; i++) {
+      if (mGOTCoffEntries[i] == GOTCoffEntry) {
+        return FALSE;
+      }
+    }
+  }
+  if (mGOTCoffEntries == NULL) {
+    mGOTCoffEntries = (UINT32*)malloc(5 * sizeof *mGOTCoffEntries);
+    if (mGOTCoffEntries == NULL) {
+      Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+    }
+    assert (mGOTCoffEntries != NULL);
+    mGOTMaxCoffEntries = 5;
+    mGOTNumCoffEntries = 0;
+  } else if (mGOTNumCoffEntries == mGOTMaxCoffEntries) {
+    mGOTCoffEntries = (UINT32*)realloc(mGOTCoffEntries, 2 * mGOTMaxCoffEntries * sizeof *mGOTCoffEntries);
+    if (mGOTCoffEntries == NULL) {
+      Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+    }
+    assert (mGOTCoffEntries != NULL);
+    mGOTMaxCoffEntries += mGOTMaxCoffEntries;
+  }
+  mGOTCoffEntries[mGOTNumCoffEntries++] = GOTCoffEntry;
+  return TRUE;
+}
+
+//
+// 32-bit Unsigned integer comparator for qsort.
+//
+STATIC
+int
+UINT32Comparator (
+  const void* lhs,
+  const void* rhs
+  )
+{
+  if (*(const UINT32*)lhs < *(const UINT32*)rhs) {
+    return -1;
+  }
+  return *(const UINT32*)lhs > *(const UINT32*)rhs;
+}
+
+//
+// Emit accumulated Coff GOT entry relocations into
+//   Coff image.  This function performs its job
+//   once and then releases the entry list, so
+//   it can safely be called multiple times.
+//
+STATIC
+VOID
+EmitGOTRelocations (
+  VOID
+  )
+{
+  UINT32 i;
+  if (mGOTCoffEntries == NULL) {
+    return;
+  }
+  //
+  // Emit Coff relocations with Rvas ordered.
+  //
+  qsort(
+    mGOTCoffEntries,
+    mGOTNumCoffEntries,
+    sizeof *mGOTCoffEntries,
+    UINT32Comparator);
+  for (i = 0; i < mGOTNumCoffEntries; i++) {
+    VerboseMsg ("EFI_IMAGE_REL_BASED_DIR64 Offset: 0x%08X", mGOTCoffEntries[i]);
+    CoffAddFixup(
+      mGOTCoffEntries[i],
+      EFI_IMAGE_REL_BASED_DIR64);
+  }
+  free(mGOTCoffEntries);
+  mGOTCoffEntries = NULL;
+  mGOTMaxCoffEntries = 0;
+  mGOTNumCoffEntries = 0;
+}
+//
+// RISC-V 64 specific Elf WriteSection function.
+//
+STATIC
+VOID
+WriteSectionRiscV64 (
+  Elf_Rela  *Rel,
+  UINT8     *Targ,
+  Elf_Shdr  *SymShdr,
+  Elf_Sym   *Sym
+  )
+{
+  UINT32      Value;
+  UINT32      Value2;
+  Elf64_Addr  GOTEntryRva;
+
+  switch (ELF_R_TYPE(Rel->r_info)) {
+  case R_RISCV_NONE:
+    break;
+
+  case R_RISCV_32:
+    *(UINT64 *)Targ = Sym->st_value + Rel->r_addend;
+    break;
+
+  case R_RISCV_64:
+    *(UINT64 *)Targ = Sym->st_value + Rel->r_addend;
+    break;
+
+  case R_RISCV_HI20:
+    mRiscVPass1Targ = Targ;
+    mRiscVPass1Sym = SymShdr;
+    mRiscVPass1SymSecIndex = Sym->st_shndx;
+    break;
+
+  case R_RISCV_LO12_I:
+    if (mRiscVPass1Sym == SymShdr && mRiscVPass1Targ != NULL && mRiscVPass1SymSecIndex == Sym->st_shndx && mRiscVPass1SymSecIndex != 0) {
+      Value = (UINT32)(RV_X(*(UINT32 *)mRiscVPass1Targ, 12, 20) << 12);
+      Value2 = (UINT32)(RV_X(*(UINT32 *)Targ, 20, 12));
+      if (Value2 & (RISCV_IMM_REACH/2)) {
+        Value2 |= ~(RISCV_IMM_REACH-1);
+      }
+      Value += Value2;
+      Value = Value - (UINT32)SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx];
+      Value2 = RISCV_CONST_HIGH_PART (Value);
+      *(UINT32 *)mRiscVPass1Targ = (RV_X (Value2, 12, 20) << 12) | \
+                             (RV_X (*(UINT32 *)mRiscVPass1Targ, 0, 12));
+      *(UINT32 *)Targ = (RV_X (Value, 0, 12) << 20) | \
+                        (RV_X (*(UINT32 *)Targ, 0, 20));
+    }
+    mRiscVPass1Sym = NULL;
+    mRiscVPass1Targ = NULL;
+    mRiscVPass1SymSecIndex = 0;
+    break;
+
+  case R_RISCV_LO12_S:
+    if (mRiscVPass1Sym == SymShdr && mRiscVPass1Targ != NULL && mRiscVPass1SymSecIndex == Sym->st_shndx && mRiscVPass1SymSecIndex != 0) {
+      Value = (UINT32)(RV_X(*(UINT32 *)mRiscVPass1Targ, 12, 20) << 12);
+      Value2 = (UINT32)(RV_X(*(UINT32 *)Targ, 7, 5) | (RV_X(*(UINT32 *)Targ, 25, 7) << 5));
+      if (Value2 & (RISCV_IMM_REACH/2)) {
+        Value2 |= ~(RISCV_IMM_REACH-1);
+      }
+      Value += Value2;
+      Value = Value - (UINT32)SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx];
+      Value2 = RISCV_CONST_HIGH_PART (Value);
+      *(UINT32 *)mRiscVPass1Targ = (RV_X (Value2, 12, 20) << 12) | \
+                                 (RV_X (*(UINT32 *)mRiscVPass1Targ, 0, 12));
+      Value2 = *(UINT32 *)Targ & 0x01fff07f;
+      Value &= RISCV_IMM_REACH - 1;
+      *(UINT32 *)Targ = Value2 | (UINT32)(((RV_X(Value, 0, 5) << 7) | (RV_X(Value, 5, 7) << 25)));
+    }
+    mRiscVPass1Sym = NULL;
+    mRiscVPass1Targ = NULL;
+    mRiscVPass1SymSecIndex = 0;
+    break;
+
+  case R_RISCV_GOT_HI20:
+    GOTEntryRva = (Sym->st_value - Rel->r_offset);
+    mRiscVPass1Offset = RV_X(GOTEntryRva, 0, 12);
+    Value = (UINT32)RV_X(GOTEntryRva, 12, 20);
+    *(UINT32 *)Targ = (Value << 12) | (RV_X(*(UINT32*)Targ, 0, 12));
+
+    mRiscVPass1Targ = Targ;
+    mRiscVPass1Sym = SymShdr;
+    mRiscVPass1SymSecIndex = Sym->st_shndx;
+    mRiscVPass1GotFixup = 1;
+    break;
+
+  case R_RISCV_PCREL_HI20:
+    mRiscVPass1Targ = Targ;
+    mRiscVPass1Sym = SymShdr;
+    mRiscVPass1SymSecIndex = Sym->st_shndx;
+
+    Value = (UINT32)(RV_X(*(UINT32 *)mRiscVPass1Targ, 12, 20));
+    break;
+
+  case R_RISCV_PCREL_LO12_S:
+    if (mRiscVPass1Targ != NULL && mRiscVPass1Sym != NULL && mRiscVPass1SymSecIndex != 0) {
+      int i;
+      Value2 = (UINT32)(RV_X(*(UINT32 *)mRiscVPass1Targ, 12, 20));
+
+      Value = ((UINT32)(RV_X(*(UINT32 *)Targ, 25, 7)) << 5);
+      Value = (Value | (UINT32)(RV_X(*(UINT32 *)Targ, 7, 5)));
+
+      if(Value & (RISCV_IMM_REACH/2)) {
+        Value |= ~(RISCV_IMM_REACH-1);
+      }
+      Value = Value - (UINT32)mRiscVPass1Sym->sh_addr + mCoffSectionsOffset[mRiscVPass1SymSecIndex];
+
+      if(-2048 > (INT32)Value) {
+        i = (((INT32)Value * -1) / 4096);
+        Value2 -= i;
+        Value += 4096 * i;
+        if(-2048 > (INT32)Value) {
+          Value2 -= 1;
+          Value += 4096;
+        }
+      }
+      else if( 2047 < (INT32)Value) {
+        i = (Value / 4096);
+        Value2 += i;
+        Value -= 4096 * i;
+        if(2047 < (INT32)Value) {
+          Value2 += 1;
+          Value -= 4096;
+        }
+      }
+
+      // Update the IMM of SD instruction
+      //
+      // |31      25|24  20|19  15|14   12 |11      7|6     0|
+      // |-------------------------------------------|-------|
+      // |imm[11:5] | rs2  | rs1  | funct3 |imm[4:0] | opcode|
+      //  ---------------------------------------------------
+
+      // First Zero out current IMM
+      *(UINT32 *)Targ &= ~0xfe000f80;
+
+      // Update with new IMM
+      *(UINT32 *)Targ |= (RV_X(Value, 5, 7) << 25);
+      *(UINT32 *)Targ |= (RV_X(Value, 0, 5) << 7);
+
+      // Update previous instruction
+      *(UINT32 *)mRiscVPass1Targ = (RV_X(Value2, 0, 20)<<12) | (RV_X(*(UINT32 *)mRiscVPass1Targ, 0, 12));
+    }
+    mRiscVPass1Sym = NULL;
+    mRiscVPass1Targ = NULL;
+    mRiscVPass1SymSecIndex = 0;
+    break;
+
+  case R_RISCV_PCREL_LO12_I:
+    if (mRiscVPass1Targ != NULL && mRiscVPass1Sym != NULL && mRiscVPass1SymSecIndex != 0) {
+      int i;
+      Value2 = (UINT32)(RV_X(*(UINT32 *)mRiscVPass1Targ, 12, 20));
+
+      if(mRiscVPass1GotFixup) {
+        Value = (UINT32)(mRiscVPass1Offset);
+      } else {
+        Value = (UINT32)(RV_X(*(UINT32 *)Targ, 20, 12));
+        if(Value & (RISCV_IMM_REACH/2)) {
+          Value |= ~(RISCV_IMM_REACH-1);
+        }
+      }
+      Value = Value - (UINT32)mRiscVPass1Sym->sh_addr + mCoffSectionsOffset[mRiscVPass1SymSecIndex];
+
+      if(-2048 > (INT32)Value) {
+        i = (((INT32)Value * -1) / 4096);
+        Value2 -= i;
+        Value += 4096 * i;
+        if(-2048 > (INT32)Value) {
+          Value2 -= 1;
+          Value += 4096;
+        }
+      }
+      else if( 2047 < (INT32)Value) {
+        i = (Value / 4096);
+        Value2 += i;
+        Value -= 4096 * i;
+        if(2047 < (INT32)Value) {
+          Value2 += 1;
+          Value -= 4096;
+        }
+      }
+
+      if(mRiscVPass1GotFixup) {
+        *(UINT32 *)Targ = (RV_X((UINT32)Value, 0, 12) << 20)
+                            | (RV_X(*(UINT32*)Targ, 0, 20));
+        // Convert LD instruction to ADDI
+        //
+        // |31      20|19  15|14  12|11   7|6       0|
+        // |-----------------------------------------|
+        // |imm[11:0] | rs1  | 011  |  rd  | 0000011 | LD
+        //  -----------------------------------------
+
+        // |-----------------------------------------|
+        // |imm[11:0] | rs1  | 000  |  rd  | 0010011 | ADDI
+        //  -----------------------------------------
+
+        // To convert, let's first reset bits 12-14 and 0-6 using ~0x707f
+        // Then modify the opcode to ADDI (0010011)
+        // All other fields will remain same.
+
+        *(UINT32 *)Targ = ((*(UINT32 *)Targ & ~0x707f) | 0x13);
+      } else {
+        *(UINT32 *)Targ = (RV_X(Value, 0, 12) << 20) | (RV_X(*(UINT32*)Targ, 0, 20));
+      }
+      *(UINT32 *)mRiscVPass1Targ = (RV_X(Value2, 0, 20)<<12) | (RV_X(*(UINT32 *)mRiscVPass1Targ, 0, 12));
+    }
+    mRiscVPass1Sym = NULL;
+    mRiscVPass1Targ = NULL;
+    mRiscVPass1SymSecIndex = 0;
+    mRiscVPass1Offset = 0;
+    mRiscVPass1GotFixup = 0;
+    break;
+
+  case R_RISCV_ADD64:
+  case R_RISCV_SUB64:
+  case R_RISCV_ADD32:
+  case R_RISCV_SUB32:
+  case R_RISCV_BRANCH:
+  case R_RISCV_JAL:
+  case R_RISCV_GPREL_I:
+  case R_RISCV_GPREL_S:
+  case R_RISCV_CALL:
+  case R_RISCV_CALL_PLT:
+  case R_RISCV_RVC_BRANCH:
+  case R_RISCV_RVC_JUMP:
+  case R_RISCV_RELAX:
+  case R_RISCV_SUB6:
+  case R_RISCV_SET6:
+  case R_RISCV_SET8:
+  case R_RISCV_SET16:
+  case R_RISCV_SET32:
+    break;
+
+  default:
+    Error (NULL, 0, 3000, "Invalid", "WriteSections64(): %s unsupported ELF EM_RISCV64 relocation 0x%x.", mInImageName, (unsigned) ELF_R_TYPE(Rel->r_info));
+  }
+}
+
+STATIC UINT16 mDllCharacteristicsEx;
+
+STATIC
+VOID
+ParseNoteSection (
+  CONST Elf_Shdr  *Shdr
+  )
+{
+  CONST Elf_Note *Note;
+  CONST UINT32   *Prop;
+  UINT32         Prop0;
+  UINT32         Prop2;
+
+  Note = (Elf_Note *)((UINT8 *)mEhdr + Shdr->sh_offset);
+
+  if ((Note->n_type == NT_GNU_PROPERTY_TYPE_0) &&
+      (Note->n_namesz == sizeof ("GNU")) &&
+      (strcmp ((CHAR8 *)(Note + 1), "GNU") == 0) &&
+      (Note->n_descsz > sizeof (UINT32[2]))) {
+    Prop = (UINT32 *)((UINT8 *)(Note + 1) + sizeof("GNU"));
+
+    switch (mEhdr->e_machine) {
+    case EM_AARCH64:
+      Prop0 = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+      Prop2 = GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
+      break;
+
+    case EM_X86_64:
+      Prop0 = GNU_PROPERTY_X86_FEATURE_1_AND;
+      Prop2 = GNU_PROPERTY_X86_FEATURE_1_IBT;
+      break;
+
+    case EM_RISCV64:
+      Prop0 = GNU_PROPERTY_RISCV64_FEATURE_1_AND;
+      Prop2 = GNU_PROPERTY_RISCV64_FEATURE_1_FCFI;
+      break;
+
+    default:
+      return;
+    }
+    if ((Prop[0] == Prop0) &&
+        (Prop[1] >= sizeof (UINT32)) &&
+        ((Prop[2] & Prop2) != 0)) {
+      mDllCharacteristicsEx |= EFI_IMAGE_DLLCHARACTERISTICS_EX_FORWARD_CFI_COMPAT;
+    }
+  }
 }
 
 //
@@ -331,6 +857,7 @@ ScanSections64 (
   UINT32                          CoffEntry;
   UINT32                          SectionCount;
   BOOLEAN                         FoundSection;
+  UINT32                          Offset;
 
   CoffEntry = 0;
   mCoffOffset = 0;
@@ -342,8 +869,9 @@ ScanSections64 (
   mNtHdrOffset = mCoffOffset;
   switch (mEhdr->e_machine) {
   case EM_X86_64:
-  case EM_IA_64:
   case EM_AARCH64:
+  case EM_RISCV64:
+  case EM_LOONGARCH:
     mCoffOffset += sizeof (EFI_IMAGE_NT_HEADERS64);
   break;
   default:
@@ -368,6 +896,22 @@ ScanSections64 (
       mCoffAlignment = (UINT32)shdr->sh_addralign;
     }
   }
+
+  for (i = 0; i < mEhdr->e_shnum; i++) {
+    Elf_Shdr *shdr = GetShdrByIndex(i);
+    if (shdr->sh_type == SHT_NOTE) {
+      ParseNoteSection (shdr);
+    }
+  }
+
+  //
+  // Check if mCoffAlignment is larger than MAX_COFF_ALIGNMENT
+  //
+  if (mCoffAlignment > MAX_COFF_ALIGNMENT) {
+    Error (NULL, 0, 3000, "Invalid", "Section alignment is larger than MAX_COFF_ALIGNMENT.");
+    assert (FALSE);
+  }
+
 
   //
   // Move the PE/COFF header right before the first section. This will help us
@@ -419,7 +963,7 @@ ScanSections64 (
     }
   }
 
-  if (!FoundSection) {
+  if (!FoundSection && mOutImageType != FW_ACPI_IMAGE) {
     Error (NULL, 0, 3000, "Invalid", "Did not find any '.text' section.");
     assert (FALSE);
   }
@@ -428,7 +972,7 @@ ScanSections64 (
   mCoffOffset = CoffAlign(mCoffOffset);
 
   if (SectionCount > 1 && mOutImageType == FW_EFI_IMAGE) {
-    Warning (NULL, 0, 0, NULL, "Mulitple sections in %s are merged into 1 text section. Source level debug might not work correctly.", mInImageName);
+    Warning (NULL, 0, 0, NULL, "Multiple sections in %s are merged into 1 text section. Source level debug might not work correctly.", mInImageName);
   }
 
   //
@@ -476,13 +1020,102 @@ ScanSections64 (
                 sizeof(EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY) +
                 strlen(mInImageName) + 1;
 
+  //
+  // Add more space in the .debug data region for the DllCharacteristicsEx
+  // field.
+  //
+  if (mDllCharacteristicsEx != 0) {
+    mCoffOffset = DebugRvaAlign(mCoffOffset) +
+                  sizeof (EFI_IMAGE_DEBUG_DIRECTORY_ENTRY) +
+                  sizeof (EFI_IMAGE_DEBUG_EX_DLLCHARACTERISTICS_ENTRY);
+  }
+
   mCoffOffset = CoffAlign(mCoffOffset);
   if (SectionCount == 0) {
     mDataOffset = mCoffOffset;
   }
 
   if (SectionCount > 1 && mOutImageType == FW_EFI_IMAGE) {
-    Warning (NULL, 0, 0, NULL, "Mulitple sections in %s are merged into 1 data section. Source level debug might not work correctly.", mInImageName);
+    Warning (NULL, 0, 0, NULL, "Multiple sections in %s are merged into 1 data section. Source level debug might not work correctly.", mInImageName);
+  }
+
+  //
+  //  The Symbol sections.
+  //
+  if (mExportFlag) {
+    UINT32      SymIndex;
+    Elf_Sym     *Sym;
+    UINT64      SymNum;
+    const UINT8 *SymName;
+
+    mExportOffset = mCoffOffset;
+    mExportSize = sizeof(EFI_IMAGE_EXPORT_DIRECTORY) + strlen(mInImageName) + 1;
+
+    for (i = 0; i < mEhdr->e_shnum; i++) {
+
+      //
+      // Determine if this is a symbol section.
+      //
+      Elf_Shdr *shdr = GetShdrByIndex(i);
+      if (!IsSymbolShdr(shdr)) {
+        continue;
+      }
+
+      UINT8    *Symtab = (UINT8*)mEhdr + shdr->sh_offset;
+      SymNum = (shdr->sh_size) / (shdr->sh_entsize);
+
+      //
+      // First Get PrmModuleExportDescriptor
+      //
+      for (SymIndex = 0; SymIndex < SymNum; SymIndex++) {
+        Sym = (Elf_Sym *)(Symtab + SymIndex * shdr->sh_entsize);
+        SymName = GetSymName(Sym);
+        if (SymName == NULL) {
+            continue;
+        }
+
+        if (strcmp((CHAR8*)SymName, PRM_MODULE_EXPORT_DESCRIPTOR_NAME) == 0) {
+          //
+          // Find PrmHandler Number and Name
+          //
+          FindPrmHandler(Sym->st_value);
+
+          snprintf(mExportSymName[mExportSymNum], PRM_HANDLER_NAME_MAXIMUM_LENGTH, "%s", (CHAR8*)SymName);
+
+          mExportRVA[mExportSymNum] = (UINT32)(Sym->st_value);
+          mExportSize += 2 * EFI_IMAGE_EXPORT_ADDR_SIZE + EFI_IMAGE_EXPORT_ORDINAL_SIZE + strlen((CHAR8 *)SymName) + 1;
+          mExportSymNum ++;
+          break;
+        }
+      }
+
+      //
+      // Second Get PrmHandler
+      //
+      if (mExportSymNum > 0) {
+        for (SymIndex = 0; SymIndex < SymNum; SymIndex++) {
+          UINT32   ExpIndex;
+          Sym = (Elf_Sym *)(Symtab + SymIndex * shdr->sh_entsize);
+          SymName = GetSymName(Sym);
+          if (SymName == NULL) {
+              continue;
+          }
+
+          for (ExpIndex = 0; ExpIndex < (mExportSymNum -1); ExpIndex++) {
+            if (strcmp((CHAR8*)SymName, mExportSymName[ExpIndex]) != 0) {
+              continue;
+            }
+            mExportRVA[ExpIndex] = (UINT32)(Sym->st_value);
+            mExportSize += 2 * EFI_IMAGE_EXPORT_ADDR_SIZE + EFI_IMAGE_EXPORT_ORDINAL_SIZE + strlen((CHAR8 *)SymName) + 1;
+          }
+        }
+      }
+
+      break;
+    }
+
+    mCoffOffset += mExportSize;
+    mCoffOffset = CoffAlign(mCoffOffset);
   }
 
   //
@@ -512,12 +1145,50 @@ ScanSections64 (
     }
   }
 
+  //
+  //  The build-ID section.
+  //
+  mBuildIdOffset = mCoffOffset;
+  mBuildIdFound = FALSE;
+  if (mBuildIdFlag) {
+    for (i = 0; i < mEhdr->e_shnum; i++) {
+      Elf_Shdr *shdr = GetShdrByIndex(i);
+      if (IsBuildIdShdr(shdr)) {
+        if ((shdr->sh_addralign != 0) && (shdr->sh_addralign != 1)) {
+          // the alignment field is valid
+          if ((shdr->sh_addr & (shdr->sh_addralign - 1)) == 0) {
+            // if the section address is aligned we must align PE/COFF
+            mCoffOffset = (UINT32) ((mCoffOffset + shdr->sh_addralign - 1) & ~(shdr->sh_addralign - 1));
+          } else {
+            Error (NULL, 0, 3000, "Invalid", "Section address not aligned to its own alignment.");
+          }
+        }
+        if (shdr->sh_size != 0) {
+          mBuildIdOffset = mCoffOffset;
+          mCoffSectionsOffset[i] = mCoffOffset;
+          mCoffOffset += (UINT32) shdr->sh_size;
+          mCoffOffset = CoffAlign(mCoffOffset);
+          mBuildIdFound = TRUE;
+        }
+        break;
+      }
+    }
+
+    if (!mBuildIdFound) {
+      Warning (NULL, 0, 0, NULL, "Build ID section is not found in %s.", mInImageName);
+    }
+  }
+
   mRelocOffset = mCoffOffset;
 
   //
   // Allocate base Coff file.  Will be expanded later for relocations.
   //
   mCoffFile = (UINT8 *)malloc(mCoffOffset);
+  if (mCoffFile == NULL) {
+    Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+  }
+  assert (mCoffFile != NULL);
   memset(mCoffFile, 0, mCoffOffset);
 
   //
@@ -533,20 +1204,25 @@ ScanSections64 (
 
   switch (mEhdr->e_machine) {
   case EM_X86_64:
-    NtHdr->Pe32Plus.FileHeader.Machine = EFI_IMAGE_MACHINE_X64;
-    NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
-    break;
-  case EM_IA_64:
-    NtHdr->Pe32Plus.FileHeader.Machine = EFI_IMAGE_MACHINE_IPF;
+    NtHdr->Pe32Plus.FileHeader.Machine = IMAGE_FILE_MACHINE_X64;
     NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
     break;
   case EM_AARCH64:
-    NtHdr->Pe32Plus.FileHeader.Machine = EFI_IMAGE_MACHINE_AARCH64;
+    NtHdr->Pe32Plus.FileHeader.Machine = IMAGE_FILE_MACHINE_ARM64;
     NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
     break;
+  case EM_RISCV64:
+    NtHdr->Pe32Plus.FileHeader.Machine = IMAGE_FILE_MACHINE_RISCV64;
+    NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
+    break;
+  case EM_LOONGARCH:
+    NtHdr->Pe32Plus.FileHeader.Machine = IMAGE_FILE_MACHINE_LOONGARCH64;
+    NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
+    break;
+
   default:
-    VerboseMsg ("%s unknown e_machine type. Assume X64", (UINTN)mEhdr->e_machine);
-    NtHdr->Pe32Plus.FileHeader.Machine = EFI_IMAGE_MACHINE_X64;
+    VerboseMsg ("%u unknown e_machine type. Assume X64", (UINTN)mEhdr->e_machine);
+    NtHdr->Pe32Plus.FileHeader.Machine = IMAGE_FILE_MACHINE_X64;
     NtHdr->Pe32Plus.OptionalHeader.Magic = EFI_IMAGE_NT_OPTIONAL_HDR64_MAGIC;
   }
 
@@ -589,8 +1265,17 @@ ScanSections64 (
     NtHdr->Pe32Plus.FileHeader.NumberOfSections--;
   }
 
+  //
+  // If found symbol, add edata section between data and rsrc section
+  //
+  if(mExportFlag) {
+    Offset = mExportOffset;
+  } else {
+    Offset = mHiiRsrcOffset;
+  }
+
   if ((mHiiRsrcOffset - mDataOffset) > 0) {
-    CreateSectionHeader (".data", mDataOffset, mHiiRsrcOffset - mDataOffset,
+    CreateSectionHeader (".data", mDataOffset, Offset - mDataOffset,
             EFI_IMAGE_SCN_CNT_INITIALIZED_DATA
             | EFI_IMAGE_SCN_MEM_WRITE
             | EFI_IMAGE_SCN_MEM_READ);
@@ -599,16 +1284,53 @@ ScanSections64 (
     NtHdr->Pe32Plus.FileHeader.NumberOfSections--;
   }
 
-  if ((mRelocOffset - mHiiRsrcOffset) > 0) {
-    CreateSectionHeader (".rsrc", mHiiRsrcOffset, mRelocOffset - mHiiRsrcOffset,
+  if(mExportFlag) {
+    if ((mHiiRsrcOffset - mExportOffset) > 0) {
+      CreateSectionHeader (".edata", mExportOffset, mHiiRsrcOffset - mExportOffset,
+              EFI_IMAGE_SCN_CNT_INITIALIZED_DATA
+              | EFI_IMAGE_SCN_MEM_READ);
+      NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_EXPORT].Size = mHiiRsrcOffset - mExportOffset;
+      NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress = mExportOffset;
+
+    } else {
+      // Don't make a section of size 0.
+      NtHdr->Pe32Plus.FileHeader.NumberOfSections--;
+    }
+  }
+
+  //
+  // Determine the end offset for .rsrc section based on whether build-ID is present
+  //
+  if (mBuildIdFound) {
+    Offset = mBuildIdOffset;
+  } else {
+    Offset = mRelocOffset;
+  }
+
+  if ((Offset - mHiiRsrcOffset) > 0) {
+    CreateSectionHeader (".rsrc", mHiiRsrcOffset, Offset - mHiiRsrcOffset,
             EFI_IMAGE_SCN_CNT_INITIALIZED_DATA
             | EFI_IMAGE_SCN_MEM_READ);
 
-    NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_RESOURCE].Size = mRelocOffset - mHiiRsrcOffset;
+    NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_RESOURCE].Size = Offset - mHiiRsrcOffset;
     NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress = mHiiRsrcOffset;
   } else {
     // Don't make a section of size 0.
     NtHdr->Pe32Plus.FileHeader.NumberOfSections--;
+  }
+
+  //
+  // Add build-ID section if requested and found
+  //
+  if (mBuildIdFlag) {
+    if (mBuildIdFound) {
+      CreateSectionHeader (".bldid", mBuildIdOffset, mRelocOffset - mBuildIdOffset,
+              EFI_IMAGE_SCN_CNT_INITIALIZED_DATA
+              | EFI_IMAGE_SCN_MEM_READ);
+    } else {
+      // Don't make a section of size 0, decrement the section count
+      NtHdr->Pe32Plus.FileHeader.NumberOfSections--;
+    }
   }
 
 }
@@ -623,6 +1345,7 @@ WriteSections64 (
   Elf_Shdr    *SecShdr;
   UINT32      SecOffset;
   BOOLEAN     (*Filter)(Elf_Shdr *);
+  Elf64_Addr  GOTEntryRva;
 
   //
   // Initialize filter pointer
@@ -637,6 +1360,9 @@ WriteSections64 (
     case SECTION_DATA:
       Filter = IsDataShdr;
       break;
+    case SECTION_BUILD_ID:
+      Filter = IsBuildIdShdr;
+      break;
     default:
       return FALSE;
   }
@@ -650,6 +1376,9 @@ WriteSections64 (
       switch (Shdr->sh_type) {
       case SHT_PROGBITS:
         /* Copy.  */
+        if (Shdr->sh_offset + Shdr->sh_size > mFileBufferSize) {
+          return FALSE;
+        }
         memcpy(mCoffFile + mCoffSectionsOffset[Idx],
               (UINT8*)mEhdr + Shdr->sh_offset,
               (size_t) Shdr->sh_size);
@@ -661,9 +1390,9 @@ WriteSections64 (
 
       default:
         //
-        //  Ignore for unkown section type.
+        //  Ignore for unknown section type.
         //
-        VerboseMsg ("%s unknown section type %x. We directly copy this section into Coff file", mInImageName, (unsigned)Shdr->sh_type);
+        VerboseMsg ("%s unknown section type %x. We ignore this unknown section type.", mInImageName, (unsigned)Shdr->sh_type);
         break;
       }
     }
@@ -687,7 +1416,7 @@ WriteSections64 (
     // section that applies to the entire binary, and which will have its section
     // index set to #0 (which is a NULL section with the SHF_ALLOC bit cleared).
     //
-    // In the absence of GOT based relocations (which we currently don't support),
+    // In the absence of GOT based relocations,
     // this RELA section will contain redundant R_xxx_RELATIVE relocations, one
     // for every R_xxx_xx64 relocation appearing in the per-section RELA sections.
     // (i.e., .rela.text and .rela.data)
@@ -734,6 +1463,22 @@ WriteSections64 (
         UINT8    *Targ;
 
         //
+        // The _GLOBAL_OFFSET_TABLE_ symbol is not actually an absolute symbol,
+        // but carries the SHN_ABS section index for historical reasons.
+        // It must be accompanied by a R_*_GOT_* type relocation on a
+        // subsequent instruction, which we handle below, specifically to avoid
+        // the GOT indirection, and to refer to the symbol directly. This means
+        // we can simply disregard direct references to the GOT symbol itself,
+        // as the resulting value will never be used.
+        //
+        if (Sym->st_shndx == SHN_ABS) {
+          const UINT8 *SymName = GetSymName (Sym);
+          if (strcmp ((CHAR8 *)SymName, "_GLOBAL_OFFSET_TABLE_") == 0) {
+            continue;
+          }
+        }
+
+        //
         // Check section header index found in symbol table and get the section
         // header location.
         //
@@ -744,12 +1489,29 @@ WriteSections64 (
             SymName = (const UINT8 *)"<unknown>";
           }
 
-          Error (NULL, 0, 3000, "Invalid",
-                 "%s: Bad definition for symbol '%s'@%#llx or unsupported symbol type.  "
-                 "For example, absolute and undefined symbols are not supported.",
-                 mInImageName, SymName, Sym->st_value);
+          //
+          // We can ignore R_*_NONE relocations (which always have numeric
+          // value 0x0).  They are used to indicate that the symbol is not
+          // defined in the current module, but in a shared library that may be
+          // used when building modules for inclusion in host-based unit tests.
+          //
+          if (ELF_R_TYPE(Rel->r_info) == 0x0) {
+            continue;
+          }
 
-          exit(EXIT_FAILURE);
+          //
+          // Skip error on EM_RISCV64 and EM_LOONGARCH because no symbol name is built
+          // from RISC-V and LoongArch toolchain.
+          //
+          if ((mEhdr->e_machine != EM_RISCV64) && (mEhdr->e_machine != EM_LOONGARCH)) {
+            Error (NULL, 0, 3000, "Invalid",
+                   "%s: Bad definition for symbol '%s'@%#llx or unsupported symbol type.  "
+                   "For example, absolute and undefined symbols are not supported.",
+                   mInImageName, SymName, Sym->st_value);
+
+            exit(EXIT_FAILURE);
+          }
+          continue;
         }
         SymShdr = GetShdrByIndex(Sym->st_shndx);
 
@@ -777,24 +1539,24 @@ WriteSections64 (
             // Absolute relocation.
             //
             VerboseMsg ("R_X86_64_64");
-            VerboseMsg ("Offset: 0x%08X, Addend: 0x%016LX", 
-              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)), 
+            VerboseMsg ("Offset: 0x%08X, Addend: 0x%016LX",
+              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
               *(UINT64 *)Targ);
             *(UINT64 *)Targ = *(UINT64 *)Targ - SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx];
             VerboseMsg ("Relocation:  0x%016LX", *(UINT64*)Targ);
             break;
           case R_X86_64_32:
             VerboseMsg ("R_X86_64_32");
-            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X", 
-              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)), 
+            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X",
+              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
               *(UINT32 *)Targ);
             *(UINT32 *)Targ = (UINT32)((UINT64)(*(UINT32 *)Targ) - SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx]);
             VerboseMsg ("Relocation:  0x%08X", *(UINT32*)Targ);
             break;
           case R_X86_64_32S:
             VerboseMsg ("R_X86_64_32S");
-            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X", 
-              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)), 
+            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X",
+              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
               *(UINT32 *)Targ);
             *(INT32 *)Targ = (INT32)((INT64)(*(INT32 *)Targ) - SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx]);
             VerboseMsg ("Relocation:  0x%08X", *(UINT32*)Targ);
@@ -815,13 +1577,60 @@ WriteSections64 (
             // Relative relocation: Symbol - Ip + Addend
             //
             VerboseMsg ("R_X86_64_PC32");
-            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X", 
-              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)), 
+            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X",
+              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
               *(UINT32 *)Targ);
             *(UINT32 *)Targ = (UINT32) (*(UINT32 *)Targ
               + (mCoffSectionsOffset[Sym->st_shndx] - SymShdr->sh_addr)
               - (SecOffset - SecShdr->sh_addr));
             VerboseMsg ("Relocation:  0x%08X", *(UINT32 *)Targ);
+            break;
+          case R_X86_64_REX_GOTPCRELX:
+            //
+            // This is a relaxable GOTPCREL relocation, and the linker may have
+            // applied this relaxation without updating the relocation type.
+            // In the position independent code model, only transformations
+            // from MOV to LEA are possible for REX-prefixed instructions.
+            //
+            if (Targ[-2] == 0x8d) { // LEA
+              break;
+            }
+          case R_X86_64_GOTPCREL:
+          case R_X86_64_GOTPCRELX:
+            VerboseMsg ("R_X86_64_GOTPCREL family");
+            VerboseMsg ("Offset: 0x%08X, Addend: 0x%08X",
+              (UINT32)(SecOffset + (Rel->r_offset - SecShdr->sh_addr)),
+              *(UINT32 *)Targ);
+            GOTEntryRva = Rel->r_offset - Rel->r_addend + *(INT32 *)Targ;
+            FindElfGOTSectionFromGOTEntryElfRva(GOTEntryRva);
+            *(UINT32 *)Targ = (UINT32) (*(UINT32 *)Targ
+              + (mCoffSectionsOffset[mGOTShindex] - mGOTShdr->sh_addr)
+              - (SecOffset - SecShdr->sh_addr));
+            VerboseMsg ("Relocation:  0x%08X", *(UINT32 *)Targ);
+            GOTEntryRva += (mCoffSectionsOffset[mGOTShindex] - mGOTShdr->sh_addr);  // ELF Rva -> COFF Rva
+            if (AccumulateCoffGOTEntries((UINT32)GOTEntryRva)) {
+              //
+              // Relocate GOT entry if it's the first time we run into it
+              //
+              Targ = mCoffFile + GOTEntryRva;
+              //
+              // Limitation: The following three statements assume memory
+              //   at *Targ is valid because the section containing the GOT
+              //   has already been copied from the ELF image to the Coff image.
+              //   This pre-condition presently holds because the GOT is placed
+              //   in section .text, and the ELF text sections are all copied
+              //   prior to reaching this point.
+              //   If the pre-condition is violated in the future, this fixup
+              //   either needs to be deferred after the GOT section is copied
+              //   to the Coff image, or the fixup should be performed on the
+              //   source Elf image instead of the destination Coff image.
+              //
+              VerboseMsg ("Offset: 0x%08X, Addend: 0x%016LX",
+                (UINT32)GOTEntryRva,
+                *(UINT64 *)Targ);
+              *(UINT64 *)Targ = *(UINT64 *)Targ - SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx];
+              VerboseMsg ("Relocation:  0x%016LX", *(UINT64*)Targ);
+            }
             break;
           default:
             Error (NULL, 0, 3000, "Invalid", "%s unsupported ELF EM_X86_64 relocation 0x%x.", mInImageName, (unsigned) ELF_R_TYPE(Rel->r_info));
@@ -829,8 +1638,83 @@ WriteSections64 (
         } else if (mEhdr->e_machine == EM_AARCH64) {
 
           switch (ELF_R_TYPE(Rel->r_info)) {
+            INT64 Offset;
+
+          case R_AARCH64_LD64_GOTOFF_LO15:
+          case R_AARCH64_LD64_GOTPAGE_LO15:
+            //
+            // Convert into an ADR instruction that refers to the symbol directly.
+            //
+            Offset = Sym->st_value - Rel->r_offset;
+
+            *(UINT32 *)Targ &= 0x1000001f;
+            *(UINT32 *)Targ |= ((Offset & 0x1ffffc) << (5 - 2)) | ((Offset & 0x3) << 29);
+
+            if (Offset < -0x100000 || Offset > 0xfffff) {
+              Error (NULL, 0, 3000, "Invalid", "WriteSections64(): %s failed to relax GOT based symbol reference - image is too big (>1 MiB).",
+                mInImageName);
+              break;
+            }
+            break;
+
+          case R_AARCH64_LD64_GOT_LO12_NC:
+            //
+            // Convert into an ADD instruction - see R_AARCH64_ADR_GOT_PAGE below.
+            //
+            *(UINT32 *)Targ &= 0x3ff;
+            *(UINT32 *)Targ |= 0x91000000 | ((Sym->st_value & 0xfff) << 10);
+            break;
+
+          case R_AARCH64_ADR_GOT_PAGE:
+            //
+            // This relocation points to the GOT entry that contains the absolute
+            // address of the symbol we are referring to. Since EDK2 only uses
+            // fully linked binaries, we can avoid the indirection, and simply
+            // refer to the symbol directly. This implies having to patch the
+            // subsequent LDR instruction (covered by a R_AARCH64_LD64_GOT_LO12_NC
+            // relocation) into an ADD instruction - this is handled above.
+            //
+            // In order to handle Cortex-A53 erratum #843419, the GCC toolchain
+            // may convert an ADRP instruction at the end of a page (0xffc
+            // offset) into an ADR instruction. If so, be sure to calculate the
+            // offset for an ADR instead of ADRP.
+            //
+            if ((*(UINT32 *)Targ & BIT31) == 0) {
+              //
+              // Calculate the offset for an ADR.
+              //
+              Offset = (Sym->st_value & ~0xfff) - Rel->r_offset;
+              if (Offset < -0x100000 || Offset > 0xfffff) {
+                Error (NULL, 0, 3000, "Invalid", "WriteSections64(): %s  due to its size (> 1 MB), unable to relocate ADR.",
+                  mInImageName);
+                break;
+              }
+            } else {
+              //
+              // Calculate the offset for an ADRP.
+              //
+              Offset = (Sym->st_value - (Rel->r_offset & ~0xfff)) >> 12;
+            }
+
+            *(UINT32 *)Targ &= 0x9000001f;
+            *(UINT32 *)Targ |= ((Offset & 0x1ffffc) << (5 - 2)) | ((Offset & 0x3) << 29);
+
+            /* fall through */
 
           case R_AARCH64_ADR_PREL_PG_HI21:
+            //
+            // In order to handle Cortex-A53 erratum #843419, the LD linker may
+            // convert ADRP instructions into ADR instructions, but without
+            // updating the static relocation type, and so we may end up here
+            // while the instruction in question is actually ADR. So let's
+            // just disregard it: the section offset check we apply below to
+            // ADR instructions will trigger for its R_AARCH64_xxx_ABS_LO12_NC
+            // companion instruction as well, so it is safe to omit it here.
+            //
+            if ((*(UINT32 *)Targ & BIT31) == 0) {
+              break;
+            }
+
             //
             // AArch64 PG_H21 relocations are typically paired with ABS_LO12
             // relocations, where a PC-relative reference with +/- 4 GB range is
@@ -849,7 +1733,6 @@ WriteSections64 (
               // Attempt to convert the ADRP into an ADR instruction.
               // This is only possible if the symbol is within +/- 1 MB.
               //
-              INT64 Offset;
 
               // Decode the ADRP instruction
               Offset = (INT32)((*(UINT32 *)Targ & 0xffffe0) << 8);
@@ -926,6 +1809,232 @@ WriteSections64 (
           default:
             Error (NULL, 0, 3000, "Invalid", "WriteSections64(): %s unsupported ELF EM_AARCH64 relocation 0x%x.", mInImageName, (unsigned) ELF_R_TYPE(Rel->r_info));
           }
+        } else if (mEhdr->e_machine == EM_RISCV64) {
+          //
+          // Write section for RISC-V 64 architecture.
+          //
+          WriteSectionRiscV64 (Rel, Targ, SymShdr, Sym);
+        } else if (mEhdr->e_machine == EM_LOONGARCH) {
+          switch (ELF_R_TYPE(Rel->r_info)) {
+            INT64     Offset;
+            INT64     BackIdx;
+            INT32     LoImm, HiImm;
+            UINT8     *PreTarg;
+            Elf_Rela  *PreRel;
+            INT64     SymCoffRva;
+            INT64     InsnCoffRva;
+            INT64     PairHiCoffRva;
+
+          case R_LARCH_SOP_PUSH_ABSOLUTE:
+          case R_LARCH_64:
+            //
+            // R_LARCH_SOP_PUSH_ABSOLUTE is an absolute relocation, and
+            // R_LARCH_64 stores an absolute runtime address in section
+            // contents.  Translate such values from the linked ELF section
+            // address space to the generated PE/COFF RVA space.
+            // WriteRelocations64() still emits the PE/COFF base relocation
+            // for load-time image rebasing.
+            //
+            *(UINT64 *)Targ = *(UINT64 *)Targ - SymShdr->sh_addr + mCoffSectionsOffset[Sym->st_shndx];
+            break;
+
+          case R_LARCH_MARK_LA:
+          case R_LARCH_NONE:
+          case R_LARCH_32:
+          case R_LARCH_RELATIVE:
+          case R_LARCH_COPY:
+          case R_LARCH_JUMP_SLOT:
+          case R_LARCH_TLS_DTPMOD32:
+          case R_LARCH_TLS_DTPMOD64:
+          case R_LARCH_TLS_DTPREL32:
+          case R_LARCH_TLS_DTPREL64:
+          case R_LARCH_TLS_TPREL32:
+          case R_LARCH_TLS_TPREL64:
+          case R_LARCH_IRELATIVE:
+          case R_LARCH_MARK_PCREL:
+          case R_LARCH_SOP_PUSH_PCREL:
+          case R_LARCH_SOP_PUSH_DUP:
+          case R_LARCH_SOP_PUSH_GPREL:
+          case R_LARCH_SOP_PUSH_TLS_TPREL:
+          case R_LARCH_SOP_PUSH_TLS_GOT:
+          case R_LARCH_SOP_PUSH_TLS_GD:
+          case R_LARCH_SOP_PUSH_PLT_PCREL:
+          case R_LARCH_SOP_ASSERT:
+          case R_LARCH_SOP_NOT:
+          case R_LARCH_SOP_SUB:
+          case R_LARCH_SOP_SL:
+          case R_LARCH_SOP_SR:
+          case R_LARCH_SOP_ADD:
+          case R_LARCH_SOP_AND:
+          case R_LARCH_SOP_IF_ELSE:
+          case R_LARCH_SOP_POP_32_S_10_5:
+          case R_LARCH_SOP_POP_32_U_10_12:
+          case R_LARCH_SOP_POP_32_S_10_12:
+          case R_LARCH_SOP_POP_32_S_10_16:
+          case R_LARCH_SOP_POP_32_S_10_16_S2:
+          case R_LARCH_SOP_POP_32_S_5_20:
+          case R_LARCH_SOP_POP_32_S_0_5_10_16_S2:
+          case R_LARCH_SOP_POP_32_S_0_10_10_16_S2:
+          case R_LARCH_SOP_POP_32_U:
+          case R_LARCH_ADD8:
+          case R_LARCH_ADD16:
+          case R_LARCH_ADD24:
+          case R_LARCH_ADD32:
+          case R_LARCH_ADD64:
+          case R_LARCH_SUB8:
+          case R_LARCH_SUB16:
+          case R_LARCH_SUB24:
+          case R_LARCH_SUB32:
+          case R_LARCH_SUB64:
+          case R_LARCH_GNU_VTINHERIT:
+          case R_LARCH_GNU_VTENTRY:
+          case R_LARCH_B16:
+          case R_LARCH_B21:
+          case R_LARCH_B26:
+          case R_LARCH_ABS_HI20:
+          case R_LARCH_ABS_LO12:
+          case R_LARCH_ABS64_LO20:
+          case R_LARCH_ABS64_HI12:
+          case R_LARCH_PCALA64_LO20:
+          case R_LARCH_PCALA64_HI12:
+          case R_LARCH_GOT64_PC_LO20:
+          case R_LARCH_GOT64_PC_HI12:
+          case R_LARCH_GOT64_HI20:
+          case R_LARCH_GOT64_LO12:
+          case R_LARCH_GOT64_LO20:
+          case R_LARCH_GOT64_HI12:
+          case R_LARCH_TLS_LE_HI20:
+          case R_LARCH_TLS_LE_LO12:
+          case R_LARCH_TLS_LE64_LO20:
+          case R_LARCH_TLS_LE64_HI12:
+          case R_LARCH_TLS_IE_PC_HI20:
+          case R_LARCH_TLS_IE_PC_LO12:
+          case R_LARCH_TLS_IE64_PC_LO20:
+          case R_LARCH_TLS_IE64_PC_HI12:
+          case R_LARCH_TLS_IE64_HI20:
+          case R_LARCH_TLS_IE64_LO12:
+          case R_LARCH_TLS_IE64_LO20:
+          case R_LARCH_TLS_IE64_HI12:
+          case R_LARCH_TLS_LD_PC_HI20:
+          case R_LARCH_TLS_LD64_HI20:
+          case R_LARCH_TLS_GD_PC_HI20:
+          case R_LARCH_TLS_GD64_HI20:
+          case R_LARCH_32_PCREL:
+          case R_LARCH_RELAX:
+          case R_LARCH_DELETE:
+          case R_LARCH_ALIGN:
+          case R_LARCH_PCREL20_S2:
+          case R_LARCH_CFA:
+          case R_LARCH_ADD6:
+          case R_LARCH_SUB6:
+          case R_LARCH_ADD_ULEB128:
+          case R_LARCH_SUB_ULEB128:
+          case R_LARCH_64_PCREL:
+            //
+            // These types are not used or do not require fixup.
+            //
+            break;
+
+            //
+            // The following four types are used the PC related method to fixup.
+            //
+          case R_LARCH_PCALA_HI20:
+          case R_LARCH_GOT_PC_HI20:
+            Offset = 0;
+            SymCoffRva = (INT64)Sym->st_value - (INT64)SymShdr->sh_addr + (INT64)mCoffSectionsOffset[Sym->st_shndx];
+            InsnCoffRva = (INT64)(UINTN)(Targ - mCoffFile);
+            if (ELF_R_TYPE(Rel->r_info) == R_LARCH_PCALA_HI20) {
+              //
+              // Calculate the PE PC-relative offset.  SymCoffRva is the
+              // referenced symbol in the generated PE/COFF RVA space, and
+              // InsnCoffRva is the PE/COFF RVA of this instruction.
+              //
+              Offset = (INT32)((SymCoffRva + Rel->r_addend) - InsnCoffRva);
+            } else if (ELF_R_TYPE(Rel->r_info) == R_LARCH_GOT_PC_HI20) {
+              //
+              // Convert the referenced symbol from the linked ELF section
+              // address space to the generated PE/COFF RVA space before
+              // calculating the PE PC-relative offset.  Targ already points
+              // into the generated PE/COFF image buffer.
+              //
+              Offset = SymCoffRva - InsnCoffRva;
+            } else {
+              Error (NULL, 0, 3000, "Invalid", "LoongArch PC related: wrong relocation type.");
+              break;
+            }
+
+            //
+            // The original PCALA/GOT_PC relocations are page based, but this
+            // path rewrites the HI/LO pair to PCADDU12I plus ADDI.D.  Split
+            // the generated PE/COFF instruction-relative offset for that pair.
+            //
+            HiImm = (UINT32)((Offset + 0x800) >> 12) & 0xFFFFF;
+
+            //
+            // Convert the first instruction from PCALAU12I to PCADDU12I and re-encode the offset into them.
+            //
+            *(UINT32 *)Targ &= 0x1F;
+            *(UINT32 *)Targ |= 0x1C000000;
+            *(UINT32 *)Targ |= HiImm << 5;
+            break;
+
+          case R_LARCH_PCALA_LO12:
+          case R_LARCH_GOT_PC_LO12:
+            PreTarg = NULL;
+            PreRel  = NULL;
+
+            //
+            // Because the HI always at front of LO, so backtracking the corresponding HI.
+            //
+            for (BackIdx = (INT32)(RelIdx - RelShdr->sh_entsize); BackIdx >= 0; BackIdx -= (INT32)RelShdr->sh_entsize) {
+              PreRel = (Elf_Rela *)((UINT8 *)mEhdr + RelShdr->sh_offset + BackIdx);
+              if (ELF_R_TYPE(PreRel->r_info) == R_LARCH_PCALA_HI20 || ELF_R_TYPE(PreRel->r_info) == R_LARCH_GOT_PC_HI20) {
+                if (ELF_R_SYM(PreRel->r_info) != ELF_R_SYM(Rel->r_info)) {
+                  continue;
+                }
+                if (PreRel->r_addend == Rel->r_addend) {
+                  PreTarg = mCoffFile + SecOffset + (PreRel->r_offset - SecShdr->sh_addr);
+                  break;
+                }
+              }
+            }
+
+            if (BackIdx < 0) {
+              Error (NULL, 0, 3000, "Invalid", "LoongArch PC related: LO has no corresponding HI.");
+              break;
+            }
+
+            //
+            // Calculate the corresponding HI relative to PC using the PE symbol RVA and fix the LO offset.
+            //
+            if (ELF_R_TYPE(Rel->r_info) == R_LARCH_PCALA_LO12 && ELF_R_TYPE(PreRel->r_info) == R_LARCH_PCALA_HI20) {
+              SymCoffRva = (INT64)Sym->st_value - (INT64)SymShdr->sh_addr + (INT64)mCoffSectionsOffset[Sym->st_shndx];
+              PairHiCoffRva = (INT64)(UINTN)(PreTarg - mCoffFile);
+              Offset = (INT32)((SymCoffRva + PreRel->r_addend) - PairHiCoffRva);
+              LoImm = (UINT32)(Offset & 0xFFF);
+              //
+              // Only fill the LO offset in corresponding instructions.
+              //
+              *(UINT32 *)Targ &= 0xFFC003FF;
+              *(UINT32 *)Targ |= LoImm << 10;
+            } else if (ELF_R_TYPE(Rel->r_info) == R_LARCH_GOT_PC_LO12 && ELF_R_TYPE(PreRel->r_info) == R_LARCH_GOT_PC_HI20) {
+              SymCoffRva = (INT64)Sym->st_value - (INT64)SymShdr->sh_addr + (INT64)mCoffSectionsOffset[Sym->st_shndx];
+              PairHiCoffRva = (INT64)(UINTN)(PreTarg - mCoffFile);
+              Offset = SymCoffRva - PairHiCoffRva;
+              LoImm = (UINT32)(Offset & 0xFFF);
+              //
+              // Convert this instruction as ADDI.D and fill the LO offset into it.
+              //
+              *(UINT32 *)Targ &= 0x3FF;
+              *(UINT32 *)Targ |= (0x2C00000 | LoImm << 10);
+            } else {
+              Error (NULL, 0, 3000, "Invalid", "LoongArch PC related: relocation not matched.");
+            }
+            break;
+
+          default:
+            Error (NULL, 0, 3000, "Invalid", "WriteSections64(): %s unsupported ELF EM_LOONGARCH relocation 0x%x.", mInImageName, (unsigned) ELF64_R_TYPE(Rel->r_info));
+          }
         } else {
           Error (NULL, 0, 3000, "Invalid", "Not a supported machine type");
         }
@@ -945,6 +2054,7 @@ WriteRelocations64 (
   UINT32                           Index;
   EFI_IMAGE_OPTIONAL_HEADER_UNION  *NtHdr;
   EFI_IMAGE_DATA_DIRECTORY         *Dir;
+  UINT32 RiscVRelType;
 
   for (Index = 0; Index < mEhdr->e_shnum; Index++) {
     Elf_Shdr *RelShdr = GetShdrByIndex(Index);
@@ -961,18 +2071,42 @@ WriteRelocations64 (
             case R_X86_64_NONE:
             case R_X86_64_PC32:
             case R_X86_64_PLT32:
+            case R_X86_64_GOTPCREL:
+            case R_X86_64_GOTPCRELX:
+            case R_X86_64_REX_GOTPCRELX:
               break;
             case R_X86_64_64:
-              VerboseMsg ("EFI_IMAGE_REL_BASED_DIR64 Offset: 0x%08X", 
+              VerboseMsg ("EFI_IMAGE_REL_BASED_DIR64 Offset: 0x%08llX",
                 mCoffSectionsOffset[RelShdr->sh_info] + (Rel->r_offset - SecShdr->sh_addr));
               CoffAddFixup(
                 (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
                 + (Rel->r_offset - SecShdr->sh_addr)),
                 EFI_IMAGE_REL_BASED_DIR64);
               break;
-            case R_X86_64_32S:
+            //
+            // R_X86_64_32 and R_X86_64_32S are ELF64 relocations emitted when using
+            //   the SYSV X64 ABI small non-position-independent code model.
+            //   R_X86_64_32 is used for unsigned 32-bit immediates with a 32-bit operand
+            //   size.  The value is either not extended, or zero-extended to 64 bits.
+            //   R_X86_64_32S is used for either signed 32-bit non-rip-relative displacements
+            //   or signed 32-bit immediates with a 64-bit operand size.  The value is
+            //   sign-extended to 64 bits.
+            //   EFI_IMAGE_REL_BASED_HIGHLOW is a PE relocation that uses 32-bit arithmetic
+            //   for rebasing an image.
+            //   EFI PE binaries declare themselves EFI_IMAGE_FILE_LARGE_ADDRESS_AWARE and
+            //   may load above 2GB.  If an EFI PE binary with a converted R_X86_64_32S
+            //   relocation is loaded above 2GB, the value will get sign-extended to the
+            //   negative part of the 64-bit address space.  The negative part of the 64-bit
+            //   address space is unmapped, so accessing such an address page-faults.
+            //   In order to support R_X86_64_32S, it is necessary to unset
+            //   EFI_IMAGE_FILE_LARGE_ADDRESS_AWARE, and the EFI PE loader must implement
+            //   this flag and abstain from loading such a PE binary above 2GB.
+            //   Since this feature is not supported, support for R_X86_64_32S (and hence
+            //   the small non-position-independent code model) is disabled.
+            //
+            // case R_X86_64_32S:
             case R_X86_64_32:
-              VerboseMsg ("EFI_IMAGE_REL_BASED_HIGHLOW Offset: 0x%08X", 
+              VerboseMsg ("EFI_IMAGE_REL_BASED_HIGHLOW Offset: 0x%08llX",
                 mCoffSectionsOffset[RelShdr->sh_info] + (Rel->r_offset - SecShdr->sh_addr));
               CoffAddFixup(
                 (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
@@ -985,6 +2119,7 @@ WriteRelocations64 (
           } else if (mEhdr->e_machine == EM_AARCH64) {
 
             switch (ELF_R_TYPE(Rel->r_info)) {
+            case R_AARCH64_NONE:
             case R_AARCH64_ADR_PREL_LO21:
             case R_AARCH64_CONDBR19:
             case R_AARCH64_LD_PREL_LO19:
@@ -1000,6 +2135,10 @@ WriteRelocations64 (
             case R_AARCH64_LDST32_ABS_LO12_NC:
             case R_AARCH64_LDST64_ABS_LO12_NC:
             case R_AARCH64_LDST128_ABS_LO12_NC:
+            case R_AARCH64_ADR_GOT_PAGE:
+            case R_AARCH64_LD64_GOT_LO12_NC:
+            case R_AARCH64_LD64_GOTOFF_LO15:
+            case R_AARCH64_LD64_GOTPAGE_LO15:
               //
               // No fixups are required for relative relocations, provided that
               // the relative offsets between sections have been preserved in
@@ -1025,14 +2164,257 @@ WriteRelocations64 (
             default:
                 Error (NULL, 0, 3000, "Invalid", "WriteRelocations64(): %s unsupported ELF EM_AARCH64 relocation 0x%x.", mInImageName, (unsigned) ELF_R_TYPE(Rel->r_info));
             }
+          } else if (mEhdr->e_machine == EM_RISCV64) {
+            RiscVRelType = ELF_R_TYPE(Rel->r_info);
+            switch (RiscVRelType) {
+            case R_RISCV_NONE:
+              break;
+
+            case R_RISCV_32:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_HIGHLOW);
+              break;
+
+            case R_RISCV_64:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_DIR64);
+              break;
+
+            case R_RISCV_HI20:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_RISCV_HI20);
+              break;
+
+            case R_RISCV_LO12_I:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_RISCV_LOW12I);
+              break;
+
+            case R_RISCV_LO12_S:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_RISCV_LOW12S);
+              break;
+
+            case R_RISCV_ADD64:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_SUB64:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_ADD32:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_SUB32:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_BRANCH:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_JAL:
+              CoffAddFixup(
+                (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                + (Rel->r_offset - SecShdr->sh_addr)),
+                EFI_IMAGE_REL_BASED_ABSOLUTE);
+              break;
+
+            case R_RISCV_GPREL_I:
+            case R_RISCV_GPREL_S:
+            case R_RISCV_CALL:
+            case R_RISCV_CALL_PLT:
+            case R_RISCV_RVC_BRANCH:
+            case R_RISCV_RVC_JUMP:
+            case R_RISCV_RELAX:
+            case R_RISCV_SUB6:
+            case R_RISCV_SET6:
+            case R_RISCV_SET8:
+            case R_RISCV_SET16:
+            case R_RISCV_SET32:
+            case R_RISCV_PCREL_HI20:
+            case R_RISCV_GOT_HI20:
+            case R_RISCV_PCREL_LO12_I:
+            case R_RISCV_PCREL_LO12_S:
+              break;
+
+            default:
+              Error (NULL, 0, 3000, "Invalid", "WriteRelocations64(): %s unsupported ELF EM_RISCV64 relocation 0x%x.", mInImageName, (unsigned) ELF_R_TYPE(Rel->r_info));
+            }
+          } else if (mEhdr->e_machine == EM_LOONGARCH) {
+            switch (ELF_R_TYPE(Rel->r_info)) {
+              case R_LARCH_MARK_LA:
+                CoffAddFixup(
+                  (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                  + (Rel->r_offset - SecShdr->sh_addr)),
+                  EFI_IMAGE_REL_BASED_LOONGARCH64_MARK_LA);
+                break;
+              case R_LARCH_64:
+                CoffAddFixup(
+                  (UINT32) ((UINT64) mCoffSectionsOffset[RelShdr->sh_info]
+                  + (Rel->r_offset - SecShdr->sh_addr)),
+                  EFI_IMAGE_REL_BASED_DIR64);
+                break;
+              case R_LARCH_NONE:
+              case R_LARCH_32:
+              case R_LARCH_RELATIVE:
+              case R_LARCH_COPY:
+              case R_LARCH_JUMP_SLOT:
+              case R_LARCH_TLS_DTPMOD32:
+              case R_LARCH_TLS_DTPMOD64:
+              case R_LARCH_TLS_DTPREL32:
+              case R_LARCH_TLS_DTPREL64:
+              case R_LARCH_TLS_TPREL32:
+              case R_LARCH_TLS_TPREL64:
+              case R_LARCH_IRELATIVE:
+              case R_LARCH_MARK_PCREL:
+              case R_LARCH_SOP_PUSH_PCREL:
+              case R_LARCH_SOP_PUSH_ABSOLUTE:
+              case R_LARCH_SOP_PUSH_DUP:
+              case R_LARCH_SOP_PUSH_GPREL:
+              case R_LARCH_SOP_PUSH_TLS_TPREL:
+              case R_LARCH_SOP_PUSH_TLS_GOT:
+              case R_LARCH_SOP_PUSH_TLS_GD:
+              case R_LARCH_SOP_PUSH_PLT_PCREL:
+              case R_LARCH_SOP_ASSERT:
+              case R_LARCH_SOP_NOT:
+              case R_LARCH_SOP_SUB:
+              case R_LARCH_SOP_SL:
+              case R_LARCH_SOP_SR:
+              case R_LARCH_SOP_ADD:
+              case R_LARCH_SOP_AND:
+              case R_LARCH_SOP_IF_ELSE:
+              case R_LARCH_SOP_POP_32_S_10_5:
+              case R_LARCH_SOP_POP_32_U_10_12:
+              case R_LARCH_SOP_POP_32_S_10_12:
+              case R_LARCH_SOP_POP_32_S_10_16:
+              case R_LARCH_SOP_POP_32_S_10_16_S2:
+              case R_LARCH_SOP_POP_32_S_5_20:
+              case R_LARCH_SOP_POP_32_S_0_5_10_16_S2:
+              case R_LARCH_SOP_POP_32_S_0_10_10_16_S2:
+              case R_LARCH_SOP_POP_32_U:
+              case R_LARCH_ADD8:
+              case R_LARCH_ADD16:
+              case R_LARCH_ADD24:
+              case R_LARCH_ADD32:
+              case R_LARCH_ADD64:
+              case R_LARCH_SUB8:
+              case R_LARCH_SUB16:
+              case R_LARCH_SUB24:
+              case R_LARCH_SUB32:
+              case R_LARCH_SUB64:
+              case R_LARCH_GNU_VTINHERIT:
+              case R_LARCH_GNU_VTENTRY:
+              case R_LARCH_B16:
+              case R_LARCH_B21:
+              case R_LARCH_B26:
+              case R_LARCH_ABS_HI20:
+              case R_LARCH_ABS_LO12:
+              case R_LARCH_ABS64_LO20:
+              case R_LARCH_ABS64_HI12:
+              case R_LARCH_PCALA_HI20:
+              case R_LARCH_PCALA_LO12:
+              case R_LARCH_PCALA64_LO20:
+              case R_LARCH_PCALA64_HI12:
+              case R_LARCH_GOT_PC_HI20:
+              case R_LARCH_GOT_PC_LO12:
+              case R_LARCH_GOT64_PC_LO20:
+              case R_LARCH_GOT64_PC_HI12:
+              case R_LARCH_GOT64_HI20:
+              case R_LARCH_GOT64_LO12:
+              case R_LARCH_GOT64_LO20:
+              case R_LARCH_GOT64_HI12:
+              case R_LARCH_TLS_LE_HI20:
+              case R_LARCH_TLS_LE_LO12:
+              case R_LARCH_TLS_LE64_LO20:
+              case R_LARCH_TLS_LE64_HI12:
+              case R_LARCH_TLS_IE_PC_HI20:
+              case R_LARCH_TLS_IE_PC_LO12:
+              case R_LARCH_TLS_IE64_PC_LO20:
+              case R_LARCH_TLS_IE64_PC_HI12:
+              case R_LARCH_TLS_IE64_HI20:
+              case R_LARCH_TLS_IE64_LO12:
+              case R_LARCH_TLS_IE64_LO20:
+              case R_LARCH_TLS_IE64_HI12:
+              case R_LARCH_TLS_LD_PC_HI20:
+              case R_LARCH_TLS_LD64_HI20:
+              case R_LARCH_TLS_GD_PC_HI20:
+              case R_LARCH_TLS_GD64_HI20:
+              case R_LARCH_32_PCREL:
+              case R_LARCH_RELAX:
+              case R_LARCH_DELETE:
+              case R_LARCH_ALIGN:
+              case R_LARCH_PCREL20_S2:
+              case R_LARCH_CFA:
+              case R_LARCH_ADD6:
+              case R_LARCH_SUB6:
+              case R_LARCH_ADD_ULEB128:
+              case R_LARCH_SUB_ULEB128:
+              case R_LARCH_64_PCREL:
+                //
+                // These types are not used or do not require fixup in PE format files.
+                //
+                break;
+              default:
+                  Error (NULL, 0, 3000, "Invalid", "WriteRelocations64(): %s unsupported ELF EM_LOONGARCH relocation 0x%x.", mInImageName, (unsigned) ELF64_R_TYPE(Rel->r_info));
+            }
           } else {
             Error (NULL, 0, 3000, "Not Supported", "This tool does not support relocations for ELF with e_machine %u (processor type).", (unsigned) mEhdr->e_machine);
           }
+        }
+        if (mEhdr->e_machine == EM_X86_64 && RelShdr->sh_info == mGOTShindex) {
+          //
+          // Tack relocations for GOT entries after other relocations for
+          //   the section the GOT is in, as it's usually found at the end
+          //   of the section.  This is done in order to maintain Rva order
+          //   of Coff relocations.
+          //
+          EmitGOTRelocations();
         }
       }
     }
   }
 
+  if (mEhdr->e_machine == EM_X86_64) {
+    //
+    // This is a safety net just in case the GOT is in a section
+    //   with no other relocations and the first invocation of
+    //   EmitGOTRelocations() above was skipped.  This invocation
+    //   does not maintain Rva order of Coff relocations.
+    //   At present, with a single text section, all references to
+    //   the GOT and the GOT itself reside in section .text, so
+    //   if there's a GOT at all, the first invocation above
+    //   is executed.
+    //
+    EmitGOTRelocations();
+  }
   //
   // Pad by adding empty entries.
   //
@@ -1062,29 +2444,47 @@ WriteDebug64 (
   VOID
   )
 {
-  UINT32                              Len;
-  EFI_IMAGE_OPTIONAL_HEADER_UNION     *NtHdr;
-  EFI_IMAGE_DATA_DIRECTORY            *DataDir;
-  EFI_IMAGE_DEBUG_DIRECTORY_ENTRY     *Dir;
-  EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY *Nb10;
+  UINT32                                      Len;
+  EFI_IMAGE_OPTIONAL_HEADER_UNION             *NtHdr;
+  EFI_IMAGE_DATA_DIRECTORY                    *DataDir;
+  EFI_IMAGE_DEBUG_DIRECTORY_ENTRY             *Dir;
+  EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY         *Nb10;
+  EFI_IMAGE_DEBUG_EX_DLLCHARACTERISTICS_ENTRY *DllEntry;
 
   Len = strlen(mInImageName) + 1;
-
-  Dir = (EFI_IMAGE_DEBUG_DIRECTORY_ENTRY*)(mCoffFile + mDebugOffset);
-  Dir->Type = EFI_IMAGE_DEBUG_TYPE_CODEVIEW;
-  Dir->SizeOfData = sizeof(EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY) + Len;
-  Dir->RVA = mDebugOffset + sizeof(EFI_IMAGE_DEBUG_DIRECTORY_ENTRY);
-  Dir->FileOffset = mDebugOffset + sizeof(EFI_IMAGE_DEBUG_DIRECTORY_ENTRY);
-
-  Nb10 = (EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY*)(Dir + 1);
-  Nb10->Signature = CODEVIEW_SIGNATURE_NB10;
-  strcpy ((char *)(Nb10 + 1), mInImageName);
-
 
   NtHdr = (EFI_IMAGE_OPTIONAL_HEADER_UNION *)(mCoffFile + mNtHdrOffset);
   DataDir = &NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_DEBUG];
   DataDir->VirtualAddress = mDebugOffset;
-  DataDir->Size = Dir->SizeOfData + sizeof(EFI_IMAGE_DEBUG_DIRECTORY_ENTRY);
+  DataDir->Size = sizeof (EFI_IMAGE_DEBUG_DIRECTORY_ENTRY);
+
+  Dir = (EFI_IMAGE_DEBUG_DIRECTORY_ENTRY*)(mCoffFile + mDebugOffset);
+
+  if (mDllCharacteristicsEx != 0) {
+    DataDir->Size  += sizeof (EFI_IMAGE_DEBUG_DIRECTORY_ENTRY);
+
+    Dir->Type       = EFI_IMAGE_DEBUG_TYPE_EX_DLLCHARACTERISTICS;
+    Dir->SizeOfData = sizeof (EFI_IMAGE_DEBUG_EX_DLLCHARACTERISTICS_ENTRY);
+    Dir->FileOffset = mDebugOffset + DataDir->Size +
+                      sizeof (EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY) +
+                      DebugRvaAlign(Len);
+    Dir->RVA        = Dir->FileOffset;
+
+    DllEntry = (VOID *)(mCoffFile + Dir->FileOffset);
+
+    DllEntry->DllCharacteristicsEx = mDllCharacteristicsEx;
+
+    Dir++;
+  }
+
+  Dir->Type = EFI_IMAGE_DEBUG_TYPE_CODEVIEW;
+  Dir->SizeOfData = sizeof(EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY) + Len;
+  Dir->RVA = mDebugOffset + DataDir->Size;
+  Dir->FileOffset = mDebugOffset + DataDir->Size;
+
+  Nb10 = (EFI_IMAGE_DEBUG_CODEVIEW_NB10_ENTRY*)(Dir + 1);
+  Nb10->Signature = CODEVIEW_SIGNATURE_NB10;
+  strcpy ((char *)(Nb10 + 1), mInImageName);
 }
 
 STATIC
@@ -1113,4 +2513,76 @@ CleanUp64 (
   }
 }
 
+STATIC
+VOID
+WriteExport64 (
+  VOID
+  )
+{
+  EFI_IMAGE_OPTIONAL_HEADER_UNION     *NtHdr;
+  EFI_IMAGE_EXPORT_DIRECTORY          *ExportDir;
+  EFI_IMAGE_DATA_DIRECTORY            *DataDir;
+  UINT32                              FileNameOffset;
+  UINT32                              NameOffset;
+  UINT16                              Index;
+  UINT8                               *Tdata = NULL;
+
+  if (mExportSymNum == 0) {
+    Error (NULL, 0, 3000, "Invalid", "--prm option set but no export symbols were found in %s", mInImageName);
+    exit(EXIT_FAILURE);
+  }
+  ExportDir = (EFI_IMAGE_EXPORT_DIRECTORY*)(mCoffFile + mExportOffset);
+  ExportDir->Characteristics = 0;
+  ExportDir->TimeDateStamp = 0;
+  ExportDir->MajorVersion = 0;
+  ExportDir->MinorVersion =0;
+  ExportDir->Name = 0;
+  ExportDir->NumberOfFunctions = mExportSymNum;
+  ExportDir->NumberOfNames = mExportSymNum;
+  ExportDir->Base = EFI_IMAGE_EXPORT_ORDINAL_BASE;
+  ExportDir->AddressOfFunctions = mExportOffset + sizeof(EFI_IMAGE_EXPORT_DIRECTORY);
+  ExportDir->AddressOfNames = ExportDir->AddressOfFunctions + EFI_IMAGE_EXPORT_ADDR_SIZE * mExportSymNum;
+  ExportDir->AddressOfNameOrdinals = ExportDir->AddressOfNames + EFI_IMAGE_EXPORT_ADDR_SIZE * mExportSymNum;
+
+  FileNameOffset = ExportDir->AddressOfNameOrdinals + EFI_IMAGE_EXPORT_ORDINAL_SIZE * mExportSymNum;
+  NameOffset = FileNameOffset + strlen(mInImageName) + 1;
+
+  // Write Input image Name RVA
+  ExportDir->Name = FileNameOffset;
+
+  // Write Input image Name
+  strcpy((char *)(mCoffFile + FileNameOffset), mInImageName);
+
+  for (Index = 0; Index < mExportSymNum; Index++) {
+    //
+    // Write Export Address Table
+    //
+    Tdata = mCoffFile + ExportDir->AddressOfFunctions + Index * EFI_IMAGE_EXPORT_ADDR_SIZE;
+    *(UINT32 *)Tdata = mExportRVA[Index];
+
+    //
+    // Write Export Name Pointer Table
+    //
+    Tdata = mCoffFile + ExportDir->AddressOfNames + Index * EFI_IMAGE_EXPORT_ADDR_SIZE;
+    *(UINT32 *)Tdata = NameOffset;
+
+    //
+    // Write Export Ordinal table
+    //
+    Tdata = mCoffFile + ExportDir->AddressOfNameOrdinals + Index * EFI_IMAGE_EXPORT_ORDINAL_SIZE;
+    *(UINT16 *)Tdata = Index;
+
+    //
+    // Write Export Name Table
+    //
+    strcpy((char *)(mCoffFile + NameOffset), mExportSymName[Index]);
+    NameOffset += strlen(mExportSymName[Index]) + 1;
+  }
+
+  NtHdr = (EFI_IMAGE_OPTIONAL_HEADER_UNION *)(mCoffFile + mNtHdrOffset);
+  DataDir = &NtHdr->Pe32Plus.OptionalHeader.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY_EXPORT];
+  DataDir->VirtualAddress = mExportOffset;
+  DataDir->Size = mExportSize;
+
+}
 

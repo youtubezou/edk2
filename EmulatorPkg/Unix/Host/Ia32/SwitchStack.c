@@ -2,19 +2,12 @@
 
 Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 --*/
 
 #include "Host.h"
-
 
 /**
   Transfers control to a function starting with a new stack.
@@ -40,8 +33,8 @@ VOID
 EFIAPI
 PeiSwitchStacks (
   IN      SWITCH_STACK_ENTRY_POINT  EntryPoint,
-  IN      VOID                      *Context1,  OPTIONAL
-  IN      VOID                      *Context2,  OPTIONAL
+  IN      VOID                      *Context1   OPTIONAL,
+  IN      VOID                      *Context2   OPTIONAL,
   IN      VOID                      *NewStack
   )
 {
@@ -53,22 +46,18 @@ PeiSwitchStacks (
   //
   // Stack should be aligned with CPU_STACK_ALIGNMENT
   //
-  ASSERT (((UINTN)NewStack & (CPU_STACK_ALIGNMENT - 1)) == 0);
+  ASSERT (ADDRESS_IS_ALIGNED (NewStack, CPU_STACK_ALIGNMENT));
 
-  JumpBuffer.Eip = (UINTN)EntryPoint;
-  JumpBuffer.Esp = (UINTN)NewStack - sizeof (VOID*);
-  JumpBuffer.Esp -= sizeof (Context1) + sizeof (Context2);
-  ((VOID**)JumpBuffer.Esp)[1] = Context1;
-  ((VOID**)JumpBuffer.Esp)[2] = Context2;
+  JumpBuffer.Eip               = (UINTN)EntryPoint;
+  JumpBuffer.Esp               = (UINTN)NewStack - sizeof (VOID *);
+  JumpBuffer.Esp              -= sizeof (Context1) + sizeof (Context2);
+  ((VOID **)JumpBuffer.Esp)[1] = Context1;
+  ((VOID **)JumpBuffer.Esp)[2] = Context2;
 
   LongJump (&JumpBuffer, (UINTN)-1);
-
 
   //
   // PeiSwitchStacks () will never return
   //
   ASSERT (FALSE);
 }
-
-
-

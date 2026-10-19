@@ -1,24 +1,17 @@
 /** @file
   EFI PEI Core Security services
-  
-Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "PeiMain.h"
 
-
-EFI_PEI_NOTIFY_DESCRIPTOR mNotifyList = {
-   EFI_PEI_PPI_DESCRIPTOR_NOTIFY_DISPATCH | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST,
-   &gEfiPeiSecurity2PpiGuid,
-   SecurityPpiNotifyCallback
+EFI_PEI_NOTIFY_DESCRIPTOR  mNotifyList = {
+  EFI_PEI_PPI_DESCRIPTOR_NOTIFY_DISPATCH | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST,
+  &gEfiPeiSecurity2PpiGuid,
+  SecurityPpiNotifyCallback
 };
 
 /**
@@ -26,18 +19,19 @@ EFI_PEI_NOTIFY_DESCRIPTOR mNotifyList = {
 
   @param PeiServices     An indirect pointer to the EFI_PEI_SERVICES table published by the PEI Foundation.
   @param OldCoreData     Pointer to the old core data.
-                         NULL if being run in non-permament memory mode.
+                         NULL if being run in non-permanent memory mode.
 
 **/
 VOID
 InitializeSecurityServices (
-  IN EFI_PEI_SERVICES  **PeiServices,
-  IN PEI_CORE_INSTANCE *OldCoreData
+  IN EFI_PEI_SERVICES   **PeiServices,
+  IN PEI_CORE_INSTANCE  *OldCoreData
   )
 {
   if (OldCoreData == NULL) {
     PeiServicesNotifyPpi (&mNotifyList);
   }
+
   return;
 }
 
@@ -45,7 +39,7 @@ InitializeSecurityServices (
 
   Provide a callback for when the security PPI is installed.
   This routine will cache installed security PPI into PeiCore's private data.
-  
+
   @param PeiServices        An indirect pointer to the EFI_PEI_SERVICES table published by the PEI Foundation.
   @param NotifyDescriptor   The descriptor for the notification event.
   @param Ppi                Pointer to the PPI in question.
@@ -61,19 +55,20 @@ SecurityPpiNotifyCallback (
   IN VOID                       *Ppi
   )
 {
-  PEI_CORE_INSTANCE                       *PrivateData;
+  PEI_CORE_INSTANCE  *PrivateData;
 
   //
   // Get PEI Core private data
   //
   PrivateData = PEI_CORE_INSTANCE_FROM_PS_THIS (PeiServices);
-  
+
   //
   // If there isn't a security PPI installed, use the one from notification
   //
   if (PrivateData->PrivateSecurityPpi == NULL) {
     PrivateData->PrivateSecurityPpi = (EFI_PEI_SECURITY2_PPI *)Ppi;
   }
+
   return EFI_SUCCESS;
 }
 
@@ -82,7 +77,7 @@ SecurityPpiNotifyCallback (
 
   @param PrivateData     PeiCore's private data structure
   @param VolumeHandle    Handle of FV
-  @param FileHandle      Handle of PEIM's ffs
+  @param FileHandle      Handle of PEIM's FFS
   @param AuthenticationStatus Authentication status
 
   @retval EFI_SUCCESS              Image is OK
@@ -91,14 +86,14 @@ SecurityPpiNotifyCallback (
 **/
 EFI_STATUS
 VerifyPeim (
-  IN PEI_CORE_INSTANCE      *PrivateData,
-  IN EFI_PEI_FV_HANDLE      VolumeHandle,
-  IN EFI_PEI_FILE_HANDLE    FileHandle,
-  IN UINT32                 AuthenticationStatus
+  IN PEI_CORE_INSTANCE    *PrivateData,
+  IN EFI_PEI_FV_HANDLE    VolumeHandle,
+  IN EFI_PEI_FILE_HANDLE  FileHandle,
+  IN UINT32               AuthenticationStatus
   )
 {
-  EFI_STATUS                      Status;
-  BOOLEAN                         DeferExection;
+  EFI_STATUS  Status;
+  BOOLEAN     DeferExecution;
 
   Status = EFI_NOT_FOUND;
   if (PrivateData->PrivateSecurityPpi == NULL) {
@@ -115,20 +110,20 @@ VerifyPeim (
     // Check to see if the image is OK
     //
     Status = PrivateData->PrivateSecurityPpi->AuthenticationState (
-                                                (CONST EFI_PEI_SERVICES **) &PrivateData->Ps,
+                                                (CONST EFI_PEI_SERVICES **)&PrivateData->Ps,
                                                 PrivateData->PrivateSecurityPpi,
                                                 AuthenticationStatus,
                                                 VolumeHandle,
                                                 FileHandle,
-                                                &DeferExection
+                                                &DeferExecution
                                                 );
-    if (DeferExection) {
+    if (DeferExecution) {
       Status = EFI_SECURITY_VIOLATION;
     }
   }
+
   return Status;
 }
-
 
 /**
   Verify a Firmware volume.

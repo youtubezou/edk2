@@ -1,14 +1,8 @@
 /** @file
   Top level C file for debug support driver.  Contains initialization function.
 
-Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,16 +16,15 @@ EFI_DEBUG_SUPPORT_PROTOCOL  mDebugSupportProtocolInterface = {
   InvalidateInstructionCache
 };
 
-
 /**
-  Debug Support Driver entry point. 
+  Debug Support Driver entry point.
 
-  Checks to see if there's not already a Debug Support protocol installed for 
+  Checks to see if there's not already a Debug Support protocol installed for
   the selected processor before installing it.
 
-  @param[in] ImageHandle       The firmware allocated handle for the EFI image.  
+  @param[in] ImageHandle       The firmware allocated handle for the EFI image.
   @param[in] SystemTable       A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS          The entry point is executed successfully.
   @retval EFI_ALREADY_STARTED  Debug Support protocol is installed already.
   @retval other                Some error occurs when executing this entry point.
@@ -40,8 +33,8 @@ EFI_DEBUG_SUPPORT_PROTOCOL  mDebugSupportProtocolInterface = {
 EFI_STATUS
 EFIAPI
 InitializeDebugSupportDriver (
-  IN EFI_HANDLE               ImageHandle,
-  IN EFI_SYSTEM_TABLE         *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_LOADED_IMAGE_PROTOCOL   *LoadedImageProtocolPtr;
@@ -69,7 +62,7 @@ InitializeDebugSupportDriver (
       Status = gBS->OpenProtocol (
                       HandlePtr[NumHandles],
                       &gEfiDebugSupportProtocolGuid,
-                      (VOID **) &DebugSupportProtocolPtr,
+                      (VOID **)&DebugSupportProtocolPtr,
                       ImageHandle,
                       NULL,
                       EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -83,6 +76,7 @@ InitializeDebugSupportDriver (
         goto ErrExit;
       }
     } while (NumHandles > 0);
+
     FreePool (HandlePtr);
   }
 
@@ -92,7 +86,7 @@ InitializeDebugSupportDriver (
   Status = gBS->OpenProtocol (
                   ImageHandle,
                   &gEfiLoadedImageProtocolGuid,
-                  (VOID **) &LoadedImageProtocolPtr,
+                  (VOID **)&LoadedImageProtocolPtr,
                   ImageHandle,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -105,7 +99,7 @@ InitializeDebugSupportDriver (
   LoadedImageProtocolPtr->Unload = PlUnloadDebugSupportDriver;
 
   //
-  // Call hook for processor specific initialization 
+  // Call hook for processor specific initialization
   //
   Status = PlInitializeDebugSupportDriver ();
   ASSERT (!EFI_ERROR (Status));

@@ -1,14 +1,8 @@
 /** @file
   Ia32 arch functions to access IDT vector.
 
-  Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,26 +15,26 @@
   @param[in]  InterruptType      Interrupt type.
 
   @retval  TRUE     IDT entries were setup by Debug Agent.
-  @retval  FALSE    IDT entries were not setuo by Debug Agent.
+  @retval  FALSE    IDT entries were not setup by Debug Agent.
 
 **/
-BOOLEAN 
+BOOLEAN
 CheckDebugAgentHandler (
-  IN  IA32_DESCRIPTOR            *IdtDescriptor,
-  IN  UINTN                      InterruptType
+  IN  IA32_DESCRIPTOR  *IdtDescriptor,
+  IN  UINTN            InterruptType
   )
 {
-  IA32_IDT_GATE_DESCRIPTOR   *IdtEntry;
-  UINTN                      InterruptHandler;
+  IA32_IDT_GATE_DESCRIPTOR  *IdtEntry;
+  UINTN                     InterruptHandler;
 
-  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *) IdtDescriptor->Base;
+  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *)IdtDescriptor->Base;
   if (IdtEntry == NULL) {
     return FALSE;
   }
 
   InterruptHandler = IdtEntry[InterruptType].Bits.OffsetLow +
-                    (IdtEntry[InterruptType].Bits.OffsetHigh << 16);
-  if (InterruptHandler >= sizeof (UINT32) &&  *(UINT32 *)(InterruptHandler - sizeof (UINT32)) == AGENT_HANDLER_SIGNATURE) {
+                     (IdtEntry[InterruptType].Bits.OffsetHigh << 16);
+  if ((InterruptHandler >= sizeof (UINT32)) &&  (*(UINT32 *)(InterruptHandler - sizeof (UINT32)) == AGENT_HANDLER_SIGNATURE)) {
     return TRUE;
   } else {
     return FALSE;
@@ -48,7 +42,7 @@ CheckDebugAgentHandler (
 }
 
 /**
-  Save IDT entry for INT1 and update it. 
+  Save IDT entry for INT1 and update it.
 
   @param[in]  IdtDescriptor      Pointer to IDT Descriptor.
   @param[out] SavedIdtEntry      Original IDT entry returned.
@@ -56,23 +50,23 @@ CheckDebugAgentHandler (
 **/
 VOID
 SaveAndUpdateIdtEntry1 (
-  IN  IA32_DESCRIPTOR            *IdtDescriptor,
-  OUT IA32_IDT_GATE_DESCRIPTOR   *SavedIdtEntry
+  IN  IA32_DESCRIPTOR           *IdtDescriptor,
+  OUT IA32_IDT_GATE_DESCRIPTOR  *SavedIdtEntry
   )
 {
-  IA32_IDT_GATE_DESCRIPTOR   *IdtEntry;
-  UINT16                     CodeSegment;
-  UINTN                      InterruptHandler;
-  
-  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *) IdtDescriptor->Base;
+  IA32_IDT_GATE_DESCRIPTOR  *IdtEntry;
+  UINT16                    CodeSegment;
+  UINTN                     InterruptHandler;
+
+  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *)IdtDescriptor->Base;
   CopyMem (SavedIdtEntry, &IdtEntry[1], sizeof (IA32_IDT_GATE_DESCRIPTOR));
 
-    //
+  //
   // Use current CS as the segment selector of interrupt gate in IDT
   //
   CodeSegment = AsmReadCs ();
 
-  InterruptHandler = (UINTN) &AsmInterruptHandle;
+  InterruptHandler            = (UINTN)&AsmInterruptHandle;
   IdtEntry[1].Bits.OffsetLow  = (UINT16)(UINTN)InterruptHandler;
   IdtEntry[1].Bits.OffsetHigh = (UINT16)((UINTN)InterruptHandler >> 16);
   IdtEntry[1].Bits.Selector   = CodeSegment;
@@ -80,7 +74,7 @@ SaveAndUpdateIdtEntry1 (
 }
 
 /**
-  Restore IDT entry for INT1. 
+  Restore IDT entry for INT1.
 
   @param[in]  IdtDescriptor      Pointer to IDT Descriptor.
   @param[in]  RestoredIdtEntry   IDT entry to be restored.
@@ -88,12 +82,12 @@ SaveAndUpdateIdtEntry1 (
 **/
 VOID
 RestoreIdtEntry1 (
-  IN  IA32_DESCRIPTOR            *IdtDescriptor,
-  IN  IA32_IDT_GATE_DESCRIPTOR   *RestoredIdtEntry
+  IN  IA32_DESCRIPTOR           *IdtDescriptor,
+  IN  IA32_IDT_GATE_DESCRIPTOR  *RestoredIdtEntry
   )
 {
-  IA32_IDT_GATE_DESCRIPTOR   *IdtEntry;
-  
-  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *) IdtDescriptor->Base;
+  IA32_IDT_GATE_DESCRIPTOR  *IdtEntry;
+
+  IdtEntry = (IA32_IDT_GATE_DESCRIPTOR *)IdtDescriptor->Base;
   CopyMem (&IdtEntry[1], RestoredIdtEntry, sizeof (IA32_IDT_GATE_DESCRIPTOR));
 }

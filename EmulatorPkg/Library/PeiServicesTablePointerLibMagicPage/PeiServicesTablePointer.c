@@ -7,13 +7,7 @@
 
   Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
   Portiions copyrigth (c) 2011, Apple Inc. All rights reserved.
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +15,6 @@
 #include <Library/PeiServicesTablePointerLib.h>
 #include <Library/DebugLib.h>
 #include <Library/EmuMagicPageLib.h>
-
 
 /**
   Caches a pointer PEI Services Table.
@@ -37,12 +30,12 @@
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
   )
 {
   ASSERT (PeiServicesTablePointer != NULL);
   ASSERT (*PeiServicesTablePointer != NULL);
-  EMU_MAGIC_PAGE()->PeiServicesTablePointer = PeiServicesTablePointer;
+  EMU_MAGIC_PAGE ()->PeiServicesTablePointer = PeiServicesTablePointer;
 }
 
 /**
@@ -63,25 +56,25 @@ GetPeiServicesTablePointer (
   VOID
   )
 {
-  CONST EFI_PEI_SERVICES **PeiServicesTablePointer;
+  CONST EFI_PEI_SERVICES  **PeiServicesTablePointer;
 
-  PeiServicesTablePointer = EMU_MAGIC_PAGE()->PeiServicesTablePointer;
+  PeiServicesTablePointer = EMU_MAGIC_PAGE ()->PeiServicesTablePointer;
   ASSERT (PeiServicesTablePointer != NULL);
   ASSERT (*PeiServicesTablePointer != NULL);
   return PeiServicesTablePointer;
 }
 
 /**
-  Perform CPU specific actions required to migrate the PEI Services Table 
+  Perform CPU specific actions required to migrate the PEI Services Table
   pointer from temporary RAM to permanent RAM.
 
-  For IA32 CPUs, the PEI Services Table pointer is stored in the 4 bytes 
+  For IA32 CPUs, the PEI Services Table pointer is stored in the 4 bytes
   immediately preceding the Interrupt Descriptor Table (IDT) in memory.
-  For X64 CPUs, the PEI Services Table pointer is stored in the 8 bytes 
+  For X64 CPUs, the PEI Services Table pointer is stored in the 8 bytes
   immediately preceding the Interrupt Descriptor Table (IDT) in memory.
   For Itanium and ARM CPUs, a the PEI Services Table Pointer is stored in
-  a dedicated CPU register.  This means that there is no memory storage 
-  associated with storing the PEI Services Table pointer, so no additional 
+  a dedicated CPU register.  This means that there is no memory storage
+  associated with storing the PEI Services Table pointer, so no additional
   migration actions are required for Itanium or ARM CPUs.
 
 **/
@@ -92,10 +85,8 @@ MigratePeiServicesTablePointer (
   )
 {
   //
-  //  PEI Services Table pointer is cached in SRAM. No additional 
+  //  PEI Services Table pointer is cached in SRAM. No additional
   //  migration actions are required.
   //
   return;
 }
-
-

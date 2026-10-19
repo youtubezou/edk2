@@ -2,13 +2,7 @@
 
  Copyright (c) 2010, Apple, Inc. All rights reserved.<BR>
 
-    This program and the accompanying materials
-    are licensed and made available under the terms and conditions of the BSD License
-    which accompanies this distribution. The full text of the license may be found at
-    http://opensource.org/licenses/bsd-license.php
-
-    THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-    WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+    SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -23,6 +17,7 @@ Abstract:
 //
 // EFI Component Name Functions
 //
+
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -69,7 +64,6 @@ EmuSnpDriverComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -142,13 +136,12 @@ EmuSnpDriverComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuSnpDriverComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
-
 
 //
 // EFI Component Name Protocol
@@ -162,14 +155,13 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gEmuSnpDriverComponen
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gEmuSnpDriverComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) EmuSnpDriverComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) EmuSnpDriverComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gEmuSnpDriverComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)EmuSnpDriverComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)EmuSnpDriverComponentNameGetControllerName,
   "en"
 };
 
-
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mEmuSnpDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mEmuSnpDriverNameTable[] = {
   {
     "eng;en",
     L"Emu SNP Driver"
@@ -307,11 +299,11 @@ EmuSnpDriverComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuSnpDriverComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   return EFI_UNSUPPORTED;

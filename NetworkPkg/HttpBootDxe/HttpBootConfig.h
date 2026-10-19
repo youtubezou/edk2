@@ -3,26 +3,18 @@
   relating to HTTP Boot.
 
 Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _HTTP_BOOT_CONFIG_H_
-#define _HTTP_BOOT_CONFIG_H_
-
+#pragma once
 
 #include "HttpBootConfigNVDataStruc.h"
 
-typedef struct _HTTP_BOOT_FORM_CALLBACK_INFO   HTTP_BOOT_FORM_CALLBACK_INFO;
+typedef struct _HTTP_BOOT_FORM_CALLBACK_INFO HTTP_BOOT_FORM_CALLBACK_INFO;
 
-extern   UINT8                            HttpBootDxeStrings[];
-extern   UINT8                            HttpBootConfigVfrBin[];
+extern   UINT8  HttpBootDxeStrings[];
+extern   UINT8  HttpBootConfigVfrBin[];
 
 #pragma pack()
 
@@ -37,13 +29,13 @@ extern   UINT8                            HttpBootConfigVfrBin[];
   )
 
 struct _HTTP_BOOT_FORM_CALLBACK_INFO {
-  UINT32                           Signature;
-  BOOLEAN                          Initilized;
-  EFI_HANDLE                       ChildHandle;
-  EFI_DEVICE_PATH_PROTOCOL         *HiiVendorDevicePath;
-  EFI_HII_HANDLE                   RegisteredHandle;
-  EFI_HII_CONFIG_ACCESS_PROTOCOL   ConfigAccess;
-  HTTP_BOOT_CONFIG_IFR_NVDATA      HttpBootNvData;
+  UINT32                            Signature;
+  BOOLEAN                           Initialized;
+  EFI_HANDLE                        ChildHandle;
+  EFI_DEVICE_PATH_PROTOCOL          *HiiVendorDevicePath;
+  EFI_HII_HANDLE                    RegisteredHandle;
+  EFI_HII_CONFIG_ACCESS_PROTOCOL    ConfigAccess;
+  HTTP_BOOT_CONFIG_IFR_NVDATA       HttpBootNvData;
 };
 
 /**
@@ -57,7 +49,7 @@ struct _HTTP_BOOT_FORM_CALLBACK_INFO {
 **/
 EFI_STATUS
 HttpBootConfigFormInit (
-  IN HTTP_BOOT_PRIVATE_DATA     *Private
+  IN HTTP_BOOT_PRIVATE_DATA  *Private
   );
 
 /**
@@ -73,7 +65,5 @@ HttpBootConfigFormInit (
 **/
 EFI_STATUS
 HttpBootConfigFormUnload (
-  IN HTTP_BOOT_PRIVATE_DATA     *Private
+  IN HTTP_BOOT_PRIVATE_DATA  *Private
   );
-
-#endif

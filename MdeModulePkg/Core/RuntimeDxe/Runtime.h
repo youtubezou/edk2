@@ -4,18 +4,11 @@
   This code is used to produce the EFI runtime architectural protocol.
 
 Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _RUNTIME_H_
-#define _RUNTIME_H_
+#pragma once
 
 #include <PiDxe.h>
 #include <Protocol/LoadedImage.h>
@@ -30,10 +23,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/CacheMaintenanceLib.h>
 #include <Library/PeCoffLib.h>
 
-
 //
 // Function Prototypes
 //
+
 /**
   Calculate CRC32 for target data.
 
@@ -65,7 +58,12 @@ RuntimeDriverCalculateCrc32 (
   @retval  EFI_SUCCESS              The pointer pointed to by Address was modified.
   @retval  EFI_NOT_FOUND            The pointer pointed to by Address was not found to be part
                                     of the current memory map. This is normally fatal.
-  @retval  EFI_INVALID_PARAMETER    One of the parameters has an invalid value.
+  @retval  EFI_INVALID_PARAMETER    1) Address is NULL.
+                                    2) *Address is NULL and DebugDisposition does
+                                    not have the EFI_OPTIONAL_PTR bit set.
+  @retval  EFI_UNSUPPORTED          This call is not supported by this platform at the time the call is made.
+                                    The platform should describe this runtime service as unsupported at runtime
+                                    via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
@@ -92,6 +90,9 @@ RuntimeDriverConvertPointer (
                                   map that requires a mapping.
   @retval  EFI_NOT_FOUND          A virtual address was supplied for an address that is not found
                                   in the memory map.
+  @retval  EFI_UNSUPPORTED        This call is not supported by this platform at the time the call is made.
+                                  The platform should describe this runtime service as unsupported at runtime
+                                  via an EFI_RT_PROPERTIES_TABLE configuration table.
 
 **/
 EFI_STATUS
@@ -101,15 +102,6 @@ RuntimeDriverSetVirtualAddressMap (
   IN UINTN                  DescriptorSize,
   IN UINT32                 DescriptorVersion,
   IN EFI_MEMORY_DESCRIPTOR  *VirtualMap
-  );
-
-/**
-  Initialize CRC32 table.
-
-**/
-VOID
-RuntimeDriverInitializeCrc32Table (
-  VOID
   );
 
 /**
@@ -127,8 +119,6 @@ RuntimeDriverInitializeCrc32Table (
 EFI_STATUS
 EFIAPI
 RuntimeDriverInitialize (
-  IN EFI_HANDLE                            ImageHandle,
-  IN EFI_SYSTEM_TABLE                      *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   );
-
-#endif

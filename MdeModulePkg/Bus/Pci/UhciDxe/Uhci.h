@@ -2,25 +2,16 @@
 
   The definition for UHCI driver model and HC protocol routines.
 
-Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_UHCI_H_
-#define _EFI_UHCI_H_
-
+#pragma once
 
 #include <Uefi.h>
 
 #include <Protocol/Usb2HostController.h>
-#include <Protocol/UsbHostController.h>
 #include <Protocol/PciIo.h>
 
 #include <Guid/EventGroup.h>
@@ -37,7 +28,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 #include <IndustryStandard/Pci.h>
 
-typedef struct _USB_HC_DEV  USB_HC_DEV;
+typedef struct _USB_HC_DEV USB_HC_DEV;
 
 #include "UsbHcMem.h"
 #include "UhciQueue.h"
@@ -50,20 +41,20 @@ typedef struct _USB_HC_DEV  USB_HC_DEV;
 // UHC timeout experience values
 //
 
-#define UHC_1_MICROSECOND             1
-#define UHC_1_MILLISECOND             (1000 * UHC_1_MICROSECOND)
-#define UHC_1_SECOND                  (1000 * UHC_1_MILLISECOND)
+#define UHC_1_MICROSECOND  1
+#define UHC_1_MILLISECOND  (1000 * UHC_1_MICROSECOND)
+#define UHC_1_SECOND       (1000 * UHC_1_MILLISECOND)
 
 //
 // UHCI register operation timeout, set by experience
 //
-#define UHC_GENERIC_TIMEOUT           UHC_1_SECOND
+#define UHC_GENERIC_TIMEOUT  UHC_1_SECOND
 
 //
 // Wait for force global resume(FGR) complete, refers to
 // specification[UHCI11-2.1.1]
 //
-#define UHC_FORCE_GLOBAL_RESUME_STALL (20 * UHC_1_MILLISECOND)
+#define UHC_FORCE_GLOBAL_RESUME_STALL  (20 * UHC_1_MILLISECOND)
 
 //
 // Wait for roothub port reset and recovery, reset stall
@@ -77,22 +68,22 @@ typedef struct _USB_HC_DEV  USB_HC_DEV;
 // Sync and Async transfer polling interval, set by experience,
 // and the unit of Async is 100us.
 //
-#define UHC_SYNC_POLL_INTERVAL        (1 * UHC_1_MILLISECOND)
-#define UHC_ASYNC_POLL_INTERVAL       EFI_TIMER_PERIOD_MILLISECONDS(1)
+#define UHC_SYNC_POLL_INTERVAL   (1 * UHC_1_MILLISECOND)
+#define UHC_ASYNC_POLL_INTERVAL  EFI_TIMER_PERIOD_MILLISECONDS(1)
 
 //
 // UHC raises TPL to TPL_NOTIFY to serialize all its operations
 // to protect shared data structures.
 //
-#define  UHCI_TPL                     TPL_NOTIFY
+#define  UHCI_TPL  TPL_NOTIFY
 
-#define  USB_HC_DEV_SIGNATURE         SIGNATURE_32 ('u', 'h', 'c', 'i')
+#define  USB_HC_DEV_SIGNATURE  SIGNATURE_32 ('u', 'h', 'c', 'i')
 
 #pragma pack(1)
 typedef struct {
-  UINT8               ProgInterface;
-  UINT8               SubClassCode;
-  UINT8               BaseCode;
+  UINT8    ProgInterface;
+  UINT8    SubClassCode;
+  UINT8    BaseCode;
 } USB_CLASSC;
 #pragma pack()
 
@@ -110,20 +101,20 @@ typedef struct {
 // device requires this bandwidth reclamation capability.
 //
 struct _USB_HC_DEV {
-  UINT32                    Signature;
-  EFI_USB2_HC_PROTOCOL      Usb2Hc;
-  EFI_PCI_IO_PROTOCOL       *PciIo;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  UINT64                    OriginalPciAttributes;
+  UINT32                      Signature;
+  EFI_USB2_HC_PROTOCOL        Usb2Hc;
+  EFI_PCI_IO_PROTOCOL         *PciIo;
+  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
+  UINT64                      OriginalPciAttributes;
 
   //
   // Schedule data structures
   //
-  UINT32                    *FrameBase; // the buffer pointed by this pointer is used to store pci bus address of the QH descriptor.
-  UINT32                    *FrameBaseHostAddr; // the buffer pointed by this pointer is used to store host memory address of the QH descriptor.
-  UHCI_QH_SW                *SyncIntQh;
-  UHCI_QH_SW                *CtrlQh;
-  UHCI_QH_SW                *BulkQh;
+  UINT32                      *FrameBase;         // the buffer pointed by this pointer is used to store pci bus address of the QH descriptor.
+  UINT32                      *FrameBaseHostAddr; // the buffer pointed by this pointer is used to store host memory address of the QH descriptor.
+  UHCI_QH_SW                  *SyncIntQh;
+  UHCI_QH_SW                  *CtrlQh;
+  UHCI_QH_SW                  *BulkQh;
 
   //
   // Structures to maintain asynchronus interrupt transfers.
@@ -133,22 +124,21 @@ struct _USB_HC_DEV {
   // released in two steps using Recycle and RecycleWait.
   // Check the asynchronous interrupt management routines.
   //
-  LIST_ENTRY                AsyncIntList;
-  EFI_EVENT                 AsyncIntMonitor;
-  UHCI_ASYNC_REQUEST        *Recycle;
-  UHCI_ASYNC_REQUEST        *RecycleWait;
+  LIST_ENTRY                  AsyncIntList;
+  EFI_EVENT                   AsyncIntMonitor;
+  UHCI_ASYNC_REQUEST          *Recycle;
+  UHCI_ASYNC_REQUEST          *RecycleWait;
 
-
-  UINTN                     RootPorts;
-  USBHC_MEM_POOL            *MemPool;
-  EFI_UNICODE_STRING_TABLE  *CtrlNameTable;
-  VOID                      *FrameMapping;
+  UINTN                       RootPorts;
+  USBHC_MEM_POOL              *MemPool;
+  EFI_UNICODE_STRING_TABLE    *CtrlNameTable;
+  VOID                        *FrameMapping;
 
   //
-  // ExitBootServicesEvent is used to stop the EHC DMA operation 
+  // ExitBootServicesEvent is used to stop the EHC DMA operation
   // after exit boot service.
   //
-  EFI_EVENT                 ExitBootServiceEvent;
+  EFI_EVENT                   ExitBootServiceEvent;
 };
 
 extern EFI_DRIVER_BINDING_PROTOCOL   gUhciDriverBinding;
@@ -156,8 +146,7 @@ extern EFI_COMPONENT_NAME_PROTOCOL   gUhciComponentName;
 extern EFI_COMPONENT_NAME2_PROTOCOL  gUhciComponentName2;
 
 /**
-  Test to see if this driver supports ControllerHandle. Any
-  ControllerHandle that has UsbHcProtocol installed will be supported.
+  Test to see if this driver supports ControllerHandle.
 
   @param  This                 Protocol instance pointer.
   @param  Controller           Handle of device to test.
@@ -170,9 +159,9 @@ extern EFI_COMPONENT_NAME2_PROTOCOL  gUhciComponentName2;
 EFI_STATUS
 EFIAPI
 UhciDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN EFI_HANDLE                      Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
 
 /**
@@ -191,9 +180,9 @@ UhciDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 UhciDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN EFI_HANDLE                      Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   );
 
 /**
@@ -212,10 +201,8 @@ UhciDriverBindingStart (
 EFI_STATUS
 EFIAPI
 UhciDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN EFI_HANDLE                      Controller,
-  IN UINTN                           NumberOfChildren,
-  IN EFI_HANDLE                      *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   );
-
-#endif

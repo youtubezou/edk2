@@ -1,25 +1,18 @@
 /** @file
   Load File protocol as defined in the UEFI 2.0 specification.
 
-  Load file protocol exists to supports the addition of new boot devices, 
-  and to support booting from devices that do not map well to file system. 
+  Load file protocol exists to supports the addition of new boot devices,
+  and to support booting from devices that do not map well to file system.
   Network boot is done via a LoadFile protocol.
 
   UEFI 2.0 can boot from any device that produces a LoadFile protocol.
 
-  Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_LOAD_FILE2_PROTOCOL_H__
-#define __EFI_LOAD_FILE2_PROTOCOL_H__
+#pragma once
 
 #define EFI_LOAD_FILE2_PROTOCOL_GUID \
   { \
@@ -29,10 +22,9 @@
 ///
 /// Protocol Guid defined by UEFI2.1.
 ///
-#define LOAD_FILE2_PROTOCOL EFI_LOAD_FILE2_PROTOCOL_GUID
+#define LOAD_FILE2_PROTOCOL  EFI_LOAD_FILE2_PROTOCOL_GUID
 
 typedef struct _EFI_LOAD_FILE2_PROTOCOL EFI_LOAD_FILE2_PROTOCOL;
-
 
 /**
   Causes the driver to load a specified file.
@@ -45,7 +37,7 @@ typedef struct _EFI_LOAD_FILE2_PROTOCOL EFI_LOAD_FILE2_PROTOCOL;
                      Buffer. On output with a return code of EFI_BUFFER_TOO_SMALL,
                      the size of Buffer required to retrieve the requested file.
   @param  Buffer     The memory buffer to transfer the file to. IF Buffer is NULL,
-                     then no the size of the requested file is returned in
+                     then the size of the requested file is returned in
                      BufferSize.
 
   @retval EFI_SUCCESS           The file was loaded.
@@ -57,7 +49,7 @@ typedef struct _EFI_LOAD_FILE2_PROTOCOL EFI_LOAD_FILE2_PROTOCOL;
   @retval EFI_NO_RESPONSE       The remote system did not respond.
   @retval EFI_NOT_FOUND         The file was not found
   @retval EFI_ABORTED           The file load process was manually canceled.
-  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current 
+  @retval EFI_BUFFER_TOO_SMALL  The BufferSize is too small to read the current
                                 directory entry. BufferSize has been updated with
                                 the size needed to complete the request.
 
@@ -77,9 +69,7 @@ EFI_STATUS
 /// The EFI_LOAD_FILE_PROTOCOL is a simple protocol used to obtain files from arbitrary devices.
 ///
 struct _EFI_LOAD_FILE2_PROTOCOL {
-  EFI_LOAD_FILE2 LoadFile;
+  EFI_LOAD_FILE2    LoadFile;
 };
 
-extern EFI_GUID gEfiLoadFile2ProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiLoadFile2ProtocolGuid;

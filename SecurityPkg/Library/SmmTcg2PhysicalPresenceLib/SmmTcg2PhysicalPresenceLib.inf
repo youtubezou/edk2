@@ -7,13 +7,8 @@
 #  This driver will have external input - variable.
 #  This external input must be validated carefully to avoid security issue.
 #
-# Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-# This program and the accompanying materials
-# are licensed and made available under the terms and conditions of the BSD License
-# which accompanies this distribution. The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# Copyright (c) 2015 - 2020, Intel Corporation. All rights reserved.<BR>
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
@@ -25,16 +20,18 @@
   MODULE_TYPE                    = DXE_SMM_DRIVER
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = Tcg2PhysicalPresenceLib|DXE_SMM_DRIVER
-  CONSTRUCTOR                    = Tcg2PhysicalPresenceLibConstructor
+  CONSTRUCTOR                    = Tcg2PhysicalPresenceLibTraditionalConstructor
 
 #
 # The following information is for reference only and not required by the build tools.
 #
-#  VALID_ARCHITECTURES           = IA32 X64 IPF EBC
+#  VALID_ARCHITECTURES           = IA32 X64 EBC
 #
 
 [Sources]
   SmmTcg2PhysicalPresenceLib.c
+  MmTcg2PhysicalPresenceLibCommon.c
+  MmTcg2PhysicalPresenceLibCommon.h
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -44,7 +41,7 @@
 [LibraryClasses]
   DebugLib
   Tcg2PpVendorLib
-  SmmServicesTableLib
+  MmServicesTableLib
   BaseMemoryLib
 
 [Guids]
@@ -52,6 +49,10 @@
   ## SOMETIMES_CONSUMES ## Variable:L"PhysicalPresence"
   ## SOMETIMES_CONSUMES ## Variable:L"PhysicalPresenceFlags"
   gEfiTcg2PhysicalPresenceGuid
-  
+
+[Pcd]
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcgPhysicalPresenceInterfaceVer  ## CONSUMES
+  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2PhysicalPresenceFlags        ## SOMETIMES_CONSUMES
+
 [Depex]
   gEfiSmmVariableProtocolGuid

@@ -1,14 +1,8 @@
 /** @file
   Provides generic security measurement functions for DXE module.
 
-Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +15,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/DevicePathLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-#define SECURITY_HANDLER_TABLE_SIZE   0x10
+#define SECURITY_HANDLER_TABLE_SIZE  0x10
 
 //
 // Secruity Operation on Image and none Image.
@@ -33,24 +27,24 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
                                               | EFI_AUTH_OPERATION_AUTHENTICATION_STATE)
 
 typedef struct {
-  UINT32  SecurityOperation;
-  SECURITY_FILE_AUTHENTICATION_STATE_HANDLER  SecurityHandler;
+  UINT32                                        SecurityOperation;
+  SECURITY_FILE_AUTHENTICATION_STATE_HANDLER    SecurityHandler;
 } SECURITY_INFO;
 
 typedef struct {
-  UINT32  Security2Operation;
-  SECURITY2_FILE_AUTHENTICATION_HANDLER  Security2Handler;
+  UINT32                                   Security2Operation;
+  SECURITY2_FILE_AUTHENTICATION_HANDLER    Security2Handler;
 } SECURITY2_INFO;
 
-UINT32  mCurrentAuthOperation       = 0;
-UINT32  mNumberOfSecurityHandler    = 0;
-UINT32  mMaxNumberOfSecurityHandler = 0;
-SECURITY_INFO  *mSecurityTable      = NULL;
+UINT32         mCurrentAuthOperation       = 0;
+UINT32         mNumberOfSecurityHandler    = 0;
+UINT32         mMaxNumberOfSecurityHandler = 0;
+SECURITY_INFO  *mSecurityTable             = NULL;
 
-UINT32  mCurrentAuthOperation2       = 0;
-UINT32  mNumberOfSecurity2Handler    = 0;
-UINT32  mMaxNumberOfSecurity2Handler = 0;
-SECURITY2_INFO *mSecurity2Table      = NULL;
+UINT32          mCurrentAuthOperation2       = 0;
+UINT32          mNumberOfSecurity2Handler    = 0;
+UINT32          mMaxNumberOfSecurity2Handler = 0;
+SECURITY2_INFO  *mSecurity2Table             = NULL;
 
 /**
   Reallocates more global memory to store the registered Handler list.
@@ -61,14 +55,15 @@ SECURITY2_INFO *mSecurity2Table      = NULL;
 RETURN_STATUS
 EFIAPI
 ReallocateSecurityHandlerTable (
+  VOID
   )
 {
   //
   // Reallocate memory for security info structure.
   //
   mSecurityTable = ReallocatePool (
-                     mMaxNumberOfSecurityHandler * sizeof (SECURITY_INFO), 
-                     (mMaxNumberOfSecurityHandler + SECURITY_HANDLER_TABLE_SIZE) * sizeof (SECURITY_INFO), 
+                     mMaxNumberOfSecurityHandler * sizeof (SECURITY_INFO),
+                     (mMaxNumberOfSecurityHandler + SECURITY_HANDLER_TABLE_SIZE) * sizeof (SECURITY_INFO),
                      mSecurityTable
                      );
 
@@ -87,7 +82,7 @@ ReallocateSecurityHandlerTable (
 }
 
 /**
- Check whether an operation is valid according to the requirement of current operation, 
+ Check whether an operation is valid according to the requirement of current operation,
  which must make sure that the measure image operation is the last one.
 
  @param CurrentAuthOperation  Current operation.
@@ -98,30 +93,31 @@ ReallocateSecurityHandlerTable (
 **/
 BOOLEAN
 CheckAuthenticationOperation (
-  IN  UINT32    CurrentAuthOperation,
-  IN  UINT32    CheckAuthOperation
+  IN  UINT32  CurrentAuthOperation,
+  IN  UINT32  CheckAuthOperation
   )
-{ 
+{
   //
   // Make sure new auth operation can be recognized.
   //
   ASSERT ((CheckAuthOperation & ~(EFI_AUTH_IMAGE_OPERATION_MASK | EFI_AUTH_OPERATION_AUTHENTICATION_STATE | EFI_AUTH_OPERATION_IMAGE_REQUIRED)) == 0);
-  
+
   //
-  // When current operation includes measure image operation, 
+  // When current operation includes measure image operation,
   // only another measure image operation or none operation will be allowed.
   //
   if ((CurrentAuthOperation & EFI_AUTH_OPERATION_MEASURE_IMAGE) == EFI_AUTH_OPERATION_MEASURE_IMAGE) {
     if (((CheckAuthOperation & EFI_AUTH_OPERATION_MEASURE_IMAGE) == EFI_AUTH_OPERATION_MEASURE_IMAGE) ||
-        ((CheckAuthOperation & EFI_AUTH_IMAGE_OPERATION_MASK) == EFI_AUTH_OPERATION_NONE)) {
+        ((CheckAuthOperation & EFI_AUTH_IMAGE_OPERATION_MASK) == EFI_AUTH_OPERATION_NONE))
+    {
       return TRUE;
     } else {
       return FALSE;
     }
   }
-  
+
   //
-  // When current operation doesn't include measure image operation, 
+  // When current operation doesn't include measure image operation,
   // any new operation will be allowed.
   //
   return TRUE;
@@ -165,7 +161,7 @@ RegisterSecurityHandler (
     //
     // Allocate more resources for new handler.
     //
-    Status = ReallocateSecurityHandlerTable();
+    Status = ReallocateSecurityHandlerTable ();
     ASSERT_EFI_ERROR (Status);
   }
 
@@ -174,7 +170,7 @@ RegisterSecurityHandler (
   //
   mSecurityTable[mNumberOfSecurityHandler].SecurityOperation = AuthenticationOperation;
   mSecurityTable[mNumberOfSecurityHandler].SecurityHandler   = SecurityHandler;
-  mNumberOfSecurityHandler ++;
+  mNumberOfSecurityHandler++;
 
   return EFI_SUCCESS;
 }
@@ -183,12 +179,12 @@ RegisterSecurityHandler (
   Execute registered handlers until one returns an error and that error is returned.
   If none of the handlers return an error, then EFI_SUCCESS is returned.
 
-  Before exectue handler, get the image buffer by file device path if a handler 
+  Before exectue handler, get the image buffer by file device path if a handler
   requires the image file. And return the image buffer to each handler when exectue handler.
 
   The handlers are executed in same order to their registered order.
 
-  @param[in]  AuthenticationStatus 
+  @param[in]  AuthenticationStatus
                            This is the authentication type returned from the Section
                            Extraction protocol. See the Section Extraction Protocol
                            Specification for details on this type.
@@ -196,9 +192,9 @@ RegisterSecurityHandler (
                            being dispatched. This will optionally be used for logging.
 
   @retval EFI_SUCCESS            The file specified by File did authenticate when more
-                                 than one security handler services were registered, 
-                                 or the file did not authenticate when no security 
-                                 handler service was registered. And the platform policy 
+                                 than one security handler services were registered,
+                                 or the file did not authenticate when no security
+                                 handler service was registered. And the platform policy
                                  dictates that the DXE Core may use File.
   @retval EFI_INVALID_PARAMETER  File is NULL.
   @retval EFI_SECURITY_VIOLATION The file specified by File did not authenticate, and
@@ -213,19 +209,19 @@ RegisterSecurityHandler (
 EFI_STATUS
 EFIAPI
 ExecuteSecurityHandlers (
-  IN  UINT32                            AuthenticationStatus,
-  IN  CONST EFI_DEVICE_PATH_PROTOCOL    *FilePath
+  IN  UINT32                          AuthenticationStatus,
+  IN  CONST EFI_DEVICE_PATH_PROTOCOL  *FilePath
   )
 {
-  UINT32        Index;
-  EFI_STATUS    Status;
-  UINT32        HandlerAuthenticationStatus;
-  VOID          *FileBuffer;
-  UINTN         FileSize;
-  EFI_HANDLE    Handle;
-  EFI_DEVICE_PATH_PROTOCOL        *Node;
-  EFI_DEVICE_PATH_PROTOCOL        *FilePathToVerfiy;
-  
+  UINT32                    Index;
+  EFI_STATUS                Status;
+  UINT32                    HandlerAuthenticationStatus;
+  VOID                      *FileBuffer;
+  UINTN                     FileSize;
+  EFI_HANDLE                Handle;
+  EFI_DEVICE_PATH_PROTOCOL  *Node;
+  EFI_DEVICE_PATH_PROTOCOL  *FilePathToVerify;
+
   if (FilePath == NULL) {
     return EFI_INVALID_PARAMETER;
   }
@@ -236,22 +232,22 @@ ExecuteSecurityHandlers (
   if (mNumberOfSecurityHandler == 0) {
     return EFI_SUCCESS;
   }
-  
+
   Status                      = EFI_SUCCESS;
   FileBuffer                  = NULL;
   FileSize                    = 0;
   HandlerAuthenticationStatus = AuthenticationStatus;
-  FilePathToVerfiy            = (EFI_DEVICE_PATH_PROTOCOL *) FilePath;
+  FilePathToVerify            = (EFI_DEVICE_PATH_PROTOCOL *)FilePath;
   //
   // Run security handler in same order to their registered list
   //
-  for (Index = 0; Index < mNumberOfSecurityHandler; Index ++) {
+  for (Index = 0; Index < mNumberOfSecurityHandler; Index++) {
     if ((mSecurityTable[Index].SecurityOperation & EFI_AUTH_OPERATION_IMAGE_REQUIRED) == EFI_AUTH_OPERATION_IMAGE_REQUIRED) {
       //
       // Try get file buffer when the handler requires image buffer.
       //
       if (FileBuffer == NULL) {
-        Node   = FilePathToVerfiy;
+        Node   = FilePathToVerify;
         Status = gBS->LocateDevicePath (&gEfiLoadFileProtocolGuid, &Node, &Handle);
         //
         // Try to get image by FALSE boot policy for the exact boot file path.
@@ -263,20 +259,27 @@ ExecuteSecurityHandlers (
           //
           FileBuffer = GetFileBufferByFilePath (TRUE, FilePath, &FileSize, &AuthenticationStatus);
         }
+
         if ((FileBuffer != NULL) && (!EFI_ERROR (Status))) {
           //
           // LoadFile () may cause the device path of the Handle be updated.
           //
-          FilePathToVerfiy = AppendDevicePath (DevicePathFromHandle (Handle), Node);
+          FilePathToVerify = AppendDevicePath (DevicePathFromHandle (Handle), Node);
         }
       }
     }
+
+    if (FilePathToVerify == NULL) {
+      ASSERT (FilePathToVerify != NULL);
+      continue;
+    }
+
     Status = mSecurityTable[Index].SecurityHandler (
-               HandlerAuthenticationStatus,
-               FilePathToVerfiy,
-               FileBuffer,
-               FileSize
-               );
+                                     HandlerAuthenticationStatus,
+                                     FilePathToVerify,
+                                     FileBuffer,
+                                     FileSize
+                                     );
     if (EFI_ERROR (Status)) {
       break;
     }
@@ -285,8 +288,9 @@ ExecuteSecurityHandlers (
   if (FileBuffer != NULL) {
     FreePool (FileBuffer);
   }
-  if (FilePathToVerfiy != FilePath) {
-    FreePool (FilePathToVerfiy);
+
+  if (FilePathToVerify != FilePath) {
+    FreePool (FilePathToVerify);
   }
 
   return Status;
@@ -301,16 +305,17 @@ ExecuteSecurityHandlers (
 RETURN_STATUS
 EFIAPI
 ReallocateSecurity2HandlerTable (
+  VOID
   )
 {
   //
   // Reallocate memory for security info structure.
   //
   mSecurity2Table = ReallocatePool (
-                     mMaxNumberOfSecurity2Handler * sizeof (SECURITY2_INFO), 
-                     (mMaxNumberOfSecurity2Handler + SECURITY_HANDLER_TABLE_SIZE) * sizeof (SECURITY2_INFO), 
-                     mSecurity2Table
-                     );
+                      mMaxNumberOfSecurity2Handler * sizeof (SECURITY2_INFO),
+                      (mMaxNumberOfSecurity2Handler + SECURITY_HANDLER_TABLE_SIZE) * sizeof (SECURITY2_INFO),
+                      mSecurity2Table
+                      );
 
   //
   // No enough resource is allocated.
@@ -327,51 +332,54 @@ ReallocateSecurity2HandlerTable (
 }
 
 /**
-  Check whether an operation is valid according to the requirement of current operation, 
+  Check whether an operation is valid according to the requirement of current operation,
   which must make sure that the measure image operation is the last one.
-  
+
   If AuthenticationOperation is not recongnized, return FALSE.
   If AuthenticationOperation is EFI_AUTH_OPERATION_NONE, return FALSE.
   If AuthenticationOperation includes security operation and authentication operation, return FALSE.
   If the previous register handler can't be executed before the later register handler, return FALSE.
-  
+
   @param CurrentAuthOperation  Current operation.
   @param CheckAuthOperation    Operation to be checked.
-  
+
   @retval  TRUE   Operation is valid for current operation.
   @retval  FALSE  Operation is invalid for current operation.
 **/
 BOOLEAN
 CheckAuthentication2Operation (
-  IN  UINT32    CurrentAuthOperation,
-  IN  UINT32    CheckAuthOperation
+  IN  UINT32  CurrentAuthOperation,
+  IN  UINT32  CheckAuthOperation
   )
-{ 
+{
   //
   // Make sure new auth operation can be recognized.
   //
   if (CheckAuthOperation == EFI_AUTH_OPERATION_NONE) {
     return FALSE;
   }
-  if ((CheckAuthOperation & ~(EFI_AUTH_IMAGE_OPERATION_MASK | 
-                              EFI_AUTH_NONE_IMAGE_OPERATION_MASK | 
-                              EFI_AUTH_OPERATION_IMAGE_REQUIRED)) != 0) {
+
+  if ((CheckAuthOperation & ~(EFI_AUTH_IMAGE_OPERATION_MASK |
+                              EFI_AUTH_NONE_IMAGE_OPERATION_MASK |
+                              EFI_AUTH_OPERATION_IMAGE_REQUIRED)) != 0)
+  {
     return FALSE;
   }
 
   //
-  // When current operation includes measure image operation, 
+  // When current operation includes measure image operation,
   // only another measure image or none image operation will be allowed.
   //
   if ((CurrentAuthOperation & EFI_AUTH_OPERATION_MEASURE_IMAGE) == EFI_AUTH_OPERATION_MEASURE_IMAGE) {
     if (((CheckAuthOperation & EFI_AUTH_OPERATION_MEASURE_IMAGE) == EFI_AUTH_OPERATION_MEASURE_IMAGE) ||
-        ((CheckAuthOperation & EFI_AUTH_IMAGE_OPERATION_MASK) == 0)) {
+        ((CheckAuthOperation & EFI_AUTH_IMAGE_OPERATION_MASK) == 0))
+    {
       return TRUE;
     } else {
       return FALSE;
     }
   }
-  
+
   //
   // Any other operation will be allowed.
   //
@@ -396,8 +404,8 @@ CheckAuthentication2Operation (
 EFI_STATUS
 EFIAPI
 RegisterSecurity2Handler (
-  IN  SECURITY2_FILE_AUTHENTICATION_HANDLER       Security2Handler,
-  IN  UINT32                                      AuthenticationOperation
+  IN  SECURITY2_FILE_AUTHENTICATION_HANDLER  Security2Handler,
+  IN  UINT32                                 AuthenticationOperation
   )
 {
   EFI_STATUS  Status;
@@ -417,7 +425,7 @@ RegisterSecurity2Handler (
     //
     // Allocate more resources for new handler.
     //
-    Status = ReallocateSecurity2HandlerTable();
+    Status = ReallocateSecurity2HandlerTable ();
     ASSERT_EFI_ERROR (Status);
   }
 
@@ -426,22 +434,22 @@ RegisterSecurity2Handler (
   //
   mSecurity2Table[mNumberOfSecurity2Handler].Security2Operation = AuthenticationOperation;
   mSecurity2Table[mNumberOfSecurity2Handler].Security2Handler   = Security2Handler;
-  mNumberOfSecurity2Handler ++;
+  mNumberOfSecurity2Handler++;
 
   return EFI_SUCCESS;
 }
 
 /**
-  Execute registered handlers based on input AuthenticationOperation until 
-  one returns an error and that error is returned. 
-  
+  Execute registered handlers based on input AuthenticationOperation until
+  one returns an error and that error is returned.
+
   If none of the handlers return an error, then EFI_SUCCESS is returned.
   The handlers those satisfy AuthenticationOperation will only be executed.
   The handlers are executed in same order to their registered order.
 
-  @param[in]  AuthenticationOperation   
+  @param[in]  AuthenticationOperation
                            The operation type specifies which handlers will be executed.
-  @param[in]  AuthenticationStatus 
+  @param[in]  AuthenticationStatus
                            The authentication status for the input file.
   @param[in]  File         This is a pointer to the device path of the file that is
                            being dispatched. This will optionally be used for logging.
@@ -459,7 +467,7 @@ RegisterSecurity2Handler (
   @retval EFI_SUCCESS             FileBuffer is NULL and current user has permission to start
                                   UEFI device drivers on the device path specified by DevicePath.
   @retval EFI_SECURITY_VIOLATION  The file specified by File or FileBuffer did not
-                                  authenticate, and the platform policy dictates that 
+                                  authenticate, and the platform policy dictates that
                                   the file should be placed in the untrusted state.
   @retval EFI_SECURITY_VIOLATION  FileBuffer FileBuffer is NULL and the user has no
                                   permission to start UEFI device drivers on the device path specified
@@ -470,26 +478,26 @@ RegisterSecurity2Handler (
   @retval EFI_ACCESS_DENIED       The file specified by File did not authenticate, and
                                   the platform policy dictates that the DXE
                                   Foundation may not use File.
-  @retval EFI_INVALID_PARAMETER   File and FileBuffer are both NULL. 
+  @retval EFI_INVALID_PARAMETER   File and FileBuffer are both NULL.
 **/
 EFI_STATUS
 EFIAPI
 ExecuteSecurity2Handlers (
-  IN  UINT32                           AuthenticationOperation,
-  IN  UINT32                           AuthenticationStatus,
-  IN  CONST EFI_DEVICE_PATH_PROTOCOL   *File,
-  IN  VOID                             *FileBuffer,
-  IN  UINTN                            FileSize,
-  IN  BOOLEAN                          BootPolicy
+  IN  UINT32                          AuthenticationOperation,
+  IN  UINT32                          AuthenticationStatus,
+  IN  CONST EFI_DEVICE_PATH_PROTOCOL  *File  OPTIONAL,
+  IN  VOID                            *FileBuffer,
+  IN  UINTN                           FileSize,
+  IN  BOOLEAN                         BootPolicy
   )
 {
-  UINT32        Index;
-  EFI_STATUS    Status;
+  UINT32      Index;
+  EFI_STATUS  Status;
 
   //
   // Invalid case if File and FileBuffer are both NULL.
   //
-  if (File == NULL && FileBuffer == NULL) {
+  if ((File == NULL) && (FileBuffer == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -503,25 +511,26 @@ ExecuteSecurity2Handlers (
   //
   // Run security handler in same order to their registered list
   //
-  for (Index = 0; Index < mNumberOfSecurity2Handler; Index ++) {
+  for (Index = 0; Index < mNumberOfSecurity2Handler; Index++) {
     //
     // If FileBuffer is not NULL, the input is Image, which will be handled by EFI_AUTH_IMAGE_OPERATION_MASK operation.
     // If FileBuffer is NULL, the input is not Image, which will be handled by EFI_AUTH_NONE_IMAGE_OPERATION_MASK operation.
     // Other cases are ignored.
     //
-    if ((FileBuffer != NULL && (mSecurity2Table[Index].Security2Operation & EFI_AUTH_IMAGE_OPERATION_MASK) != 0) ||
-        (FileBuffer == NULL && (mSecurity2Table[Index].Security2Operation & EFI_AUTH_NONE_IMAGE_OPERATION_MASK) != 0)) {
+    if (((FileBuffer != NULL) && ((mSecurity2Table[Index].Security2Operation & EFI_AUTH_IMAGE_OPERATION_MASK) != 0)) ||
+        ((FileBuffer == NULL) && ((mSecurity2Table[Index].Security2Operation & EFI_AUTH_NONE_IMAGE_OPERATION_MASK) != 0)))
+    {
       //
       // Execute registered handlers based on input AuthenticationOperation
       //
       if ((mSecurity2Table[Index].Security2Operation & AuthenticationOperation) != 0) {
         Status = mSecurity2Table[Index].Security2Handler (
-                   AuthenticationStatus,
-                   File,
-                   FileBuffer,
-                   FileSize,
-                   BootPolicy
-                   );
+                                          AuthenticationStatus,
+                                          File,
+                                          FileBuffer,
+                                          FileSize,
+                                          BootPolicy
+                                          );
         if (EFI_ERROR (Status)) {
           return Status;
         }

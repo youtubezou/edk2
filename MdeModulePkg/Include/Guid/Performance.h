@@ -2,69 +2,46 @@
   This file defines performance-related definitions, including the format of:
   * performance GUID HOB.
   * performance protocol interfaces.
-  * performance variables.  
+  * performance variables.
 
-Copyright (c) 2009 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __PERFORMANCE_DATA_H__
-#define __PERFORMANCE_DATA_H__
+#pragma once
+
+#define PERFORMANCE_PROPERTY_REVISION  0x1
+
+typedef struct {
+  UINT32    Revision;
+  UINT32    Reserved;
+  UINT64    Frequency;
+  UINT64    TimerStartValue;
+  UINT64    TimerEndValue;
+} PERFORMANCE_PROPERTY;
 
 //
 // PEI_PERFORMANCE_STRING_SIZE must be a multiple of 8.
 //
-#define PEI_PERFORMANCE_STRING_SIZE     8
-#define PEI_PERFORMANCE_STRING_LENGTH   (PEI_PERFORMANCE_STRING_SIZE - 1)
+#define PEI_PERFORMANCE_STRING_SIZE    8
+#define PEI_PERFORMANCE_STRING_LENGTH  (PEI_PERFORMANCE_STRING_SIZE - 1)
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS  Handle;
-  CHAR8                 Token[PEI_PERFORMANCE_STRING_SIZE];   ///< Measured token string name. 
-  CHAR8                 Module[PEI_PERFORMANCE_STRING_SIZE];  ///< Module string name.
-  UINT64                StartTimeStamp;                       ///< Start time point.
-  UINT64                EndTimeStamp;                         ///< End time point.
+  EFI_PHYSICAL_ADDRESS    Handle;
+  CHAR8                   Token[PEI_PERFORMANCE_STRING_SIZE];  ///< Measured token string name.
+  CHAR8                   Module[PEI_PERFORMANCE_STRING_SIZE]; ///< Module string name.
+  UINT64                  StartTimeStamp;                      ///< Start time point.
+  UINT64                  EndTimeStamp;                        ///< End time point.
 } PEI_PERFORMANCE_LOG_ENTRY;
 
 //
 // The header must be aligned at 8 bytes.
-// 
+//
 typedef struct {
-  UINT32                NumberOfEntries;  ///< The number of all performance log entries.
-  UINT32                Reserved;
+  UINT32    NumberOfEntries;              ///< The number of all performance log entries.
+  UINT32    Reserved;
 } PEI_PERFORMANCE_LOG_HEADER;
-
-
-//
-// The data structure for performance data in ACPI memory.
-//
-#define PERFORMANCE_SIGNATURE   SIGNATURE_32 ('P', 'e', 'r', 'f')
-#define PERF_TOKEN_SIZE         28
-#define PERF_TOKEN_LENGTH       (PERF_TOKEN_SIZE - 1)
-#define PERF_PEI_ENTRY_MAX_NUM  50
-#define PERF_DATA_MAX_LENGTH    0x4000
-
-typedef struct {
-  CHAR8   Token[PERF_TOKEN_SIZE];
-  UINT32  Duration;
-} PERF_DATA;
-
-typedef struct {
-  UINT64        BootToOs;
-  UINT64        S3Resume;
-  UINT32        S3EntryNum;
-  PERF_DATA     S3Entry[PERF_PEI_ENTRY_MAX_NUM];
-  UINT64        CpuFreq;
-  UINT64        BDSRaw;
-  UINT32        Count;
-  UINT32        Signiture;
-} PERF_HEADER;
 
 #define PERFORMANCE_PROTOCOL_GUID \
   { 0x76b6bdfa, 0x2acd, 0x4462, { 0x9E, 0x3F, 0xcb, 0x58, 0xC9, 0x69, 0xd9, 0x37 } }
@@ -75,43 +52,43 @@ typedef struct {
 //
 // Forward reference for pure ANSI compatibility
 //
-typedef struct _PERFORMANCE_PROTOCOL PERFORMANCE_PROTOCOL;
-typedef struct _PERFORMANCE_EX_PROTOCOL PERFORMANCE_EX_PROTOCOL;
+typedef struct _PERFORMANCE_PROTOCOL     PERFORMANCE_PROTOCOL;
+typedef struct _PERFORMANCE_EX_PROTOCOL  PERFORMANCE_EX_PROTOCOL;
 
 //
 // DXE_PERFORMANCE_STRING_SIZE must be a multiple of 8.
 //
-#define DXE_PERFORMANCE_STRING_SIZE     32
-#define DXE_PERFORMANCE_STRING_LENGTH   (DXE_PERFORMANCE_STRING_SIZE - 1)
+#define DXE_PERFORMANCE_STRING_SIZE    32
+#define DXE_PERFORMANCE_STRING_LENGTH  (DXE_PERFORMANCE_STRING_SIZE - 1)
 
 //
 // The default guage entries number for DXE phase.
 //
-#define INIT_DXE_GAUGE_DATA_ENTRIES     800
+#define INIT_DXE_GAUGE_DATA_ENTRIES  800
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS  Handle;
-  CHAR8                 Token[DXE_PERFORMANCE_STRING_SIZE];  ///< Measured token string name. 
-  CHAR8                 Module[DXE_PERFORMANCE_STRING_SIZE]; ///< Module string name.
-  UINT64                StartTimeStamp;                      ///< Start time point.
-  UINT64                EndTimeStamp;                        ///< End time point.
+  EFI_PHYSICAL_ADDRESS    Handle;
+  CHAR8                   Token[DXE_PERFORMANCE_STRING_SIZE];  ///< Measured token string name.
+  CHAR8                   Module[DXE_PERFORMANCE_STRING_SIZE]; ///< Module string name.
+  UINT64                  StartTimeStamp;                      ///< Start time point.
+  UINT64                  EndTimeStamp;                        ///< End time point.
 } GAUGE_DATA_ENTRY;
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS  Handle;
-  CHAR8                 Token[DXE_PERFORMANCE_STRING_SIZE];  ///< Measured token string name. 
-  CHAR8                 Module[DXE_PERFORMANCE_STRING_SIZE]; ///< Module string name.
-  UINT64                StartTimeStamp;                      ///< Start time point.
-  UINT64                EndTimeStamp;                        ///< End time point.
-  UINT32                Identifier;                          ///< Identifier.
+  EFI_PHYSICAL_ADDRESS    Handle;
+  CHAR8                   Token[DXE_PERFORMANCE_STRING_SIZE];  ///< Measured token string name.
+  CHAR8                   Module[DXE_PERFORMANCE_STRING_SIZE]; ///< Module string name.
+  UINT64                  StartTimeStamp;                      ///< Start time point.
+  UINT64                  EndTimeStamp;                        ///< End time point.
+  UINT32                  Identifier;                          ///< Identifier.
 } GAUGE_DATA_ENTRY_EX;
 
 //
 // The header must be aligned at 8 bytes
 //
 typedef struct {
-  UINT32                NumberOfEntries; ///< The number of all performance gauge entries.
-  UINT32                Reserved;
+  UINT32    NumberOfEntries;             ///< The number of all performance gauge entries.
+  UINT32    Reserved;
 } GAUGE_DATA_HEADER;
 
 //
@@ -127,32 +104,32 @@ typedef struct {
 //
 // SMM_PERFORMANCE_STRING_SIZE.
 //
-#define SMM_PERFORMANCE_STRING_SIZE     32
-#define SMM_PERFORMANCE_STRING_LENGTH   (SMM_PERFORMANCE_STRING_SIZE - 1)
+#define SMM_PERFORMANCE_STRING_SIZE    32
+#define SMM_PERFORMANCE_STRING_LENGTH  (SMM_PERFORMANCE_STRING_SIZE - 1)
 
 //
 // The default guage entries number for SMM phase.
 //
-#define INIT_SMM_GAUGE_DATA_ENTRIES     200
+#define INIT_SMM_GAUGE_DATA_ENTRIES  200
 
 typedef struct {
-  UINTN             Function;
-  EFI_STATUS        ReturnStatus;
-  UINTN             NumberOfEntries;
-  UINTN             LogEntryKey;
-  GAUGE_DATA_ENTRY  *GaugeData;
+  UINTN               Function;
+  EFI_STATUS          ReturnStatus;
+  UINTN               NumberOfEntries;
+  UINTN               LogEntryKey;
+  GAUGE_DATA_ENTRY    *GaugeData;
 } SMM_PERF_COMMUNICATE;
 
 typedef struct {
-  UINTN                Function;
-  EFI_STATUS           ReturnStatus;
-  UINTN                NumberOfEntries;
-  UINTN                LogEntryKey;
-  GAUGE_DATA_ENTRY_EX  *GaugeDataEx;
+  UINTN                  Function;
+  EFI_STATUS             ReturnStatus;
+  UINTN                  NumberOfEntries;
+  UINTN                  LogEntryKey;
+  GAUGE_DATA_ENTRY_EX    *GaugeDataEx;
 } SMM_PERF_COMMUNICATE_EX;
 
-#define SMM_PERF_FUNCTION_GET_GAUGE_ENTRY_NUMBER          1
-#define SMM_PERF_FUNCTION_GET_GAUGE_DATA                  2
+#define SMM_PERF_FUNCTION_GET_GAUGE_ENTRY_NUMBER  1
+#define SMM_PERF_FUNCTION_GET_GAUGE_DATA          2
 
 /**
   Adds a record at the end of the performance measurement log
@@ -178,10 +155,10 @@ typedef struct {
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_START_GAUGE)(
-  IN CONST VOID   *Handle,  OPTIONAL
-  IN CONST CHAR8  *Token,   OPTIONAL
-  IN CONST CHAR8  *Module,  OPTIONAL
+(EFIAPI *PERFORMANCE_START_GAUGE)(
+  IN CONST VOID   *Handle   OPTIONAL,
+  IN CONST CHAR8  *Token    OPTIONAL,
+  IN CONST CHAR8  *Module   OPTIONAL,
   IN UINT64       TimeStamp
   );
 
@@ -211,10 +188,10 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_END_GAUGE)(
-  IN CONST VOID   *Handle,  OPTIONAL
-  IN CONST CHAR8  *Token,   OPTIONAL
-  IN CONST CHAR8  *Module,  OPTIONAL
+(EFIAPI *PERFORMANCE_END_GAUGE)(
+  IN CONST VOID   *Handle   OPTIONAL,
+  IN CONST CHAR8  *Token    OPTIONAL,
+  IN CONST CHAR8  *Module   OPTIONAL,
   IN UINT64       TimeStamp
   );
 
@@ -230,7 +207,7 @@ EFI_STATUS
   @param  LogEntryKey             The key for the previous performance measurement log entry.
                                   If 0, then the first performance measurement log entry is retrieved.
   @param  GaugeDataEntry          Out parameter for the indirect pointer to the gauge data entry specified by LogEntryKey.
-                                  
+
   @retval EFI_SUCCESS             The GuageDataEntry is successfully found based on LogEntryKey.
   @retval EFI_NOT_FOUND           There is no entry after the measurement referred to by LogEntryKey.
   @retval EFI_INVALID_PARAMETER   The LogEntryKey is not a valid entry, or GaugeDataEntry is NULL.
@@ -238,7 +215,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_GET_GAUGE)(
+(EFIAPI *PERFORMANCE_GET_GAUGE)(
   IN  UINTN               LogEntryKey,
   OUT GAUGE_DATA_ENTRY    **GaugeDataEntry
   );
@@ -269,10 +246,10 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_START_GAUGE_EX)(
-  IN CONST VOID   *Handle,  OPTIONAL
-  IN CONST CHAR8  *Token,   OPTIONAL
-  IN CONST CHAR8  *Module,  OPTIONAL
+(EFIAPI *PERFORMANCE_START_GAUGE_EX)(
+  IN CONST VOID   *Handle   OPTIONAL,
+  IN CONST CHAR8  *Token    OPTIONAL,
+  IN CONST CHAR8  *Module   OPTIONAL,
   IN UINT64       TimeStamp,
   IN UINT32       Identifier
   );
@@ -305,10 +282,10 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_END_GAUGE_EX)(
-  IN CONST VOID   *Handle,  OPTIONAL
-  IN CONST CHAR8  *Token,   OPTIONAL
-  IN CONST CHAR8  *Module,  OPTIONAL
+(EFIAPI *PERFORMANCE_END_GAUGE_EX)(
+  IN CONST VOID   *Handle   OPTIONAL,
+  IN CONST CHAR8  *Token    OPTIONAL,
+  IN CONST CHAR8  *Module   OPTIONAL,
   IN UINT64       TimeStamp,
   IN UINT32       Identifier
   );
@@ -325,7 +302,7 @@ EFI_STATUS
   @param  LogEntryKey             The key for the previous performance measurement log entry.
                                   If 0, then the first performance measurement log entry is retrieved.
   @param  GaugeDataEntryEx        Out parameter for the indirect pointer to the extented gauge data entry specified by LogEntryKey.
-                                  
+
   @retval EFI_SUCCESS             The GuageDataEntryEx is successfully found based on LogEntryKey.
   @retval EFI_NOT_FOUND           There is no entry after the measurement referred to by LogEntryKey.
   @retval EFI_INVALID_PARAMETER   The LogEntryKey is not a valid entry, or GaugeDataEntryEx is NULL.
@@ -333,26 +310,24 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI * PERFORMANCE_GET_GAUGE_EX)(
+(EFIAPI *PERFORMANCE_GET_GAUGE_EX)(
   IN  UINTN                 LogEntryKey,
   OUT GAUGE_DATA_ENTRY_EX   **GaugeDataEntryEx
   );
 
 struct _PERFORMANCE_PROTOCOL {
-  PERFORMANCE_START_GAUGE             StartGauge;
-  PERFORMANCE_END_GAUGE               EndGauge;
-  PERFORMANCE_GET_GAUGE               GetGauge;
+  PERFORMANCE_START_GAUGE    StartGauge;
+  PERFORMANCE_END_GAUGE      EndGauge;
+  PERFORMANCE_GET_GAUGE      GetGauge;
 };
 
 struct _PERFORMANCE_EX_PROTOCOL {
-  PERFORMANCE_START_GAUGE_EX          StartGaugeEx;
-  PERFORMANCE_END_GAUGE_EX            EndGaugeEx;
-  PERFORMANCE_GET_GAUGE_EX            GetGaugeEx;
+  PERFORMANCE_START_GAUGE_EX    StartGaugeEx;
+  PERFORMANCE_END_GAUGE_EX      EndGaugeEx;
+  PERFORMANCE_GET_GAUGE_EX      GetGaugeEx;
 };
 
-extern EFI_GUID gPerformanceProtocolGuid;
-extern EFI_GUID gSmmPerformanceProtocolGuid;
-extern EFI_GUID gPerformanceExProtocolGuid;
-extern EFI_GUID gSmmPerformanceExProtocolGuid;
-
-#endif
+extern EFI_GUID  gPerformanceProtocolGuid;
+extern EFI_GUID  gSmmPerformanceProtocolGuid;
+extern EFI_GUID  gPerformanceExProtocolGuid;
+extern EFI_GUID  gSmmPerformanceExProtocolGuid;

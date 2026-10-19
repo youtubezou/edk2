@@ -1,19 +1,12 @@
 /** @file
   Esrt management implementation head file.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _DXE_ESRT_IMPL_H_
-#define _DXE_ESRT_IMPL_H_
+#pragma once
 
 #include <Guid/EventGroup.h>
 #include <Guid/SystemResourceTable.h>
@@ -28,63 +21,61 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
 #include <Library/CapsuleLib.h>
-#include <Library/PrintLib.h>
 
 #include <Protocol/FirmwareManagement.h>
 #include <Protocol/EsrtManagement.h>
-#include <Protocol/VariableLock.h>
+#include <Library/VariablePolicyHelperLib.h>
 
 //
 // Name of  Variable for Non-FMP ESRT Repository
-// 
-#define EFI_ESRT_NONFMP_VARIABLE_NAME    L"EsrtNonFmp"
+//
+#define EFI_ESRT_NONFMP_VARIABLE_NAME  L"EsrtNonFmp"
 
 //
 // Name of Variable for FMP
-// 
-#define EFI_ESRT_FMP_VARIABLE_NAME       L"EsrtFmp"
+//
+#define EFI_ESRT_FMP_VARIABLE_NAME  L"EsrtFmp"
 
 //
 // Attribute of Cached ESRT entry
 //
-#define ESRT_FROM_FMP                    0x00000001
-#define ESRT_FROM_NONFMP                 0x00000002
+#define ESRT_FROM_FMP     0x00000001
+#define ESRT_FROM_NONFMP  0x00000002
 
 typedef struct {
-  EFI_HANDLE            Handle;
+  EFI_HANDLE    Handle;
   //
   // Ready to boot event
   //
-  EFI_EVENT             Event;
-  
+  EFI_EVENT     Event;
+
   //
   // Updates to Fmp storage must be locked.
   //
-  EFI_LOCK              FmpLock;
+  EFI_LOCK      FmpLock;
 
   //
   // Update to Non-Fmp storage must be locked
   //
-  EFI_LOCK              NonFmpLock;
+  EFI_LOCK      NonFmpLock;
 } ESRT_PRIVATE_DATA;
 
-
 /**
-  Find Esrt Entry stored in ESRT repository. 
+  Find Esrt Entry stored in ESRT repository.
 
   @param[in]     FwClass           Firmware class guid in Esrt entry
   @param[in]     Attribute         Esrt from Non FMP or FMP instance
   @param[out]    Entry             Esrt entry returned
-  
+
   @retval EFI_SUCCESS            Successfully find an Esrt entry
   @retval EF_NOT_FOUND           No Esrt entry found
 
 **/
 EFI_STATUS
 GetEsrtEntry (
-  IN  EFI_GUID              *FwClass,
-  IN  UINTN                 Attribute,
-  OUT EFI_SYSTEM_RESOURCE_ENTRY *Entry
+  IN  EFI_GUID                   *FwClass,
+  IN  UINTN                      Attribute,
+  OUT EFI_SYSTEM_RESOURCE_ENTRY  *Entry
   );
 
 /**
@@ -92,30 +83,30 @@ GetEsrtEntry (
 
   @param[in]  Entry                Esrt entry to be set
   @param[in]  Attribute            Esrt from Esrt private protocol or FMP instance
-  
+
   @retval EFI_SUCCESS          Successfully set a variable.
 
 **/
 EFI_STATUS
-InsertEsrtEntry(
-  IN EFI_SYSTEM_RESOURCE_ENTRY *Entry,
-  UINTN                        Attribute
+InsertEsrtEntry (
+  IN EFI_SYSTEM_RESOURCE_ENTRY  *Entry,
+  UINTN                         Attribute
   );
 
 /**
-  Delete ESRT Entry from ESRT repository. 
+  Delete ESRT Entry from ESRT repository.
 
-  @param[in]    FwClass              FwClass of Esrt entry to delete  
+  @param[in]    FwClass              FwClass of Esrt entry to delete
   @param[in]    Attribute            Esrt from Esrt private protocol or FMP instance
-  
-  @retval EFI_SUCCESS         Insert all entries Successfully 
+
+  @retval EFI_SUCCESS         Insert all entries Successfully
   @retval EFI_NOT_FOUND       ESRT entry with FwClass doesn't exsit
-  
+
 **/
 EFI_STATUS
-DeleteEsrtEntry(
-  IN  EFI_GUID        *FwClass,
-  IN  UINTN           Attribute
+DeleteEsrtEntry (
+  IN  EFI_GUID  *FwClass,
+  IN  UINTN     Attribute
   );
 
 /**
@@ -123,15 +114,15 @@ DeleteEsrtEntry(
 
   @param[in]    Entry                Esrt entry to be set
   @param[in]    Attribute            Esrt from Non Esrt or FMP instance
-  
+
   @retval EFI_SUCCESS          Successfully Update a variable.
   @retval EFI_NOT_FOUND        The Esrt enry doesn't exist
 
 **/
 EFI_STATUS
-UpdateEsrtEntry(
-  IN EFI_SYSTEM_RESOURCE_ENTRY *Entry,
-  UINTN                        Attribute
+UpdateEsrtEntry (
+  IN EFI_SYSTEM_RESOURCE_ENTRY  *Entry,
+  UINTN                         Attribute
   );
 
 /**
@@ -140,21 +131,21 @@ UpdateEsrtEntry(
   @param[in, out]    EsrtEntry             Esrt entry to be Init
   @param[in]         FmpImageInfo          FMP image info descriptor
   @param[in]         DescriptorVersion     FMP Image info descriptor version
-  
+
 **/
-VOID 
+VOID
 SetEsrtEntryFromFmpInfo (
-  IN OUT EFI_SYSTEM_RESOURCE_ENTRY   *EsrtEntry,
-  IN EFI_FIRMWARE_IMAGE_DESCRIPTOR   *FmpImageInfo,
-  IN UINT32                          DescriptorVersion
+  IN OUT EFI_SYSTEM_RESOURCE_ENTRY  *EsrtEntry,
+  IN EFI_FIRMWARE_IMAGE_DESCRIPTOR  *FmpImageInfo,
+  IN UINT32                         DescriptorVersion
   );
 
 /**
-  Get ESRT entry from ESRT Cache by FwClass Guid 
+  Get ESRT entry from ESRT Cache by FwClass Guid
 
-  @param[in]       FwClass                FwClass of Esrt entry to get  
-  @param[in, out]  Entry                  Esrt entry returned 
-  
+  @param[in]       FwClass                FwClass of Esrt entry to get
+  @param[in, out]  Entry                  Esrt entry returned
+
   @retval EFI_SUCCESS                   The variable saving this Esrt Entry exists.
   @retval EF_NOT_FOUND                  No correct variable found.
   @retval EFI_WRITE_PROTECTED           ESRT Cache repository is locked
@@ -162,16 +153,16 @@ SetEsrtEntryFromFmpInfo (
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeGetEsrtEntry(
-  IN     EFI_GUID                  *FwClass,
-  IN OUT EFI_SYSTEM_RESOURCE_ENTRY *Entry
+EsrtDxeGetEsrtEntry (
+  IN     EFI_GUID                   *FwClass,
+  IN OUT EFI_SYSTEM_RESOURCE_ENTRY  *Entry
   );
 
 /**
   Update one ESRT entry in ESRT Cache.
 
   @param[in]  Entry                         Esrt entry to be updated
-  
+
   @retval EFI_SUCCESS                   Successfully update an ESRT entry in cache.
   @retval EFI_INVALID_PARAMETER  Entry does't exist in ESRT Cache
   @retval EFI_WRITE_PROTECTED     ESRT Cache is locked
@@ -179,23 +170,23 @@ EsrtDxeGetEsrtEntry(
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeUpdateEsrtEntry(
-  IN EFI_SYSTEM_RESOURCE_ENTRY *Entry
+EsrtDxeUpdateEsrtEntry (
+  IN EFI_SYSTEM_RESOURCE_ENTRY  *Entry
   );
 
 /**
-  Non-FMP instance to unregister Esrt Entry from ESRT Cache. 
+  Non-FMP instance to unregister Esrt Entry from ESRT Cache.
 
-  @param[in]    FwClass                FwClass of Esrt entry to Unregister  
-  
-  @retval EFI_SUCCESS             Insert all entries Successfully 
+  @param[in]    FwClass                FwClass of Esrt entry to Unregister
+
+  @retval EFI_SUCCESS             Insert all entries Successfully
   @retval EFI_NOT_FOUND           Entry of FwClass does not exsit
 
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeUnRegisterEsrtEntry(
-  IN  EFI_GUID        *FwClass
+EsrtDxeUnRegisterEsrtEntry (
+  IN  EFI_GUID  *FwClass
   );
 
 /**
@@ -208,8 +199,8 @@ EsrtDxeUnRegisterEsrtEntry(
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeRegisterEsrtEntry(
-  IN EFI_SYSTEM_RESOURCE_ENTRY *Entry
+EsrtDxeRegisterEsrtEntry (
+  IN EFI_SYSTEM_RESOURCE_ENTRY  *Entry
   );
 
 /**
@@ -224,22 +215,19 @@ EsrtDxeRegisterEsrtEntry(
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeSyncFmp(
+EsrtDxeSyncFmp (
   VOID
   );
 
 /**
-  This function locks up Esrt repository to be readonly. It should be called 
+  This function locks up Esrt repository to be readonly. It should be called
   before gEfiEndOfDxeEventGroupGuid event signaled
 
-  @retval EFI_SUCCESS              Locks up FMP Non-FMP repository successfully 
+  @retval EFI_SUCCESS              Locks up FMP Non-FMP repository successfully
 
 **/
 EFI_STATUS
 EFIAPI
-EsrtDxeLockEsrtRepository(
+EsrtDxeLockEsrtRepository (
   VOID
   );
-
-#endif // #ifndef _EFI_ESRT_IMPL_H_
-

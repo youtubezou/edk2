@@ -3,22 +3,15 @@
   This PPI is installed by some platform or chipset-specific PEIM that abstracts
   handling multiprocessor support.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2015 - 2017, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This PPI is introduced in PI Version 1.4.
 
 **/
 
-#ifndef __PEI_MP_SERVICES_PPI_H__
-#define __PEI_MP_SERVICES_PPI_H__
+#pragma once
 
 #include <Protocol/MpService.h>
 
@@ -27,7 +20,7 @@
     0xee16160a, 0xe8be, 0x47a6, { 0x82, 0xa, 0xc6, 0x90, 0xd, 0xb0, 0x25, 0xa } \
   }
 
-typedef struct _EFI_PEI_MP_SERVICES_PPI  EFI_PEI_MP_SERVICES_PPI ;
+typedef struct _EFI_PEI_MP_SERVICES_PPI EFI_PEI_MP_SERVICES_PPI;
 
 /**
   Get the number of CPU's.
@@ -48,7 +41,7 @@ typedef struct _EFI_PEI_MP_SERVICES_PPI  EFI_PEI_MP_SERVICES_PPI ;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_GET_NUMBER_OF_PROCESSORS) (
+(EFIAPI *EFI_PEI_MP_SERVICES_GET_NUMBER_OF_PROCESSORS)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   OUT UINTN                       *NumberOfProcessors,
@@ -73,7 +66,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_GET_PROCESSOR_INFO) (
+(EFIAPI *EFI_PEI_MP_SERVICES_GET_PROCESSOR_INFO)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   IN  UINTN                       ProcessorNumber,
@@ -81,7 +74,7 @@ EFI_STATUS
   );
 
 /**
-  Activate all of the application proessors.
+  Activate all of the application processors.
 
   @param[in] PeiServices          An indirect pointer to the PEI Services Table
                                   published by the PEI Foundation.
@@ -116,7 +109,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_STARTUP_ALL_APS) (
+(EFIAPI *EFI_PEI_MP_SERVICES_STARTUP_ALL_APS)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   IN  EFI_AP_PROCEDURE            Procedure,
@@ -161,7 +154,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_STARTUP_THIS_AP) (
+(EFIAPI *EFI_PEI_MP_SERVICES_STARTUP_THIS_AP)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   IN  EFI_AP_PROCEDURE            Procedure,
@@ -187,7 +180,7 @@ EFI_STATUS
   @retval EFI_UNSUPPORTED         Switching the BSP cannot be completed prior to this
                                   service returning.
   @retval EFI_UNSUPPORTED         Switching the BSP is not supported.
-  @retval EFI_SUCCESS             The calling processor is an AP.
+  @retval EFI_DEVICE_ERROR        The calling processor is an AP.
   @retval EFI_NOT_FOUND           The processor with the handle specified by
                                   ProcessorNumber does not exist.
   @retval EFI_INVALID_PARAMETER   ProcessorNumber specifies the current BSP or a disabled
@@ -196,7 +189,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_SWITCH_BSP) (
+(EFIAPI *EFI_PEI_MP_SERVICES_SWITCH_BSP)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   IN  UINTN                       ProcessorNumber,
@@ -233,7 +226,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_ENABLEDISABLEAP) (
+(EFIAPI *EFI_PEI_MP_SERVICES_ENABLEDISABLEAP)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   IN  UINTN                       ProcessorNumber,
@@ -258,7 +251,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_MP_SERVICES_WHOAMI) (
+(EFIAPI *EFI_PEI_MP_SERVICES_WHOAMI)(
   IN  CONST EFI_PEI_SERVICES      **PeiServices,
   IN  EFI_PEI_MP_SERVICES_PPI     *This,
   OUT UINTN                       *ProcessorNumber
@@ -269,15 +262,13 @@ EFI_STATUS
 /// handling multiprocessor support.
 ///
 struct _EFI_PEI_MP_SERVICES_PPI {
-  EFI_PEI_MP_SERVICES_GET_NUMBER_OF_PROCESSORS   GetNumberOfProcessors;
-  EFI_PEI_MP_SERVICES_GET_PROCESSOR_INFO         GetProcessorInfo;
-  EFI_PEI_MP_SERVICES_STARTUP_ALL_APS            StartupAllAPs;
-  EFI_PEI_MP_SERVICES_STARTUP_THIS_AP            StartupThisAP;
-  EFI_PEI_MP_SERVICES_SWITCH_BSP                 SwitchBSP;
-  EFI_PEI_MP_SERVICES_ENABLEDISABLEAP            EnableDisableAP;
-  EFI_PEI_MP_SERVICES_WHOAMI                     WhoAmI;
+  EFI_PEI_MP_SERVICES_GET_NUMBER_OF_PROCESSORS    GetNumberOfProcessors;
+  EFI_PEI_MP_SERVICES_GET_PROCESSOR_INFO          GetProcessorInfo;
+  EFI_PEI_MP_SERVICES_STARTUP_ALL_APS             StartupAllAPs;
+  EFI_PEI_MP_SERVICES_STARTUP_THIS_AP             StartupThisAP;
+  EFI_PEI_MP_SERVICES_SWITCH_BSP                  SwitchBSP;
+  EFI_PEI_MP_SERVICES_ENABLEDISABLEAP             EnableDisableAP;
+  EFI_PEI_MP_SERVICES_WHOAMI                      WhoAmI;
 };
 
-extern EFI_GUID gEfiPeiMpServicesPpiGuid;
-
-#endif
+extern EFI_GUID  gEfiPeiMpServicesPpiGuid;

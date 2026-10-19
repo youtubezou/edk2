@@ -2,19 +2,12 @@
   Ihe internal heder file includes the required Protocol/Guid/Library
   and the shared function APIs.
 
-Copyright (c) 2007 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _INTERNAL_PLATFORM_DRIVER_OVERRIDE_H_
-#define _INTERNAL_PLATFORM_DRIVER_OVERRIDE_H_
+#pragma once
 
 #include <PiDxe.h>
 
@@ -59,7 +52,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 FreeMappingDatabase (
-  IN  OUT  LIST_ENTRY            *MappingDataBase
+  IN  OUT  LIST_ENTRY  *MappingDataBase
   )
 ;
 
@@ -78,7 +71,7 @@ FreeMappingDatabase (
 EFI_STATUS
 EFIAPI
 InitOverridesMapping (
-  OUT  LIST_ENTRY            *MappingDataBase
+  OUT  LIST_ENTRY  *MappingDataBase
   )
 ;
 
@@ -95,7 +88,7 @@ InitOverridesMapping (
 EFI_STATUS
 EFIAPI
 SaveOverridesMapping (
-  IN  LIST_ENTRY              *MappingDataBase
+  IN  LIST_ENTRY  *MappingDataBase
   )
 ;
 
@@ -126,10 +119,10 @@ SaveOverridesMapping (
 EFI_STATUS
 EFIAPI
 GetDriverFromMapping (
-  IN     EFI_HANDLE                                     ControllerHandle,
-  IN OUT EFI_HANDLE                                     *DriverImageHandle,
-  IN     LIST_ENTRY                                     *MappingDataBase,
-  IN     EFI_HANDLE                                     CallerImageHandle
+  IN     EFI_HANDLE  ControllerHandle,
+  IN OUT EFI_HANDLE  *DriverImageHandle,
+  IN     LIST_ENTRY  *MappingDataBase,
+  IN     EFI_HANDLE  CallerImageHandle
   )
 ;
 
@@ -146,18 +139,18 @@ GetDriverFromMapping (
 
   @retval EFI_INVALID_PARAMETER    ControllerDevicePath or MappingDataBase is NULL.
   @retval EFI_NOT_FOUND            ControllerDevicePath is not found in MappingDataBase or
-                                   DriverImageDevicePath is not found in the found DriverImage Info list. 
-  @retval EFI_SUCCESS              The controller's total override driver number and 
+                                   DriverImageDevicePath is not found in the found DriverImage Info list.
+  @retval EFI_SUCCESS              The controller's total override driver number and
                                    input DriverImage's order number is correctly return.
 **/
 EFI_STATUS
 EFIAPI
 CheckMapping (
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *ControllerDevicePath,
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *DriverImageDevicePath  OPTIONAL,
-  IN     LIST_ENTRY                                     *MappingDataBase,
-  OUT    UINT32                                         *DriverInfoNum  OPTIONAL,
-  OUT    UINT32                                         *DriverImageNO  OPTIONAL
+  IN     EFI_DEVICE_PATH_PROTOCOL  *ControllerDevicePath,
+  IN     EFI_DEVICE_PATH_PROTOCOL  *DriverImageDevicePath  OPTIONAL,
+  IN     LIST_ENTRY                *MappingDataBase,
+  OUT    UINT32                    *DriverInfoNum  OPTIONAL,
+  OUT    UINT32                    *DriverImageNO  OPTIONAL
   )
 ;
 
@@ -169,31 +162,31 @@ CheckMapping (
                                    override driver image item
   @param  DriverImageDevicePath    The driver image device path need to be insert
   @param  MappingDataBase          Mapping database list entry pointer
-  @param  DriverImageNO            The inserted order number. If this number is taken, 
+  @param  DriverImageNO            The inserted order number. If this number is taken,
                                    the larger available number will be used.
 
   @retval EFI_INVALID_PARAMETER    ControllerDevicePath is NULL, or DriverImageDevicePath is NULL
                                    or MappingDataBase is NULL
-  @retval EFI_ALREADY_STARTED      The input Controller to input DriverImage has been 
+  @retval EFI_ALREADY_STARTED      The input Controller to input DriverImage has been
                                    recorded into the mapping database.
-  @retval EFI_SUCCESS              The Controller and DriverImage are inserted into 
+  @retval EFI_SUCCESS              The Controller and DriverImage are inserted into
                                    the mapping database successfully.
 
 **/
 EFI_STATUS
 EFIAPI
 InsertDriverImage (
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *ControllerDevicePath,
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *DriverImageDevicePath,
-  IN     LIST_ENTRY                                     *MappingDataBase,
-  IN     UINT32                                         DriverImageNO
+  IN     EFI_DEVICE_PATH_PROTOCOL  *ControllerDevicePath,
+  IN     EFI_DEVICE_PATH_PROTOCOL  *DriverImageDevicePath,
+  IN     LIST_ENTRY                *MappingDataBase,
+  IN     UINT32                    DriverImageNO
   )
 ;
 
 /**
   Delete a controller's override driver from the mapping database.
 
-  @param  ControllerDevicePath     The controller device path will be deleted 
+  @param  ControllerDevicePath     The controller device path will be deleted
                                    when all drivers images on it are removed.
   @param  DriverImageDevicePath    The driver image device path will be delete.
                                    If NULL, all driver image will be delete.
@@ -201,17 +194,15 @@ InsertDriverImage (
 
   @retval EFI_INVALID_PARAMETER    ControllerDevicePath is NULL, or MappingDataBase is NULL
   @retval EFI_NOT_FOUND            ControllerDevicePath is not found in MappingDataBase or
-                                   DriverImageDevicePath is not found in the found DriverImage Info list. 
+                                   DriverImageDevicePath is not found in the found DriverImage Info list.
   @retval EFI_SUCCESS              Delete the specified driver successfully.
 
 **/
 EFI_STATUS
 EFIAPI
 DeleteDriverImage (
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *ControllerDevicePath,
-  IN     EFI_DEVICE_PATH_PROTOCOL                       *DriverImageDevicePath,
-  IN     LIST_ENTRY                                     *MappingDataBase
+  IN     EFI_DEVICE_PATH_PROTOCOL  *ControllerDevicePath,
+  IN     EFI_DEVICE_PATH_PROTOCOL  *DriverImageDevicePath,
+  IN     LIST_ENTRY                *MappingDataBase
   )
 ;
-
-#endif

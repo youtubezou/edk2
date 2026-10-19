@@ -2,19 +2,11 @@
   FrontPage routines to handle the callbacks and browser calls
 
 Copyright (c) 2011 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
-#ifndef _BDS_MODULE_H_
-#define _BDS_MODULE_H_
+#pragma once
 
 #include <IndustryStandard/SmBios.h>
 
@@ -43,37 +35,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 /// HII specific Vendor Device Path definition.
 ///
 typedef struct {
-  VENDOR_DEVICE_PATH             VendorDevicePath;
-  EFI_DEVICE_PATH_PROTOCOL       End;
+  VENDOR_DEVICE_PATH          VendorDevicePath;
+  EFI_DEVICE_PATH_PROTOCOL    End;
 } HII_VENDOR_DEVICE_PATH;
 
 #pragma pack()
 
-
 //
-//The interface functions related to the Setup Browser Reset Reminder feature
+// The interface functions related to the Setup Browser Reset Reminder feature
 //
-/**
-  Enable the setup browser reset reminder feature.
-  This routine is used in a platform tip. If the platform policy needs the feature, use the routine to enable it.
-
-**/
-VOID
-EFIAPI
-EnableResetReminderFeature (
-  VOID
-  );
-
-/**
-  Disable the setup browser reset reminder feature.
-  This routine is used in a platform tip. If the platform policy does not want the feature, use the routine to disable it.
-
-**/
-VOID
-EFIAPI
-DisableResetReminderFeature (
-  VOID
-  );
 
 /**
   Record the info that a reset is required.
@@ -83,18 +53,6 @@ DisableResetReminderFeature (
 VOID
 EFIAPI
 EnableResetRequired (
-  VOID
-  );
-
-
-/**
-  Record the info that no reset is required.
-  A module boolean variable is used to record whether a reset is required.
-
-**/
-VOID
-EFIAPI
-DisableResetRequired (
   VOID
   );
 
@@ -129,5 +87,3 @@ EFIAPI
 SetupResetReminder (
   VOID
   );
-
-#endif

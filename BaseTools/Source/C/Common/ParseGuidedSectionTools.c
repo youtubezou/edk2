@@ -1,14 +1,8 @@
 /** @file
 Helper functions for parsing GuidedSectionTools.txt
 
-Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -36,33 +30,25 @@ typedef struct _GUID_SEC_TOOL_ENTRY {
 } GUID_SEC_TOOL_ENTRY;
 
 //
-// Functin Implementation
+// Function Implementation
 //
 
-EFI_HANDLE
-ParseGuidedSectionToolsFile (
-  IN CHAR8    *InputFile
-  )
-/*++
-
-Routine Description:
-
+/**
   This function parses the tools_def.txt file.  It returns a
   EFI_HANDLE object which can be used for the other library
   functions and should be passed to FreeParsedGuidedSectionToolsHandle
   to free resources when the tools_def.txt information is no
   longer needed.
 
-Arguments:
+  @param InputFile     Path name of file to read
 
-  InputFile     Path name of file to read
-
-Returns:
-
-  NULL if error parsing
-  A non-NULL EFI_HANDLE otherwise
-
---*/
+  @retval NULL if error parsing
+  @retval A non-NULL EFI_HANDLE otherwise
+**/
+EFI_HANDLE
+ParseGuidedSectionToolsFile (
+  IN CHAR8    *InputFile
+  )
 {
   EFI_STATUS Status;
   EFI_HANDLE MemoryFile;
@@ -76,35 +62,26 @@ Returns:
   ParsedGuidedSectionTools = ParseGuidedSectionToolsMemoryFile (MemoryFile);
 
   FreeMemoryFile (MemoryFile);
-  
+
   return ParsedGuidedSectionTools;
 }
 
-
-EFI_HANDLE
-ParseGuidedSectionToolsMemoryFile (
-  IN EFI_HANDLE    InputFile
-  )
-/*++
-
-Routine Description:
-
+/**
   This function parses the tools_def.txt file.  It returns a
   EFI_HANDLE object which can be used for the other library
   functions and should be passed to FreeParsedGuidedSectionToolsHandle
   to free resources when the tools_def.txt information is no
   longer needed.
 
-Arguments:
+  @param InputFile     Memory file image.
 
-  InputFile     Memory file image.
-
-Returns:
-
-  NULL if error or EOF
-  InputBuffer otherwise
-
---*/
+  @retval NULL if error or EOF
+  @retval InputBuffer otherwise
+**/
+EFI_HANDLE
+ParseGuidedSectionToolsMemoryFile (
+  IN EFI_HANDLE    InputFile
+  )
 {
   EFI_STATUS  Status;
   CHAR8       *NextLine;
@@ -122,13 +99,15 @@ Returns:
     if (NextLine == NULL) {
       break;
     }
-    
+
     Status = StripInfDscStringInPlace (NextLine);
     if (EFI_ERROR (Status)) {
+      free (NextLine);
       break;
     }
 
     if (NextLine[0] == '\0') {
+      free (NextLine);
       continue;
     }
 
@@ -144,46 +123,42 @@ Returns:
           NewGuidTool->Name = CloneString(Tool->Strings[1]);
           NewGuidTool->Path = CloneString(Tool->Strings[2]);
           NewGuidTool->Next = NULL;
+
+          if (FirstGuidTool == NULL) {
+            FirstGuidTool = NewGuidTool;
+          } else {
+            LastGuidTool->Next = NewGuidTool;
+          }
+          LastGuidTool = NewGuidTool;
         }
-        if (FirstGuidTool == NULL) {
-          FirstGuidTool = NewGuidTool;
-        } else {
-          LastGuidTool->Next = NewGuidTool;
-        }
-        LastGuidTool = NewGuidTool;
       }
+    }
+
+    if (Tool != NULL) {
       FreeStringList (Tool);
     }
+    free (NextLine);
   }
 
   return FirstGuidTool;
 }
 
+/**
+  This function looks up the appropriate tool to use for extracting
+  a GUID defined FV section.
 
+  @param ParsedGuidedSectionToolsHandle    A parsed GUID section tools handle.
+  @param SectionGuid                       The GUID for the section.
+
+  @retval NULL     if no tool is found or there is another error
+  @retval Non-NULL The tool to use to access the section contents.  (The caller
+             must free the memory associated with this string.)
+**/
 CHAR8*
 LookupGuidedSectionToolPath (
   IN EFI_HANDLE ParsedGuidedSectionToolsHandle,
   IN EFI_GUID   *SectionGuid
   )
-/*++
-
-Routine Description:
-
-  This function looks up the appropriate tool to use for extracting
-  a GUID defined FV section.
-
-Arguments:
-
-  ParsedGuidedSectionToolsHandle    A parsed GUID section tools handle.
-  SectionGuid                       The GUID for the section.
-
-Returns:
-
-  NULL     - if no tool is found or there is another error
-  Non-NULL - The tool to use to access the section contents.  (The caller
-             must free the memory associated with this string.)
-
---*/
 {
   GUID_SEC_TOOL_ENTRY *GuidTool;
 

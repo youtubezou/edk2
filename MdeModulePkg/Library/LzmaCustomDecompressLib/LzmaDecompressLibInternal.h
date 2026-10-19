@@ -1,20 +1,14 @@
 /** @file
   LZMA Decompress Library internal header file declares Lzma decompress interfaces.
 
-  Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __LZMADECOMPRESSLIB_INTERNAL_H__
-#define __LZMADECOMPRESSLIB_INTERNAL_H__
+#pragma once
 
+#include <Base.h>
 #include <PiPei.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -23,15 +17,15 @@
 #include <Guid/LzmaDecompress.h>
 
 /**
-  Given a Lzma compressed source buffer, this function retrieves the size of 
-  the uncompressed buffer and the size of the scratch buffer required 
+  Given a Lzma compressed source buffer, this function retrieves the size of
+  the uncompressed buffer and the size of the scratch buffer required
   to decompress the compressed source buffer.
 
-  Retrieves the size of the uncompressed buffer and the temporary scratch buffer 
+  Retrieves the size of the uncompressed buffer and the temporary scratch buffer
   required to decompress the buffer specified by Source and SourceSize.
-  The size of the uncompressed buffer is returned in DestinationSize, 
+  The size of the uncompressed buffer is returned in DestinationSize,
   the size of the scratch buffer is returned in ScratchSize, and RETURN_SUCCESS is returned.
-  This function does not have scratch buffer available to perform a thorough 
+  This function does not have scratch buffer available to perform a thorough
   checking of the validity of the source data. It just retrieves the "Original Size"
   field from the LZMA_HEADER_SIZE beginning bytes of the source data and output it as DestinationSize.
   And ScratchSize is specific to the decompression implementation.
@@ -44,13 +38,17 @@
                           that will be generated when the compressed buffer specified
                           by Source and SourceSize is decompressed.
   @param  ScratchSize     A pointer to the size, in bytes, of the scratch buffer that
-                          is required to decompress the compressed buffer specified 
+                          is required to decompress the compressed buffer specified
                           by Source and SourceSize.
 
-  @retval  RETURN_SUCCESS The size of the uncompressed data was returned 
-                          in DestinationSize and the size of the scratch 
+  @retval  RETURN_SUCCESS The size of the uncompressed data was returned
+                          in DestinationSize and the size of the scratch
                           buffer was returned in ScratchSize.
 
+  @retval RETURN_UNSUPPORTED  DestinationSize cannot be output because the
+                              uncompressed buffer size (in bytes) does not fit
+                              in a UINT32. Output parameters have not been
+                              modified.
 **/
 RETURN_STATUS
 EFIAPI
@@ -65,8 +63,8 @@ LzmaUefiDecompressGetInfo (
   Decompresses a Lzma compressed source buffer.
 
   Extracts decompressed data to its original form.
-  If the compressed source data specified by Source is successfully decompressed 
-  into Destination, then RETURN_SUCCESS is returned.  If the compressed source data 
+  If the compressed source data specified by Source is successfully decompressed
+  into Destination, then RETURN_SUCCESS is returned.  If the compressed source data
   specified by Source is not in a valid compressed data format,
   then RETURN_INVALID_PARAMETER is returned.
 
@@ -74,13 +72,13 @@ LzmaUefiDecompressGetInfo (
   @param  SourceSize  The size of source buffer.
   @param  Destination The destination buffer to store the decompressed data
   @param  Scratch     A temporary scratch buffer that is used to perform the decompression.
-                      This is an optional parameter that may be NULL if the 
+                      This is an optional parameter that may be NULL if the
                       required scratch buffer size is 0.
-                     
-  @retval  RETURN_SUCCESS Decompression completed successfully, and 
+
+  @retval  RETURN_SUCCESS Decompression completed successfully, and
                           the uncompressed buffer is returned in Destination.
-  @retval  RETURN_INVALID_PARAMETER 
-                          The source buffer specified by Source is corrupted 
+  @retval  RETURN_INVALID_PARAMETER
+                          The source buffer specified by Source is corrupted
                           (not in a valid compressed format).
 **/
 RETURN_STATUS
@@ -91,6 +89,3 @@ LzmaUefiDecompress (
   IN OUT VOID    *Destination,
   IN OUT VOID    *Scratch
   );
-
-#endif
-

@@ -3,14 +3,8 @@
 //  Device Manager formset.
 //
 //  Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-//  This program and the accompanying materials
-//  are licensed and made available under the terms and conditions of the BSD License
-//  which accompanies this distribution.  The full text of the license may be found at
-//  http://opensource.org/licenses/bsd-license.php
-//  
-//  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-//  
+//  SPDX-License-Identifier: BSD-2-Clause-Patent
+//
 //**/
 
 #define FORMSET_GUID  { 0x3ebfa8e6, 0x511d, 0x4b5b, 0xa9, 0x5f, 0xfb, 0x38, 0x26, 0xf, 0x1c, 0x27 }
@@ -33,6 +27,17 @@ formset
   form formid = DEVICE_MANAGER_FORM_ID,
     title  = STRING_TOKEN(STR_EDKII_MENU_TITLE);
     subtitle text = STRING_TOKEN(STR_DEVICES_LIST);
+
+    //
+    // Add this invisable text in order to indicate enter Device Manager form.
+    //
+    suppressif TRUE;
+          text
+              help  = STRING_TOKEN(STR_EMPTY_STRING),
+              text  = STRING_TOKEN(STR_EMPTY_STRING),
+              flags = INTERACTIVE,
+              key   = 0x1212;
+    endif;
 
     label LABEL_DEVICES_LIST;
     label LABEL_END;

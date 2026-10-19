@@ -2,18 +2,11 @@
   Provide FSP wrapper API related function.
 
   Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FSP_WRAPPER_API_LIB_H__
-#define __FSP_WRAPPER_API_LIB_H__
+#pragma once
 
 #include <FspEas.h>
 
@@ -40,13 +33,13 @@ FspFindFspHeader (
 EFI_STATUS
 EFIAPI
 CallFspNotifyPhase (
-  IN NOTIFY_PHASE_PARAMS *NotifyPhaseParams
+  IN NOTIFY_PHASE_PARAMS  *NotifyPhaseParams
   );
 
 /**
   Call FSP API - FspMemoryInit.
 
-  @param[in]  FspmUpdDataPtr          Pointer to the FSPM_UPD data sructure.
+  @param[in]  FspmUpdDataPtr          Pointer to the FSPM_UPD data structure.
   @param[out] HobListPtr              Pointer to receive the address of the HOB list.
 
   @return EFI status returned by FspMemoryInit API.
@@ -54,8 +47,8 @@ CallFspNotifyPhase (
 EFI_STATUS
 EFIAPI
 CallFspMemoryInit (
-  IN VOID                       *FspmUpdDataPtr,
-  OUT VOID                      **HobListPtr
+  IN VOID   *FspmUpdDataPtr,
+  OUT VOID  **HobListPtr
   );
 
 /**
@@ -68,7 +61,7 @@ CallFspMemoryInit (
 EFI_STATUS
 EFIAPI
 CallTempRamExit (
-  IN VOID                       *TempRamExitParam
+  IN VOID  *TempRamExitParam
   );
 
 /**
@@ -81,7 +74,18 @@ CallTempRamExit (
 EFI_STATUS
 EFIAPI
 CallFspSiliconInit (
-  IN VOID                       *FspsUpdDataPtr
+  IN VOID  *FspsUpdDataPtr
   );
 
-#endif
+/**
+  Call FSP API - FspSmmInit.
+
+  @param[in] FspiUpdDataPtr     Pointer to the FSPI_UPD data structure.
+
+  @return EFI status returned by FspSmmInit API.
+**/
+EFI_STATUS
+EFIAPI
+CallFspSmmInit (
+  IN VOID  *FspiUpdDataPtr
+  );

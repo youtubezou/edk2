@@ -2,21 +2,14 @@
   This library is BaseCrypto SHA256 hash instance.
   It can be registered to BaseCrypto router, to serve as hash engine.
 
-Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiPei.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/Tpm2CommandLib.h>
 #include <Library/DebugLib.h>
 #include <Library/BaseCryptLib.h>
 #include <Library/MemoryAllocationLib.h>
@@ -30,11 +23,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 Tpm2SetSha256ToDigestList (
-  IN TPML_DIGEST_VALUES *DigestList,
-  IN UINT8              *Sha256Digest
+  IN TPML_DIGEST_VALUES  *DigestList,
+  IN UINT8               *Sha256Digest
   )
 {
-  DigestList->count = 1;
+  DigestList->count              = 1;
   DigestList->digests[0].hashAlg = TPM_ALG_SHA256;
   CopyMem (
     DigestList->digests[0].digest.sha256,
@@ -54,15 +47,18 @@ Tpm2SetSha256ToDigestList (
 EFI_STATUS
 EFIAPI
 Sha256HashInit (
-  OUT HASH_HANDLE    *HashHandle
+  OUT HASH_HANDLE  *HashHandle
   )
 {
-  VOID     *Sha256Ctx;
-  UINTN    CtxSize;
+  VOID   *Sha256Ctx;
+  UINTN  CtxSize;
 
-  CtxSize = Sha256GetContextSize ();
+  CtxSize   = Sha256GetContextSize ();
   Sha256Ctx = AllocatePool (CtxSize);
-  ASSERT (Sha256Ctx != NULL);
+  if (Sha256Ctx == NULL) {
+    ASSERT (Sha256Ctx != NULL);
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   Sha256Init (Sha256Ctx);
 
@@ -83,12 +79,12 @@ Sha256HashInit (
 EFI_STATUS
 EFIAPI
 Sha256HashUpdate (
-  IN HASH_HANDLE    HashHandle,
-  IN VOID           *DataToHash,
-  IN UINTN          DataToHashLen
+  IN HASH_HANDLE  HashHandle,
+  IN VOID         *DataToHash,
+  IN UINTN        DataToHashLen
   )
 {
-  VOID     *Sha256Ctx;
+  VOID  *Sha256Ctx;
 
   Sha256Ctx = (VOID *)HashHandle;
   Sha256Update (Sha256Ctx, DataToHash, DataToHashLen);
@@ -107,18 +103,18 @@ Sha256HashUpdate (
 EFI_STATUS
 EFIAPI
 Sha256HashFinal (
-  IN HASH_HANDLE         HashHandle,
-  OUT TPML_DIGEST_VALUES *DigestList
+  IN HASH_HANDLE          HashHandle,
+  OUT TPML_DIGEST_VALUES  *DigestList
   )
 {
-  UINT8         Digest[SHA256_DIGEST_SIZE];
-  VOID          *Sha256Ctx;
+  UINT8  Digest[SHA256_DIGEST_SIZE];
+  VOID   *Sha256Ctx;
 
   Sha256Ctx = (VOID *)HashHandle;
   Sha256Final (Sha256Ctx, Digest);
 
   FreePool (Sha256Ctx);
-  
+
   Tpm2SetSha256ToDigestList (DigestList, Digest);
 
   return EFI_SUCCESS;
@@ -133,8 +129,8 @@ HASH_INTERFACE  mSha256InternalHashInstance = {
 
 /**
   The function register SHA256 instance.
-  
-  @retval EFI_SUCCESS   SHA256 instance is registered, or system dose not surpport registr SHA256 instance
+
+  @retval EFI_SUCCESS   SHA256 instance is registered, or system does not support register SHA256 instance
 **/
 EFI_STATUS
 EFIAPI
@@ -151,5 +147,6 @@ HashInstanceLibSha256Constructor (
     //
     return EFI_SUCCESS;
   }
+
   return Status;
 }

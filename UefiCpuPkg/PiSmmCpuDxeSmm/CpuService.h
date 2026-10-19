@@ -2,18 +2,11 @@
 Include file for SMM CPU Services protocol implementation.
 
 Copyright (c) 2011 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _CPU_SERVICE_H_
-#define _CPU_SERVICE_H_
+#pragma once
 
 typedef enum {
   SmmCpuNone,
@@ -44,9 +37,9 @@ typedef enum {
 EFI_STATUS
 EFIAPI
 SmmGetProcessorInfo (
-  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL *This,
-  IN       UINTN                        ProcessorNumber,
-  OUT      EFI_PROCESSOR_INFORMATION    *ProcessorInfoBuffer
+  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL  *This,
+  IN       UINTN                         ProcessorNumber,
+  OUT      EFI_PROCESSOR_INFORMATION     *ProcessorInfoBuffer
   );
 
 /**
@@ -63,8 +56,8 @@ SmmGetProcessorInfo (
 EFI_STATUS
 EFIAPI
 SmmSwitchBsp (
-  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL *This,
-  IN       UINTN                        ProcessorNumber
+  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL  *This,
+  IN       UINTN                         ProcessorNumber
   );
 
 /**
@@ -121,8 +114,8 @@ SmmRemoveProcessor (
 EFI_STATUS
 EFIAPI
 SmmWhoAmI (
-  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL *This,
-  OUT      UINTN                        *ProcessorNumber
+  IN CONST EFI_SMM_CPU_SERVICE_PROTOCOL  *This,
+  OUT      UINTN                         *ProcessorNumber
   );
 
 /**
@@ -177,5 +170,3 @@ EFI_STATUS
 InitializeSmmCpuServices (
   IN EFI_HANDLE  Handle
   );
-
-#endif

@@ -5,19 +5,12 @@
   for hard drive, CD and DVD devices that are the most common SCSI boot targets used by UEFI platforms.
   This library class depends on SCSI I/O Protocol defined in UEFI Specification and SCSI-2 industry standard.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __SCSI_LIB_H__
-#define __SCSI_LIB_H__
+#pragma once
 
 #include <Protocol/ScsiIo.h>
 
@@ -52,7 +45,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
                                     optional and may be NULL.
   @param[in, out] SenseDataLength   On input, a pointer to the length in bytes of
                                     the SenseData buffer. On output, a pointer to
-                                    the number of bytes written to the SenseData buffer. 
+                                    the number of bytes written to the SenseData buffer.
   @param[out]     HostAdapterStatus The status of the SCSI Host Controller that produces
                                     the SCSI bus containing the SCSI target specified by
                                     ScsiIo when the SCSI Request Packet was executed.
@@ -62,7 +55,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
                                     by ScsiIo when the SCSI Request Packet was executed
                                     on the SCSI Host Controller. See the EFI SCSI I/O
                                     Protocol in the UEFI Specification for details on
-                                    the possible return values. 
+                                    the possible return values.
 
   @retval EFI_SUCCESS               The command was executed successfully.
                                     See HostAdapterStatus, TargetStatus, SenseDataLength,
@@ -93,12 +86,11 @@ EFIAPI
 ScsiTestUnitReadyCommand (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,  OPTIONAL
+  IN OUT VOID                  *SenseData   OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus
   );
-
 
 /**
   Execute Inquiry SCSI command on a specific SCSI target.
@@ -135,7 +127,7 @@ ScsiTestUnitReadyCommand (
                                          If SenseDataLength is 0, then this parameter
                                          is optional and may be NULL.
   @param[in, out] SenseDataLength        On input, the length in bytes of the SenseData buffer.
-                                         On output, the number of bytes written to the SenseData buffer. 
+                                         On output, the number of bytes written to the SenseData buffer.
   @param[out]     HostAdapterStatus      The status of the SCSI Host Controller that
                                          produces the SCSI bus containing the SCSI
                                          target specified by ScsiIo when the SCSI
@@ -147,12 +139,12 @@ ScsiTestUnitReadyCommand (
                                          executed on the SCSI Host Controller.
                                          See the EFI SCSI I/O Protocol in the UEFI
                                          Specification for details on the possible
-                                         return values. 
+                                         return values.
   @param[in, out] InquiryDataBuffer      A pointer to inquiry data that was generated
                                          by the execution of the SCSI Request Packet.
                                          This buffer must be allocated by the caller.
                                          If InquiryDataLength is 0, then this parameter
-                                         is optional and may be NULL. 
+                                         is optional and may be NULL.
   @param[in, out] InquiryDataLength      On input, a pointer to the length in bytes
                                          of the InquiryDataBuffer buffer.
                                          On output, a pointer to the number of bytes
@@ -160,7 +152,7 @@ ScsiTestUnitReadyCommand (
   @param[in]      EnableVitalProductData If TRUE, then the supported vital product
                                          data is returned in InquiryDataBuffer.
                                          If FALSE, then the standard inquiry data is
-                                         returned in InquiryDataBuffer. 
+                                         returned in InquiryDataBuffer.
 
   @retval EFI_SUCCESS                    The command was executed successfully. See HostAdapterStatus,
                                          TargetStatus, SenseDataLength, and SenseData in that order
@@ -192,15 +184,14 @@ EFIAPI
 ScsiInquiryCommand (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,  OPTIONAL
+  IN OUT VOID                  *SenseData   OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *InquiryDataBuffer,    OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *InquiryDataBuffer     OPTIONAL,
   IN OUT UINT32                *InquiryDataLength,
   IN     BOOLEAN               EnableVitalProductData
   );
-
 
 /**
   Execute Inquiry SCSI command on a specific SCSI target.
@@ -237,7 +228,7 @@ ScsiInquiryCommand (
                                          If SenseDataLength is 0, then this parameter
                                          is optional and may be NULL.
   @param[in, out] SenseDataLength        On input, the length in bytes of the SenseData buffer.
-                                         On output, the number of bytes written to the SenseData buffer. 
+                                         On output, the number of bytes written to the SenseData buffer.
   @param[out]     HostAdapterStatus      The status of the SCSI Host Controller that
                                          produces the SCSI bus containing the SCSI
                                          target specified by ScsiIo when the SCSI
@@ -249,12 +240,12 @@ ScsiInquiryCommand (
                                          executed on the SCSI Host Controller.
                                          See the EFI SCSI I/O Protocol in the UEFI
                                          Specification for details on the possible
-                                         return values. 
+                                         return values.
   @param[in, out] InquiryDataBuffer      A pointer to inquiry data that was generated
                                          by the execution of the SCSI Request Packet.
                                          This buffer must be allocated by the caller.
                                          If InquiryDataLength is 0, then this parameter
-                                         is optional and may be NULL. 
+                                         is optional and may be NULL.
   @param[in, out] InquiryDataLength      On input, a pointer to the length in bytes
                                          of the InquiryDataBuffer buffer.
                                          On output, a pointer to the number of bytes
@@ -296,16 +287,15 @@ EFIAPI
 ScsiInquiryCommandEx (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,  OPTIONAL
+  IN OUT VOID                  *SenseData   OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *InquiryDataBuffer,    OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *InquiryDataBuffer     OPTIONAL,
   IN OUT UINT32                *InquiryDataLength,
   IN     BOOLEAN               EnableVitalProductData,
   IN     UINT8                 PageCode
   );
-
 
 /**
   Execute Mode Sense(10) SCSI command on a specific SCSI target.
@@ -344,7 +334,7 @@ ScsiInquiryCommandEx (
                                      If SenseDataLength is 0, then this parameter
                                      is optional and may be NULL.
   @param[in, out]  SenseDataLength   On input, the length in bytes of the SenseData buffer.
-                                     On output, the number of bytes written to the SenseData buffer. 
+                                     On output, the number of bytes written to the SenseData buffer.
   @param[out]     HostAdapterStatus  The status of the SCSI Host Controller that
                                      produces the SCSI bus containing the SCSI target
                                      specified by ScsiIo when the SCSI Request Packet
@@ -360,14 +350,14 @@ ScsiInquiryCommandEx (
                                      execution of the SCSI Request Packet.  This
                                      buffer must be allocated by the caller. If
                                      DataLength is 0, then this parameter is optional
-                                     and may be NULL. 
+                                     and may be NULL.
   @param[in, out]  DataLength        On input, a pointer to the length in bytes of
                                      the DataBuffer buffer.  On output, a pointer
                                      to the number of bytes written to the DataBuffer
-                                     buffer. 
+                                     buffer.
   @param[in]      DBDField           Specifies the DBD field of the CDB for this SCSI Command.
-  @param[in]      PageControl        Specifies the PC field of the CDB for this SCSI Command. 
-  @param[in]      PageCode           Specifies the Page Control field of the CDB for this SCSI Command. 
+  @param[in]      PageControl        Specifies the PC field of the CDB for this SCSI Command.
+  @param[in]      PageCode           Specifies the Page Control field of the CDB for this SCSI Command.
 
   @retval EFI_SUCCESS                The command was executed successfully.
                                      See HostAdapterStatus, TargetStatus, SenseDataLength,
@@ -399,20 +389,18 @@ ScsiInquiryCommandEx (
 EFI_STATUS
 EFIAPI
 ScsiModeSense10Command (
-  IN     EFI_SCSI_IO_PROTOCOL    *ScsiIo,
-  IN     UINT64                  Timeout,
-  IN OUT VOID                    *SenseData,  OPTIONAL
-  IN OUT UINT8                   *SenseDataLength,
-     OUT UINT8                   *HostAdapterStatus,
-     OUT UINT8                   *TargetStatus,
-  IN OUT VOID                    *DataBuffer, OPTIONAL
-  IN OUT UINT32                  *DataLength,
-  IN     UINT8                   DBDField,    OPTIONAL
-  IN     UINT8                   PageControl,
-  IN     UINT8                   PageCode
+  IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
+  IN     UINT64                Timeout,
+  IN OUT VOID                  *SenseData   OPTIONAL,
+  IN OUT UINT8                 *SenseDataLength,
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer  OPTIONAL,
+  IN OUT UINT32                *DataLength,
+  IN     UINT8                 DBDField     OPTIONAL,
+  IN     UINT8                 PageControl,
+  IN     UINT8                 PageCode
   );
-
-
 
 /**
   Execute Request Sense SCSI command on a specific SCSI target.
@@ -451,12 +439,11 @@ EFIAPI
 ScsiRequestSenseCommand (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,  OPTIONAL
+  IN OUT VOID                  *SenseData   OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus
   );
-
 
 /**
   Execute Read Capacity SCSI command on a specific SCSI target.
@@ -507,15 +494,14 @@ EFIAPI
 ScsiReadCapacityCommand (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,    OPTIONAL
+  IN OUT VOID                  *SenseData     OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,   OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer    OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     BOOLEAN               Pmi
   );
-
 
 /**
   Execute Read Capacity SCSI 16 command on a specific SCSI target.
@@ -566,15 +552,14 @@ EFIAPI
 ScsiReadCapacity16Command (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,  OPTIONAL
+  IN OUT VOID                  *SenseData   OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer, OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer  OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     BOOLEAN               Pmi
   );
-
 
 /**
   Execute Read(10) SCSI command on a specific SCSI target.
@@ -626,16 +611,15 @@ EFIAPI
 ScsiRead10Command (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT32                StartLba,
   IN     UINT32                SectorSize
   );
-
 
 /**
   Execute Write(10) SCSI command on a specific SCSI target.
@@ -669,6 +653,7 @@ ScsiRead10Command (
   @param[in, out] DataLength           The length of data buffer.
   @param[in]      StartLba             The start address of LBA.
   @param[in]      SectorSize           The number of contiguous logical blocks of data that shall be transferred.
+  @param[in]      SetFua               If TRUE, FUA bit will be set.
 
   @retval  EFI_SUCCESS                 Command is executed successfully.
   @retval  EFI_BAD_BUFFER_SIZE         The SCSI Request Packet was executed, but the entire DataBuffer could
@@ -687,14 +672,15 @@ EFIAPI
 ScsiWrite10Command (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT32                StartLba,
-  IN     UINT32                SectorSize
+  IN     UINT32                SectorSize,
+  IN     BOOLEAN               SetFua
   );
 
 /**
@@ -747,16 +733,15 @@ EFIAPI
 ScsiRead16Command (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT64                StartLba,
   IN     UINT32                SectorSize
   );
-
 
 /**
   Execute Write(16) SCSI command on a specific SCSI target.
@@ -790,6 +775,7 @@ ScsiRead16Command (
   @param[in, out] DataLength           The length of data buffer.
   @param[in]      StartLba             The start address of LBA.
   @param[in]      SectorSize           The number of contiguous logical blocks of data that shall be transferred.
+  @param[in]      SetFua               If TRUE, FUA bit will be set.
 
   @retval  EFI_SUCCESS                 Command is executed successfully.
   @retval  EFI_BAD_BUFFER_SIZE         The SCSI Request Packet was executed, but the entire DataBuffer could
@@ -808,16 +794,142 @@ EFIAPI
 ScsiWrite16Command (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT64                StartLba,
-  IN     UINT32                SectorSize
+  IN     UINT32                SectorSize,
+  IN     BOOLEAN               SetFua
   );
 
+/**
+  Execute Security Protocol In SCSI command on a specific SCSI target.
+
+  Executes the SCSI Security Protocol In command on the SCSI target specified by ScsiIo.
+  If Timeout is zero, then this function waits indefinitely for the command to complete.
+  If Timeout is greater than zero, then the command is executed and will timeout after
+  Timeout 100 ns units.
+  If ScsiIo is NULL, then ASSERT().
+  If SenseDataLength is NULL, then ASSERT().
+  If HostAdapterStatus is NULL, then ASSERT().
+  If TargetStatus is NULL, then ASSERT().
+  If TransferLength is NULL, then ASSERT().
+
+  If SenseDataLength is non-zero and SenseData is not NULL, SenseData must meet buffer
+  alignment requirement defined in EFI_SCSI_IO_PROTOCOL. Otherwise EFI_INVALID_PARAMETER
+  gets returned.
+
+  If DataLength is non-zero and DataBuffer is not NULL, DataBuffer must meet buffer
+  alignment requirement defined in EFI_SCSI_IO_PROTOCOL. Otherwise EFI_INVALID_PARAMETER
+  gets returned.
+
+  @param[in]      ScsiIo                    SCSI IO Protocol to use.
+  @param[in]      Timeout                   The length of timeout period.
+  @param[in, out] SenseData                 A pointer to output sense data.
+  @param[in, out] SenseDataLength           The length of output sense data.
+  @param[out]     HostAdapterStatus         The status of Host Adapter.
+  @param[out]     TargetStatus              The status of the target.
+  @param[in]      SecurityProtocol          The Security Protocol to use.
+  @param[in]      SecurityProtocolSpecific  The Security Protocol Specific data.
+  @param[in]      Inc512                    If TRUE, 512 increment (INC_512) bit will be set for the
+                                            SECURITY PROTOCOL IN command.
+  @param[in]      DataLength                The size in bytes of the data buffer.
+  @param[in, out] DataBuffer                A pointer to a data buffer.
+  @param[out]     TransferLength            A pointer to a buffer to store the size in
+                                            bytes of the data written to the data buffer.
+
+  @retval  EFI_SUCCESS                 Command is executed successfully.
+  @retval  EFI_BAD_BUFFER_SIZE         The SCSI Request Packet was executed, but the entire DataBuffer could
+                                       not be transferred. The actual number of bytes transferred is returned in TransferLength.
+  @retval  EFI_NOT_READY               The SCSI Request Packet could not be sent because there are too many
+                                       SCSI Command Packets already queued.
+  @retval  EFI_DEVICE_ERROR            A device error occurred while attempting to send SCSI Request Packet.
+  @retval  EFI_UNSUPPORTED             The command described by the SCSI Request Packet is not supported by
+                                       the SCSI initiator(i.e., SCSI  Host Controller)
+  @retval  EFI_TIMEOUT                 A timeout occurred while waiting for the SCSI Request Packet to execute.
+  @retval  EFI_INVALID_PARAMETER       The contents of the SCSI Request Packet are invalid.
+
+**/
+EFI_STATUS
+EFIAPI
+ScsiSecurityProtocolInCommand (
+  IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
+  IN     UINT64                Timeout,
+  IN OUT VOID                  *SenseData    OPTIONAL,
+  IN OUT UINT8                 *SenseDataLength,
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN     UINT8                 SecurityProtocol,
+  IN     UINT16                SecurityProtocolSpecific,
+  IN     BOOLEAN               Inc512,
+  IN     UINTN                 DataLength,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
+  OUT UINTN                    *TransferLength
+  );
+
+/**
+  Execute Security Protocol Out SCSI command on a specific SCSI target.
+
+  Executes the SCSI Security Protocol Out command on the SCSI target specified by ScsiIo.
+  If Timeout is zero, then this function waits indefinitely for the command to complete.
+  If Timeout is greater than zero, then the command is executed and will timeout after
+  Timeout 100 ns units.
+  If ScsiIo is NULL, then ASSERT().
+  If SenseDataLength is NULL, then ASSERT().
+  If HostAdapterStatus is NULL, then ASSERT().
+  If TargetStatus is NULL, then ASSERT().
+
+  If SenseDataLength is non-zero and SenseData is not NULL, SenseData must meet buffer
+  alignment requirement defined in EFI_SCSI_IO_PROTOCOL. Otherwise EFI_INVALID_PARAMETER
+  gets returned.
+
+  If DataLength is non-zero and DataBuffer is not NULL, DataBuffer must meet buffer
+  alignment requirement defined in EFI_SCSI_IO_PROTOCOL. Otherwise EFI_INVALID_PARAMETER
+  gets returned.
+
+  @param[in]      ScsiIo                    SCSI IO Protocol to use.
+  @param[in]      Timeout                   The length of timeout period.
+  @param[in, out] SenseData                 A pointer to output sense data.
+  @param[in, out] SenseDataLength           The length of output sense data.
+  @param[out]     HostAdapterStatus         The status of Host Adapter.
+  @param[out]     TargetStatus              The status of the target.
+  @param[in]      SecurityProtocol          The Security Protocol to use.
+  @param[in]      SecurityProtocolSpecific  The Security Protocol Specific data.
+  @param[in]      Inc512                    If TRUE, 512 increment (INC_512) bit will be set for the
+                                            SECURITY PROTOCOL OUT command.
+  @param[in]      DataLength                The size in bytes of the transfer data.
+  @param[in, out] DataBuffer                A pointer to a data buffer.
+
+  @retval  EFI_SUCCESS                 Command is executed successfully.
+  @retval  EFI_BAD_BUFFER_SIZE         The SCSI Request Packet was executed, but the entire DataBuffer could
+                                       not be transferred. The actual number of bytes transferred is returned in DataLength.
+  @retval  EFI_NOT_READY               The SCSI Request Packet could not be sent because there are too many
+                                       SCSI Command Packets already queued.
+  @retval  EFI_DEVICE_ERROR            A device error occurred while attempting to send SCSI Request Packet.
+  @retval  EFI_UNSUPPORTED             The command described by the SCSI Request Packet is not supported by
+                                       the SCSI initiator(i.e., SCSI  Host Controller)
+  @retval  EFI_TIMEOUT                 A timeout occurred while waiting for the SCSI Request Packet to execute.
+  @retval  EFI_INVALID_PARAMETER       The contents of the SCSI Request Packet are invalid.
+
+**/
+EFI_STATUS
+EFIAPI
+ScsiSecurityProtocolOutCommand (
+  IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
+  IN     UINT64                Timeout,
+  IN OUT VOID                  *SenseData    OPTIONAL,
+  IN OUT UINT8                 *SenseDataLength,
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN     UINT8                 SecurityProtocol,
+  IN     UINT16                SecurityProtocolSpecific,
+  IN     BOOLEAN               Inc512,
+  IN     UINTN                 DataLength,
+  IN OUT VOID                  *DataBuffer   OPTIONAL
+  );
 
 /**
   Execute blocking/non-blocking Read(10) SCSI command on a specific SCSI
@@ -897,17 +1009,16 @@ EFIAPI
 ScsiRead10CommandEx (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT32                StartLba,
   IN     UINT32                SectorSize,
   IN     EFI_EVENT             Event         OPTIONAL
   );
-
 
 /**
   Execute blocking/non-blocking Write(10) SCSI command on a specific SCSI
@@ -987,17 +1098,16 @@ EFIAPI
 ScsiWrite10CommandEx (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT32                StartLba,
   IN     UINT32                SectorSize,
   IN     EFI_EVENT             Event         OPTIONAL
   );
-
 
 /**
   Execute blocking/non-blocking Read(16) SCSI command on a specific SCSI
@@ -1077,17 +1187,16 @@ EFIAPI
 ScsiRead16CommandEx (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT64                StartLba,
   IN     UINT32                SectorSize,
   IN     EFI_EVENT             Event         OPTIONAL
   );
-
 
 /**
   Execute blocking/non-blocking Write(16) SCSI command on a specific SCSI
@@ -1167,15 +1276,13 @@ EFIAPI
 ScsiWrite16CommandEx (
   IN     EFI_SCSI_IO_PROTOCOL  *ScsiIo,
   IN     UINT64                Timeout,
-  IN OUT VOID                  *SenseData,   OPTIONAL
+  IN OUT VOID                  *SenseData    OPTIONAL,
   IN OUT UINT8                 *SenseDataLength,
-     OUT UINT8                 *HostAdapterStatus,
-     OUT UINT8                 *TargetStatus,
-  IN OUT VOID                  *DataBuffer,  OPTIONAL
+  OUT UINT8                    *HostAdapterStatus,
+  OUT UINT8                    *TargetStatus,
+  IN OUT VOID                  *DataBuffer   OPTIONAL,
   IN OUT UINT32                *DataLength,
   IN     UINT64                StartLba,
   IN     UINT32                SectorSize,
   IN     EFI_EVENT             Event         OPTIONAL
   );
-
-#endif

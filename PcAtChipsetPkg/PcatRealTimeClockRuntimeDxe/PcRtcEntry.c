@@ -1,22 +1,26 @@
 /** @file
   Provides Set/Get time operations.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2018 - 2020, ARM Limited. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+#include <Library/DxeServicesTableLib.h>
 #include "PcRtc.h"
 
 PC_RTC_MODULE_GLOBALS  mModuleGlobal;
 
-EFI_HANDLE             mHandle = NULL;
+EFI_HANDLE  mHandle = NULL;
+
+STATIC EFI_EVENT  mVirtualAddrChangeEvent;
+
+UINTN   mRtcIndexRegister;
+UINTN   mRtcTargetRegister;
+UINT16  mRtcDefaultYear;
+UINT16  mMinimalValidYear;
+UINT16  mMaximalValidYear;
 
 /**
   Returns the current time and date information, and the time-keeping capabilities
@@ -34,8 +38,8 @@ EFI_HANDLE             mHandle = NULL;
 EFI_STATUS
 EFIAPI
 PcRtcEfiGetTime (
-  OUT EFI_TIME                *Time,
-  OUT EFI_TIME_CAPABILITIES   *Capabilities  OPTIONAL
+  OUT EFI_TIME               *Time,
+  OUT EFI_TIME_CAPABILITIES  *Capabilities  OPTIONAL
   )
 {
   return PcRtcGetTime (Time, Capabilities, &mModuleGlobal);
@@ -54,7 +58,7 @@ PcRtcEfiGetTime (
 EFI_STATUS
 EFIAPI
 PcRtcEfiSetTime (
-  IN EFI_TIME                *Time
+  IN EFI_TIME  *Time
   )
 {
   return PcRtcSetTime (Time, &mModuleGlobal);
@@ -78,14 +82,13 @@ PcRtcEfiSetTime (
 EFI_STATUS
 EFIAPI
 PcRtcEfiGetWakeupTime (
-  OUT BOOLEAN     *Enabled,
-  OUT BOOLEAN     *Pending,
-  OUT EFI_TIME    *Time
+  OUT BOOLEAN   *Enabled,
+  OUT BOOLEAN   *Pending,
+  OUT EFI_TIME  *Time
   )
 {
   return PcRtcGetWakeupTime (Enabled, Pending, Time, &mModuleGlobal);
 }
-
 
 /**
   Sets the system wakeup alarm clock time.
@@ -104,17 +107,119 @@ PcRtcEfiGetWakeupTime (
 EFI_STATUS
 EFIAPI
 PcRtcEfiSetWakeupTime (
-  IN BOOLEAN      Enabled,
-  IN EFI_TIME    *Time       OPTIONAL
+  IN BOOLEAN   Enabled,
+  IN EFI_TIME  *Time       OPTIONAL
   )
 {
   return PcRtcSetWakeupTime (Enabled, Time, &mModuleGlobal);
 }
 
 /**
+  Fixup internal data so that EFI can be called in virtual mode.
+  Call the passed in Child Notify event and convert any pointers in
+  lib to virtual mode.
+
+  @param[in]    Event   The Event that is being processed
+  @param[in]    Context Event Context
+**/
+STATIC
+VOID
+EFIAPI
+VirtualNotifyEvent (
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
+  )
+{
+  // Only needed if you are going to support the OS calling RTC functions in
+  // virtual mode. You will need to call EfiConvertPointer (). To convert any
+  // stored physical addresses to virtual address. After the OS transitions to
+  // calling in virtual mode, all future runtime calls will be made in virtual
+  // mode.
+  EfiConvertPointer (0x0, (VOID **)&mRtcIndexRegister);
+  EfiConvertPointer (0x0, (VOID **)&mRtcTargetRegister);
+}
+
+/**
+  Callback function invoked when the VariablePolicy protocol is installed.
+
+  This function registers the RTCALARM and RTC variables with the VariablePolicy protocol
+  to set strict requirements for the variables.
+
+  @param[in]  Event    The notification event (non-NULL when called as a notification callback).
+                       NULL if called directly during initialization.
+  @param[in]  Context  The VariablePolicy protocol pointer. Non-NULL when called directly or
+                       when the protocol is available. NULL on the initial notification if
+                       the protocol is not yet installed, in which case this function returns
+                       without error.
+**/
+STATIC
+VOID
+EFIAPI
+OnVariablePolicyProtocolNotification (
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
+  )
+{
+  EDKII_VARIABLE_POLICY_PROTOCOL  *VariablePolicy;
+  EFI_STATUS                      Status;
+
+  Status = gBS->LocateProtocol (&gEdkiiVariablePolicyProtocolGuid, NULL, (VOID **)&VariablePolicy);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_VERBOSE, "%a: - Variable Policy not yet available - %r\n", __func__, Status));
+    return;
+  }
+
+  //
+  // Register policy for RTCALARM variable:
+  // - Size must be exactly sizeof(EFI_TIME) bytes (no variable-sized buffers)
+  // - Must have BS_ACCESS, RT_ACCESS, and NON_VOLATILE attributes (required for runtime use)
+  // - Cannot have any other attributes (prevents tampering)
+  //
+  Status = RegisterBasicVariablePolicy (
+             VariablePolicy,
+             &gEfiCallerIdGuid,
+             L"RTCALARM",
+             sizeof (EFI_TIME),
+             sizeof (EFI_TIME),
+             EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+             (UINT32) ~(EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE),
+             VARIABLE_POLICY_TYPE_NO_LOCK
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: - Error setting policy for RTCALARM - %r\n", __func__, Status));
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  //
+  // Register policy for RTC variable:
+  // - Size must be exactly sizeof(UINT32) bytes (no variable-sized buffers)
+  // - Must have BS_ACCESS, RT_ACCESS, and NON_VOLATILE attributes (required for runtime use)
+  // - Cannot have any other attributes (prevents tampering)
+  //
+  Status = RegisterBasicVariablePolicy (
+             VariablePolicy,
+             &gEfiCallerIdGuid,
+             L"RTC",
+             sizeof (UINT32),
+             sizeof (UINT32),
+             EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE,
+             (UINT32) ~(EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_NON_VOLATILE),
+             VARIABLE_POLICY_TYPE_NO_LOCK
+             );
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "%a: - Error setting policy for RTC - %r\n", __func__, Status));
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  gBS->CloseEvent (Event);
+
+  return;
+}
+
+/**
   The user Entry Point for PcRTC module.
 
-  This is the entrhy point for PcRTC module. It installs the UEFI runtime service
+  This is the entry point for PcRTC module. It installs the UEFI runtime service
   including GetTime(),SetTime(),GetWakeupTime(),and SetWakeupTime().
 
   @param  ImageHandle    The firmware allocated handle for the EFI image.
@@ -127,19 +232,32 @@ PcRtcEfiSetWakeupTime (
 EFI_STATUS
 EFIAPI
 InitializePcRtc (
-  IN EFI_HANDLE                            ImageHandle,
-  IN EFI_SYSTEM_TABLE                      *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS  Status;
   EFI_EVENT   Event;
+  VOID        *ProtocolRegistration;
 
   EfiInitializeLock (&mModuleGlobal.RtcLock, TPL_CALLBACK);
   mModuleGlobal.CenturyRtcAddress = GetCenturyRtcAddress ();
 
+  if (FeaturePcdGet (PcdRtcUseMmio)) {
+    mRtcIndexRegister  = (UINTN)PcdGet64 (PcdRtcIndexRegister64);
+    mRtcTargetRegister = (UINTN)PcdGet64 (PcdRtcTargetRegister64);
+  } else {
+    mRtcIndexRegister  = (UINTN)PcdGet8 (PcdRtcIndexRegister);
+    mRtcTargetRegister = (UINTN)PcdGet8 (PcdRtcTargetRegister);
+  }
+
+  mRtcDefaultYear   = PcdGet16 (PcdRtcDefaultYear);
+  mMinimalValidYear = PcdGet16 (PcdMinimalValidYear);
+  mMaximalValidYear = PcdGet16 (PcdMaximalValidYear);
+
   Status = PcRtcInit (&mModuleGlobal);
   ASSERT_EFI_ERROR (Status);
-  
+
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
@@ -149,7 +267,7 @@ InitializePcRtc (
                   &Event
                   );
   ASSERT_EFI_ERROR (Status);
-  
+
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
                   TPL_CALLBACK,
@@ -171,7 +289,31 @@ InitializePcRtc (
                   NULL,
                   NULL
                   );
-  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    ASSERT_EFI_ERROR (Status);
+    return Status;
+  }
+
+  if (FeaturePcdGet (PcdRtcUseMmio)) {
+    // Register for the virtual address change event
+    Status = gBS->CreateEventEx (
+                    EVT_NOTIFY_SIGNAL,
+                    TPL_NOTIFY,
+                    VirtualNotifyEvent,
+                    NULL,
+                    &gEfiEventVirtualAddressChangeGuid,
+                    &mVirtualAddrChangeEvent
+                    );
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  EfiCreateProtocolNotifyEvent (
+    &gEdkiiVariablePolicyProtocolGuid,
+    TPL_CALLBACK,
+    OnVariablePolicyProtocolNotification,
+    NULL,
+    &ProtocolRegistration
+    );
 
   return Status;
 }

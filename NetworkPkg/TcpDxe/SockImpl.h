@@ -1,22 +1,16 @@
 /** @file
   The function declaration that provided for Socket Interface.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _SOCK_IMPL_H_
-#define _SOCK_IMPL_H_
+#pragma once
 
 #include "Socket.h"
+#include "TcpMain.h"
 
 /**
   Signal a event with the given status.
@@ -31,7 +25,7 @@
     gBS->SignalEvent ((Token)->Event); \
   } while (0)
 
-#define SOCK_HEADER_SPACE (60 + 60 + 72)
+#define SOCK_HEADER_SPACE  (60 + 60 + 72)
 
 /**
   Process the TCP send data, buffer the tcp txdata and append
@@ -46,8 +40,8 @@
 **/
 EFI_STATUS
 SockProcessTcpSndData (
-  IN SOCKET   *Sock,
-  IN VOID     *TcpTxData
+  IN SOCKET  *Sock,
+  IN VOID    *TcpTxData
   );
 
 /**
@@ -61,8 +55,8 @@ SockProcessTcpSndData (
 **/
 UINT32
 SockProcessRcvToken (
-  IN OUT SOCKET        *Sock,
-  IN OUT SOCK_IO_TOKEN *RcvToken
+  IN OUT SOCKET         *Sock,
+  IN OUT SOCK_IO_TOKEN  *RcvToken
   );
 
 /**
@@ -73,19 +67,19 @@ SockProcessRcvToken (
 **/
 VOID
 SockConnFlush (
-  IN OUT SOCKET *Sock
+  IN OUT SOCKET  *Sock
   );
 
 /**
   Cancel the tokens in the specific token list.
 
-  @param[in]       Token                 Pointer to the Token. If NULL, all tokens 
-                                         in SpecifiedTokenList will be canceled.  
+  @param[in]       Token                 Pointer to the Token. If NULL, all tokens
+                                         in SpecifiedTokenList will be canceled.
   @param[in, out]  SpecifiedTokenList    Pointer to the token list to be checked.
-  
+
   @retval EFI_SUCCESS          Cancel the tokens in the specific token listsuccessfully.
   @retval EFI_NOT_FOUND        The Token is not found in SpecifiedTokenList.
-  
+
 **/
 EFI_STATUS
 SockCancelToken (
@@ -98,12 +92,12 @@ SockCancelToken (
 
   @param[in]  SockInitData          Pointer to the initial data of the socket.
 
-  @return Pointer to the newly created socket, return NULL when exception occured.
+  @return Pointer to the newly created socket, return NULL when exception occurred.
 
 **/
 SOCKET *
 SockCreate (
-  IN SOCK_INIT_DATA *SockInitData
+  IN SOCK_INIT_DATA  *SockInitData
   );
 
 /**
@@ -114,7 +108,5 @@ SockCreate (
 **/
 VOID
 SockDestroy (
-  IN OUT SOCKET *Sock
+  IN OUT SOCKET  *Sock
   );
-
-#endif

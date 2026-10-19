@@ -2,14 +2,8 @@
   UfsHcDxe driver is used to provide platform-dependent info, mainly UFS host controller
   MMIO base, to upper layer UFS drivers.
 
-  Copyright (c) 2014 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,7 +12,7 @@
 //
 // NVM Express Driver Binding Protocol Instance
 //
-EFI_DRIVER_BINDING_PROTOCOL gUfsHcDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gUfsHcDriverBinding = {
   UfsHcDriverBindingSupported,
   UfsHcDriverBindingStart,
   UfsHcDriverBindingStop,
@@ -30,9 +24,8 @@ EFI_DRIVER_BINDING_PROTOCOL gUfsHcDriverBinding = {
 //
 // Template for Ufs host controller private data.
 //
-UFS_HOST_CONTROLLER_PRIVATE_DATA gUfsHcTemplate = {
+UFS_HOST_CONTROLLER_PRIVATE_DATA  gUfsHcTemplate = {
   UFS_HC_PRIVATE_DATA_SIGNATURE,  // Signature
-  NULL,                           // Handle
   {                               // UfsHcProtocol
     UfsHcGetMmioBar,
     UfsHcAllocateBuffer,
@@ -60,15 +53,15 @@ UFS_HOST_CONTROLLER_PRIVATE_DATA gUfsHcTemplate = {
 EFI_STATUS
 EFIAPI
 UfsHcGetMmioBar (
-  IN     EDKII_UFS_HOST_CONTROLLER_PROTOCOL *This,
-     OUT UINTN                              *MmioBar
+  IN     EDKII_UFS_HOST_CONTROLLER_PROTOCOL  *This,
+  OUT UINTN                                  *MmioBar
   )
 {
-  UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
-  EFI_PCI_IO_PROTOCOL               *PciIo;
-  EFI_STATUS                        Status;
-  UINT8                             BarIndex;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *BarDesc;
+  UFS_HOST_CONTROLLER_PRIVATE_DATA   *Private;
+  EFI_PCI_IO_PROTOCOL                *PciIo;
+  EFI_STATUS                         Status;
+  UINT8                              BarIndex;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *BarDesc;
 
   if ((This == NULL) || (MmioBar == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -83,7 +76,7 @@ UfsHcGetMmioBar (
                     PciIo,
                     BarIndex,
                     NULL,
-                    (VOID**) &BarDesc
+                    (VOID **)&BarDesc
                     );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -96,24 +89,24 @@ UfsHcGetMmioBar (
   return Status;
 }
 
-/**                                                                 
+/**
   Provides the UFS controller-specific addresses needed to access system memory.
-            
+
   @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Operation             Indicates if the bus master is going to read or write to system memory.
   @param  HostAddress           The system memory address to map to the UFS controller.
   @param  NumberOfBytes         On input the number of bytes to map. On output the number of bytes
-                                that were mapped.                                                 
+                                that were mapped.
   @param  DeviceAddress         The resulting map address for the bus master UFS controller to use to
-                                access the hosts HostAddress.                                        
+                                access the hosts HostAddress.
   @param  Mapping               A resulting value to pass to Unmap().
-                                  
+
   @retval EFI_SUCCESS           The range was mapped for the returned NumberOfBytes.
-  @retval EFI_UNSUPPORTED       The HostAddress cannot be mapped as a common buffer.                                
+  @retval EFI_UNSUPPORTED       The HostAddress cannot be mapped as a common buffer.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
   @retval EFI_OUT_OF_RESOURCES  The request could not be completed due to a lack of resources.
   @retval EFI_DEVICE_ERROR      The system hardware could not map the requested address.
-                                   
+
 **/
 EFI_STATUS
 EFIAPI
@@ -122,8 +115,8 @@ UfsHcMap (
   IN     EDKII_UFS_HOST_CONTROLLER_OPERATION  Operation,
   IN     VOID                                 *HostAddress,
   IN OUT UINTN                                *NumberOfBytes,
-     OUT EFI_PHYSICAL_ADDRESS                 *DeviceAddress,
-     OUT VOID                                 **Mapping
+  OUT EFI_PHYSICAL_ADDRESS                    *DeviceAddress,
+  OUT VOID                                    **Mapping
   )
 {
   UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
@@ -137,25 +130,25 @@ UfsHcMap (
   Private = UFS_HOST_CONTROLLER_PRIVATE_DATA_FROM_UFSHC (This);
   PciIo   = Private->PciIo;
 
-  Status  = PciIo->Map (PciIo, (EFI_PCI_IO_PROTOCOL_OPERATION)Operation, HostAddress, NumberOfBytes, DeviceAddress, Mapping);
+  Status = PciIo->Map (PciIo, (EFI_PCI_IO_PROTOCOL_OPERATION)Operation, HostAddress, NumberOfBytes, DeviceAddress, Mapping);
   return Status;
 }
 
-/**                                                                 
+/**
   Completes the Map() operation and releases any corresponding resources.
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.                                      
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Mapping               The mapping value returned from Map().
-                                  
+
   @retval EFI_SUCCESS           The range was unmapped.
   @retval EFI_DEVICE_ERROR      The data was not committed to the target system memory.
-                                   
+
 **/
 EFI_STATUS
 EFIAPI
 UfsHcUnmap (
-  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL *This,
-  IN  VOID                               *Mapping
+  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL  *This,
+  IN  VOID                                *Mapping
   )
 {
   UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
@@ -169,39 +162,39 @@ UfsHcUnmap (
   Private = UFS_HOST_CONTROLLER_PRIVATE_DATA_FROM_UFSHC (This);
   PciIo   = Private->PciIo;
 
-  Status  = PciIo->Unmap (PciIo, Mapping);
+  Status = PciIo->Unmap (PciIo, Mapping);
   return Status;
 }
 
-/**                                                                 
+/**
   Allocates pages that are suitable for an EfiUfsHcOperationBusMasterCommonBuffer
-  mapping.                                                                       
-            
+  mapping.
+
   @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
   @param  Type                  This parameter is not used and must be ignored.
   @param  MemoryType            The type of memory to allocate, EfiBootServicesData or
-                                EfiRuntimeServicesData.                               
-  @param  Pages                 The number of pages to allocate.                                
+                                EfiRuntimeServicesData.
+  @param  Pages                 The number of pages to allocate.
   @param  HostAddress           A pointer to store the base system memory address of the
-                                allocated range.                                        
+                                allocated range.
   @param  Attributes            The requested bit mask of attributes for the allocated range.
-                                  
+
   @retval EFI_SUCCESS           The requested memory pages were allocated.
   @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
-                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.                     
+                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
-  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.  
-                                   
+  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
+
 **/
 EFI_STATUS
 EFIAPI
 UfsHcAllocateBuffer (
-  IN     EDKII_UFS_HOST_CONTROLLER_PROTOCOL *This,
-  IN     EFI_ALLOCATE_TYPE                  Type,
-  IN     EFI_MEMORY_TYPE                    MemoryType,
-  IN     UINTN                              Pages,
-     OUT VOID                               **HostAddress,
-  IN     UINT64                             Attributes
+  IN     EDKII_UFS_HOST_CONTROLLER_PROTOCOL  *This,
+  IN     EFI_ALLOCATE_TYPE                   Type,
+  IN     EFI_MEMORY_TYPE                     MemoryType,
+  IN     UINTN                               Pages,
+  OUT VOID                                   **HostAddress,
+  IN     UINT64                              Attributes
   )
 {
   UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
@@ -215,28 +208,28 @@ UfsHcAllocateBuffer (
   Private = UFS_HOST_CONTROLLER_PRIVATE_DATA_FROM_UFSHC (This);
   PciIo   = Private->PciIo;
 
-  Status  = PciIo->AllocateBuffer (PciIo, Type, MemoryType, Pages, HostAddress, Attributes);
+  Status = PciIo->AllocateBuffer (PciIo, Type, MemoryType, Pages, HostAddress, Attributes);
   return Status;
 }
 
-/**                                                                 
+/**
   Frees memory that was allocated with AllocateBuffer().
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.  
-  @param  Pages                 The number of pages to free.                                
-  @param  HostAddress           The base system memory address of the allocated range.                                    
-                                  
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
+  @param  Pages                 The number of pages to free.
+  @param  HostAddress           The base system memory address of the allocated range.
+
   @retval EFI_SUCCESS           The requested memory pages were freed.
   @retval EFI_INVALID_PARAMETER The memory range specified by HostAddress and Pages
                                 was not allocated with AllocateBuffer().
-                                     
+
 **/
 EFI_STATUS
 EFIAPI
 UfsHcFreeBuffer (
-  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL *This,
-  IN  UINTN                              Pages,
-  IN  VOID                               *HostAddress
+  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL  *This,
+  IN  UINTN                               Pages,
+  IN  VOID                                *HostAddress
   )
 {
   UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
@@ -250,25 +243,25 @@ UfsHcFreeBuffer (
   Private = UFS_HOST_CONTROLLER_PRIVATE_DATA_FROM_UFSHC (This);
   PciIo   = Private->PciIo;
 
-  Status  = PciIo->FreeBuffer (PciIo, Pages, HostAddress);
+  Status = PciIo->FreeBuffer (PciIo, Pages, HostAddress);
   return Status;
 }
 
-/**                                                                 
+/**
   Flushes all posted write transactions from the UFS bus to attached UFS device.
-            
-  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.  
-                                  
+
+  @param  This                  A pointer to the EFI_UFS_HOST_CONTROLLER_PROTOCOL instance.
+
   @retval EFI_SUCCESS           The posted write transactions were flushed from the UFS bus
-                                to attached UFS device.                                      
+                                to attached UFS device.
   @retval EFI_DEVICE_ERROR      The posted write transactions were not flushed from the UFS
-                                bus to attached UFS device due to a hardware error.                           
-                                     
+                                bus to attached UFS device due to a hardware error.
+
 **/
 EFI_STATUS
 EFIAPI
 UfsHcFlush (
-  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL *This
+  IN  EDKII_UFS_HOST_CONTROLLER_PROTOCOL  *This
   )
 {
   UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
@@ -278,11 +271,11 @@ UfsHcFlush (
   Private = UFS_HOST_CONTROLLER_PRIVATE_DATA_FROM_UFSHC (This);
   PciIo   = Private->PciIo;
 
-  Status  = PciIo->Flush (PciIo);
+  Status = PciIo->Flush (PciIo);
   return Status;
 }
 
-/**                                                                 
+/**
   Enable a UFS bus driver to access UFS MMIO registers in the UFS Host Controller memory space.
 
   @param  This                  A pointer to the EDKII_UFS_HOST_CONTROLLER_PROTOCOL instance.
@@ -319,12 +312,12 @@ UfsHcMmioRead (
   PciIo    = Private->PciIo;
   BarIndex = Private->BarIndex;
 
-  Status   = PciIo->Mem.Read (PciIo, (EFI_PCI_IO_PROTOCOL_WIDTH)Width, BarIndex, Offset, Count, Buffer);
+  Status = PciIo->Mem.Read (PciIo, (EFI_PCI_IO_PROTOCOL_WIDTH)Width, BarIndex, Offset, Count, Buffer);
 
   return Status;
 }
 
-/**                                                                 
+/**
   Enable a UFS bus driver to access UFS MMIO registers in the UFS Host Controller memory space.
 
   @param  This                  A pointer to the EDKII_UFS_HOST_CONTROLLER_PROTOCOL instance.
@@ -361,7 +354,7 @@ UfsHcMmioWrite (
   PciIo    = Private->PciIo;
   BarIndex = Private->BarIndex;
 
-  Status   = PciIo->Mem.Write (PciIo, (EFI_PCI_IO_PROTOCOL_WIDTH)Width, BarIndex, Offset, Count, Buffer);
+  Status = PciIo->Mem.Write (PciIo, (EFI_PCI_IO_PROTOCOL_WIDTH)Width, BarIndex, Offset, Count, Buffer);
 
   return Status;
 }
@@ -433,7 +426,7 @@ UfsHcDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID *) &ParentDevicePath,
+                  (VOID *)&ParentDevicePath,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -444,15 +437,16 @@ UfsHcDriverBindingSupported (
     //
     return Status;
   }
+
   //
   // Close the protocol because we don't use it here
   //
   gBS->CloseProtocol (
-        Controller,
-        &gEfiDevicePathProtocolGuid,
-        This->DriverBindingHandle,
-        Controller
-        );
+         Controller,
+         &gEfiDevicePathProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
 
   //
   // Now test the EfiPciIoProtocol
@@ -460,7 +454,7 @@ UfsHcDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiPciIoProtocolGuid,
-                  (VOID **) &PciIo,
+                  (VOID **)&PciIo,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -468,6 +462,7 @@ UfsHcDriverBindingSupported (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   //
   // Now further check the PCI header: Base class (offset 0x0B) and
   // Sub Class (offset 0x0A). This controller should be an UFS controller
@@ -481,28 +476,30 @@ UfsHcDriverBindingSupported (
                         );
   if (EFI_ERROR (Status)) {
     gBS->CloseProtocol (
-          Controller,
-          &gEfiPciIoProtocolGuid,
-          This->DriverBindingHandle,
-          Controller
-          );
+           Controller,
+           &gEfiPciIoProtocolGuid,
+           This->DriverBindingHandle,
+           Controller
+           );
     return EFI_UNSUPPORTED;
   }
+
   //
   // Since we already got the PciData, we can close protocol to avoid to carry it on for multiple exit points.
   //
   gBS->CloseProtocol (
-        Controller,
-        &gEfiPciIoProtocolGuid,
-        This->DriverBindingHandle,
-        Controller
-        );
+         Controller,
+         &gEfiPciIoProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
 
   //
   // Examine UFS Host Controller PCI Configuration table fields
   //
   if (PciData.Hdr.ClassCode[2] == PCI_CLASS_MASS_STORAGE) {
-    if (PciData.Hdr.ClassCode[1] == 0x09 ) { //UFS Controller Subclass
+    if (PciData.Hdr.ClassCode[1] == 0x09 ) {
+      // UFS Controller Subclass
       UfsHcFound = TRUE;
     }
   }
@@ -513,7 +510,6 @@ UfsHcDriverBindingSupported (
 
   return Status;
 }
-
 
 /**
   Starts a device controller or a bus controller.
@@ -558,12 +554,12 @@ UfsHcDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                        Status;
-  EFI_PCI_IO_PROTOCOL               *PciIo;
-  UFS_HOST_CONTROLLER_PRIVATE_DATA  *Private;
-  UINT64                            Supports;
-  UINT8                             BarIndex;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *BarDesc;
+  EFI_STATUS                         Status;
+  EFI_PCI_IO_PROTOCOL                *PciIo;
+  UFS_HOST_CONTROLLER_PRIVATE_DATA   *Private;
+  UINT64                             Supports;
+  UINT8                              BarIndex;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *BarDesc;
 
   PciIo    = NULL;
   Private  = NULL;
@@ -576,7 +572,7 @@ UfsHcDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiPciIoProtocolGuid,
-                  (VOID **) &PciIo,
+                  (VOID **)&PciIo,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -609,7 +605,7 @@ UfsHcDriverBindingStart (
                       PciIo,
                       BarIndex,
                       NULL,
-                      (VOID**) &BarDesc
+                      (VOID **)&BarDesc
                       );
     if (Status == EFI_UNSUPPORTED) {
       continue;
@@ -663,7 +659,7 @@ UfsHcDriverBindingStart (
                   &Controller,
                   &gEdkiiUfsHostControllerProtocolGuid,
                   EFI_NATIVE_INTERFACE,
-                  (VOID*)&(Private->UfsHc)
+                  (VOID *)&(Private->UfsHc)
                   );
 
 Done:
@@ -672,20 +668,20 @@ Done:
       //
       // Restore original PCI attributes
       //
-      Status = PciIo->Attributes (
-                        PciIo,
-                        EfiPciIoAttributeOperationSet,
-                        Private->PciAttributes,
-                        NULL
-                        );
-      ASSERT_EFI_ERROR (Status);
+      PciIo->Attributes (
+               PciIo,
+               EfiPciIoAttributeOperationSet,
+               Private->PciAttributes,
+               NULL
+               );
     }
+
     gBS->CloseProtocol (
-          Controller,
-          &gEfiPciIoProtocolGuid,
-          This->DriverBindingHandle,
-          Controller
-          );
+           Controller,
+           &gEfiPciIoProtocolGuid,
+           This->DriverBindingHandle,
+           Controller
+           );
     if (Private != NULL) {
       FreePool (Private);
     }
@@ -693,7 +689,6 @@ Done:
 
   return Status;
 }
-
 
 /**
   Stops a device controller or a bus controller.
@@ -724,10 +719,10 @@ Done:
 EFI_STATUS
 EFIAPI
 UfsHcDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL     *This,
-  IN  EFI_HANDLE                      Controller,
-  IN  UINTN                           NumberOfChildren,
-  IN  EFI_HANDLE                      *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
   EFI_STATUS                          Status;
@@ -740,7 +735,7 @@ UfsHcDriverBindingStop (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEdkiiUfsHostControllerProtocolGuid,
-                  (VOID **) &UfsHc,
+                  (VOID **)&UfsHc,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -802,7 +797,7 @@ UfsHcDriverEntry (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS           Status;
+  EFI_STATUS  Status;
 
   Status = EfiLibInstallDriverBindingComponentName2 (
              ImageHandle,

@@ -1,19 +1,12 @@
 /** @file
   Multiple-Processor initialization Library.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2016 - 2019, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __MP_INIT_LIB_H__
-#define __MP_INIT_LIB_H__
+#pragma once
 
 #include <Ppi/SecPlatformInformation.h>
 #include <Protocol/MpService.h>
@@ -60,8 +53,8 @@ MpInitLibInitialize (
 EFI_STATUS
 EFIAPI
 MpInitLibGetNumberOfProcessors (
-  OUT UINTN                     *NumberOfProcessors,       OPTIONAL
-  OUT UINTN                     *NumberOfEnabledProcessors OPTIONAL
+  OUT UINTN  *NumberOfProcessors        OPTIONAL,
+  OUT UINTN  *NumberOfEnabledProcessors OPTIONAL
   );
 
 /**
@@ -69,6 +62,8 @@ MpInitLibGetNumberOfProcessors (
   instant this call is made. This service may only be called from the BSP.
 
   @param[in]  ProcessorNumber       The handle number of processor.
+                                    Lower 24 bits contains the actual processor number.
+                                    BIT24 indicates if the EXTENDED_PROCESSOR_INFORMATION will be retrieved.
   @param[out] ProcessorInfoBuffer   A pointer to the buffer where information for
                                     the requested processor is deposited.
   @param[out] HealthData            Return processor health data.
@@ -116,7 +111,7 @@ MpInitLibGetProcessorInfo (
                                       EFI_EVENT is defined in CreateEvent() in
                                       the Unified Extensible Firmware Interface
                                       Specification.
-  @param[in]  TimeoutInMicrosecsond   Indicates the time limit in microseconds for
+  @param[in]  TimeoutInMicroseconds   Indicates the time limit in microseconds for
                                       APs to return from Procedure, either for
                                       blocking or non-blocking mode. Zero means
                                       infinity.  If the timeout expires before
@@ -167,12 +162,12 @@ MpInitLibGetProcessorInfo (
 EFI_STATUS
 EFIAPI
 MpInitLibStartupAllAPs (
-  IN  EFI_AP_PROCEDURE          Procedure,
-  IN  BOOLEAN                   SingleThread,
-  IN  EFI_EVENT                 WaitEvent               OPTIONAL,
-  IN  UINTN                     TimeoutInMicroseconds,
-  IN  VOID                      *ProcedureArgument      OPTIONAL,
-  OUT UINTN                     **FailedCpuList         OPTIONAL
+  IN  EFI_AP_PROCEDURE  Procedure,
+  IN  BOOLEAN           SingleThread,
+  IN  EFI_EVENT         WaitEvent               OPTIONAL,
+  IN  UINTN             TimeoutInMicroseconds,
+  IN  VOID              *ProcedureArgument      OPTIONAL,
+  OUT UINTN             **FailedCpuList         OPTIONAL
   );
 
 /**
@@ -202,7 +197,7 @@ MpInitLibStartupAllAPs (
                                       EFI_EVENT is defined in CreateEvent() in
                                       the Unified Extensible Firmware Interface
                                       Specification.
-  @param[in]  TimeoutInMicrosecsond   Indicates the time limit in microseconds for
+  @param[in]  TimeoutInMicroseconds   Indicates the time limit in microseconds for
                                       this AP to finish this Procedure, either for
                                       blocking or non-blocking mode. Zero means
                                       infinity.  If the timeout expires before
@@ -249,12 +244,12 @@ MpInitLibStartupAllAPs (
 EFI_STATUS
 EFIAPI
 MpInitLibStartupThisAP (
-  IN  EFI_AP_PROCEDURE          Procedure,
-  IN  UINTN                     ProcessorNumber,
-  IN  EFI_EVENT                 WaitEvent               OPTIONAL,
-  IN  UINTN                     TimeoutInMicroseconds,
-  IN  VOID                      *ProcedureArgument      OPTIONAL,
-  OUT BOOLEAN                   *Finished               OPTIONAL
+  IN  EFI_AP_PROCEDURE  Procedure,
+  IN  UINTN             ProcessorNumber,
+  IN  EFI_EVENT         WaitEvent               OPTIONAL,
+  IN  UINTN             TimeoutInMicroseconds,
+  IN  VOID              *ProcedureArgument      OPTIONAL,
+  OUT BOOLEAN           *Finished               OPTIONAL
   );
 
 /**
@@ -286,8 +281,8 @@ MpInitLibStartupThisAP (
 EFI_STATUS
 EFIAPI
 MpInitLibSwitchBSP (
-  IN UINTN                     ProcessorNumber,
-  IN BOOLEAN                   EnableOldBSP
+  IN UINTN    ProcessorNumber,
+  IN BOOLEAN  EnableOldBSP
   );
 
 /**
@@ -323,9 +318,9 @@ MpInitLibSwitchBSP (
 EFI_STATUS
 EFIAPI
 MpInitLibEnableDisableAP (
-  IN  UINTN                     ProcessorNumber,
-  IN  BOOLEAN                   EnableAP,
-  IN  UINT32                    *HealthFlag OPTIONAL
+  IN  UINTN    ProcessorNumber,
+  IN  BOOLEAN  EnableAP,
+  IN  UINT32   *HealthFlag OPTIONAL
   );
 
 /**
@@ -347,7 +342,39 @@ MpInitLibEnableDisableAP (
 EFI_STATUS
 EFIAPI
 MpInitLibWhoAmI (
-  OUT UINTN                    *ProcessorNumber
+  OUT UINTN  *ProcessorNumber
   );
 
-#endif
+/**
+  This service executes a caller provided function on all enabled CPUs.
+
+  @param[in]  Procedure               A pointer to the function to be run on
+                                      enabled APs of the system. See type
+                                      EFI_AP_PROCEDURE.
+  @param[in]  TimeoutInMicroseconds   Indicates the time limit in microseconds for
+                                      APs to return from Procedure, either for
+                                      blocking or non-blocking mode. Zero means
+                                      infinity. TimeoutInMicroseconds is ignored
+                                      for BSP.
+  @param[in]  ProcedureArgument       The parameter passed into Procedure for
+                                      all APs.
+
+  @retval EFI_SUCCESS             In blocking mode, all CPUs have finished before
+                                  the timeout expired.
+  @retval EFI_SUCCESS             In non-blocking mode, function has been dispatched
+                                  to all enabled CPUs.
+  @retval EFI_DEVICE_ERROR        Caller processor is AP.
+  @retval EFI_NOT_READY           Any enabled APs are busy.
+  @retval EFI_NOT_READY           MP Initialize Library is not initialized.
+  @retval EFI_TIMEOUT             In blocking mode, the timeout expired before
+                                  all enabled APs have finished.
+  @retval EFI_INVALID_PARAMETER   Procedure is NULL.
+
+**/
+EFI_STATUS
+EFIAPI
+MpInitLibStartupAllCPUs (
+  IN  EFI_AP_PROCEDURE  Procedure,
+  IN  UINTN             TimeoutInMicroseconds,
+  IN  VOID              *ProcedureArgument      OPTIONAL
+  );

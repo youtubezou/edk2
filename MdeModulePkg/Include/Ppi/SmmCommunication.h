@@ -1,38 +1,29 @@
 /** @file
   EFI SMM Communication PPI definition.
 
-  This Ppi provides a means of communicating between PEIM and SMI 
+  This Ppi provides a means of communicating between PEIM and SMI
   handlers inside of SMM.
   This Ppi is produced and consumed only in S3 resume boot path.
   It is NOT available in normal boot path.
 
-Copyright (c) 2010, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
-#ifndef _SMM_COMMUNICATION_PPI_H_
-#define _SMM_COMMUNICATION_PPI_H_
+#pragma once
 
 #define EFI_PEI_SMM_COMMUNICATION_PPI_GUID \
   { \
     0xae933e1c, 0xcc47, 0x4e38, { 0x8f, 0xe, 0xe2, 0xf6, 0x1d, 0x26, 0x5, 0xdf } \
   }
 
-typedef struct _EFI_PEI_SMM_COMMUNICATION_PPI  EFI_PEI_SMM_COMMUNICATION_PPI;
+typedef struct _EFI_PEI_SMM_COMMUNICATION_PPI EFI_PEI_SMM_COMMUNICATION_PPI;
 
 /**
   Communicates with a registered handler.
-  
+
   This function provides a service to send and receive messages from a registered UEFI service.
 
   @param[in] This                The EFI_PEI_SMM_COMMUNICATION_PPI instance.
@@ -56,9 +47,7 @@ EFI_STATUS
 /// between DXE drivers and a registered SMI handler.
 ///
 struct _EFI_PEI_SMM_COMMUNICATION_PPI {
-  EFI_PEI_SMM_COMMUNICATE  Communicate;
+  EFI_PEI_SMM_COMMUNICATE    Communicate;
 };
 
-extern EFI_GUID gEfiPeiSmmCommunicationPpiGuid;
-
-#endif
+extern EFI_GUID  gEfiPeiSmmCommunicationPpiGuid;

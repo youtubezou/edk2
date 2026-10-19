@@ -1,15 +1,8 @@
 /** @file
 
-Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2016 - 2017, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -25,23 +18,25 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 EMMC_PEIM_MEM_BLOCK *
 EmmcPeimAllocMemBlock (
-  IN  UINTN                    Pages
+  IN  UINTN  Pages
   )
 {
-  EMMC_PEIM_MEM_BLOCK          *Block;
-  EFI_STATUS                   Status;
-  VOID                         *TempPtr;
-  EFI_PHYSICAL_ADDRESS         Address;
+  EMMC_PEIM_MEM_BLOCK   *Block;
+  VOID                  *BufHost;
+  VOID                  *Mapping;
+  EFI_PHYSICAL_ADDRESS  MappedAddr;
+  EFI_STATUS            Status;
+  VOID                  *TempPtr;
 
   TempPtr = NULL;
   Block   = NULL;
 
-  Status = PeiServicesAllocatePool (sizeof(EMMC_PEIM_MEM_BLOCK), &TempPtr);
+  Status = PeiServicesAllocatePool (sizeof (EMMC_PEIM_MEM_BLOCK), &TempPtr);
   if (EFI_ERROR (Status)) {
     return NULL;
   }
 
-  ZeroMem ((VOID*)(UINTN)TempPtr, sizeof(EMMC_PEIM_MEM_BLOCK));
+  ZeroMem ((VOID *)(UINTN)TempPtr, sizeof (EMMC_PEIM_MEM_BLOCK));
 
   //
   // each bit in the bit array represents EMMC_PEIM_MEM_UNIT
@@ -49,32 +44,35 @@ EmmcPeimAllocMemBlock (
   //
   ASSERT (EMMC_PEIM_MEM_UNIT * 8 <= EFI_PAGE_SIZE);
 
-  Block = (EMMC_PEIM_MEM_BLOCK*)(UINTN)TempPtr;
-  Block->BufLen   = EFI_PAGES_TO_SIZE (Pages);
-  Block->BitsLen  = Block->BufLen / (EMMC_PEIM_MEM_UNIT * 8);
+  Block          = (EMMC_PEIM_MEM_BLOCK *)(UINTN)TempPtr;
+  Block->BufLen  = EFI_PAGES_TO_SIZE (Pages);
+  Block->BitsLen = Block->BufLen / (EMMC_PEIM_MEM_UNIT * 8);
 
   Status = PeiServicesAllocatePool (Block->BitsLen, &TempPtr);
   if (EFI_ERROR (Status)) {
     return NULL;
   }
 
-  ZeroMem ((VOID*)(UINTN)TempPtr, Block->BitsLen);
+  ZeroMem ((VOID *)(UINTN)TempPtr, Block->BitsLen);
 
-  Block->Bits = (UINT8*)(UINTN)TempPtr;
+  Block->Bits = (UINT8 *)(UINTN)TempPtr;
 
-  Status = PeiServicesAllocatePages (
-             EfiBootServicesCode,
+  Status = IoMmuAllocateBuffer (
              Pages,
-             &Address
+             &BufHost,
+             &MappedAddr,
+             &Mapping
              );
   if (EFI_ERROR (Status)) {
     return NULL;
   }
 
-  ZeroMem ((VOID*)(UINTN)Address, EFI_PAGES_TO_SIZE (Pages));
+  ZeroMem ((VOID *)(UINTN)BufHost, EFI_PAGES_TO_SIZE (Pages));
 
-  Block->Buf  = (UINT8*)((UINTN)Address);
-  Block->Next = NULL;
+  Block->BufHost = (UINT8 *)(UINTN)BufHost;
+  Block->Buf     = (UINT8 *)(UINTN)MappedAddr;
+  Block->Mapping = Mapping;
+  Block->Next    = NULL;
 
   return Block;
 }
@@ -88,11 +86,13 @@ EmmcPeimAllocMemBlock (
 **/
 VOID
 EmmcPeimFreeMemBlock (
-  IN EMMC_PEIM_MEM_POOL       *Pool,
-  IN EMMC_PEIM_MEM_BLOCK      *Block
+  IN EMMC_PEIM_MEM_POOL   *Pool,
+  IN EMMC_PEIM_MEM_BLOCK  *Block
   )
 {
   ASSERT ((Pool != NULL) && (Block != NULL));
+
+  IoMmuFreeBuffer (EFI_SIZE_TO_PAGES (Block->BufLen), Block->BufHost, Block->Mapping);
 }
 
 /**
@@ -107,28 +107,28 @@ EmmcPeimFreeMemBlock (
 **/
 VOID *
 EmmcPeimAllocMemFromBlock (
-  IN  EMMC_PEIM_MEM_BLOCK *Block,
-  IN  UINTN               Units
+  IN  EMMC_PEIM_MEM_BLOCK  *Block,
+  IN  UINTN                Units
   )
 {
-  UINTN                   Byte;
-  UINT8                   Bit;
-  UINTN                   StartByte;
-  UINT8                   StartBit;
-  UINTN                   Available;
-  UINTN                   Count;
+  UINTN  Byte;
+  UINT8  Bit;
+  UINTN  StartByte;
+  UINT8  StartBit;
+  UINTN  Available;
+  UINTN  Count;
 
   ASSERT ((Block != 0) && (Units != 0));
 
-  StartByte  = 0;
-  StartBit   = 0;
-  Available  = 0;
+  StartByte = 0;
+  StartBit  = 0;
+  Available = 0;
 
   for (Byte = 0, Bit = 0; Byte < Block->BitsLen;) {
     //
     // If current bit is zero, the corresponding memory unit is
     // available, otherwise we need to restart our searching.
-    // Available counts the consective number of zero bit.
+    // Available counts the consecutive number of zero bit.
     //
     if (!EMMC_PEIM_MEM_BIT_IS_SET (Block->Bits[Byte], Bit)) {
       Available++;
@@ -138,13 +138,12 @@ EmmcPeimAllocMemFromBlock (
       }
 
       EMMC_PEIM_NEXT_BIT (Byte, Bit);
-
     } else {
       EMMC_PEIM_NEXT_BIT (Byte, Bit);
 
-      Available  = 0;
-      StartByte  = Byte;
-      StartBit   = Bit;
+      Available = 0;
+      StartByte = Byte;
+      StartBit  = Bit;
     }
   }
 
@@ -155,13 +154,13 @@ EmmcPeimAllocMemFromBlock (
   //
   // Mark the memory as allocated
   //
-  Byte  = StartByte;
-  Bit   = StartBit;
+  Byte = StartByte;
+  Bit  = StartBit;
 
   for (Count = 0; Count < Units; Count++) {
     ASSERT (!EMMC_PEIM_MEM_BIT_IS_SET (Block->Bits[Byte], Bit));
 
-    Block->Bits[Byte] = (UINT8) (Block->Bits[Byte] | (UINT8) EMMC_PEIM_MEM_BIT (Bit));
+    Block->Bits[Byte] = (UINT8)(Block->Bits[Byte] | (UINT8)EMMC_PEIM_MEM_BIT (Bit));
     EMMC_PEIM_NEXT_BIT (Byte, Bit);
   }
 
@@ -177,8 +176,8 @@ EmmcPeimAllocMemFromBlock (
 **/
 VOID
 EmmcPeimInsertMemBlockToPool (
-  IN EMMC_PEIM_MEM_BLOCK      *Head,
-  IN EMMC_PEIM_MEM_BLOCK      *Block
+  IN EMMC_PEIM_MEM_BLOCK  *Head,
+  IN EMMC_PEIM_MEM_BLOCK  *Block
   )
 {
   ASSERT ((Head != NULL) && (Block != NULL));
@@ -197,11 +196,10 @@ EmmcPeimInsertMemBlockToPool (
 **/
 BOOLEAN
 EmmcPeimIsMemBlockEmpty (
-  IN EMMC_PEIM_MEM_BLOCK     *Block
+  IN EMMC_PEIM_MEM_BLOCK  *Block
   )
 {
-  UINTN                   Index;
-
+  UINTN  Index;
 
   for (Index = 0; Index < Block->BitsLen; Index++) {
     if (Block->Bits[Index] != 0) {
@@ -210,32 +208,6 @@ EmmcPeimIsMemBlockEmpty (
   }
 
   return TRUE;
-}
-
-/**
-  Unlink the memory block from the pool's list.
-
-  @param  Head           The block list head of the memory's pool.
-  @param  BlockToUnlink  The memory block to unlink.
-
-**/
-VOID
-EmmcPeimUnlinkMemBlock (
-  IN EMMC_PEIM_MEM_BLOCK      *Head,
-  IN EMMC_PEIM_MEM_BLOCK      *BlockToUnlink
-  )
-{
-  EMMC_PEIM_MEM_BLOCK         *Block;
-
-  ASSERT ((Head != NULL) && (BlockToUnlink != NULL));
-
-  for (Block = Head; Block != NULL; Block = Block->Next) {
-    if (Block->Next == BlockToUnlink) {
-      Block->Next         = BlockToUnlink->Next;
-      BlockToUnlink->Next = NULL;
-      break;
-    }
-  }
 }
 
 /**
@@ -252,9 +224,9 @@ EmmcPeimInitMemPool (
   IN  EMMC_PEIM_HC_PRIVATE_DATA  *Private
   )
 {
-  EMMC_PEIM_MEM_POOL         *Pool;
-  EFI_STATUS                 Status;
-  VOID                       *TempPtr;
+  EMMC_PEIM_MEM_POOL  *Pool;
+  EFI_STATUS          Status;
+  VOID                *TempPtr;
 
   TempPtr = NULL;
   Pool    = NULL;
@@ -264,7 +236,7 @@ EmmcPeimInitMemPool (
     return EFI_OUT_OF_RESOURCES;
   }
 
-  ZeroMem ((VOID*)(UINTN)TempPtr, sizeof (EMMC_PEIM_MEM_POOL));
+  ZeroMem ((VOID *)(UINTN)TempPtr, sizeof (EMMC_PEIM_MEM_POOL));
 
   Pool = (EMMC_PEIM_MEM_POOL *)((UINTN)TempPtr);
 
@@ -289,17 +261,15 @@ EmmcPeimInitMemPool (
 **/
 EFI_STATUS
 EmmcPeimFreeMemPool (
-  IN EMMC_PEIM_MEM_POOL       *Pool
+  IN EMMC_PEIM_MEM_POOL  *Pool
   )
 {
-  EMMC_PEIM_MEM_BLOCK         *Block;
+  EMMC_PEIM_MEM_BLOCK  *Block;
 
   ASSERT (Pool->Head != NULL);
 
   //
   // Unlink all the memory blocks from the pool, then free them.
-  // EmmcPeimUnlinkMemBlock can't be used to unlink and free the
-  // first block.
   //
   for (Block = Pool->Head->Next; Block != NULL; Block = Pool->Head->Next) {
     EmmcPeimFreeMemBlock (Pool, Block);
@@ -322,16 +292,16 @@ EmmcPeimFreeMemPool (
 **/
 VOID *
 EmmcPeimAllocateMem (
-  IN  EMMC_PEIM_MEM_POOL     *Pool,
-  IN  UINTN                  Size
+  IN  EMMC_PEIM_MEM_POOL  *Pool,
+  IN  UINTN               Size
   )
 {
-  EMMC_PEIM_MEM_BLOCK        *Head;
-  EMMC_PEIM_MEM_BLOCK        *Block;
-  EMMC_PEIM_MEM_BLOCK        *NewBlock;
-  VOID                       *Mem;
-  UINTN                      AllocSize;
-  UINTN                      Pages;
+  EMMC_PEIM_MEM_BLOCK  *Head;
+  EMMC_PEIM_MEM_BLOCK  *Block;
+  EMMC_PEIM_MEM_BLOCK  *NewBlock;
+  VOID                 *Mem;
+  UINTN                AllocSize;
+  UINTN                Pages;
 
   Mem       = NULL;
   AllocSize = EMMC_PEIM_MEM_ROUND (Size);
@@ -394,22 +364,22 @@ EmmcPeimAllocateMem (
 **/
 VOID
 EmmcPeimFreeMem (
-  IN EMMC_PEIM_MEM_POOL   *Pool,
-  IN VOID                 *Mem,
-  IN UINTN                Size
+  IN EMMC_PEIM_MEM_POOL  *Pool,
+  IN VOID                *Mem,
+  IN UINTN               Size
   )
 {
-  EMMC_PEIM_MEM_BLOCK     *Head;
-  EMMC_PEIM_MEM_BLOCK     *Block;
-  UINT8                   *ToFree;
-  UINTN                   AllocSize;
-  UINTN                   Byte;
-  UINTN                   Bit;
-  UINTN                   Count;
+  EMMC_PEIM_MEM_BLOCK  *Head;
+  EMMC_PEIM_MEM_BLOCK  *Block;
+  UINT8                *ToFree;
+  UINTN                AllocSize;
+  UINTN                Byte;
+  UINTN                Bit;
+  UINTN                Count;
 
   Head      = Pool->Head;
   AllocSize = EMMC_PEIM_MEM_ROUND (Size);
-  ToFree    = (UINT8 *) Mem;
+  ToFree    = (UINT8 *)Mem;
 
   for (Block = Head; Block != NULL; Block = Block->Next) {
     //
@@ -420,8 +390,8 @@ EmmcPeimFreeMem (
       //
       // compute the start byte and bit in the bit array
       //
-      Byte  = ((ToFree - Block->Buf) / EMMC_PEIM_MEM_UNIT) / 8;
-      Bit   = ((ToFree - Block->Buf) / EMMC_PEIM_MEM_UNIT) % 8;
+      Byte = ((ToFree - Block->Buf) / EMMC_PEIM_MEM_UNIT) / 8;
+      Bit  = ((ToFree - Block->Buf) / EMMC_PEIM_MEM_UNIT) % 8;
 
       //
       // reset associated bits in bit array
@@ -429,7 +399,7 @@ EmmcPeimFreeMem (
       for (Count = 0; Count < (AllocSize / EMMC_PEIM_MEM_UNIT); Count++) {
         ASSERT (EMMC_PEIM_MEM_BIT_IS_SET (Block->Bits[Byte], Bit));
 
-        Block->Bits[Byte] = (UINT8) (Block->Bits[Byte] ^ EMMC_PEIM_MEM_BIT (Bit));
+        Block->Bits[Byte] = (UINT8)(Block->Bits[Byte] ^ EMMC_PEIM_MEM_BIT (Bit));
         EMMC_PEIM_NEXT_BIT (Byte, Bit);
       }
 
@@ -451,5 +421,5 @@ EmmcPeimFreeMem (
     EmmcPeimFreeMemBlock (Pool, Block);
   }
 
-  return ;
+  return;
 }

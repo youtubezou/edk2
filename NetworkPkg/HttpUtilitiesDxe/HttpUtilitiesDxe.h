@@ -4,18 +4,11 @@
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_HTTP_UTILITIES_DXE_H__
-#define __EFI_HTTP_UTILITIES_DXE_H__
+#pragma once
 
 #include <Uefi.h>
 
@@ -39,7 +32,7 @@
 //
 // Protocol instances
 //
-extern EFI_HTTP_UTILITIES_PROTOCOL mHttpUtilitiesProtocol;
+extern EFI_HTTP_UTILITIES_PROTOCOL  mHttpUtilitiesProtocol;
 
 /**
   Create HTTP header based on a combination of seed header, fields
@@ -76,17 +69,16 @@ extern EFI_HTTP_UTILITIES_PROTOCOL mHttpUtilitiesProtocol;
 EFI_STATUS
 EFIAPI
 HttpUtilitiesBuild (
-  IN     EFI_HTTP_UTILITIES_PROTOCOL *This,
-  IN     UINTN                       SeedMessageSize,
-  IN     VOID                        *SeedMessage, OPTIONAL
-  IN     UINTN                       DeleteCount,
-  IN     CHAR8                       *DeleteList[], OPTIONAL
-  IN     UINTN                       AppendCount,
-  IN     EFI_HTTP_HEADER             *AppendList[], OPTIONAL
-     OUT UINTN                       *NewMessageSize,
-     OUT VOID                        **NewMessage
+  IN     EFI_HTTP_UTILITIES_PROTOCOL  *This,
+  IN     UINTN                        SeedMessageSize,
+  IN     VOID                         *SeedMessage  OPTIONAL,
+  IN     UINTN                        DeleteCount,
+  IN     CHAR8                        *DeleteList[]  OPTIONAL,
+  IN     UINTN                        AppendCount,
+  IN     EFI_HTTP_HEADER              *AppendList[]  OPTIONAL,
+  OUT UINTN                           *NewMessageSize,
+  OUT VOID                            **NewMessage
   );
-
 
 /**
   Parses HTTP header and produces an array of key/value pairs.
@@ -118,5 +110,3 @@ HttpUtilitiesParse (
   OUT EFI_HTTP_HEADER              **HeaderFields,
   OUT UINTN                        *FieldCount
   );
-
-#endif

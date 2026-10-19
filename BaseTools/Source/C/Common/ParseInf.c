@@ -1,14 +1,8 @@
 /** @file
 This contains some useful functions for parsing INF files.
 
-Copyright (c) 2004 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,35 +14,28 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include "ParseInf.h"
 #include "CommonLib.h"
 
+/**
+  This function reads a line, stripping any comments.
+  The function reads a string from the input stream argument and stores it in
+  the input string. ReadLine reads characters from the current file position
+  to and including the first newline character, to the end of the stream, or
+  until the number of characters read is equal to MaxLength - 1, whichever
+  comes first.  The newline character, if read, is replaced with a \0.
+
+  @param InputFile     Memory file image.
+  @param InputBuffer   Buffer to read into, must be MaxLength size.
+  @param MaxLength     The maximum size of the input buffer.
+
+  @retval NULL if error or EOF
+  @retval InputBuffer otherwise
+**/
 CHAR8 *
 ReadLine (
   IN MEMORY_FILE    *InputFile,
   IN OUT CHAR8      *InputBuffer,
   IN UINTN          MaxLength
   )
-/*++
 
-Routine Description:
-
-  This function reads a line, stripping any comments.
-  The function reads a string from the input stream argument and stores it in 
-  the input string. ReadLine reads characters from the current file position 
-  to and including the first newline character, to the end of the stream, or 
-  until the number of characters read is equal to MaxLength - 1, whichever 
-  comes first.  The newline character, if read, is replaced with a \0. 
-
-Arguments:
-
-  InputFile     Memory file image.
-  InputBuffer   Buffer to read into, must be MaxLength size.
-  MaxLength     The maximum size of the input buffer.
-
-Returns:
-
-  NULL if error or EOF
-  InputBuffer otherwise
-
---*/
 {
   CHAR8 *CharPtr;
   CHAR8 *EndOfLine;
@@ -135,29 +122,21 @@ Returns:
   return InputBuffer;
 }
 
+/**
+  This function parses a file from the beginning to find a section.
+  The section string may be anywhere within a line.
+
+  @param InputFile     Memory file image.
+  @param Section       Section to search for
+
+  @retval FALSE if error or EOF
+  @retval TRUE if section found
+**/
 BOOLEAN
 FindSection (
   IN MEMORY_FILE    *InputFile,
   IN CHAR8          *Section
   )
-/*++
-
-Routine Description:
-
-  This function parses a file from the beginning to find a section.
-  The section string may be anywhere within a line.
-
-Arguments:
-
-  InputFile     Memory file image.
-  Section       Section to search for
-
-Returns:
-
-  FALSE if error or EOF
-  TRUE if section found
-
---*/
 {
   CHAR8 InputBuffer[MAX_LONG_FILE_PATH];
   CHAR8 *CurrentToken;
@@ -196,6 +175,21 @@ Returns:
   return FALSE;
 }
 
+/**
+  Finds a token value given the section and token to search for.
+
+  @param InputFile Memory file image.
+  @param Section   The section to search for, a string within [].
+  @param Token     The token to search for, e.g. EFI_PEIM_RECOVERY, followed by an = in the INF file.
+  @param Instance  The instance of the token to search for.  Zero is the first instance.
+  @param Value     The string that holds the value following the =.  Must be MAX_LONG_FILE_PATH in size.
+
+  @retval EFI_SUCCESS             Value found.
+  @retval EFI_ABORTED             Format error detected in INF file.
+  @retval EFI_INVALID_PARAMETER   Input argument was null.
+  @retval EFI_LOAD_ERROR          Error reading from the file.
+  @retval EFI_NOT_FOUND           Section/Token/Value not found.
+**/
 EFI_STATUS
 FindToken (
   IN MEMORY_FILE    *InputFile,
@@ -204,36 +198,13 @@ FindToken (
   IN UINTN          Instance,
   OUT CHAR8         *Value
   )
-/*++
-
-Routine Description:
-
-  Finds a token value given the section and token to search for.
-
-Arguments:
-
-  InputFile Memory file image.
-  Section   The section to search for, a string within [].
-  Token     The token to search for, e.g. EFI_PEIM_RECOVERY, followed by an = in the INF file.
-  Instance  The instance of the token to search for.  Zero is the first instance.
-  Value     The string that holds the value following the =.  Must be MAX_LONG_FILE_PATH in size.
-
-Returns:
-
-  EFI_SUCCESS             Value found.
-  EFI_ABORTED             Format error detected in INF file.
-  EFI_INVALID_PARAMETER   Input argument was null.
-  EFI_LOAD_ERROR          Error reading from the file.
-  EFI_NOT_FOUND           Section/Token/Value not found.
-
---*/
 {
   CHAR8   InputBuffer[MAX_LONG_FILE_PATH];
   CHAR8   *CurrentToken;
   CHAR8   *Delimiter;
   BOOLEAN ParseError;
   BOOLEAN ReadError;
-  UINTN   Occurrance;
+  UINTN   Occurrence;
 
   //
   // Check input parameters
@@ -258,7 +229,7 @@ Returns:
   //
   // Initialize our instance counter for the search token
   //
-  Occurrance = 0;
+  Occurrence = 0;
 
   if (FindSection (InputFile, Section)) {
     //
@@ -307,7 +278,7 @@ Returns:
         //
         // Check if it is the correct instance
         //
-        if (Instance == Occurrance) {
+        if (Instance == Occurrence) {
           //
           // Copy the contents following the =
           //
@@ -338,9 +309,9 @@ Returns:
           }
         } else {
           //
-          // Increment the occurrance found
+          // Increment the occurrence found
           //
-          Occurrance++;
+          Occurrence++;
         }
       }
     } while (
@@ -348,7 +319,7 @@ Returns:
       !ReadError &&
       InputFile->CurrentFilePointer < InputFile->Eof &&
       CurrentToken[0] != '[' &&
-      Occurrance <= Instance
+      Occurrence <= Instance
     );
   }
   //
@@ -365,36 +336,28 @@ Returns:
   return EFI_NOT_FOUND;
 }
 
+/**
+  Converts a string to an EFI_GUID.  The string must be in the
+  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx format.
+
+  @param AsciiGuidBuffer pointer to ascii string
+  @param GuidBuffer      pointer to destination Guid
+
+  @retval EFI_ABORTED             Could not convert the string
+  @retval EFI_SUCCESS             The string was successfully converted
+  @retval EFI_INVALID_PARAMETER   Input parameter is invalid.
+**/
 EFI_STATUS
 StringToGuid (
   IN CHAR8      *AsciiGuidBuffer,
   OUT EFI_GUID  *GuidBuffer
   )
-/*++
-
-Routine Description: 
-
-  Converts a string to an EFI_GUID.  The string must be in the 
-  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx format.
-
-Arguments:  
-
-  AsciiGuidBuffer - pointer to ascii string
-  GuidBuffer      - pointer to destination Guid
-
-Returns:  
-
-  EFI_ABORTED             Could not convert the string
-  EFI_SUCCESS             The string was successfully converted
-  EFI_INVALID_PARAMETER   Input parameter is invalid.
-
---*/
 {
   INT32 Index;
-  unsigned Data1;
-  unsigned Data2;
-  unsigned Data3;
-  unsigned Data4[8];
+  int   Data1;
+  int   Data2;
+  int   Data3;
+  int   Data4[8];
 
   if (AsciiGuidBuffer == NULL || GuidBuffer == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -408,7 +371,7 @@ Returns:
         break;
       }
     } else {
-      if (((AsciiGuidBuffer[Index] >= '0') && (AsciiGuidBuffer[Index] <= '9')) || 
+      if (((AsciiGuidBuffer[Index] >= '0') && (AsciiGuidBuffer[Index] <= '9')) ||
          ((AsciiGuidBuffer[Index] >= 'a') && (AsciiGuidBuffer[Index] <= 'f')) ||
          ((AsciiGuidBuffer[Index] >= 'A') && (AsciiGuidBuffer[Index] <= 'F'))) {
         continue;
@@ -417,12 +380,12 @@ Returns:
       }
     }
   }
-  
+
   if (Index < 36 || AsciiGuidBuffer[36] != '\0') {
     Error (NULL, 0, 1003, "Invalid option value", "Incorrect GUID \"%s\"\n  Correct Format \"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"", AsciiGuidBuffer);
     return EFI_ABORTED;
   }
-  
+
   //
   // Scan the guid string into the buffer
   //
@@ -467,58 +430,50 @@ Returns:
   return EFI_SUCCESS;
 }
 
+/**
+  Converts a null terminated ascii string that represents a number into a
+  UINT64 value.  A hex number may be preceded by a 0x, but may not be
+  succeeded by an h.  A number without 0x or 0X is considered to be base 10
+  unless the IsHex input is true.
+
+  @param AsciiString   The string to convert.
+  @param IsHex         Force the string to be treated as a hex number.
+  @param ReturnValue   The return value.
+
+  @retval EFI_SUCCESS   Number successfully converted.
+  @retval EFI_ABORTED   Invalid character encountered.
+**/
 EFI_STATUS
 AsciiStringToUint64 (
   IN CONST CHAR8  *AsciiString,
   IN BOOLEAN      IsHex,
   OUT UINT64      *ReturnValue
   )
-/*++
-
-Routine Description:
-
-  Converts a null terminated ascii string that represents a number into a 
-  UINT64 value.  A hex number may be preceeded by a 0x, but may not be 
-  succeeded by an h.  A number without 0x or 0X is considered to be base 10 
-  unless the IsHex input is true.
-
-Arguments:
-
-  AsciiString   The string to convert.
-  IsHex         Force the string to be treated as a hex number.
-  ReturnValue   The return value.
-
-Returns:
-
-  EFI_SUCCESS   Number successfully converted.
-  EFI_ABORTED   Invalid character encountered.
-
---*/
 {
   UINT8   Index;
   UINT64  Value;
   CHAR8   CurrentChar;
-  
+
   //
   // Initialize the result
   //
   Value = 0;
   Index = 0;
-  
+
   //
   // Check input parameter
   //
-  if (AsciiString == NULL || ReturnValue == NULL) {
+  if (AsciiString == NULL || ReturnValue == NULL || strlen(AsciiString) > 0xFF) {
     return EFI_INVALID_PARAMETER;
   }
   while (AsciiString[Index] == ' ') {
     Index ++;
   }
-  
+
   //
   // Add each character to the result
   //
-  
+
   //
   // Skip first two chars only if the string starts with '0x' or '0X'
   //
@@ -583,29 +538,21 @@ Returns:
   return EFI_SUCCESS;
 }
 
+/**
+  This function reads a line, stripping any comments.
+  // BUGBUG:  This is obsolete once genmake goes away...
+
+  @param InputFile     Stream pointer.
+  @param InputBuffer   Buffer to read into, must be MAX_LONG_FILE_PATH size.
+
+  @retval NULL if error or EOF
+  @retval InputBuffer otherwise
+**/
 CHAR8 *
 ReadLineInStream (
   IN FILE       *InputFile,
   IN OUT CHAR8  *InputBuffer
   )
-/*++
-
-Routine Description:
-
-  This function reads a line, stripping any comments.
-  // BUGBUG:  This is obsolete once genmake goes away...
-
-Arguments:
-
-  InputFile     Stream pointer.
-  InputBuffer   Buffer to read into, must be MAX_LONG_FILE_PATH size.
-
-Returns:
-
-  NULL if error or EOF
-  InputBuffer otherwise
-
---*/
 {
   CHAR8 *CharPtr;
 
@@ -639,30 +586,22 @@ Returns:
   return InputBuffer;
 }
 
+/**
+  This function parses a stream file from the beginning to find a section.
+  The section string may be anywhere within a line.
+  // BUGBUG:  This is obsolete once genmake goes away...
+
+  @param InputFile     Stream pointer.
+  @param Section       Section to search for
+
+  @retval FALSE if error or EOF
+  @retval TRUE if section found
+**/
 BOOLEAN
 FindSectionInStream (
   IN FILE       *InputFile,
   IN CHAR8      *Section
   )
-/*++
-
-Routine Description:
-
-  This function parses a stream file from the beginning to find a section.
-  The section string may be anywhere within a line.
-  // BUGBUG:  This is obsolete once genmake goes away...
-
-Arguments:
-
-  InputFile     Stream pointer.
-  Section       Section to search for
-
-Returns:
-
-  FALSE if error or EOF
-  TRUE if section found
-
---*/
 {
   CHAR8 InputBuffer[MAX_LONG_FILE_PATH];
   CHAR8 *CurrentToken;

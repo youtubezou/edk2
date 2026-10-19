@@ -2,18 +2,11 @@
   Ppi for Ipmi of SMS.
 
   Copyright (c) 2014 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _IPMI_PPI_H_
-#define _IPMI_PPI_H_
+#pragma once
 
 typedef struct _PEI_IPMI_PPI PEI_IPMI_PPI;
 
@@ -43,13 +36,13 @@ typedef struct _PEI_IPMI_PPI PEI_IPMI_PPI;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PEI_IPMI_SUBMIT_COMMAND) (
+(EFIAPI *PEI_IPMI_SUBMIT_COMMAND)(
   IN     PEI_IPMI_PPI                      *This,
   IN     UINT8                             NetFunction,
   IN     UINT8                             Command,
   IN     UINT8                             *RequestData,
   IN     UINT32                            RequestDataSize,
-     OUT UINT8                             *ResponseData,
+  OUT UINT8                             *ResponseData,
   IN OUT UINT32                            *ResponseDataSize
   );
 
@@ -57,9 +50,7 @@ EFI_STATUS
 // IPMI PPI
 //
 struct _PEI_IPMI_PPI {
-  PEI_IPMI_SUBMIT_COMMAND       IpmiSubmitCommand;
+  PEI_IPMI_SUBMIT_COMMAND    IpmiSubmitCommand;
 };
 
-extern EFI_GUID gPeiIpmiPpiGuid;
-
-#endif
+extern EFI_GUID  gPeiIpmiPpiGuid;

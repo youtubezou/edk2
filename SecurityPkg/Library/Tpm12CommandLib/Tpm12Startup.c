@@ -3,13 +3,7 @@
 
 Copyright (c) 2013, Intel Corporation. All rights reserved. <BR>
 (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,8 +16,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #pragma pack(1)
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR   Hdr;
-  TPM_STARTUP_TYPE      TpmSt;
+  TPM_RQU_COMMAND_HDR    Hdr;
+  TPM_STARTUP_TYPE       TpmSt;
 } TPM_CMD_START_UP;
 
 #pragma pack()
@@ -54,21 +48,22 @@ Tpm12Startup (
   Command.Hdr.paramSize = SwapBytes32 (sizeof (Command));
   Command.Hdr.ordinal   = SwapBytes32 (TPM_ORD_Startup);
   Command.TpmSt         = SwapBytes16 (TpmSt);
-  Length = sizeof (Response);
-  Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
+  Length                = sizeof (Response);
+  Status                = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  switch (SwapBytes32(Response.returnCode)) {
-  case TPM_SUCCESS:
-    DEBUG ((DEBUG_INFO, "TPM12Startup: TPM_SUCCESS\n"));
-    return EFI_SUCCESS;
-  case TPM_INVALID_POSTINIT:
-    // In warm reset, TPM may response TPM_INVALID_POSTINIT
-    DEBUG ((DEBUG_INFO, "TPM12Startup: TPM_INVALID_POSTINIT\n"));
-    return EFI_SUCCESS;
-  default:
-    return EFI_DEVICE_ERROR;
+
+  switch (SwapBytes32 (Response.returnCode)) {
+    case TPM_SUCCESS:
+      DEBUG ((DEBUG_INFO, "TPM12Startup: TPM_SUCCESS\n"));
+      return EFI_SUCCESS;
+    case TPM_INVALID_POSTINIT:
+      // In warm reset, TPM may response TPM_INVALID_POSTINIT
+      DEBUG ((DEBUG_INFO, "TPM12Startup: TPM_INVALID_POSTINIT\n"));
+      return EFI_SUCCESS;
+    default:
+      return EFI_DEVICE_ERROR;
   }
 }
 
@@ -92,18 +87,19 @@ Tpm12SaveState (
   //
   // send Tpm command TPM_ORD_SaveState
   //
-  Command.tag        = SwapBytes16 (TPM_TAG_RQU_COMMAND);
-  Command.paramSize  = SwapBytes32 (sizeof (Command));
-  Command.ordinal    = SwapBytes32 (TPM_ORD_SaveState);
-  Length = sizeof (Response);
-  Status = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
+  Command.tag       = SwapBytes16 (TPM_TAG_RQU_COMMAND);
+  Command.paramSize = SwapBytes32 (sizeof (Command));
+  Command.ordinal   = SwapBytes32 (TPM_ORD_SaveState);
+  Length            = sizeof (Response);
+  Status            = Tpm12SubmitCommand (sizeof (Command), (UINT8 *)&Command, &Length, (UINT8 *)&Response);
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   switch (SwapBytes32 (Response.returnCode)) {
-  case TPM_SUCCESS:
-    return EFI_SUCCESS;
-  default:
-    return EFI_DEVICE_ERROR;
+    case TPM_SUCCESS:
+      return EFI_SUCCESS;
+    default:
+      return EFI_DEVICE_ERROR;
   }
 }

@@ -4,23 +4,13 @@
 
   Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
   Portions copyright (c) 2011, Apple Inc. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include <PiDxe.h>
 #include <Library/SerialPortLib.h>
 #include <Library/EmuThunkLib.h>
-
-
-
 
 /**
   Initialize the serial device hardware.
@@ -62,13 +52,12 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
   return gEmuThunk->WriteStdOut (Buffer, NumberOfBytes);
 }
-
 
 /**
   Read data from serial device and save the datas in buffer.
@@ -89,8 +78,8 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
   )
 {
   return gEmuThunk->ReadStdIn (Buffer, NumberOfBytes);
@@ -129,7 +118,7 @@ SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 SerialPortSetControl (
-  IN UINT32 Control
+  IN UINT32  Control
   )
 {
   return RETURN_UNSUPPORTED;
@@ -148,13 +137,14 @@ SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortGetControl (
-  OUT UINT32 *Control
+  OUT UINT32  *Control
   )
 {
   *Control = 0;
   if (!SerialPortPoll ()) {
     *Control = EFI_SERIAL_INPUT_BUFFER_EMPTY;
   }
+
   return RETURN_SUCCESS;
 }
 
@@ -194,14 +184,13 @@ SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortSetAttributes (
-  IN OUT UINT64             *BaudRate,
-  IN OUT UINT32             *ReceiveFifoDepth,
-  IN OUT UINT32             *Timeout,
-  IN OUT EFI_PARITY_TYPE    *Parity,
-  IN OUT UINT8              *DataBits,
-  IN OUT EFI_STOP_BITS_TYPE *StopBits
+  IN OUT UINT64              *BaudRate,
+  IN OUT UINT32              *ReceiveFifoDepth,
+  IN OUT UINT32              *Timeout,
+  IN OUT EFI_PARITY_TYPE     *Parity,
+  IN OUT UINT8               *DataBits,
+  IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
   return RETURN_UNSUPPORTED;
 }
-

@@ -2,14 +2,8 @@
   This library is BaseCrypto SHA1 hash instance.
   It can be registered to BaseCrypto router, to serve as hash engine.
 
-Copyright (c) 2013 - 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved. <BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -30,11 +24,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 Tpm2SetSha1ToDigestList (
-  IN TPML_DIGEST_VALUES *DigestList,
-  IN UINT8              *Sha1Digest
+  IN TPML_DIGEST_VALUES  *DigestList,
+  IN UINT8               *Sha1Digest
   )
 {
-  DigestList->count = 1;
+  DigestList->count              = 1;
   DigestList->digests[0].hashAlg = TPM_ALG_SHA1;
   CopyMem (
     DigestList->digests[0].digest.sha1,
@@ -54,15 +48,18 @@ Tpm2SetSha1ToDigestList (
 EFI_STATUS
 EFIAPI
 Sha1HashInit (
-  OUT HASH_HANDLE    *HashHandle
+  OUT HASH_HANDLE  *HashHandle
   )
 {
-  VOID     *Sha1Ctx;
-  UINTN    CtxSize;
+  VOID   *Sha1Ctx;
+  UINTN  CtxSize;
 
   CtxSize = Sha1GetContextSize ();
   Sha1Ctx = AllocatePool (CtxSize);
-  ASSERT (Sha1Ctx != NULL);
+  if (Sha1Ctx == NULL) {
+    ASSERT (Sha1Ctx != NULL);
+    return EFI_OUT_OF_RESOURCES;
+  }
 
   Sha1Init (Sha1Ctx);
 
@@ -83,12 +80,12 @@ Sha1HashInit (
 EFI_STATUS
 EFIAPI
 Sha1HashUpdate (
-  IN HASH_HANDLE    HashHandle,
-  IN VOID           *DataToHash,
-  IN UINTN          DataToHashLen
+  IN HASH_HANDLE  HashHandle,
+  IN VOID         *DataToHash,
+  IN UINTN        DataToHashLen
   )
 {
-  VOID     *Sha1Ctx;
+  VOID  *Sha1Ctx;
 
   Sha1Ctx = (VOID *)HashHandle;
   Sha1Update (Sha1Ctx, DataToHash, DataToHashLen);
@@ -107,18 +104,18 @@ Sha1HashUpdate (
 EFI_STATUS
 EFIAPI
 Sha1HashFinal (
-  IN HASH_HANDLE         HashHandle,
-  OUT TPML_DIGEST_VALUES *DigestList
+  IN HASH_HANDLE          HashHandle,
+  OUT TPML_DIGEST_VALUES  *DigestList
   )
 {
-  UINT8         Digest[SHA1_DIGEST_SIZE];
-  VOID          *Sha1Ctx;
+  UINT8  Digest[SHA1_DIGEST_SIZE];
+  VOID   *Sha1Ctx;
 
   Sha1Ctx = (VOID *)HashHandle;
   Sha1Final (Sha1Ctx, Digest);
 
   FreePool (Sha1Ctx);
-  
+
   Tpm2SetSha1ToDigestList (DigestList, Digest);
 
   return EFI_SUCCESS;
@@ -133,8 +130,8 @@ HASH_INTERFACE  mSha1InternalHashInstance = {
 
 /**
   The function register SHA1 instance.
-  
-  @retval EFI_SUCCESS   SHA1 instance is registered, or system dose not surpport registr SHA1 instance
+
+  @retval EFI_SUCCESS   SHA1 instance is registered, or system does not support register SHA1 instance
 **/
 EFI_STATUS
 EFIAPI
@@ -151,5 +148,6 @@ HashInstanceLibSha1Constructor (
     //
     return EFI_SUCCESS;
   }
+
   return Status;
 }

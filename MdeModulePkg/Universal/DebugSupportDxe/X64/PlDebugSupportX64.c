@@ -2,19 +2,15 @@
   X64 specific functions to support Debug Support protocol.
 
 Copyright (c) 2008 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "PlDebugSupport.h"
 
-IA32_IDT_GATE_DESCRIPTOR  NullDesc = {{0,0}};
+IA32_IDT_GATE_DESCRIPTOR  NullDesc = {
+  { 0, 0 }
+};
 
 /**
   Get Interrupt Handle from IDT Gate Descriptor.
@@ -29,16 +25,16 @@ GetInterruptHandleFromIdt (
   IN IA32_IDT_GATE_DESCRIPTOR  *IdtGateDecriptor
   )
 {
-  UINTN      InterruptHandle;
+  UINTN  InterruptHandle;
 
   //
   // InterruptHandle  0-15 : OffsetLow
   // InterruptHandle 16-31 : OffsetHigh
   // InterruptHandle 32-63 : OffsetUpper
   //
-  InterruptHandle = ((UINTN) IdtGateDecriptor->Bits.OffsetLow) |
-                    (((UINTN) IdtGateDecriptor->Bits.OffsetHigh)  << 16) |
-                    (((UINTN) IdtGateDecriptor->Bits.OffsetUpper) << 32) ;
+  InterruptHandle = ((UINTN)IdtGateDecriptor->Bits.OffsetLow) |
+                    (((UINTN)IdtGateDecriptor->Bits.OffsetHigh)  << 16) |
+                    (((UINTN)IdtGateDecriptor->Bits.OffsetUpper) << 32);
 
   return InterruptHandle;
 }
@@ -56,11 +52,11 @@ GetInterruptHandleFromIdt (
 **/
 VOID
 CreateEntryStub (
-  IN EFI_EXCEPTION_TYPE     ExceptionType,
-  OUT VOID                  **Stub
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  OUT VOID               **Stub
   )
 {
-  UINT8       *StubCopy;
+  UINT8  *StubCopy;
 
   StubCopy = *Stub;
 
@@ -78,12 +74,12 @@ CreateEntryStub (
   //
   // poke in the exception type so the second push pushes the exception type
   //
-  StubCopy[0x1] = (UINT8) ExceptionType;
+  StubCopy[0x1] = (UINT8)ExceptionType;
 
   //
   // fixup the jump target to point to the common entry
   //
-  *(UINT32 *) &StubCopy[0x3] = (UINT32)((UINTN) CommonIdtEntry - (UINTN) &StubCopy[StubSize]);
+  *(UINT32 *)&StubCopy[0x3] = (UINT32)((UINTN)CommonIdtEntry - (UINTN)&StubCopy[StubSize]);
 
   return;
 }
@@ -108,8 +104,8 @@ CreateEntryStub (
 **/
 EFI_STATUS
 ManageIdtEntryTable (
-  CALLBACK_FUNC      NewCallback,
-  EFI_EXCEPTION_TYPE ExceptionType
+  CALLBACK_FUNC       NewCallback,
+  EFI_EXCEPTION_TYPE  ExceptionType
   )
 {
   EFI_STATUS  Status;

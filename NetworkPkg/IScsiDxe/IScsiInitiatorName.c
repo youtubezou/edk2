@@ -2,23 +2,16 @@
   Implementation for EFI iSCSI Initiator Name Protocol.
 
 Copyright (c) 2004 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "IScsiImpl.h"
 
-EFI_ISCSI_INITIATOR_NAME_PROTOCOL gIScsiInitiatorName = {
+EFI_ISCSI_INITIATOR_NAME_PROTOCOL  gIScsiInitiatorName = {
   IScsiGetInitiatorName,
   IScsiSetInitiatorName
 };
-
 
 /**
   Retrieves the current set value of iSCSI Initiator Name.
@@ -70,7 +63,6 @@ IScsiGetInitiatorName (
   return Status;
 }
 
-
 /**
   Sets the iSSI Initiator Name.
 
@@ -116,10 +108,11 @@ IScsiSetInitiatorName (
     *BufferSize = ISCSI_NAME_MAX_SIZE;
     return EFI_INVALID_PARAMETER;
   }
+
   //
   // Only support iqn iSCSI names.
   //
-  Status = IScsiNormalizeName ((CHAR8 *) Buffer, *BufferSize - 1);
+  Status = IScsiNormalizeName ((CHAR8 *)Buffer, *BufferSize - 1);
   if (EFI_ERROR (Status)) {
     return Status;
   }

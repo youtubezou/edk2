@@ -1,19 +1,13 @@
 /** @file
   Instance of file explorer Library based on gEfiFileExplorerProtocolGuid.
 
-  Implement the file explorer library instance by wrap the interface 
+  Implement the file explorer library instance by wrap the interface
   provided in the file explorer protocol. This protocol is defined as the internal
-  protocol related to this implementation, not in the public spec. So, this 
+  protocol related to this implementation, not in the public spec. So, this
   library instance is only for this code base.
 
-Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -26,33 +20,33 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 
-EFI_FILE_EXPLORER_PROTOCOL *mProtocol = NULL;
+EFI_FILE_EXPLORER_PROTOCOL  *mProtocol = NULL;
 
 /**
   The constructor function caches the pointer to file explorer protocol.
-  
+
   The constructor function locates Print2 protocol from protocol database.
-  It will ASSERT() if that operation fails and it will always return EFI_SUCCESS. 
+  It will ASSERT() if that operation fails and it will always return EFI_SUCCESS.
 
   @param  ImageHandle   The firmware allocated handle for the EFI image.
   @param  SystemTable   A pointer to the EFI System Table.
-  
+
   @retval EFI_SUCCESS   The constructor always returns EFI_SUCCESS.
 
 **/
 EFI_STATUS
 EFIAPI
 FileExplorerConstructor (
-  IN EFI_HANDLE                ImageHandle,
-  IN EFI_SYSTEM_TABLE          *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                   Status;
+  EFI_STATUS  Status;
 
   Status = SystemTable->BootServices->LocateProtocol (
                                         &gEfiFileExplorerProtocolGuid,
                                         NULL,
-                                        (VOID**) &mProtocol
+                                        (VOID **)&mProtocol
                                         );
   ASSERT_EFI_ERROR (Status);
   ASSERT (mProtocol != NULL);
@@ -61,7 +55,7 @@ FileExplorerConstructor (
 }
 
 /**
-  Choose a file in the specified directory. 
+  Choose a file in the specified directory.
 
   If user input NULL for the RootDirectory, will choose file in the system.
 
@@ -74,7 +68,7 @@ FileExplorerConstructor (
                            after choose one file.
   @param  File             Return the device path for the last time chosed file.
 
-  @retval EFI_SUCESS             Choose file success.
+  @retval EFI_SUCCESS            Choose file success.
   @retval EFI_INVALID_PARAMETER  Both ChooseHandler and return device path are NULL
                                  One of them must not NULL.
   @retval Other errors           Choose file failed.
@@ -83,11 +77,10 @@ EFI_STATUS
 EFIAPI
 ChooseFile (
   IN  EFI_DEVICE_PATH_PROTOCOL  *RootDirectory,
-  IN  CHAR16                    *FileType,  OPTIONAL
-  IN  CHOOSE_HANDLER            ChooseHandler,  OPTIONAL
+  IN  CHAR16                    *FileType   OPTIONAL,
+  IN  CHOOSE_HANDLER            ChooseHandler   OPTIONAL,
   OUT EFI_DEVICE_PATH_PROTOCOL  **File  OPTIONAL
   )
 {
   return mProtocol->ChooseFile (RootDirectory, FileType, ChooseHandler, File);
 }
-

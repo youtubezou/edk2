@@ -1,21 +1,16 @@
 ## @file
 #  Unit tests for checking syntax of Python source code
 #
-#  Copyright (c) 2009, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ##
 # Import Modules
 #
 import os
+import tempfile
 import unittest
 import py_compile
 
@@ -28,8 +23,10 @@ class Tests(TestTools.BaseToolsTest):
 
     def SingleFileTest(self, filename):
         try:
-            py_compile.compile(filename, doraise=True)
-        except Exception, e:
+            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                py_compile.compile(filename, cfile=temp_file.name, doraise=True)
+                os.unlink(temp_file.name)
+        except Exception as e:
             self.fail('syntax error: %s, Error is %s' % (filename, str(e)))
 
 def MakePythonSyntaxCheckTests():
@@ -55,7 +52,7 @@ def MakePythonSyntaxCheckTests():
         newmethod = lambda self: self.SingleFileTest(filename)
         setattr(
             Tests,
-            test, 
+            test,
             newmethod
             )
 

@@ -1,21 +1,16 @@
 /** @file
   The realization of EFI_RAM_DISK_PROTOCOL.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2019, Intel Corporation. All rights reserved.<BR>
   (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) Microsoft Corporation.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "RamDiskImpl.h"
 
-RAM_DISK_PRIVATE_DATA mRamDiskPrivateDataTemplate = {
+RAM_DISK_PRIVATE_DATA  mRamDiskPrivateDataTemplate = {
   RAM_DISK_PRIVATE_DATA_SIGNATURE,
   NULL
 };
@@ -25,15 +20,14 @@ MEDIA_RAM_DISK_DEVICE_PATH  mRamDiskDeviceNodeTemplate = {
     MEDIA_DEVICE_PATH,
     MEDIA_RAM_DISK_DP,
     {
-      (UINT8) (sizeof (MEDIA_RAM_DISK_DEVICE_PATH)),
-      (UINT8) ((sizeof (MEDIA_RAM_DISK_DEVICE_PATH)) >> 8)
+      (UINT8)(sizeof (MEDIA_RAM_DISK_DEVICE_PATH)),
+      (UINT8)((sizeof (MEDIA_RAM_DISK_DEVICE_PATH)) >> 8)
     }
   }
 };
 
 BOOLEAN  mRamDiskSsdtTableKeyValid = FALSE;
 UINTN    mRamDiskSsdtTableKey;
-
 
 /**
   Initialize the RAM disk device node.
@@ -44,22 +38,21 @@ UINTN    mRamDiskSsdtTableKey;
 **/
 VOID
 RamDiskInitDeviceNode (
-  IN     RAM_DISK_PRIVATE_DATA         *PrivateData,
-  IN OUT MEDIA_RAM_DISK_DEVICE_PATH    *RamDiskDevNode
+  IN     RAM_DISK_PRIVATE_DATA       *PrivateData,
+  IN OUT MEDIA_RAM_DISK_DEVICE_PATH  *RamDiskDevNode
   )
 {
   WriteUnaligned64 (
-    (UINT64 *) &(RamDiskDevNode->StartingAddr[0]),
-    (UINT64) PrivateData->StartingAddr
+    (UINT64 *)&(RamDiskDevNode->StartingAddr[0]),
+    (UINT64)PrivateData->StartingAddr
     );
   WriteUnaligned64 (
-    (UINT64 *) &(RamDiskDevNode->EndingAddr[0]),
-    (UINT64) PrivateData->StartingAddr + PrivateData->Size - 1
+    (UINT64 *)&(RamDiskDevNode->EndingAddr[0]),
+    (UINT64)PrivateData->StartingAddr + PrivateData->Size - 1
     );
   CopyGuid (&RamDiskDevNode->TypeGuid, &PrivateData->TypeGuid);
   RamDiskDevNode->Instance = PrivateData->InstanceNumber;
 }
-
 
 /**
   Initialize and publish NVDIMM root device SSDT in ACPI table.
@@ -73,10 +66,10 @@ RamDiskPublishSsdt (
   VOID
   )
 {
-  EFI_STATUS                     Status;
-  EFI_ACPI_DESCRIPTION_HEADER    *Table;
-  UINTN                          SectionInstance;
-  UINTN                          TableSize;
+  EFI_STATUS                   Status;
+  EFI_ACPI_DESCRIPTION_HEADER  *Table;
+  UINTN                        SectionInstance;
+  UINTN                        TableSize;
 
   Status          = EFI_SUCCESS;
   SectionInstance = 0;
@@ -90,7 +83,7 @@ RamDiskPublishSsdt (
                &gEfiCallerIdGuid,
                EFI_SECTION_RAW,
                SectionInstance,
-               (VOID **) &Table,
+               (VOID **)&Table,
                &TableSize
                );
     if (EFI_ERROR (Status)) {
@@ -121,7 +114,6 @@ RamDiskPublishSsdt (
   return Status;
 }
 
-
 /**
   Publish the RAM disk NVDIMM Firmware Interface Table (NFIT) to the ACPI
   table.
@@ -134,29 +126,29 @@ RamDiskPublishSsdt (
 **/
 EFI_STATUS
 RamDiskPublishNfit (
-  IN RAM_DISK_PRIVATE_DATA        *PrivateData
+  IN RAM_DISK_PRIVATE_DATA  *PrivateData
   )
 {
-  EFI_STATUS                                    Status;
-  EFI_MEMORY_DESCRIPTOR                         *MemoryMap;
-  EFI_MEMORY_DESCRIPTOR                         *MemoryMapEntry;
-  EFI_MEMORY_DESCRIPTOR                         *MemoryMapEnd;
-  UINTN                                         TableIndex;
-  VOID                                          *TableHeader;
-  EFI_ACPI_TABLE_VERSION                        TableVersion;
-  UINTN                                         TableKey;
-  EFI_ACPI_DESCRIPTION_HEADER                   *NfitHeader;
+  EFI_STATUS                   Status;
+  EFI_MEMORY_DESCRIPTOR        *MemoryMap;
+  EFI_MEMORY_DESCRIPTOR        *MemoryMapEntry;
+  EFI_MEMORY_DESCRIPTOR        *MemoryMapEnd;
+  UINTN                        TableIndex;
+  VOID                         *TableHeader;
+  EFI_ACPI_TABLE_VERSION       TableVersion;
+  UINTN                        TableKey;
+  EFI_ACPI_DESCRIPTION_HEADER  *NfitHeader;
   EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE
-                                                *SpaRange;
-  VOID                                          *Nfit;
-  UINT32                                        NfitLen;
-  UINTN                                         MemoryMapSize;
-  UINTN                                         MapKey;
-  UINTN                                         DescriptorSize;
-  UINT32                                        DescriptorVersion;
-  UINT64                                        CurrentData;
-  UINT8                                         Checksum;
-  BOOLEAN                                       MemoryFound;
+           *SpaRange;
+  VOID     *Nfit;
+  UINT32   NfitLen;
+  UINTN    MemoryMapSize;
+  UINTN    MapKey;
+  UINTN    DescriptorSize;
+  UINT32   DescriptorVersion;
+  UINT64   CurrentData;
+  UINT8    Checksum;
+  BOOLEAN  MemoryFound;
 
   //
   // Get the EFI memory map.
@@ -174,8 +166,12 @@ RamDiskPublishNfit (
                   );
   ASSERT (Status == EFI_BUFFER_TOO_SMALL);
   do {
-    MemoryMap = (EFI_MEMORY_DESCRIPTOR *) AllocatePool (MemoryMapSize);
-    ASSERT (MemoryMap != NULL);
+    MemoryMap = (EFI_MEMORY_DESCRIPTOR *)AllocatePool (MemoryMapSize);
+    if (MemoryMap == NULL) {
+      ASSERT (MemoryMap != NULL);
+      return EFI_OUT_OF_RESOURCES;
+    }
+
     Status = gBS->GetMemoryMap (
                     &MemoryMapSize,
                     MemoryMap,
@@ -187,25 +183,29 @@ RamDiskPublishNfit (
       FreePool (MemoryMap);
     }
   } while (Status == EFI_BUFFER_TOO_SMALL);
+
   ASSERT_EFI_ERROR (Status);
 
   MemoryMapEntry = MemoryMap;
-  MemoryMapEnd   = (EFI_MEMORY_DESCRIPTOR *) ((UINT8 *) MemoryMap + MemoryMapSize);
-  while ((UINTN) MemoryMapEntry < (UINTN) MemoryMapEnd) {
+  MemoryMapEnd   = (EFI_MEMORY_DESCRIPTOR *)((UINT8 *)MemoryMap + MemoryMapSize);
+  while ((UINTN)MemoryMapEntry < (UINTN)MemoryMapEnd) {
     if ((MemoryMapEntry->Type == EfiReservedMemoryType) &&
         (MemoryMapEntry->PhysicalStart <= PrivateData->StartingAddr) &&
         (MemoryMapEntry->PhysicalStart +
          MultU64x32 (MemoryMapEntry->NumberOfPages, EFI_PAGE_SIZE)
-         >= PrivateData->StartingAddr + PrivateData->Size)) {
+         >= PrivateData->StartingAddr + PrivateData->Size))
+    {
       MemoryFound = TRUE;
       DEBUG ((
-        EFI_D_INFO,
-        "RamDiskPublishNfit: RAM disk with reserved meomry type, will publish to NFIT.\n"
+        DEBUG_INFO,
+        "RamDiskPublishNfit: RAM disk with reserved memory type, will publish to NFIT.\n"
         ));
       break;
     }
+
     MemoryMapEntry = NEXT_MEMORY_DESCRIPTOR (MemoryMapEntry, DescriptorSize);
   }
+
   FreePool (MemoryMap);
 
   if (!MemoryFound) {
@@ -231,7 +231,8 @@ RamDiskPublishNfit (
       TableIndex++;
 
       if (((EFI_ACPI_SDT_HEADER *)TableHeader)->Signature ==
-          EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE_STRUCTURE_SIGNATURE) {
+          EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE_STRUCTURE_SIGNATURE)
+      {
         break;
       }
     }
@@ -242,7 +243,7 @@ RamDiskPublishNfit (
     // A NFIT is already in the ACPI table.
     //
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "RamDiskPublishNfit: A NFIT is already exist in the ACPI Table.\n"
       ));
 
@@ -252,6 +253,7 @@ RamDiskPublishNfit (
     if (Nfit == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
+
     CopyMem (Nfit, TableHeader, NfitHeader->Length);
 
     //
@@ -277,13 +279,13 @@ RamDiskPublishNfit (
     // Append the System Physical Address (SPA) Range Structure at the end
     // of the origin NFIT.
     //
-    SpaRange   = (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE *)
-                 ((UINT8 *)Nfit + NfitHeader->Length);
+    SpaRange = (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE *)
+               ((UINT8 *)Nfit + NfitHeader->Length);
 
     //
     // Update the length field of the NFIT
     //
-    NfitHeader->Length   = NfitLen;
+    NfitHeader->Length = NfitLen;
 
     //
     // The checksum will be updated after the new contents are appended.
@@ -305,13 +307,13 @@ RamDiskPublishNfit (
     // No NFIT is in the ACPI table, we will create one here.
     //
     DEBUG ((
-      EFI_D_INFO,
+      DEBUG_INFO,
       "RamDiskPublishNfit: No NFIT is in the ACPI Table, will create one.\n"
       ));
 
     NfitLen = sizeof (EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE) +
               sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE);
-    Nfit    = AllocateZeroPool (NfitLen);
+    Nfit = AllocateZeroPool (NfitLen);
     if (Nfit == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
@@ -335,13 +337,13 @@ RamDiskPublishNfit (
   //
   // Fill in the content of the SPA Range Structure.
   //
-  SpaRange->Type   = EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE_TYPE;
-  SpaRange->Length = sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE);
+  SpaRange->Type                             = EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE_TYPE;
+  SpaRange->Length                           = sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE);
   SpaRange->SystemPhysicalAddressRangeBase   = PrivateData->StartingAddr;
   SpaRange->SystemPhysicalAddressRangeLength = PrivateData->Size;
   CopyGuid (&SpaRange->AddressRangeTypeGUID, &PrivateData->TypeGuid);
 
-  Checksum             = CalculateCheckSum8((UINT8 *)Nfit, NfitHeader->Length);
+  Checksum             = CalculateCheckSum8 ((UINT8 *)Nfit, NfitHeader->Length);
   NfitHeader->Checksum = Checksum;
 
   //
@@ -368,7 +370,6 @@ RamDiskPublishNfit (
   return EFI_SUCCESS;
 }
 
-
 /**
   Unpublish the RAM disk NVDIMM Firmware Interface Table (NFIT) from the
   ACPI table.
@@ -381,23 +382,23 @@ RamDiskPublishNfit (
 **/
 EFI_STATUS
 RamDiskUnpublishNfit (
-  IN RAM_DISK_PRIVATE_DATA        *PrivateData
+  IN RAM_DISK_PRIVATE_DATA  *PrivateData
   )
 {
-  EFI_STATUS                                    Status;
-  UINTN                                         TableIndex;
-  VOID                                          *TableHeader;
-  EFI_ACPI_TABLE_VERSION                        TableVersion;
-  UINTN                                         TableKey;
-  EFI_ACPI_DESCRIPTION_HEADER                   *NewNfitHeader;
+  EFI_STATUS                   Status;
+  UINTN                        TableIndex;
+  VOID                         *TableHeader;
+  EFI_ACPI_TABLE_VERSION       TableVersion;
+  UINTN                        TableKey;
+  EFI_ACPI_DESCRIPTION_HEADER  *NewNfitHeader;
   EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE
-                                                *SpaRange;
-  VOID                                          *NewNfit;
-  VOID                                          *NewNfitPtr;
-  EFI_ACPI_6_1_NFIT_STRUCTURE_HEADER            *NfitStructHeader;
-  UINT32                                        NewNfitLen;
-  UINT32                                        RemainLen;
-  UINT8                                         Checksum;
+                                      *SpaRange;
+  VOID                                *NewNfit;
+  VOID                                *NewNfitPtr;
+  EFI_ACPI_6_1_NFIT_STRUCTURE_HEADER  *NfitStructHeader;
+  UINT32                              NewNfitLen;
+  UINT32                              RemainLen;
+  UINT8                               Checksum;
 
   //
   // Find the NFIT in the ACPI table.
@@ -418,7 +419,8 @@ RamDiskUnpublishNfit (
       TableIndex++;
 
       if (((EFI_ACPI_SDT_HEADER *)TableHeader)->Signature ==
-          EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE_STRUCTURE_SIGNATURE) {
+          EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE_STRUCTURE_SIGNATURE)
+      {
         break;
       }
     }
@@ -431,8 +433,8 @@ RamDiskUnpublishNfit (
     return EFI_NOT_FOUND;
   }
 
-  NewNfitLen    = ((EFI_ACPI_DESCRIPTION_HEADER *)TableHeader)->Length -
-                  sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE);
+  NewNfitLen = ((EFI_ACPI_DESCRIPTION_HEADER *)TableHeader)->Length -
+               sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE);
 
   //
   // After removing this RAM disk from the NFIT, if no other structure is in
@@ -493,12 +495,14 @@ RamDiskUnpublishNfit (
                      ((UINT8 *)TableHeader + sizeof (EFI_ACPI_6_1_NVDIMM_FIRMWARE_INTERFACE_TABLE));
   while (RemainLen > 0) {
     if ((NfitStructHeader->Type == EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE_TYPE) &&
-        (NfitStructHeader->Length == sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE))) {
+        (NfitStructHeader->Length == sizeof (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE)))
+    {
       SpaRange = (EFI_ACPI_6_1_NFIT_SYSTEM_PHYSICAL_ADDRESS_RANGE_STRUCTURE *)NfitStructHeader;
 
       if ((SpaRange->SystemPhysicalAddressRangeBase == PrivateData->StartingAddr) &&
           (SpaRange->SystemPhysicalAddressRangeLength == PrivateData->Size) &&
-          (CompareGuid (&SpaRange->AddressRangeTypeGUID, &PrivateData->TypeGuid))) {
+          (CompareGuid (&SpaRange->AddressRangeTypeGUID, &PrivateData->TypeGuid)))
+      {
         //
         // Skip the SPA Range Structure for the RAM disk to be unpublished
         // from NFIT.
@@ -523,7 +527,7 @@ RamDiskUnpublishNfit (
                        ((UINT8 *)NfitStructHeader + NfitStructHeader->Length);
   }
 
-  Checksum                = CalculateCheckSum8((UINT8 *)NewNfit, NewNfitHeader->Length);
+  Checksum                = CalculateCheckSum8 ((UINT8 *)NewNfit, NewNfitHeader->Length);
   NewNfitHeader->Checksum = Checksum;
 
   Status = mAcpiTableProtocol->UninstallAcpiTable (
@@ -558,7 +562,6 @@ RamDiskUnpublishNfit (
   return EFI_SUCCESS;
 }
 
-
 /**
   Register a RAM disk with specified address, size and type.
 
@@ -592,19 +595,19 @@ RamDiskUnpublishNfit (
 EFI_STATUS
 EFIAPI
 RamDiskRegister (
-  IN UINT64                       RamDiskBase,
-  IN UINT64                       RamDiskSize,
-  IN EFI_GUID                     *RamDiskType,
-  IN EFI_DEVICE_PATH              *ParentDevicePath     OPTIONAL,
-  OUT EFI_DEVICE_PATH_PROTOCOL    **DevicePath
+  IN UINT64                     RamDiskBase,
+  IN UINT64                     RamDiskSize,
+  IN EFI_GUID                   *RamDiskType,
+  IN EFI_DEVICE_PATH            *ParentDevicePath     OPTIONAL,
+  OUT EFI_DEVICE_PATH_PROTOCOL  **DevicePath
   )
 {
-  EFI_STATUS                      Status;
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
-  RAM_DISK_PRIVATE_DATA           *RegisteredPrivateData;
-  MEDIA_RAM_DISK_DEVICE_PATH      *RamDiskDevNode;
-  UINTN                           DevicePathSize;
-  LIST_ENTRY                      *Entry;
+  EFI_STATUS                  Status;
+  RAM_DISK_PRIVATE_DATA       *PrivateData;
+  RAM_DISK_PRIVATE_DATA       *RegisteredPrivateData;
+  MEDIA_RAM_DISK_DEVICE_PATH  *RamDiskDevNode;
+  UINTN                       DevicePathSize;
+  LIST_ENTRY                  *Entry;
 
   if ((0 == RamDiskSize) || (NULL == RamDiskType) || (NULL == DevicePath)) {
     return EFI_INVALID_PARAMETER;
@@ -613,7 +616,9 @@ RamDiskRegister (
   //
   // Add check to prevent data read across the memory boundary
   //
-  if (RamDiskBase + RamDiskSize > ((UINTN) -1) - RAM_DISK_BLOCK_SIZE + 1) {
+  if ((RamDiskSize > MAX_UINTN) ||
+      (RamDiskBase > MAX_UINTN - RamDiskSize + 1))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -651,7 +656,7 @@ RamDiskRegister (
 
   *DevicePath = AppendDevicePathNode (
                   ParentDevicePath,
-                  (EFI_DEVICE_PATH_PROTOCOL *) RamDiskDevNode
+                  (EFI_DEVICE_PATH_PROTOCOL *)RamDiskDevNode
                   );
   if (NULL == *DevicePath) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -664,10 +669,10 @@ RamDiskRegister (
   // Check whether the created device path is already present in the handle
   // database
   //
-  if (!IsListEmpty(&RegisteredRamDisks)) {
+  if (!IsListEmpty (&RegisteredRamDisks)) {
     DevicePathSize = GetDevicePathSize (PrivateData->DevicePath);
 
-    EFI_LIST_FOR_EACH (Entry, &RegisteredRamDisks) {
+    BASE_LIST_FOR_EACH (Entry, &RegisteredRamDisks) {
       RegisteredPrivateData = RAM_DISK_PRIVATE_FROM_THIS (Entry);
       if (DevicePathSize == GetDevicePathSize (RegisteredPrivateData->DevicePath)) {
         //
@@ -676,7 +681,9 @@ RamDiskRegister (
         if ((CompareMem (
                PrivateData->DevicePath,
                RegisteredPrivateData->DevicePath,
-               DevicePathSize)) == 0) {
+               DevicePathSize
+               )) == 0)
+        {
           *DevicePath = NULL;
           Status      = EFI_ALREADY_STARTED;
           goto ErrorExit;
@@ -739,7 +746,6 @@ ErrorExit:
   return Status;
 }
 
-
 /**
   Unregister a RAM disk specified by DevicePath.
 
@@ -758,17 +764,17 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 RamDiskUnregister (
-  IN  EFI_DEVICE_PATH_PROTOCOL    *DevicePath
+  IN  EFI_DEVICE_PATH_PROTOCOL  *DevicePath
   )
 {
-  LIST_ENTRY                      *Entry;
-  LIST_ENTRY                      *NextEntry;
-  BOOLEAN                         Found;
-  UINT64                          StartingAddr;
-  UINT64                          EndingAddr;
-  EFI_DEVICE_PATH_PROTOCOL        *Header;
-  MEDIA_RAM_DISK_DEVICE_PATH      *RamDiskDevNode;
-  RAM_DISK_PRIVATE_DATA           *PrivateData;
+  LIST_ENTRY                  *Entry;
+  LIST_ENTRY                  *NextEntry;
+  BOOLEAN                     Found;
+  UINT64                      StartingAddr;
+  UINT64                      EndingAddr;
+  EFI_DEVICE_PATH_PROTOCOL    *Header;
+  MEDIA_RAM_DISK_DEVICE_PATH  *RamDiskDevNode;
+  RAM_DISK_PRIVATE_DATA       *PrivateData;
 
   if (NULL == DevicePath) {
     return EFI_INVALID_PARAMETER;
@@ -784,8 +790,9 @@ RamDiskUnregister (
     // Test if the current device node is a RAM disk.
     //
     if ((MEDIA_DEVICE_PATH == Header->Type) &&
-      (MEDIA_RAM_DISK_DP == Header->SubType)) {
-      RamDiskDevNode = (MEDIA_RAM_DISK_DEVICE_PATH *) Header;
+        (MEDIA_RAM_DISK_DP == Header->SubType))
+    {
+      RamDiskDevNode = (MEDIA_RAM_DISK_DEVICE_PATH *)Header;
 
       break;
     }
@@ -797,12 +804,12 @@ RamDiskUnregister (
     return EFI_UNSUPPORTED;
   }
 
-  Found          = FALSE;
-  StartingAddr   = ReadUnaligned64 ((UINT64 *) &(RamDiskDevNode->StartingAddr[0]));
-  EndingAddr     = ReadUnaligned64 ((UINT64 *) &(RamDiskDevNode->EndingAddr[0]));
+  Found        = FALSE;
+  StartingAddr = ReadUnaligned64 ((UINT64 *)&(RamDiskDevNode->StartingAddr[0]));
+  EndingAddr   = ReadUnaligned64 ((UINT64 *)&(RamDiskDevNode->EndingAddr[0]));
 
-  if (!IsListEmpty(&RegisteredRamDisks)) {
-    EFI_LIST_FOR_EACH_SAFE (Entry, NextEntry, &RegisteredRamDisks) {
+  if (!IsListEmpty (&RegisteredRamDisks)) {
+    BASE_LIST_FOR_EACH_SAFE (Entry, NextEntry, &RegisteredRamDisks) {
       PrivateData = RAM_DISK_PRIVATE_FROM_THIS (Entry);
 
       //
@@ -811,7 +818,8 @@ RamDiskUnregister (
       //
       if ((StartingAddr == PrivateData->StartingAddr) &&
           (EndingAddr == PrivateData->StartingAddr + PrivateData->Size - 1) &&
-          (CompareGuid (&RamDiskDevNode->TypeGuid, &PrivateData->TypeGuid))) {
+          (CompareGuid (&RamDiskDevNode->TypeGuid, &PrivateData->TypeGuid)))
+      {
         //
         // Remove the content for this RAM disk in NFIT.
         //
@@ -829,7 +837,7 @@ RamDiskUnregister (
                &gEfiBlockIo2ProtocolGuid,
                &PrivateData->BlockIo2,
                &gEfiDevicePathProtocolGuid,
-               (EFI_DEVICE_PATH_PROTOCOL *) PrivateData->DevicePath,
+               (EFI_DEVICE_PATH_PROTOCOL *)PrivateData->DevicePath,
                NULL
                );
 
@@ -841,7 +849,7 @@ RamDiskUnregister (
           // driver is responsible for freeing the allocated memory for the
           // RAM disk.
           //
-          FreePool ((VOID *)(UINTN) PrivateData->StartingAddr);
+          FreePool ((VOID *)(UINTN)PrivateData->StartingAddr);
         }
 
         FreePool (PrivateData->DevicePath);

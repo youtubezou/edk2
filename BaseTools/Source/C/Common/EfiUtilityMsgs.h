@@ -1,19 +1,12 @@
 /** @file
 Defines and prototypes for common EFI utility error and debug messages.
 
-Copyright (c) 2004 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_UTILITY_MSGS_H_
-#define _EFI_UTILITY_MSGS_H_
+#pragma once
 
 #include <Common/UefiBaseTypes.h>
 
@@ -32,7 +25,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define STATUS_SUCCESS  0
 #define STATUS_WARNING  1
 #define STATUS_ERROR    2
-#define VOID void 
+#define VOID void
 
 typedef int STATUS;
 
@@ -166,5 +159,3 @@ SetPrintLimits (
 #ifdef __cplusplus
 }
 #endif
-
-#endif // #ifndef _EFI_UTILITY_MSGS_H_

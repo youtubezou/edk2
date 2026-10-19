@@ -1,19 +1,12 @@
 /** @file
   Generic debug support macros, typedefs and prototypes for IA32/x64.
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _DEBUG_SUPPORT_H_
-#define _DEBUG_SUPPORT_H_
+#pragma once
 
 #include <Uefi.h>
 
@@ -27,8 +20,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseLib.h>
 
-#define NUM_IDT_ENTRIES                 0x78
-#define SYSTEM_TIMER_VECTOR             0x68
+#define NUM_IDT_ENTRIES      0x78
+#define SYSTEM_TIMER_VECTOR  0x68
 
 typedef
 VOID
@@ -38,20 +31,22 @@ VOID
 
 typedef
 VOID
-(EFIAPI *CALLBACK_FUNC) (
+(EFIAPI *CALLBACK_FUNC)(
   );
 
 typedef struct {
-  IA32_IDT_GATE_DESCRIPTOR  OrigDesc;
-  DEBUG_PROC                OrigVector;
-  IA32_IDT_GATE_DESCRIPTOR  NewDesc;
-  DEBUG_PROC                StubEntry;
-  CALLBACK_FUNC             RegisteredCallback;
+  IA32_IDT_GATE_DESCRIPTOR    OrigDesc;
+  DEBUG_PROC                  OrigVector;
+  IA32_IDT_GATE_DESCRIPTOR    NewDesc;
+  DEBUG_PROC                  StubEntry;
+  CALLBACK_FUNC               RegisteredCallback;
 } IDT_ENTRY;
 
-extern UINT8                     InterruptEntryStub[];
-extern UINT32                    StubSize;
-extern VOID                      (*OrigVector) (VOID);
+extern UINT8   InterruptEntryStub[];
+extern UINT32  StubSize;
+extern VOID    (*OrigVector) (
+  VOID
+  );
 extern IDT_ENTRY                 *IdtEntryTable;
 extern IA32_IDT_GATE_DESCRIPTOR  NullDesc;
 
@@ -85,13 +80,13 @@ FxStorSupport (
 **/
 VOID
 Vect2Desc (
-  IA32_IDT_GATE_DESCRIPTOR * DestDesc,
-  VOID (*Vector) (VOID)
+  IA32_IDT_GATE_DESCRIPTOR  *DestDesc,
+  VOID (                    *Vector )(VOID)
   );
 
 /**
-  Initializes driver's handler registration database. 
-  
+  Initializes driver's handler registration database.
+
   This code executes in boot services context
   Must be public because it's referenced from DebugSupport.c
 
@@ -119,97 +114,97 @@ PlInitializeDebugSupportDriver (
 EFI_STATUS
 EFIAPI
 PlUnloadDebugSupportDriver (
-  IN EFI_HANDLE                       ImageHandle
+  IN EFI_HANDLE  ImageHandle
   );
 
 /**
   Returns the maximum value that may be used for the ProcessorIndex parameter in
-  RegisterPeriodicCallback() and RegisterExceptionCallback().                   
-    
+  RegisterPeriodicCallback() and RegisterExceptionCallback().
+
   Hard coded to support only 1 processor for now.
 
   @param  This                  A pointer to the EFI_DEBUG_SUPPORT_PROTOCOL instance.
   @param  MaxProcessorIndex     Pointer to a caller-allocated UINTN in which the maximum supported
-                                processor index is returned. Always 0 returned.                                     
-                                
+                                processor index is returned. Always 0 returned.
+
   @retval EFI_SUCCESS           Always returned with **MaxProcessorIndex set to 0.
 
 **/
 EFI_STATUS
 EFIAPI
 GetMaximumProcessorIndex (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL       *This,
-  OUT UINTN                           *MaxProcessorIndex
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  OUT UINTN                      *MaxProcessorIndex
   );
 
 /**
   Registers a function to be called back periodically in interrupt context.
-    
+
   @param  This                  A pointer to the EFI_DEBUG_SUPPORT_PROTOCOL instance.
   @param  ProcessorIndex        Specifies which processor the callback function applies to.
   @param  PeriodicCallback      A pointer to a function of type PERIODIC_CALLBACK that is the main
                                 periodic entry point of the debug agent.
-                                
-  @retval EFI_SUCCESS           The function completed successfully.  
+
+  @retval EFI_SUCCESS           The function completed successfully.
   @retval EFI_ALREADY_STARTED   Non-NULL PeriodicCallback parameter when a callback
-                                function was previously registered.                
-  @retval EFI_OUT_OF_RESOURCES  System has insufficient memory resources to register new callback                               
-                                function. 
+                                function was previously registered.
+  @retval EFI_OUT_OF_RESOURCES  System has insufficient memory resources to register new callback
+                                function.
 **/
 EFI_STATUS
 EFIAPI
 RegisterPeriodicCallback (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL       *This,
-  IN UINTN                            ProcessorIndex,
-  IN EFI_PERIODIC_CALLBACK            PeriodicCallback
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  IN UINTN                       ProcessorIndex,
+  IN EFI_PERIODIC_CALLBACK       PeriodicCallback
   );
 
 /**
   Registers a function to be called when a given processor exception occurs.
 
   This code executes in boot services context.
-    
+
   @param  This                  A pointer to the EFI_DEBUG_SUPPORT_PROTOCOL instance.
   @param  ProcessorIndex        Specifies which processor the callback function applies to.
   @param  ExceptionCallback     A pointer to a function of type EXCEPTION_CALLBACK that is called
-                                when the processor exception specified by ExceptionType occurs.  
-  @param  ExceptionType         Specifies which processor exception to hook.                       
-                                
-  @retval EFI_SUCCESS           The function completed successfully.  
+                                when the processor exception specified by ExceptionType occurs.
+  @param  ExceptionType         Specifies which processor exception to hook.
+
+  @retval EFI_SUCCESS           The function completed successfully.
   @retval EFI_ALREADY_STARTED   Non-NULL PeriodicCallback parameter when a callback
-                                function was previously registered.                
-  @retval EFI_OUT_OF_RESOURCES  System has insufficient memory resources to register new callback                               
+                                function was previously registered.
+  @retval EFI_OUT_OF_RESOURCES  System has insufficient memory resources to register new callback
                                 function.
 **/
 EFI_STATUS
 EFIAPI
 RegisterExceptionCallback (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL       *This,
-  IN UINTN                            ProcessorIndex,
-  IN EFI_EXCEPTION_CALLBACK           ExceptionCallback,
-  IN EFI_EXCEPTION_TYPE               ExceptionType
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  IN UINTN                       ProcessorIndex,
+  IN EFI_EXCEPTION_CALLBACK      ExceptionCallback,
+  IN EFI_EXCEPTION_TYPE          ExceptionType
   );
 
 /**
   Invalidates processor instruction cache for a memory range. Subsequent execution in this range
-  causes a fresh memory fetch to retrieve code to be executed.                                  
-    
+  causes a fresh memory fetch to retrieve code to be executed.
+
   @param  This                  A pointer to the EFI_DEBUG_SUPPORT_PROTOCOL instance.
   @param  ProcessorIndex        Specifies which processor's instruction cache is to be invalidated.
-  @param  Start                 Specifies the physical base of the memory range to be invalidated.                                
+  @param  Start                 Specifies the physical base of the memory range to be invalidated.
   @param  Length                Specifies the minimum number of bytes in the processor's instruction
-                                cache to invalidate.                                                 
-                                
+                                cache to invalidate.
+
   @retval EFI_SUCCESS           Always returned.
 
 **/
 EFI_STATUS
 EFIAPI
 InvalidateInstructionCache (
-  IN EFI_DEBUG_SUPPORT_PROTOCOL       *This,
-  IN UINTN                            ProcessorIndex,
-  IN VOID                             *Start,
-  IN UINT64                           Length
+  IN EFI_DEBUG_SUPPORT_PROTOCOL  *This,
+  IN UINTN                       ProcessorIndex,
+  IN VOID                        *Start,
+  IN UINT64                      Length
   );
 
 /**
@@ -225,8 +220,8 @@ InvalidateInstructionCache (
 **/
 VOID
 CreateEntryStub (
-  IN EFI_EXCEPTION_TYPE     ExceptionType,
-  OUT VOID                  **Stub
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  OUT VOID               **Stub
   );
 
 /**
@@ -262,8 +257,8 @@ GetInterruptHandleFromIdt (
 **/
 EFI_STATUS
 ManageIdtEntryTable (
-  CALLBACK_FUNC      NewCallback,
-  EFI_EXCEPTION_TYPE ExceptionType
+  CALLBACK_FUNC       NewCallback,
+  EFI_EXCEPTION_TYPE  ExceptionType
   );
 
 /**
@@ -280,8 +275,8 @@ ManageIdtEntryTable (
 **/
 VOID
 HookEntry (
-  IN EFI_EXCEPTION_TYPE            ExceptionType,
-  IN CALLBACK_FUNC                 NewCallback
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  IN CALLBACK_FUNC       NewCallback
   );
 
 /**
@@ -292,7 +287,5 @@ HookEntry (
 **/
 VOID
 UnhookEntry (
-  IN EFI_EXCEPTION_TYPE           ExceptionType
+  IN EFI_EXCEPTION_TYPE  ExceptionType
   );
-
-#endif

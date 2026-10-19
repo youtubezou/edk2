@@ -1,17 +1,10 @@
 /** @file
   UEFI Component Name(2) protocol implementation for SCSI disk driver.
 
-Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include "ScsiDisk.h"
 
@@ -27,16 +20,15 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gScsiDiskComponentNam
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gScsiDiskComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) ScsiDiskComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) ScsiDiskComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gScsiDiskComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)ScsiDiskComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)ScsiDiskComponentNameGetControllerName,
   "en"
 };
 
-
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mScsiDiskDriverNameTable[] = {
-  { "eng;en", (CHAR16 *) L"Scsi Disk Driver" },
-  { NULL , NULL }
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mScsiDiskDriverNameTable[] = {
+  { "eng;en", (CHAR16 *)L"Scsi Disk Driver" },
+  { NULL,     NULL                          }
 };
 
 /**
@@ -166,16 +158,16 @@ ScsiDiskComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 ScsiDiskComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS            Status;
-  SCSI_DISK_DEV         *ScsiDiskDevice;
-  EFI_BLOCK_IO_PROTOCOL *BlockIo;
+  EFI_STATUS             Status;
+  SCSI_DISK_DEV          *ScsiDiskDevice;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
 
   //
   // This is a device driver, so ChildHandle must be NULL.
@@ -183,7 +175,7 @@ ScsiDiskComponentNameGetControllerName (
   if (ChildHandle != NULL) {
     return EFI_UNSUPPORTED;
   }
-  
+
   //
   // Make sure this driver is currently managing ControllerHandle
   //
@@ -195,13 +187,14 @@ ScsiDiskComponentNameGetControllerName (
   if (EFI_ERROR (Status)) {
     return Status;
   }
+
   //
   // Get the device context
   //
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiBlockIoProtocolGuid,
-                  (VOID **) &BlockIo,
+                  (VOID **)&BlockIo,
                   gScsiDiskDriverBinding.DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -220,5 +213,4 @@ ScsiDiskComponentNameGetControllerName (
            ControllerName,
            (BOOLEAN)(This == &gScsiDiskComponentName)
            );
-
 }

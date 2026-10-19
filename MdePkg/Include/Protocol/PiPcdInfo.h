@@ -4,22 +4,15 @@
   The protocol that provides additional information about items that reside in the PCD database.
 
   Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   PI Version 1.2.1 Vol 3.
 **/
 
-#ifndef __PI_PCD_INFO_H__
-#define __PI_PCD_INFO_H__
+#pragma once
 
-extern EFI_GUID gEfiGetPcdInfoProtocolGuid;
+extern EFI_GUID  gEfiGetPcdInfoProtocolGuid;
 
 #define EFI_GET_PCD_INFO_PROTOCOL_GUID \
   { 0xfd0f4478,  0xefd, 0x461d, { 0xba, 0x2d, 0xe5, 0x8c, 0x45, 0xfd, 0x5f, 0x5e } }
@@ -27,7 +20,7 @@ extern EFI_GUID gEfiGetPcdInfoProtocolGuid;
 ///
 /// The forward declaration for EFI_GET_PCD_INFO_PROTOCOL.
 ///
-typedef struct _EFI_GET_PCD_INFO_PROTOCOL  EFI_GET_PCD_INFO_PROTOCOL;
+typedef struct _EFI_GET_PCD_INFO_PROTOCOL EFI_GET_PCD_INFO_PROTOCOL;
 
 /**
   Retrieve additional information associated with a PCD token.
@@ -44,11 +37,11 @@ typedef struct _EFI_GET_PCD_INFO_PROTOCOL  EFI_GET_PCD_INFO_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_GET_PCD_INFO_PROTOCOL_GET_INFO) (
+(EFIAPI *EFI_GET_PCD_INFO_PROTOCOL_GET_INFO)(
   IN CONST  EFI_GUID        *Guid,
   IN        UINTN           TokenNumber,
   OUT       EFI_PCD_INFO    *PcdInfo
-);
+  );
 
 /**
   Retrieve the currently set SKU Id.
@@ -59,9 +52,9 @@ EFI_STATUS
 **/
 typedef
 UINTN
-(EFIAPI *EFI_GET_PCD_INFO_PROTOCOL_GET_SKU) (
+(EFIAPI *EFI_GET_PCD_INFO_PROTOCOL_GET_SKU)(
   VOID
-);
+  );
 
 ///
 /// Callers to this protocol must be at a TPL_APPLICATION task priority level.
@@ -78,6 +71,3 @@ struct _EFI_GET_PCD_INFO_PROTOCOL {
   ///
   EFI_GET_PCD_INFO_PROTOCOL_GET_SKU     GetSku;
 };
-
-#endif
-

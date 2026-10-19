@@ -1,38 +1,32 @@
 /** @file
   UEFI Component Name(2) protocol implementation for AtaAtapiPassThru driver.
-  
-  Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
 
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "AtaAtapiPassThru.h"
 
 //
-// Driver name table 
+// Driver name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mAtaAtapiPassThruDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mAtaAtapiPassThruDriverNameTable[] = {
   { "eng;en", L"AtaAtapiPassThru Driver" },
-  { NULL , NULL }
+  { NULL,     NULL                       }
 };
 
 //
 // Controller name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mAtaAtapiPassThruIdeControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mAtaAtapiPassThruIdeControllerNameTable[] = {
   { "eng;en", L"IDE Controller" },
-  { NULL , NULL }
+  { NULL,     NULL              }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mAtaAtapiPassThruAhciControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mAtaAtapiPassThruAhciControllerNameTable[] = {
   { "eng;en", L"AHCI Controller" },
-  { NULL , NULL }
+  { NULL,     NULL               }
 };
 
 //
@@ -47,9 +41,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gAtaAtapiPassThruComp
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gAtaAtapiPassThruComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) AtaAtapiPassThruComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) AtaAtapiPassThruComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gAtaAtapiPassThruComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)AtaAtapiPassThruComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)AtaAtapiPassThruComponentNameGetControllerName,
   "en"
 };
 
@@ -108,7 +102,6 @@ AtaAtapiPassThruComponentNameGetDriverName (
            (BOOLEAN)(This == &gAtaAtapiPassThruComponentName)
            );
 }
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -181,11 +174,11 @@ AtaAtapiPassThruComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 AtaAtapiPassThruComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   EFI_STATUS                    Status;
@@ -193,7 +186,7 @@ AtaAtapiPassThruComponentNameGetControllerName (
   VOID                          *Interface;
   ATA_ATAPI_PASS_THRU_INSTANCE  *Instance;
 
-  if (Language == NULL || ControllerName == NULL) {
+  if ((Language == NULL) || (ControllerName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 

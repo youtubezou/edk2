@@ -5,13 +5,7 @@
   Copyright (C) 2015, Red Hat, Inc.
   Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/DebugLib.h>
@@ -24,11 +18,11 @@
 
 VOID
 InstallProtocolInterfaces (
-  IN EFI_FW_VOL_BLOCK_DEVICE *FvbDevice
+  IN EFI_FW_VOL_BLOCK_DEVICE  *FvbDevice
   )
 {
-  EFI_HANDLE FvbHandle;
-  EFI_STATUS Status;
+  EFI_HANDLE  FvbHandle;
+  EFI_STATUS  Status;
 
   ASSERT (FeaturePcdGet (PcdSmmSmramRequire));
 
@@ -40,7 +34,7 @@ InstallProtocolInterfaces (
   // Firmware Volume Block protocol structure.
   //
   FvbHandle = NULL;
-  DEBUG ((EFI_D_INFO, "Installing QEMU flash SMM FVB\n"));
+  DEBUG ((DEBUG_INFO, "Installing QEMU flash SMM FVB\n"));
   Status = gSmst->SmmInstallProtocolInterface (
                     &FvbHandle,
                     &gEfiSmmFirmwareVolumeBlockProtocolGuid,
@@ -66,4 +60,38 @@ InstallVirtualAddressChangeHandler (
   //
   // Nothing.
   //
+}
+
+EFI_STATUS
+MarkIoMemoryRangeForRuntimeAccess (
+  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN UINTN                 Length
+  )
+{
+  //
+  // Nothing
+  //
+
+  return EFI_SUCCESS;
+}
+
+VOID
+SetPcdFlashNvStorageBaseAddresses (
+  VOID
+  )
+{
+  //
+  // Do nothing.
+  //
+}
+
+VOID
+UpdateQemuFlashVariablesEnable (
+  VOID
+  )
+{
+  RETURN_STATUS  PcdStatus;
+
+  PcdStatus = PcdSetBoolS (PcdOvmfFlashVariablesEnable, TRUE);
+  ASSERT_RETURN_ERROR (PcdStatus);
 }

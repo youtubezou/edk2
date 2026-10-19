@@ -2,20 +2,12 @@
   FFS file access utilities.
 
 Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
 #include "DxeMain.h"
 #include "FwVolDriver.h"
-
 
 /**
   Get the FFS file state by checking the highest bit set in the header's state field.
@@ -32,13 +24,13 @@ GetFileState (
   IN EFI_FFS_FILE_HEADER  *FfsHeader
   )
 {
-  EFI_FFS_FILE_STATE      FileState;
-  UINT8                   HighestBit;
+  EFI_FFS_FILE_STATE  FileState;
+  UINT8               HighestBit;
 
   FileState = FfsHeader->State;
 
   if (ErasePolarity != 0) {
-    FileState = (EFI_FFS_FILE_STATE)~FileState;
+    FileState = (EFI_FFS_FILE_STATE) ~FileState;
   }
 
   HighestBit = 0x80;
@@ -46,10 +38,8 @@ GetFileState (
     HighestBit >>= 1;
   }
 
-  return (EFI_FFS_FILE_STATE) HighestBit;
+  return (EFI_FFS_FILE_STATE)HighestBit;
 }
-
-
 
 /**
   Check if a block of buffer is erased.
@@ -64,16 +54,16 @@ GetFileState (
 **/
 BOOLEAN
 IsBufferErased (
-  IN UINT8    ErasePolarity,
-  IN VOID     *InBuffer,
-  IN UINTN    BufferSize
+  IN UINT8  ErasePolarity,
+  IN VOID   *InBuffer,
+  IN UINTN  BufferSize
   )
 {
-  UINTN   Count;
-  UINT8   EraseByte;
-  UINT8   *Buffer;
+  UINTN  Count;
+  UINT8  EraseByte;
+  UINT8  *Buffer;
 
-  if(ErasePolarity == 1) {
+  if (ErasePolarity == 1) {
     EraseByte = 0xFF;
   } else {
     EraseByte = 0;
@@ -89,8 +79,6 @@ IsBufferErased (
   return TRUE;
 }
 
-
-
 /**
   Verify checksum of the firmware volume header.
 
@@ -102,12 +90,12 @@ IsBufferErased (
 **/
 BOOLEAN
 VerifyFvHeaderChecksum (
-  IN EFI_FIRMWARE_VOLUME_HEADER *FvHeader
+  IN EFI_FIRMWARE_VOLUME_HEADER  *FvHeader
   )
 {
   UINT16  Checksum;
 
-  Checksum = CalculateSum16 ((UINT16 *) FvHeader, FvHeader->HeaderLength);
+  Checksum = CalculateSum16 ((UINT16 *)FvHeader, FvHeader->HeaderLength);
 
   if (Checksum == 0) {
     return TRUE;
@@ -115,7 +103,6 @@ VerifyFvHeaderChecksum (
     return FALSE;
   }
 }
-
 
 /**
   Verify checksum of the FFS file header.
@@ -131,14 +118,15 @@ VerifyHeaderChecksum (
   IN EFI_FFS_FILE_HEADER  *FfsHeader
   )
 {
-  UINT8 HeaderChecksum;
+  UINT8  HeaderChecksum;
 
   if (IS_FFS_FILE2 (FfsHeader)) {
-    HeaderChecksum = CalculateSum8 ((UINT8 *) FfsHeader, sizeof (EFI_FFS_FILE_HEADER2));
+    HeaderChecksum = CalculateSum8 ((UINT8 *)FfsHeader, sizeof (EFI_FFS_FILE_HEADER2));
   } else {
-    HeaderChecksum = CalculateSum8 ((UINT8 *) FfsHeader, sizeof (EFI_FFS_FILE_HEADER));
+    HeaderChecksum = CalculateSum8 ((UINT8 *)FfsHeader, sizeof (EFI_FFS_FILE_HEADER));
   }
-  HeaderChecksum = (UINT8) (HeaderChecksum - FfsHeader->State - FfsHeader->IntegrityCheck.Checksum.File);
+
+  HeaderChecksum = (UINT8)(HeaderChecksum - FfsHeader->State - FfsHeader->IntegrityCheck.Checksum.File);
 
   if (HeaderChecksum == 0) {
     return TRUE;
@@ -146,8 +134,6 @@ VerifyHeaderChecksum (
     return FALSE;
   }
 }
-
-
 
 /**
   Check if it's a valid FFS file header.
@@ -170,22 +156,21 @@ IsValidFfsHeader (
   *FileState = GetFileState (ErasePolarity, FfsHeader);
 
   switch (*FileState) {
-  case EFI_FILE_HEADER_VALID:
-  case EFI_FILE_DATA_VALID:
-  case EFI_FILE_MARKED_FOR_UPDATE:
-  case EFI_FILE_DELETED:
-    //
-    // Here we need to verify header checksum
-    //
-    return VerifyHeaderChecksum (FfsHeader);
+    case EFI_FILE_HEADER_VALID:
+    case EFI_FILE_DATA_VALID:
+    case EFI_FILE_MARKED_FOR_UPDATE:
+    case EFI_FILE_DELETED:
+      //
+      // Here we need to verify header checksum
+      //
+      return VerifyHeaderChecksum (FfsHeader);
 
-  case EFI_FILE_HEADER_CONSTRUCTION:
-  case EFI_FILE_HEADER_INVALID:
-  default:
-    return FALSE;
+    case EFI_FILE_HEADER_CONSTRUCTION:
+    case EFI_FILE_HEADER_INVALID:
+    default:
+      return FALSE;
   }
 }
-
 
 /**
   Check if it's a valid FFS file.
@@ -209,25 +194,23 @@ IsValidFfsFile (
 
   FileState = GetFileState (ErasePolarity, FfsHeader);
   switch (FileState) {
-
-  case EFI_FILE_DELETED:
-  case EFI_FILE_DATA_VALID:
-  case EFI_FILE_MARKED_FOR_UPDATE:
-    DataCheckSum = FFS_FIXED_CHECKSUM;
-    if ((FfsHeader->Attributes & FFS_ATTRIB_CHECKSUM) == FFS_ATTRIB_CHECKSUM) {
-      if (IS_FFS_FILE2 (FfsHeader)) {
-        DataCheckSum = CalculateCheckSum8 ((CONST UINT8 *) FfsHeader + sizeof (EFI_FFS_FILE_HEADER2), FFS_FILE2_SIZE (FfsHeader) - sizeof(EFI_FFS_FILE_HEADER2));
-      } else {
-        DataCheckSum = CalculateCheckSum8 ((CONST UINT8 *) FfsHeader + sizeof (EFI_FFS_FILE_HEADER), FFS_FILE_SIZE (FfsHeader) - sizeof(EFI_FFS_FILE_HEADER));
+    case EFI_FILE_DELETED:
+    case EFI_FILE_DATA_VALID:
+    case EFI_FILE_MARKED_FOR_UPDATE:
+      DataCheckSum = FFS_FIXED_CHECKSUM;
+      if ((FfsHeader->Attributes & FFS_ATTRIB_CHECKSUM) == FFS_ATTRIB_CHECKSUM) {
+        if (IS_FFS_FILE2 (FfsHeader)) {
+          DataCheckSum = CalculateCheckSum8 ((CONST UINT8 *)FfsHeader + sizeof (EFI_FFS_FILE_HEADER2), FFS_FILE2_SIZE (FfsHeader) - sizeof (EFI_FFS_FILE_HEADER2));
+        } else {
+          DataCheckSum = CalculateCheckSum8 ((CONST UINT8 *)FfsHeader + sizeof (EFI_FFS_FILE_HEADER), FFS_FILE_SIZE (FfsHeader) - sizeof (EFI_FFS_FILE_HEADER));
+        }
       }
-    }
-    if (FfsHeader->IntegrityCheck.Checksum.File == DataCheckSum) {
-      return TRUE;
-    }
 
-  default:
-    return FALSE;
+      if (FfsHeader->IntegrityCheck.Checksum.File == DataCheckSum) {
+        return TRUE;
+      }
+
+    default:
+      return FALSE;
   }
 }
-
-

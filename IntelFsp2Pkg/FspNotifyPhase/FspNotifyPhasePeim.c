@@ -1,14 +1,8 @@
 /** @file
   Source file for FSP notify phase PEI module
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2016 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "FspNotifyPhasePeim.h"
@@ -16,58 +10,64 @@
 /**
 
    This function waits for FSP notify.
-    
+
    @param This          Entry point for DXE IPL PPI.
    @param PeiServices   General purpose services available to every PEIM.
    @param HobList       Address to the Pei HOB list.
-   
+
    @return EFI_SUCCESS              This function never returns.
 
 **/
 EFI_STATUS
 EFIAPI
 WaitForNotify (
-  IN CONST EFI_DXE_IPL_PPI *This,
-  IN EFI_PEI_SERVICES      **PeiServices,
-  IN EFI_PEI_HOB_POINTERS  HobList
+  IN CONST EFI_DXE_IPL_PPI  *This,
+  IN EFI_PEI_SERVICES       **PeiServices,
+  IN EFI_PEI_HOB_POINTERS   HobList
   );
 
-CONST EFI_DXE_IPL_PPI mDxeIplPpi = {
+CONST EFI_DXE_IPL_PPI  mDxeIplPpi = {
   WaitForNotify
 };
 
-CONST EFI_PEI_PPI_DESCRIPTOR mInstallDxeIplPpi = {
+CONST EFI_PEI_PPI_DESCRIPTOR  mInstallDxeIplPpi = {
   EFI_PEI_PPI_DESCRIPTOR_PPI,
   &gEfiDxeIplPpiGuid,
-  (VOID *) &mDxeIplPpi
+  (VOID *)&mDxeIplPpi
 };
 
-CONST EFI_PEI_PPI_DESCRIPTOR gEndOfPeiSignalPpi = {
+CONST EFI_PEI_PPI_DESCRIPTOR  gEndOfPeiSignalPpi = {
   (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEfiEndOfPeiSignalPpiGuid,
+  NULL
+};
+
+CONST EFI_PEI_PPI_DESCRIPTOR  gFspReadyForNotifyPhasePpi = {
+  (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
+  &gFspReadyForNotifyPhasePpiGuid,
   NULL
 };
 
 /**
 
    This function waits for FSP notify.
-    
+
    @param This          Entry point for DXE IPL PPI.
    @param PeiServices   General purpose services available to every PEIM.
    @param HobList       Address to the Pei HOB list.
-   
+
    @return EFI_SUCCESS              This function never returns.
 
 **/
 EFI_STATUS
 EFIAPI
 WaitForNotify (
-  IN CONST EFI_DXE_IPL_PPI *This,
-  IN EFI_PEI_SERVICES      **PeiServices,
-  IN EFI_PEI_HOB_POINTERS  HobList
+  IN CONST EFI_DXE_IPL_PPI  *This,
+  IN EFI_PEI_SERVICES       **PeiServices,
+  IN EFI_PEI_HOB_POINTERS   HobList
   )
 {
-  EFI_STATUS   Status;
+  EFI_STATUS  Status;
 
   DEBUG ((DEBUG_INFO | DEBUG_INIT, "FSP HOB is located at 0x%08X\n", HobList));
 
@@ -81,7 +81,18 @@ WaitForNotify (
   // Give control back to BootLoader after FspSiliconInit
   //
   DEBUG ((DEBUG_INFO | DEBUG_INIT, "FSP is waiting for NOTIFY\n"));
-  FspSiliconInitDone ();
+  FspSiliconInitDone2 (EFI_SUCCESS);
+
+  //
+  // Fsp notify phase check
+  //
+  DEBUG ((DEBUG_INFO | DEBUG_INIT, "Fsp Notify Phase called ...\n"));
+  ASSERT (GetFspApiCallingIndex () == NotifyPhaseApiIndex);
+
+  while (GetFspApiCallingIndex () != NotifyPhaseApiIndex) {
+    SetFspApiReturnStatus (EFI_UNSUPPORTED);
+    Pei2LoaderSwitchStack ();
+  }
 
   //
   // BootLoader called FSP again through NotifyPhase
@@ -110,33 +121,39 @@ WaitForNotify (
   @retval     EFI_OUT_OF_RESOURCES Insufficient resources to create database
 **/
 EFI_STATUS
+EFIAPI
 FspNotifyPhasePeimEntryPoint (
-  IN       EFI_PEI_FILE_HANDLE    FileHandle,
-  IN CONST EFI_PEI_SERVICES       **PeiServices
+  IN       EFI_PEI_FILE_HANDLE  FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
-  EFI_STATUS                      Status;
-  VOID                            *OldDxeIplPpi;
-  EFI_PEI_PPI_DESCRIPTOR          *OldDescriptor;
+  EFI_STATUS              Status;
+  VOID                    *OldDxeIplPpi;
+  EFI_PEI_PPI_DESCRIPTOR  *OldDescriptor;
 
   DEBUG ((DEBUG_INFO | DEBUG_INIT, "The entry of FspNotificationPeim\n"));
 
-  //
-  // Locate old DXE IPL PPI
-  //
-  Status = PeiServicesLocatePpi (
-            &gEfiDxeIplPpiGuid,
-            0,
-            &OldDescriptor,
-            &OldDxeIplPpi
-            );
-  ASSERT_EFI_ERROR (Status);
+  if (GetFspGlobalDataPointer ()->FspMode == FSP_IN_API_MODE) {
+    //
+    // Locate old DXE IPL PPI
+    //
+    Status = PeiServicesLocatePpi (
+               &gEfiDxeIplPpiGuid,
+               0,
+               &OldDescriptor,
+               &OldDxeIplPpi
+               );
+    ASSERT_EFI_ERROR (Status);
 
-  //
-  // Re-install the DXE IPL PPI to wait for notify
-  //
-  Status = PeiServicesReInstallPpi (OldDescriptor, &mInstallDxeIplPpi);
-  ASSERT_EFI_ERROR (Status);
+    //
+    // Re-install the DXE IPL PPI to wait for notify
+    //
+    Status = PeiServicesReInstallPpi (OldDescriptor, &mInstallDxeIplPpi);
+    ASSERT_EFI_ERROR (Status);
+  } else {
+    Status = PeiServicesInstallPpi (&gFspReadyForNotifyPhasePpi);
+    ASSERT_EFI_ERROR (Status);
+  }
 
   return EFI_SUCCESS;
 }

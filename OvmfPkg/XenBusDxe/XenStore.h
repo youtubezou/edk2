@@ -9,27 +9,10 @@
   This file may be distributed separately from the Linux kernel, or
   incorporated into other software packages, subject to the following license:
 
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this source file (the "Software"), to deal in the Software without
-  restriction, including without limitation the rights to use, copy, modify,
-  merge, publish, distribute, sublicense, and/or sell copies of the Software,
-  and to permit persons to whom the Software is furnished to do so, subject to
-  the following conditions:
-
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-  IN THE SOFTWARE.
+  SPDX-License-Identifier: MIT
 **/
 
-#ifndef _XEN_XENSTORE_XENSTOREVAR_H
-#define _XEN_XENSTORE_XENSTOREVAR_H
+#pragma once
 
 #include "XenBusDxe.h"
 
@@ -54,11 +37,11 @@ typedef struct _XENSTORE_WATCH XENSTORE_WATCH;
 **/
 XENSTORE_STATUS
 XenStoreListDirectory (
-  IN  CONST XENSTORE_TRANSACTION *Transaction,
-  IN  CONST CHAR8           *DirectoryPath,
-  IN  CONST CHAR8           *Node,
-  OUT UINT32                *DirectoryCountPtr,
-  OUT CONST CHAR8           ***DirectoryListPtr
+  IN  CONST XENSTORE_TRANSACTION  *Transaction,
+  IN  CONST CHAR8                 *DirectoryPath,
+  IN  CONST CHAR8                 *Node,
+  OUT UINT32                      *DirectoryCountPtr,
+  OUT CONST CHAR8                 ***DirectoryListPtr
   );
 
 /**
@@ -74,9 +57,9 @@ XenStoreListDirectory (
 **/
 BOOLEAN
 XenStorePathExists (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8 *Directory,
-  IN CONST CHAR8 *Node
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *Directory,
+  IN CONST CHAR8                 *Node
   );
 
 /**
@@ -98,11 +81,11 @@ XenStorePathExists (
 **/
 XENSTORE_STATUS
 XenStoreRead (
-  IN  CONST XENSTORE_TRANSACTION *Transaction,
-  IN  CONST CHAR8             *DirectoryPath,
-  IN  CONST CHAR8             *Node,
-  OUT UINT32                  *LenPtr OPTIONAL,
-  OUT VOID                    **Result
+  IN  CONST XENSTORE_TRANSACTION  *Transaction,
+  IN  CONST CHAR8                 *DirectoryPath,
+  IN  CONST CHAR8                 *Node,
+  OUT UINT32                      *LenPtr OPTIONAL,
+  OUT VOID                        **Result
   );
 
 /**
@@ -118,10 +101,10 @@ XenStoreRead (
 **/
 XENSTORE_STATUS
 XenStoreWrite (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8           *DirectoryPath,
-  IN CONST CHAR8           *Node,
-  IN CONST CHAR8           *Str
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *DirectoryPath,
+  IN CONST CHAR8                 *Node,
+  IN CONST CHAR8                 *Str
   );
 
 /**
@@ -136,9 +119,9 @@ XenStoreWrite (
 **/
 XENSTORE_STATUS
 XenStoreRemove (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8            *DirectoryPath,
-  IN CONST CHAR8            *Node
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *DirectoryPath,
+  IN CONST CHAR8                 *Node
   );
 
 /**
@@ -155,7 +138,7 @@ XenStoreRemove (
 **/
 XENSTORE_STATUS
 XenStoreTransactionStart (
-  OUT XENSTORE_TRANSACTION *Transaction
+  OUT XENSTORE_TRANSACTION  *Transaction
   );
 
 /**
@@ -170,8 +153,8 @@ XenStoreTransactionStart (
 **/
 XENSTORE_STATUS
 XenStoreTransactionEnd (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN BOOLEAN                Abort
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN BOOLEAN                     Abort
   );
 
 /**
@@ -189,10 +172,10 @@ XenStoreTransactionEnd (
 XENSTORE_STATUS
 EFIAPI
 XenStoreSPrint (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8            *DirectoryPath,
-  IN CONST CHAR8            *Node,
-  IN CONST CHAR8            *FormatString,
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *DirectoryPath,
+  IN CONST CHAR8                 *Node,
+  IN CONST CHAR8                 *FormatString,
   ...
   );
 
@@ -209,12 +192,13 @@ XenStoreSPrint (
            indicating the type of write failure.
 **/
 XENSTORE_STATUS
+EFIAPI
 XenStoreVSPrint (
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8           *DirectoryPath,
-  IN CONST CHAR8           *Node,
-  IN CONST CHAR8           *FormatString,
-  IN VA_LIST               Marker
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *DirectoryPath,
+  IN CONST CHAR8                 *Node,
+  IN CONST CHAR8                 *FormatString,
+  IN VA_LIST                     Marker
   );
 
 /**
@@ -247,7 +231,7 @@ XenStoreRegisterWatch (
 **/
 VOID
 XenStoreUnregisterWatch (
-  IN XENSTORE_WATCH *Watch
+  IN XENSTORE_WATCH  *Watch
   );
 
 /**
@@ -255,17 +239,16 @@ XenStoreUnregisterWatch (
   is the NUL string, the returned value contains the path string
   <DirectoryPath>.
 
-  @param DirectoryPath	The NUL terminated directory prefix for new path.
+  @param DirectoryPath  The NUL terminated directory prefix for new path.
   @param Node           The NUL terminated basename for the new path.
 
   @return  A buffer containing the joined path.
  */
 CHAR8 *
 XenStoreJoin (
-  IN CONST CHAR8 *DirectoryPath,
-  IN CONST CHAR8 *Node
+  IN CONST CHAR8  *DirectoryPath,
+  IN CONST CHAR8  *Node
   );
-
 
 /**
   Initialize the XenStore states and rings.
@@ -276,7 +259,7 @@ XenStoreJoin (
 **/
 EFI_STATUS
 XenStoreInit (
-  XENBUS_DEVICE *Dev
+  XENBUS_DEVICE  *Dev
   );
 
 /**
@@ -286,9 +269,8 @@ XenStoreInit (
 **/
 VOID
 XenStoreDeinit (
-  IN XENBUS_DEVICE *Dev
+  IN XENBUS_DEVICE  *Dev
   );
-
 
 //
 // XENBUS protocol
@@ -297,34 +279,34 @@ XenStoreDeinit (
 XENSTORE_STATUS
 EFIAPI
 XenBusWaitForWatch (
-  IN XENBUS_PROTOCOL *This,
-  IN VOID *Token
+  IN XENBUS_PROTOCOL  *This,
+  IN VOID             *Token
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusXenStoreRead (
-  IN  XENBUS_PROTOCOL       *This,
-  IN  CONST XENSTORE_TRANSACTION *Transaction,
-  IN  CONST CHAR8           *Node,
-  OUT VOID                  **Value
+  IN  XENBUS_PROTOCOL             *This,
+  IN  CONST XENSTORE_TRANSACTION  *Transaction,
+  IN  CONST CHAR8                 *Node,
+  OUT VOID                        **Value
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusXenStoreBackendRead (
-  IN  XENBUS_PROTOCOL       *This,
-  IN  CONST XENSTORE_TRANSACTION *Transaction,
-  IN  CONST CHAR8           *Node,
-  OUT VOID                  **Value
+  IN  XENBUS_PROTOCOL             *This,
+  IN  CONST XENSTORE_TRANSACTION  *Transaction,
+  IN  CONST CHAR8                 *Node,
+  OUT VOID                        **Value
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusXenStoreRemove (
-  IN XENBUS_PROTOCOL        *This,
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8            *Node
+  IN XENBUS_PROTOCOL             *This,
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *Node
   );
 
 XENSTORE_STATUS
@@ -337,36 +319,36 @@ XenBusXenStoreTransactionStart (
 XENSTORE_STATUS
 EFIAPI
 XenBusXenStoreTransactionEnd (
-  IN XENBUS_PROTOCOL        *This,
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN BOOLEAN                Abort
+  IN XENBUS_PROTOCOL             *This,
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN BOOLEAN                     Abort
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusXenStoreSPrint (
-  IN XENBUS_PROTOCOL        *This,
-  IN CONST XENSTORE_TRANSACTION *Transaction,
-  IN CONST CHAR8            *DirectoryPath,
-  IN CONST CHAR8            *Node,
-  IN CONST CHAR8            *FormatString,
+  IN XENBUS_PROTOCOL             *This,
+  IN CONST XENSTORE_TRANSACTION  *Transaction,
+  IN CONST CHAR8                 *DirectoryPath,
+  IN CONST CHAR8                 *Node,
+  IN CONST CHAR8                 *FormatString,
   ...
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusRegisterWatch (
-  IN  XENBUS_PROTOCOL *This,
-  IN  CONST CHAR8     *Node,
-  OUT VOID            **Token
+  IN  XENBUS_PROTOCOL  *This,
+  IN  CONST CHAR8      *Node,
+  OUT VOID             **Token
   );
 
 XENSTORE_STATUS
 EFIAPI
 XenBusRegisterWatchBackend (
-  IN  XENBUS_PROTOCOL *This,
-  IN  CONST CHAR8     *Node,
-  OUT VOID            **Token
+  IN  XENBUS_PROTOCOL  *This,
+  IN  CONST CHAR8      *Node,
+  OUT VOID             **Token
   );
 
 VOID
@@ -375,5 +357,3 @@ XenBusUnregisterWatch (
   IN XENBUS_PROTOCOL  *This,
   IN VOID             *Token
   );
-
-#endif /* _XEN_XENSTORE_XENSTOREVAR_H */

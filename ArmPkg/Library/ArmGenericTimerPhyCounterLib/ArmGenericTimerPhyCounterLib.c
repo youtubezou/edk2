@@ -3,18 +3,12 @@
   Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
   Copyright (c) 2014, Linaro Ltd. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Library/ArmGenericTimerCounterLib.h>
-#include <Library/ArmArchTimer.h>
+#include <Library/ArmLib.h>
 
 VOID
 EFIAPI
@@ -22,11 +16,19 @@ ArmGenericTimerEnableTimer (
   VOID
   )
 {
-  UINTN TimerCtrlReg;
+  UINTN  TimerCtrlReg;
 
-  ArmArchTimerReadReg (CntpCtl, (VOID *)&TimerCtrlReg);
+  TimerCtrlReg  = ArmReadCntpCtl ();
   TimerCtrlReg |= ARM_ARCH_TIMER_ENABLE;
-  ArmArchTimerWriteReg (CntpCtl, (VOID *)&TimerCtrlReg);
+  ArmWriteCntpCtl (TimerCtrlReg);
+}
+
+VOID
+EFIAPI
+ArmGenericTimerReenableTimer (
+  VOID
+  )
+{
 }
 
 VOID
@@ -35,11 +37,11 @@ ArmGenericTimerDisableTimer (
   VOID
   )
 {
-  UINTN TimerCtrlReg;
+  UINTN  TimerCtrlReg;
 
-  ArmArchTimerReadReg (CntpCtl, (VOID *)&TimerCtrlReg);
+  TimerCtrlReg  = ArmReadCntpCtl ();
   TimerCtrlReg &= ~ARM_ARCH_TIMER_ENABLE;
-  ArmArchTimerWriteReg (CntpCtl, (VOID *)&TimerCtrlReg);
+  ArmWriteCntpCtl (TimerCtrlReg);
 }
 
 VOID
@@ -48,7 +50,7 @@ ArmGenericTimerSetTimerFreq (
   IN   UINTN  FreqInHz
   )
 {
-  ArmArchTimerWriteReg (CntFrq, (VOID *)&FreqInHz);
+  ArmWriteCntFrq (FreqInHz);
 }
 
 UINTN
@@ -57,9 +59,7 @@ ArmGenericTimerGetTimerFreq (
   VOID
   )
 {
-  UINTN ArchTimerFreq = 0;
-  ArmArchTimerReadReg (CntFrq, (VOID *)&ArchTimerFreq);
-  return ArchTimerFreq;
+  return ArmReadCntFrq ();
 }
 
 UINTN
@@ -68,20 +68,16 @@ ArmGenericTimerGetTimerVal (
   VOID
   )
 {
-  UINTN ArchTimerValue;
-  ArmArchTimerReadReg (CntpTval, (VOID *)&ArchTimerValue);
-
-  return ArchTimerValue;
+  return ArmReadCntpTval ();
 }
-
 
 VOID
 EFIAPI
 ArmGenericTimerSetTimerVal (
-  IN   UINTN   Value
+  IN   UINTN  Value
   )
 {
-  ArmArchTimerWriteReg (CntpTval, (VOID *)&Value);
+  ArmWriteCntpTval (Value);
 }
 
 UINT64
@@ -90,10 +86,7 @@ ArmGenericTimerGetSystemCount (
   VOID
   )
 {
-  UINT64 SystemCount;
-  ArmArchTimerReadReg (CntPct, (VOID *)&SystemCount);
-
-  return SystemCount;
+  return ArmReadCntPct ();
 }
 
 UINTN
@@ -102,19 +95,16 @@ ArmGenericTimerGetTimerCtrlReg (
   VOID
   )
 {
-  UINTN  Value;
-  ArmArchTimerReadReg (CntpCtl, (VOID *)&Value);
-
-  return Value;
+  return ArmReadCntpCtl ();
 }
 
 VOID
 EFIAPI
 ArmGenericTimerSetTimerCtrlReg (
-  UINTN Value
+  UINTN  Value
   )
 {
-  ArmArchTimerWriteReg (CntpCtl, (VOID *)&Value);
+  ArmWriteCntpCtl (Value);
 }
 
 UINT64
@@ -123,17 +113,14 @@ ArmGenericTimerGetCompareVal (
   VOID
   )
 {
-  UINT64  Value;
-  ArmArchTimerReadReg (CntpCval, (VOID *)&Value);
-
-  return Value;
+  return ArmReadCntpCval ();
 }
 
 VOID
 EFIAPI
 ArmGenericTimerSetCompareVal (
-  IN   UINT64   Value
+  IN   UINT64  Value
   )
 {
-  ArmArchTimerWriteReg (CntpCval, (VOID *)&Value);
+  ArmWriteCntpCval (Value);
 }

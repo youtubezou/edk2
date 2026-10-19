@@ -2,16 +2,10 @@
 PEIM to produce gPeiUsb2HostControllerPpiGuid based on gPeiUsbControllerPpiGuid
 which is used to enable recovery function from USB Drivers.
 
-Copyright (c) 2010, Intel Corporation. All rights reserved.<BR>
-  
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (c) Microsoft Corporation.<BR>
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,7 +14,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 /**
   Delete a single asynchronous interrupt transfer for
   the device and endpoint.
-  
+
   @param  Ehc         The EHCI device.
   @param  Data        Current data not associated with a QTD.
   @param  DataLen     The length of the data.
@@ -33,19 +27,19 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 PEI_EHC_QTD *
 EhcCreateQtd (
-  IN PEI_USB2_HC_DEV      *Ehc,
-  IN UINT8                *Data,
-  IN UINTN                DataLen,
-  IN UINT8                PktId,
-  IN UINT8                Toggle,
-  IN UINTN                MaxPacket
+  IN PEI_USB2_HC_DEV  *Ehc,
+  IN UINT8            *Data,
+  IN UINTN            DataLen,
+  IN UINT8            PktId,
+  IN UINT8            Toggle,
+  IN UINTN            MaxPacket
   )
 {
-  PEI_EHC_QTD             *Qtd;
-  QTD_HW                  *QtdHw;
-  UINTN                   Index;
-  UINTN                   Len;
-  UINTN                   ThisBufLen;
+  PEI_EHC_QTD  *Qtd;
+  QTD_HW       *QtdHw;
+  UINTN        Index;
+  UINTN        Len;
+  UINTN        ThisBufLen;
 
   ASSERT (Ehc != NULL);
 
@@ -55,9 +49,9 @@ EhcCreateQtd (
     return NULL;
   }
 
-  Qtd->Signature    = EHC_QTD_SIG;
-  Qtd->Data         = Data;
-  Qtd->DataLen      = 0;
+  Qtd->Signature = EHC_QTD_SIG;
+  Qtd->Data      = Data;
+  Qtd->DataLen   = 0;
 
   InitializeListHead (&Qtd->QtdList);
 
@@ -83,20 +77,20 @@ EhcCreateQtd (
       // compute the offset and clear Reserved fields. This is already
       // done in the data point.
       //
-      QtdHw->Page[Index]      = EHC_LOW_32BIT (Data);
-      QtdHw->PageHigh[Index]  = EHC_HIGH_32BIT (Data);
+      QtdHw->Page[Index]     = EHC_LOW_32BIT (Data);
+      QtdHw->PageHigh[Index] = EHC_HIGH_32BIT (Data);
 
-      ThisBufLen              = QTD_BUF_LEN - (EHC_LOW_32BIT (Data) & QTD_BUF_MASK);
+      ThisBufLen = QTD_BUF_LEN - (EHC_LOW_32BIT (Data) & QTD_BUF_MASK);
 
       if (Len + ThisBufLen >= DataLen) {
         Len = DataLen;
         break;
       }
 
-      Len += ThisBufLen;
+      Len  += ThisBufLen;
       Data += ThisBufLen;
     }
-    
+
     //
     // Need to fix the last pointer if the Qtd can't hold all the
     // user's data to make sure that the length is in the unit of
@@ -107,7 +101,7 @@ EhcCreateQtd (
       Len = Len - Len % MaxPacket;
     }
 
-    QtdHw->TotalBytes = (UINT32) Len;
+    QtdHw->TotalBytes = (UINT32)Len;
     Qtd->DataLen      = Len;
   }
 
@@ -120,15 +114,15 @@ EhcCreateQtd (
     1. SplitXState in the Status field.
     2. Microframe S-mask.
     3. Microframe C-mask.
-  
+
   @param  Ep    The queue head's related endpoint.
   @param  QhHw  The queue head to initialize.
 
 **/
 VOID
 EhcInitIntQh (
-  IN USB_ENDPOINT         *Ep,
-  IN QH_HW                *QhHw
+  IN USB_ENDPOINT  *Ep,
+  IN QH_HW         *QhHw
   )
 {
   //
@@ -140,9 +134,9 @@ EhcInitIntQh (
   //
   if (Ep->DevSpeed == EFI_USB_SPEED_HIGH) {
     QhHw->SMask = QH_MICROFRAME_0;
-    return ;
+    return;
   }
-  
+
   //
   // For low/full speed device, the transfer must go through
   // the split transaction. Need to update three fields
@@ -160,7 +154,7 @@ EhcInitIntQh (
 
 /**
   Allocate and initialize a EHCI queue head.
-  
+
   @param  Ehci      The EHCI device.
   @param  Ep        The endpoint to create queue head for.
 
@@ -169,12 +163,12 @@ EhcInitIntQh (
 **/
 PEI_EHC_QH *
 EhcCreateQh (
-  IN PEI_USB2_HC_DEV      *Ehci,
-  IN USB_ENDPOINT         *Ep
+  IN PEI_USB2_HC_DEV  *Ehci,
+  IN USB_ENDPOINT     *Ep
   )
 {
-  PEI_EHC_QH              *Qh;
-  QH_HW                   *QhHw;
+  PEI_EHC_QH  *Qh;
+  QH_HW       *QhHw;
 
   Qh = UsbHcAllocateMem (Ehci, Ehci->MemPool, sizeof (PEI_EHC_QH));
 
@@ -182,62 +176,63 @@ EhcCreateQh (
     return NULL;
   }
 
-  Qh->Signature       = EHC_QH_SIG;
-  Qh->NextQh          = NULL;
-  Qh->Interval        = Ep->PollRate;
-  
+  Qh->Signature = EHC_QH_SIG;
+  Qh->NextQh    = NULL;
+  Qh->Interval  = Ep->PollRate;
+
   InitializeListHead (&Qh->Qtds);
 
-  QhHw                = &Qh->QhHw;
-  QhHw->HorizonLink   = QH_LINK (NULL, 0, TRUE);
-  QhHw->DeviceAddr    = Ep->DevAddr;
-  QhHw->Inactive      = 0;
-  QhHw->EpNum         = Ep->EpAddr;
-  QhHw->EpSpeed       = Ep->DevSpeed;
-  QhHw->DtCtrl        = 0;
-  QhHw->ReclaimHead   = 0;
-  QhHw->MaxPacketLen  = (UINT32) Ep->MaxPacket;
-  QhHw->CtrlEp        = 0;
-  QhHw->NakReload     = QH_NAK_RELOAD;
-  QhHw->HubAddr       = Ep->HubAddr;
-  QhHw->PortNum       = Ep->HubPort;
-  QhHw->Multiplier    = 1;
-  QhHw->DataToggle    = Ep->Toggle;
+  QhHw               = &Qh->QhHw;
+  QhHw->HorizonLink  = QH_LINK (NULL, 0, TRUE);
+  QhHw->DeviceAddr   = Ep->DevAddr;
+  QhHw->Inactive     = 0;
+  QhHw->EpNum        = Ep->EpAddr;
+  QhHw->EpSpeed      = Ep->DevSpeed;
+  QhHw->DtCtrl       = 0;
+  QhHw->ReclaimHead  = 0;
+  QhHw->MaxPacketLen = (UINT32)Ep->MaxPacket;
+  QhHw->CtrlEp       = 0;
+  QhHw->NakReload    = QH_NAK_RELOAD;
+  QhHw->HubAddr      = Ep->HubAddr;
+  QhHw->PortNum      = Ep->HubPort;
+  QhHw->Multiplier   = 1;
+  QhHw->DataToggle   = Ep->Toggle;
 
   if (Ep->DevSpeed != EFI_USB_SPEED_HIGH) {
     QhHw->Status |= QTD_STAT_DO_SS;
   }
 
   switch (Ep->Type) {
-  case EHC_CTRL_TRANSFER:
-    //
-    // Special initialization for the control transfer:
-    // 1. Control transfer initialize data toggle from each QTD
-    // 2. Set the Control Endpoint Flag (C) for low/full speed endpoint.
-    //
-    QhHw->DtCtrl = 1;
+    case EHC_CTRL_TRANSFER:
+      //
+      // Special initialization for the control transfer:
+      // 1. Control transfer initialize data toggle from each QTD
+      // 2. Set the Control Endpoint Flag (C) for low/full speed endpoint.
+      //
+      QhHw->DtCtrl = 1;
 
-    if (Ep->DevSpeed != EFI_USB_SPEED_HIGH) {
-      QhHw->CtrlEp = 1;
-    }
-    break;
+      if (Ep->DevSpeed != EFI_USB_SPEED_HIGH) {
+        QhHw->CtrlEp = 1;
+      }
 
-  case EHC_INT_TRANSFER_ASYNC:
-  case EHC_INT_TRANSFER_SYNC:
-    //
-    // Special initialization for the interrupt transfer
-    // to set the S-Mask and C-Mask
-    //
-    QhHw->NakReload = 0;
-    EhcInitIntQh (Ep, QhHw);
-    break;
+      break;
 
-  case EHC_BULK_TRANSFER:
-    if ((Ep->DevSpeed == EFI_USB_SPEED_HIGH) && (Ep->Direction == EfiUsbDataOut)) {
-      QhHw->Status |= QTD_STAT_DO_PING;
-    }
+    case EHC_INT_TRANSFER_ASYNC:
+    case EHC_INT_TRANSFER_SYNC:
+      //
+      // Special initialization for the interrupt transfer
+      // to set the S-Mask and C-Mask
+      //
+      QhHw->NakReload = 0;
+      EhcInitIntQh (Ep, QhHw);
+      break;
 
-    break;
+    case EHC_BULK_TRANSFER:
+      if ((Ep->DevSpeed == EFI_USB_SPEED_HIGH) && (Ep->Direction == EfiUsbDataOut)) {
+        QhHw->Status |= QTD_STAT_DO_PING;
+      }
+
+      break;
   }
 
   return Qh;
@@ -250,7 +245,7 @@ EhcCreateQh (
   can't support high speed endpoint with a interval less
   than 8 microframe because interval is specified in
   the unit of ms (millisecond).
-  
+
   @param Interval       The interval to convert.
 
   @retval The converted interval.
@@ -258,15 +253,15 @@ EhcCreateQh (
 **/
 UINTN
 EhcConvertPollRate (
-  IN  UINTN               Interval
+  IN  UINTN  Interval
   )
 {
-  UINTN                   BitCount;
+  UINTN  BitCount;
 
   if (Interval == 0) {
     return 1;
   }
-  
+
   //
   // Find the index (1 based) of the highest non-zero bit
   //
@@ -282,55 +277,63 @@ EhcConvertPollRate (
 
 /**
   Free a list of QTDs.
-  
+
   @param  Ehc         The EHCI device.
   @param  Qtds        The list head of the QTD.
 
 **/
 VOID
 EhcFreeQtds (
-  IN PEI_USB2_HC_DEV      *Ehc,
-  IN EFI_LIST_ENTRY       *Qtds
+  IN PEI_USB2_HC_DEV  *Ehc,
+  IN EFI_LIST_ENTRY   *Qtds
   )
 {
-  EFI_LIST_ENTRY          *Entry;
-  EFI_LIST_ENTRY          *Next;
-  PEI_EHC_QTD             *Qtd;
+  EFI_LIST_ENTRY  *Entry;
+  EFI_LIST_ENTRY  *Next;
+  PEI_EHC_QTD     *Qtd;
 
-  EFI_LIST_FOR_EACH_SAFE (Entry, Next, Qtds) {
+  BASE_LIST_FOR_EACH_SAFE (Entry, Next, Qtds) {
     Qtd = EFI_LIST_CONTAINER (Entry, PEI_EHC_QTD, QtdList);
 
     RemoveEntryList (&Qtd->QtdList);
-    UsbHcFreeMem (Ehc->MemPool, Qtd, sizeof (PEI_EHC_QTD));
+    UsbHcFreeMem (Ehc, Ehc->MemPool, Qtd, sizeof (PEI_EHC_QTD));
   }
 }
 
 /**
   Free an allocated URB. It is possible for it to be partially inited.
-  
+
   @param  Ehc         The EHCI device.
   @param  Urb         The URB to free.
 
 **/
 VOID
 EhcFreeUrb (
-  IN PEI_USB2_HC_DEV      *Ehc,
-  IN PEI_URB              *Urb
+  IN PEI_USB2_HC_DEV  *Ehc,
+  IN PEI_URB          *Urb
   )
 {
+  if (Urb->RequestPhy != NULL) {
+    IoMmuUnmap (Ehc->IoMmu, Urb->RequestMap);
+  }
+
+  if (Urb->DataMap != NULL) {
+    IoMmuUnmap (Ehc->IoMmu, Urb->DataMap);
+  }
+
   if (Urb->Qh != NULL) {
     //
     // Ensure that this queue head has been unlinked from the
     // schedule data structures. Free all the associated QTDs
     //
     EhcFreeQtds (Ehc, &Urb->Qh->Qtds);
-    UsbHcFreeMem (Ehc->MemPool, Urb->Qh, sizeof (PEI_EHC_QH));
+    UsbHcFreeMem (Ehc, Ehc->MemPool, Urb->Qh, sizeof (PEI_EHC_QH));
   }
 }
 
 /**
   Create a list of QTDs for the URB.
-  
+
   @param  Ehc         The EHCI device.
   @param  Urb         The URB to create QTDs for.
 
@@ -340,20 +343,20 @@ EhcFreeUrb (
 **/
 EFI_STATUS
 EhcCreateQtds (
-  IN PEI_USB2_HC_DEV      *Ehc,
-  IN PEI_URB              *Urb
+  IN PEI_USB2_HC_DEV  *Ehc,
+  IN PEI_URB          *Urb
   )
 {
-  USB_ENDPOINT            *Ep;
-  PEI_EHC_QH              *Qh;
-  PEI_EHC_QTD             *Qtd;
-  PEI_EHC_QTD             *StatusQtd;
-  PEI_EHC_QTD             *NextQtd;
-  EFI_LIST_ENTRY          *Entry;
-  UINT32                  AlterNext;
-  UINT8                   Toggle;
-  UINTN                   Len;
-  UINT8                   Pid;
+  USB_ENDPOINT    *Ep;
+  PEI_EHC_QH      *Qh;
+  PEI_EHC_QTD     *Qtd;
+  PEI_EHC_QTD     *StatusQtd;
+  PEI_EHC_QTD     *NextQtd;
+  EFI_LIST_ENTRY  *Entry;
+  UINT32          AlterNext;
+  UINT8           Toggle;
+  UINTN           Len;
+  UINT8           Pid;
 
   ASSERT ((Urb != NULL) && (Urb->Qh != NULL));
 
@@ -372,7 +375,7 @@ EhcCreateQtds (
   if (Ep->Direction == EfiUsbDataIn) {
     AlterNext = QTD_LINK (Ehc->ShortReadStop, FALSE);
   }
-  
+
   //
   // Build the Setup and status packets for control transfer
   //
@@ -426,7 +429,7 @@ EhcCreateQtds (
   while (Len < Urb->DataLen) {
     Qtd = EhcCreateQtd (
             Ehc,
-            (UINT8 *) Urb->DataPhy + Len,
+            (UINT8 *)Urb->DataPhy + Len,
             Urb->DataLen - Len,
             Pid,
             Toggle,
@@ -444,12 +447,12 @@ EhcCreateQtds (
     // Switch the Toggle bit if odd number of packets are included in the QTD.
     //
     if (((Qtd->DataLen + Ep->MaxPacket - 1) / Ep->MaxPacket) % 2) {
-      Toggle = (UINT8) (1 - Toggle);
+      Toggle = (UINT8)(1 - Toggle);
     }
 
     Len += Qtd->DataLen;
   }
-  
+
   //
   // Insert the status packet for control transfer
   //
@@ -460,7 +463,7 @@ EhcCreateQtds (
   //
   // OK, all the QTDs needed are created. Now, fix the NextQtd point
   //
-  EFI_LIST_FOR_EACH (Entry, &Qh->Qtds) {
+  BASE_LIST_FOR_EACH (Entry, &Qh->Qtds) {
     Qtd = EFI_LIST_CONTAINER (Entry, PEI_EHC_QTD, QtdList);
 
     //
@@ -470,15 +473,15 @@ EhcCreateQtds (
       break;
     }
 
-    NextQtd             = EFI_LIST_CONTAINER (Entry->ForwardLink, PEI_EHC_QTD, QtdList);
-    Qtd->QtdHw.NextQtd  = QTD_LINK (NextQtd, FALSE);
+    NextQtd            = EFI_LIST_CONTAINER (Entry->ForwardLink, PEI_EHC_QTD, QtdList);
+    Qtd->QtdHw.NextQtd = QTD_LINK (NextQtd, FALSE);
   }
 
   //
   // Link the QTDs to the queue head
   //
-  NextQtd           = EFI_LIST_CONTAINER (Qh->Qtds.ForwardLink, PEI_EHC_QTD, QtdList);
-  Qh->QhHw.NextQtd  = QTD_LINK (NextQtd, FALSE);
+  NextQtd          = EFI_LIST_CONTAINER (Qh->Qtds.ForwardLink, PEI_EHC_QTD, QtdList);
+  Qh->QhHw.NextQtd = QTD_LINK (NextQtd, FALSE);
   return EFI_SUCCESS;
 
 ON_ERROR:
@@ -488,7 +491,7 @@ ON_ERROR:
 
 /**
   Create a new URB and its associated QTD.
-  
+
   @param  Ehc               The EHCI device.
   @param  DevAddr           The device address.
   @param  EpAddr            Endpoint addrress & its direction.
@@ -509,91 +512,106 @@ ON_ERROR:
 **/
 PEI_URB *
 EhcCreateUrb (
-  IN PEI_USB2_HC_DEV                    *Ehc,
-  IN UINT8                              DevAddr,
-  IN UINT8                              EpAddr,  
-  IN UINT8                              DevSpeed,
-  IN UINT8                              Toggle,
-  IN UINTN                              MaxPacket,
-  IN EFI_USB2_HC_TRANSACTION_TRANSLATOR *Hub,
-  IN UINTN                              Type,
-  IN EFI_USB_DEVICE_REQUEST             *Request,
-  IN VOID                               *Data,
-  IN UINTN                              DataLen,
-  IN EFI_ASYNC_USB_TRANSFER_CALLBACK    Callback,
-  IN VOID                               *Context,
-  IN UINTN                              Interval
+  IN PEI_USB2_HC_DEV                     *Ehc,
+  IN UINT8                               DevAddr,
+  IN UINT8                               EpAddr,
+  IN UINT8                               DevSpeed,
+  IN UINT8                               Toggle,
+  IN UINTN                               MaxPacket,
+  IN EFI_USB2_HC_TRANSACTION_TRANSLATOR  *Hub,
+  IN UINTN                               Type,
+  IN EFI_USB_DEVICE_REQUEST              *Request,
+  IN VOID                                *Data,
+  IN UINTN                               DataLen,
+  IN EFI_ASYNC_USB_TRANSFER_CALLBACK     Callback,
+  IN VOID                                *Context,
+  IN UINTN                               Interval
   )
 {
-  USB_ENDPOINT                  *Ep;
-  EFI_PHYSICAL_ADDRESS          PhyAddr;
-  EFI_STATUS                    Status;
-  UINTN                         Len;
-  PEI_URB                       *Urb;
-  VOID                          *Map;
+  USB_ENDPOINT           *Ep;
+  EFI_PHYSICAL_ADDRESS   PhyAddr;
+  EDKII_IOMMU_OPERATION  MapOp;
+  EFI_STATUS             Status;
+  UINTN                  Len;
+  PEI_URB                *Urb;
+  VOID                   *Map;
 
-    
   Map = NULL;
-  
-  Urb = Ehc->Urb;
-  Urb->Signature  = EHC_URB_SIG;
+
+  Urb            = Ehc->Urb;
+  Urb->Signature = EHC_URB_SIG;
   InitializeListHead (&Urb->UrbList);
 
-  Ep              = &Urb->Ep;
-  Ep->DevAddr     = DevAddr;
-  Ep->EpAddr      = (UINT8) (EpAddr & 0x0F);
-  Ep->Direction   = (((EpAddr & 0x80) != 0) ? EfiUsbDataIn : EfiUsbDataOut);
-  Ep->DevSpeed    = DevSpeed;
-  Ep->MaxPacket   = MaxPacket;
+  Ep            = &Urb->Ep;
+  Ep->DevAddr   = DevAddr;
+  Ep->EpAddr    = (UINT8)(EpAddr & 0x0F);
+  Ep->Direction = (((EpAddr & 0x80) != 0) ? EfiUsbDataIn : EfiUsbDataOut);
+  Ep->DevSpeed  = DevSpeed;
+  Ep->MaxPacket = MaxPacket;
 
-  Ep->HubAddr     = 0;
-  Ep->HubPort     = 0;
+  Ep->HubAddr = 0;
+  Ep->HubPort = 0;
 
   if (DevSpeed != EFI_USB_SPEED_HIGH) {
     ASSERT (Hub != NULL);
 
-    Ep->HubAddr   = Hub->TranslatorHubAddress;
-    Ep->HubPort   = Hub->TranslatorPortNumber;
+    Ep->HubAddr = Hub->TranslatorHubAddress;
+    Ep->HubPort = Hub->TranslatorPortNumber;
   }
 
-  Ep->Toggle      = Toggle;
-  Ep->Type        = Type;
-  Ep->PollRate    = EhcConvertPollRate (Interval);
+  Ep->Toggle   = Toggle;
+  Ep->Type     = Type;
+  Ep->PollRate = EhcConvertPollRate (Interval);
 
-  Urb->Request    = Request;
-  Urb->Data       = Data;
-  Urb->DataLen    = DataLen;
-  Urb->Callback   = Callback;
-  Urb->Context    = Context;
-  Urb->Qh         = EhcCreateQh (Ehc, &Urb->Ep);
+  Urb->Request  = Request;
+  Urb->Data     = Data;
+  Urb->DataLen  = DataLen;
+  Urb->Callback = Callback;
+  Urb->Context  = Context;
+  Urb->Qh       = EhcCreateQh (Ehc, &Urb->Ep);
 
   if (Urb->Qh == NULL) {
     goto ON_ERROR;
   }
-  
+
+  Urb->RequestPhy = NULL;
+  Urb->RequestMap = NULL;
+  Urb->DataPhy    = NULL;
+  Urb->DataMap    = NULL;
+
   //
   // Map the request and user data
   //
   if (Request != NULL) {
-    Len     = sizeof (EFI_USB_DEVICE_REQUEST);
-    PhyAddr =  (EFI_PHYSICAL_ADDRESS) (UINTN) Request ;
-    if ( (Len != sizeof (EFI_USB_DEVICE_REQUEST))) {
+    Len    = sizeof (EFI_USB_DEVICE_REQUEST);
+    MapOp  = EdkiiIoMmuOperationBusMasterRead;
+    Status = IoMmuMap (Ehc->IoMmu, MapOp, Request, &Len, &PhyAddr, &Map);
+
+    if (EFI_ERROR (Status) || (Len != sizeof (EFI_USB_DEVICE_REQUEST))) {
       goto ON_ERROR;
     }
 
-    Urb->RequestPhy = (VOID *) ((UINTN) PhyAddr);
+    Urb->RequestPhy = (VOID *)((UINTN)PhyAddr);
     Urb->RequestMap = Map;
   }
 
   if (Data != NULL) {
-    Len      = DataLen;
-    PhyAddr  =  (EFI_PHYSICAL_ADDRESS) (UINTN) Data ;
-    if ( (Len != DataLen)) {
+    Len = DataLen;
+
+    if (Ep->Direction == EfiUsbDataIn) {
+      MapOp = EdkiiIoMmuOperationBusMasterWrite;
+    } else {
+      MapOp = EdkiiIoMmuOperationBusMasterRead;
+    }
+
+    Status = IoMmuMap (Ehc->IoMmu, MapOp, Data, &Len, &PhyAddr, &Map);
+
+    if (EFI_ERROR (Status) || (Len != DataLen)) {
       goto ON_ERROR;
     }
 
-    Urb->DataPhy  = (VOID *) ((UINTN) PhyAddr);
-    Urb->DataMap  = Map;
+    Urb->DataPhy = (VOID *)((UINTN)PhyAddr);
+    Urb->DataMap = Map;
   }
 
   Status = EhcCreateQtds (Ehc, Urb);

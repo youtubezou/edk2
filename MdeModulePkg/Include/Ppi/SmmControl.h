@@ -9,27 +9,18 @@
   event from a platform chipset agent is an optional capability for both IA-32 and Itanium-based
   systems.
 
-  Copyright (c) 2010, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions
-  of the BSD License which accompanies this distribution.  The
-  full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
-#ifndef _SMM_CONTROL_PPI_H_
-#define _SMM_CONTROL_PPI_H_
+#pragma once
 
 #define PEI_SMM_CONTROL_PPI_GUID \
   { 0x61c68702, 0x4d7e, 0x4f43, 0x8d, 0xef, 0xa7, 0x43, 0x5, 0xce, 0x74, 0xc5 }
 
-typedef struct _PEI_SMM_CONTROL_PPI  PEI_SMM_CONTROL_PPI;
+typedef struct _PEI_SMM_CONTROL_PPI PEI_SMM_CONTROL_PPI;
 
 /**
   Invokes SMI activation from either the preboot or runtime environment.
@@ -50,9 +41,9 @@ typedef struct _PEI_SMM_CONTROL_PPI  PEI_SMM_CONTROL_PPI;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PEI_SMM_ACTIVATE) (
+(EFIAPI *PEI_SMM_ACTIVATE)(
   IN EFI_PEI_SERVICES                                **PeiServices,
-  IN PEI_SMM_CONTROL_PPI                             * This,
+  IN PEI_SMM_CONTROL_PPI                             *This,
   IN OUT INT8                                        *ArgumentBuffer OPTIONAL,
   IN OUT UINTN                                       *ArgumentBufferSize OPTIONAL,
   IN BOOLEAN                                         Periodic OPTIONAL,
@@ -64,7 +55,7 @@ EFI_STATUS
 
   @param  PeiServices           General purpose services available to every PEIM.
   @param  This                  The PEI_SMM_CONTROL_PPI instance.
-  @param  Periodic              Optional parameter to repeat at this period one 
+  @param  Periodic              Optional parameter to repeat at this period one
                                 time or, if the Periodic Boolean is set, periodically.
 
   @retval EFI_SUCCESS           The SMI/PMI has been engendered.
@@ -74,9 +65,9 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PEI_SMM_DEACTIVATE) (
+(EFIAPI *PEI_SMM_DEACTIVATE)(
   IN EFI_PEI_SERVICES                      **PeiServices,
-  IN PEI_SMM_CONTROL_PPI                   * This,
+  IN PEI_SMM_CONTROL_PPI                   *This,
   IN BOOLEAN                               Periodic OPTIONAL
   );
 
@@ -85,12 +76,10 @@ EFI_STATUS
 ///  - A processor driver to abstract the SMI/PMI IPI
 ///  - The driver that abstracts the ASIC that is supporting the APM port, such as the ICH in an
 ///  Intel chipset
-/// 
+///
 struct _PEI_SMM_CONTROL_PPI {
-  PEI_SMM_ACTIVATE    Trigger;
-  PEI_SMM_DEACTIVATE  Clear;
+  PEI_SMM_ACTIVATE      Trigger;
+  PEI_SMM_DEACTIVATE    Clear;
 };
 
-extern EFI_GUID gPeiSmmControlPpiGuid;
-
-#endif
+extern EFI_GUID  gPeiSmmControlPpiGuid;

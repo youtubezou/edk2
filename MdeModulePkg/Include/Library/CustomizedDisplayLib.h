@@ -1,19 +1,12 @@
 /** @file
   This library class defines a set of interfaces to customize Display module
 
-Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __CUSTOMIZED_DISPLAY_LIB_H__
-#define __CUSTOMIZED_DISPLAY_LIB_H__
+#pragma once
 
 #include <Protocol/DisplayProtocol.h>
 
@@ -38,28 +31,28 @@ Statement
 **/
 
 /**
-  This funtion defines Page Frame and Backgroud. 
-  
-  Based on the above layout, it will be responsible for HeaderHeight, FooterHeight, 
-  StatusBarHeight and Backgroud. And, it will reserve Screen for Statement. 
+  This function defines Page Frame and Backgroud.
+
+  Based on the above layout, it will be responsible for HeaderHeight, FooterHeight,
+  StatusBarHeight and Backgroud. And, it will reserve Screen for Statement.
 
   @param[in]  FormData             Form Data to be shown in Page.
   @param[out] ScreenForStatement   Screen to be used for Statement. (Prompt, Value and Help)
-  
+
   @return Status
 **/
 EFI_STATUS
 EFIAPI
 DisplayPageFrame (
-  IN FORM_DISPLAY_ENGINE_FORM       *FormData,
-  OUT EFI_SCREEN_DESCRIPTOR         *ScreenForStatement
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData,
+  OUT EFI_SCREEN_DESCRIPTOR    *ScreenForStatement
   );
 
 /**
   Clear Screen to the initial state.
 **/
 VOID
-EFIAPI 
+EFIAPI
 ClearDisplayPage (
   VOID
   );
@@ -68,54 +61,54 @@ ClearDisplayPage (
   This function updates customized key panel's help information.
   The library will prepare those Strings for the basic key, ESC, Enter, Up/Down/Left/Right, +/-.
   and arrange them in Footer panel.
-  
-  @param[in]  FormData       Form Data to be shown in Page. FormData has the highlighted statement. 
+
+  @param[in]  FormData       Form Data to be shown in Page. FormData has the highlighted statement.
   @param[in]  Statement      The statement current selected.
   @param[in]  Selected       Whether or not a tag be selected. TRUE means Enter has hit this question.
 **/
 VOID
 EFIAPI
 RefreshKeyHelp (
-  IN FORM_DISPLAY_ENGINE_FORM      *FormData,
-  IN FORM_DISPLAY_ENGINE_STATEMENT *Statement,
-  IN  BOOLEAN                      Selected
+  IN FORM_DISPLAY_ENGINE_FORM       *FormData,
+  IN FORM_DISPLAY_ENGINE_STATEMENT  *Statement,
+  IN  BOOLEAN                       Selected
   );
 
 /**
   Update status bar.
 
-  This function updates the status bar on the bottom of menu screen. It just shows StatusBar. 
+  This function updates the status bar on the bottom of menu screen. It just shows StatusBar.
   Original logic in this function should be splitted out.
 
-  @param[in]  MessageType            The type of message to be shown. InputError or Configuration Changed. 
+  @param[in]  MessageType            The type of message to be shown. InputError or Configuration Changed.
   @param[in]  State                  Show or Clear Message.
 **/
 VOID
 EFIAPI
 UpdateStatusBar (
-  IN  UINTN                  MessageType,
-  IN  BOOLEAN                State
+  IN  UINTN    MessageType,
+  IN  BOOLEAN  State
   );
 
 /**
-  Create popup window. 
+  Create popup window.
 
   This function draws OEM/Vendor specific pop up windows.
 
   @param[out]  Key    User Input Key
   @param       ...    String to be shown in Popup. The variable argument list is terminated by a NULL.
-  
+
 **/
 VOID
 EFIAPI
 CreateDialog (
-  OUT EFI_INPUT_KEY  *Key,        OPTIONAL
+  OUT EFI_INPUT_KEY  *Key         OPTIONAL,
   ...
   );
 
 /**
-  Confirm how to handle the changed data. 
-  
+  Confirm how to handle the changed data.
+
   @return Action BROWSER_ACTION_SUBMIT, BROWSER_ACTION_DISCARD or other values.
 **/
 UINTN
@@ -127,7 +120,7 @@ ConfirmDataChange (
 /**
   OEM specifies whether Setup exits Page by ESC key.
 
-  This function customized the behavior that whether Setup exits Page so that 
+  This function customized the behavior that whether Setup exits Page so that
   system able to boot when configuration is not changed.
 
   @retval  TRUE     Exits FrontPage
@@ -140,25 +133,26 @@ FormExitPolicy (
   );
 
 /**
-  Set Timeout value for a ceratain Form to get user response. 
-  
+  Set Timeout value for a ceratain Form to get user response.
+
   This function allows to set timeout value on a ceratain form if necessary.
-  If timeout is not zero, the form will exit if user has no response in timeout. 
-  
+  If timeout is not zero, the form will exit if user has no response in timeout.
+
   @param[in]  FormData   Form Data to be shown in Page
 
-  @return 0     No timeout for this form. 
+  @return 0     No timeout for this form.
   @return > 0   Timeout value in 100 ns units.
 **/
 UINT64
 EFIAPI
 FormExitTimeout (
-  IN FORM_DISPLAY_ENGINE_FORM      *FormData
+  IN FORM_DISPLAY_ENGINE_FORM  *FormData
   );
 
 //
 // Print Functions
 //
+
 /**
   Prints a unicode string to the default console, at
   the supplied cursor position, using L"%s" format.
@@ -173,11 +167,10 @@ FormExitTimeout (
 UINTN
 EFIAPI
 PrintStringAt (
-  IN UINTN     Column,
-  IN UINTN     Row,
-  IN CHAR16    *String
+  IN UINTN   Column,
+  IN UINTN   Row,
+  IN CHAR16  *String
   );
-
 
 /**
   Prints a unicode string with the specified width to the default console, at
@@ -186,8 +179,8 @@ PrintStringAt (
   @param  Column     The cursor position to print the string at. When it is -1, use current Position.
   @param  Row        The cursor position to print the string at. When it is -1, use current Position.
   @param  String     String pointer.
-  @param  Width      Width for String to be printed. If the print length of String < Width, 
-                     Space char (L' ') will be used to append String. 
+  @param  Width      Width for String to be printed. If the print length of String < Width,
+                     Space char (L' ') will be used to append String.
 
   @return Length of string printed to the console
 
@@ -195,10 +188,10 @@ PrintStringAt (
 UINTN
 EFIAPI
 PrintStringAtWithWidth (
-  IN UINTN     Column,
-  IN UINTN     Row,
-  IN CHAR16    *String,
-  IN UINTN     Width
+  IN UINTN   Column,
+  IN UINTN   Row,
+  IN CHAR16  *String,
+  IN UINTN   Width
   );
 
 /**
@@ -215,9 +208,9 @@ PrintStringAtWithWidth (
 UINTN
 EFIAPI
 PrintCharAt (
-  IN UINTN     Column,
-  IN UINTN     Row,
-  CHAR16       Character
+  IN UINTN  Column,
+  IN UINTN  Row,
+  CHAR16    Character
   );
 
 /**
@@ -233,16 +226,17 @@ PrintCharAt (
 VOID
 EFIAPI
 ClearLines (
-  IN UINTN               LeftColumn,
-  IN UINTN               RightColumn,
-  IN UINTN               TopRow,
-  IN UINTN               BottomRow,
-  IN UINTN               TextAttribute
+  IN UINTN  LeftColumn,
+  IN UINTN  RightColumn,
+  IN UINTN  TopRow,
+  IN UINTN  BottomRow,
+  IN UINTN  TextAttribute
   );
 
 //
 // Color Setting Functions
 //
+
 /**
   Get OEM/Vendor specific popup attribute colors.
 
@@ -352,5 +346,3 @@ EFIAPI
 GetSubTitleTextColor (
   VOID
   );
-
-#endif

@@ -2,18 +2,13 @@
 # This file is used to create a database used by ECC tool
 #
 # Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
-# This program and the accompanying materials
-# are licensed and made available under the terms and conditions of the BSD License
-# which accompanies this distribution.  The full text of the license may be found at
-# http://opensource.org/licenses/bsd-license.php
-#
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ##
 # Import Modules
 #
+from __future__ import absolute_import
 import sqlite3
 import Common.LongFilePathOs as os, time
 
@@ -26,9 +21,9 @@ from Table.TableFunction import TableFunction
 from Table.TablePcd import TablePcd
 from Table.TableIdentifier import TableIdentifier
 from Table.TableReport import TableReport
-from MetaFileWorkspace.MetaFileTable import ModuleTable
-from MetaFileWorkspace.MetaFileTable import PackageTable
-from MetaFileWorkspace.MetaFileTable import PlatformTable
+from Ecc.MetaFileWorkspace.MetaFileTable import ModuleTable
+from Ecc.MetaFileWorkspace.MetaFileTable import PackageTable
+from Ecc.MetaFileWorkspace.MetaFileTable import PlatformTable
 from Table.TableFdf import TableFdf
 
 ##
@@ -38,7 +33,7 @@ DATABASE_PATH = "Ecc.db"
 
 ## Database
 #
-# This class defined the ECC databse
+# This class defined the ECC database
 # During the phase of initialization, the database will create all tables and
 # insert all records of table DataModel
 #
@@ -82,8 +77,7 @@ class Database(object):
         self.Conn = sqlite3.connect(self.DbPath, isolation_level = 'DEFERRED')
         self.Conn.execute("PRAGMA page_size=4096")
         self.Conn.execute("PRAGMA synchronous=OFF")
-        # to avoid non-ascii charater conversion error
-        self.Conn.text_factory = str
+        # to avoid non-ascii character conversion error
         self.Cur = self.Conn.cursor()
 
         self.TblDataModel = TableDataModel(self.Cur)
@@ -213,60 +207,7 @@ class Database(object):
 
     ## UpdateIdentifierBelongsToFunction
     #
-    # Update the field "BelongsToFunction" for each Indentifier
-    #
-    #
-    def UpdateIdentifierBelongsToFunction_disabled(self):
-        EdkLogger.verbose("Update 'BelongsToFunction' for Identifiers started ...")
-
-        SqlCommand = """select ID, BelongsToFile, StartLine, EndLine, Model from Identifier"""
-        EdkLogger.debug(4, "SqlCommand: %s" %SqlCommand)
-        self.Cur.execute(SqlCommand)
-        Records = self.Cur.fetchall()
-        for Record in Records:
-            IdentifierID = Record[0]
-            BelongsToFile = Record[1]
-            StartLine = Record[2]
-            EndLine = Record[3]
-            Model = Record[4]
-
-            #
-            # Check whether an identifier belongs to a function
-            #
-            EdkLogger.debug(4, "For common identifiers ... ")
-            SqlCommand = """select ID from Function
-                        where StartLine < %s and EndLine > %s
-                        and BelongsToFile = %s""" % (StartLine, EndLine, BelongsToFile)
-            EdkLogger.debug(4, "SqlCommand: %s" %SqlCommand)
-            self.Cur.execute(SqlCommand)
-            IDs = self.Cur.fetchall()
-            for ID in IDs:
-                SqlCommand = """Update Identifier set BelongsToFunction = %s where ID = %s""" % (ID[0], IdentifierID)
-                EdkLogger.debug(4, "SqlCommand: %s" %SqlCommand)
-                self.Cur.execute(SqlCommand)
-
-            #
-            # Check whether the identifier is a function header
-            #
-            EdkLogger.debug(4, "For function headers ... ")
-            if Model == DataClass.MODEL_IDENTIFIER_COMMENT:
-                SqlCommand = """select ID from Function
-                        where StartLine = %s + 1
-                        and BelongsToFile = %s""" % (EndLine, BelongsToFile)
-                EdkLogger.debug(4, "SqlCommand: %s" %SqlCommand)
-                self.Cur.execute(SqlCommand)
-                IDs = self.Cur.fetchall()
-                for ID in IDs:
-                    SqlCommand = """Update Identifier set BelongsToFunction = %s, Model = %s where ID = %s""" % (ID[0], DataClass.MODEL_IDENTIFIER_FUNCTION_HEADER, IdentifierID)
-                    EdkLogger.debug(4, "SqlCommand: %s" %SqlCommand)
-                    self.Cur.execute(SqlCommand)
-
-        EdkLogger.verbose("Update 'BelongsToFunction' for Identifiers ... DONE")
-
-
-    ## UpdateIdentifierBelongsToFunction
-    #
-    # Update the field "BelongsToFunction" for each Indentifier
+    # Update the field "BelongsToFunction" for each Identifier
     #
     #
     def UpdateIdentifierBelongsToFunction(self):

@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
-; Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2015 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Abstract:
 ;
@@ -22,21 +16,21 @@
 ;
 ; Define SSE macros using SSE 4.1 instructions
 ; args 1:XMM, 2:IDX, 3:REG
-%macro SXMMN           3
+%macro SXMMN    3
              pinsrd  %1, %3, (%2 & 3)
              %endmacro
 
 ;
 ;args 1:XMM, 2:REG, 3:IDX
 ;
-%macro LXMMN           3
+%macro LXMMN    3
              pextrd  %2, %1, (%3 & 3)
              %endmacro
 %else
 ;
 ; Define SSE macros using SSE 2 instructions
 ; args 1:XMM, 2:IDX, 3:REG
-%macro SXMMN       3
+%macro SXMMN    3
              pinsrw  %1, %3, (%2 & 3) * 2
              ror     %3, 16
              pinsrw  %1, %3, (%2 & 3) * 2 + 1
@@ -44,19 +38,19 @@
              %endmacro
 
 ;
-;args 1:XMM, 2:REG,  3:IDX
+;args 1:XMM, 2:REG, 3:IDX
 ;
 %macro LXMMN    3
-             pshufd  %1, %1,  ((0E4E4E4h >> (%3 * 2))  & 0FFh)
+             pshufd  %1, %1, ((0E4E4E4h >> (%3 * 2))  & 0FFh)
              movd    %2, %1
-             pshufd  %1, %1,  ((0E4E4E4h >> (%3 * 2 + (%3 & 1) * 4)) & 0FFh)
+             pshufd  %1, %1, ((0E4E4E4h >> (%3 * 2 + (%3 & 1) * 4)) & 0FFh)
              %endmacro
 %endif
 
 ;
-; XMM7 to save/restore EBP, EBX, ESI, EDI
+; XMM7 to save/restore EBP - slot 0, EBX - slot 1, ESI - slot 2, EDI - slot 3
 ;
-%macro SAVE_REGS   0
+%macro SAVE_REGS    0
   SXMMN      xmm7, 0, ebp
   SXMMN      xmm7, 1, ebx
   SXMMN      xmm7, 2, esi
@@ -73,61 +67,76 @@
              %endmacro
 
 ;
-; XMM6 to save/restore EAX, EDX, ECX, ESP
+; XMM6 to save/restore ESP - slot 0, EAX - slot 1, EDX - slot 2, ECX - slot 3
 ;
-%macro LOAD_EAX     0
-  LXMMN      xmm6, eax, 1
+%macro LOAD_ESP    0
+  movd       esp,  xmm6
              %endmacro
 
-%macro SAVE_EAX     0
-  SXMMN      xmm6, 1, eax
-             %endmacro
-
-%macro LOAD_EDX     0
-  LXMMN      xmm6, edx, 2
-             %endmacro
-
-%macro SAVE_EDX     0
-  SXMMN      xmm6, 2, edx
-             %endmacro
-
-%macro SAVE_ECX     0
-  SXMMN      xmm6, 3, ecx
-             %endmacro
-
-%macro LOAD_ECX     0
-  LXMMN      xmm6, ecx, 3
-             %endmacro
-
-%macro SAVE_ESP     0
+%macro SAVE_ESP    0
   SXMMN      xmm6, 0, esp
              %endmacro
 
-%macro LOAD_ESP     0
-  movd       esp,  xmm6
+%macro LOAD_EAX    0
+  LXMMN      xmm6, eax, 1
              %endmacro
+
+%macro SAVE_EAX    0
+  SXMMN      xmm6, 1, eax
+             %endmacro
+
+%macro LOAD_EDX    0
+  LXMMN      xmm6, edx, 2
+             %endmacro
+
+%macro SAVE_EDX    0
+  SXMMN      xmm6, 2, edx
+             %endmacro
+
+%macro LOAD_ECX    0
+  LXMMN      xmm6, ecx, 3
+             %endmacro
+
+%macro SAVE_ECX    0
+  SXMMN      xmm6, 3, ecx
+             %endmacro
+
 ;
-; XMM5 for calling stack
+; XMM5 slot 0 for calling stack
 ; arg 1:Entry
 %macro CALL_XMM       1
              mov     esi, %%ReturnAddress
-             pslldq  xmm5, 4
-%ifdef USE_SSE41_FLAG
-             pinsrd  xmm5, esi, 0
-%else
-             pinsrw  xmm5, esi, 0
-             ror     esi,  16
-             pinsrw  xmm5, esi, 1
-%endif
+             SXMMN   xmm5, 0, esi
              mov     esi,  %1
              jmp     esi
 %%ReturnAddress:
              %endmacro
 
 %macro RET_XMM       0
-             movd    esi, xmm5
-             psrldq  xmm5, 4
+             LXMMN   xmm5, esi, 0
              jmp     esi
+             %endmacro
+
+;
+; XMM5 slot 1 for uCode status
+;
+%macro LOAD_UCODE_STATUS    0
+  LXMMN      xmm5, eax, 1
+             %endmacro
+
+%macro SAVE_UCODE_STATUS    0
+  SXMMN      xmm5, 1, eax
+             %endmacro
+
+;
+; XMM5 slot 2 for TemporaryRamSize
+;
+%macro LOAD_TEMPORARY_RAM_SIZE    1
+  LXMMN      xmm5, %1, 2
+             %endmacro
+
+%macro SAVE_TEMPORARY_RAM_SIZE    1
+  SXMMN      xmm5, 2, %1
              %endmacro
 
 %macro ENABLE_SSE   0
@@ -156,9 +165,12 @@ NextAddress:
             fldcw   [FpuControlWord]
 
             ;
-            ; Use CpuId instructuion (CPUID.01H:EDX.SSE[bit 25] = 1) to test
+            ; Use CpuId instruction (CPUID.01H:EDX.SSE[bit 25] = 1) to test
             ; whether the processor supports SSE instruction.
             ;
+            ; Save EBX to MM2
+            ;
+            movd    mm2, ebx
             mov     eax, 1
             cpuid
             bt      edx, 25
@@ -171,6 +183,10 @@ NextAddress:
             bt      ecx, 19
             jnc     SseError
 %endif
+            ;
+            ; Restore EBX from MM2
+            ;
+            movd    ebx, mm2
 
             ;
             ; Set OSFXSR bit (bit #9) & OSXMMEXCPT bit (bit #10)

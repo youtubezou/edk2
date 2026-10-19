@@ -2,19 +2,12 @@
   Implements get/set firmware volume attributes
 
 Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "DxeMain.h"
 #include "FwVolDriver.h"
-
 
 /**
   Retrieves attributes, insures positive polarity of attribute bits, returns
@@ -29,17 +22,17 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 FvGetVolumeAttributes (
-  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL *This,
-  OUT       EFI_FV_ATTRIBUTES             *Attributes
+  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL  *This,
+  OUT       EFI_FV_ATTRIBUTES              *Attributes
   )
 {
-  EFI_STATUS                                Status;
-  FV_DEVICE                                 *FvDevice;
-  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL        *Fvb;
-  EFI_FVB_ATTRIBUTES_2                      FvbAttributes;
+  EFI_STATUS                          Status;
+  FV_DEVICE                           *FvDevice;
+  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *Fvb;
+  EFI_FVB_ATTRIBUTES_2                FvbAttributes;
 
   FvDevice = FV_DEVICE_FROM_THIS (This);
-  Fvb = FvDevice->Fvb;
+  Fvb      = FvDevice->Fvb;
 
   //
   // First get the Firmware Volume Block Attributes
@@ -55,8 +48,6 @@ FvGetVolumeAttributes (
 
   return Status;
 }
-
-
 
 /**
   Sets current attributes for volume
@@ -78,7 +69,6 @@ FvSetVolumeAttributes (
   return EFI_UNSUPPORTED;
 }
 
-
 /**
   Return information of type InformationType for the requested firmware
   volume.
@@ -95,16 +85,14 @@ FvSetVolumeAttributes (
 EFI_STATUS
 EFIAPI
 FvGetVolumeInfo (
-  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL       *This,
-  IN  CONST EFI_GUID                            *InformationType,
-  IN OUT UINTN                                  *BufferSize,
-  OUT VOID                                      *Buffer
+  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL  *This,
+  IN  CONST EFI_GUID                       *InformationType,
+  IN OUT UINTN                             *BufferSize,
+  OUT VOID                                 *Buffer
   )
 {
   return EFI_UNSUPPORTED;
 }
-
-
 
 /**
   Set information of type InformationType for the requested firmware
@@ -122,14 +110,11 @@ FvGetVolumeInfo (
 EFI_STATUS
 EFIAPI
 FvSetVolumeInfo (
-  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL       *This,
-  IN  CONST EFI_GUID                            *InformationType,
-  IN  UINTN                                     BufferSize,
-  IN CONST  VOID                                *Buffer
+  IN  CONST EFI_FIRMWARE_VOLUME2_PROTOCOL  *This,
+  IN  CONST EFI_GUID                       *InformationType,
+  IN  UINTN                                BufferSize,
+  IN CONST  VOID                           *Buffer
   )
 {
   return EFI_UNSUPPORTED;
 }
-
-
-

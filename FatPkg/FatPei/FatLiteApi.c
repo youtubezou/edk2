@@ -1,15 +1,9 @@
 /** @file
   FAT recovery PEIM entry point, Ppi Functions and FAT Api functions.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,15 +12,15 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 PEI_FAT_PRIVATE_DATA  *mPrivateData = NULL;
 
 /**
-  BlockIo installation nofication function. Find out all the current BlockIO
+  BlockIo installation notification function. Find out all the current BlockIO
   PPIs in the system and add them into private data. Assume there is
 
-  @param  PeiServices             General purpose services available to every 
-                                  PEIM. 
-  @param  NotifyDescriptor        The typedef structure of the notification 
-                                  descriptor. Not used in this function. 
-  @param  Ppi                     The typedef structure of the PPI descriptor. 
-                                  Not used in this function. 
+  @param  PeiServices             General purpose services available to every
+                                  PEIM.
+  @param  NotifyDescriptor        The typedef structure of the notification
+                                  descriptor. Not used in this function.
+  @param  Ppi                     The typedef structure of the PPI descriptor.
+                                  Not used in this function.
 
   @retval EFI_SUCCESS             The function completed successfully.
 
@@ -39,12 +33,11 @@ BlockIoNotifyEntry (
   IN VOID                       *Ppi
   );
 
-
 /**
   Discover all the block I/O devices to find the FAT volume.
 
-  @param  PrivateData             Global memory map for accessing global 
-                                  variables. 
+  @param  PrivateData             Global memory map for accessing global
+                                  variables.
   @param  BlockIo2                Boolean to show whether using BlockIo2 or BlockIo
 
   @retval EFI_SUCCESS             The function completed successfully.
@@ -52,23 +45,23 @@ BlockIoNotifyEntry (
 **/
 EFI_STATUS
 UpdateBlocksAndVolumes (
-  IN OUT PEI_FAT_PRIVATE_DATA            *PrivateData,
-  IN     BOOLEAN                         BlockIo2
+  IN OUT PEI_FAT_PRIVATE_DATA  *PrivateData,
+  IN     BOOLEAN               BlockIo2
   )
 {
-  EFI_STATUS                     Status;
-  EFI_PEI_PPI_DESCRIPTOR         *TempPpiDescriptor;
-  UINTN                          BlockIoPpiInstance;
-  EFI_PEI_RECOVERY_BLOCK_IO_PPI  *BlockIoPpi;
-  EFI_PEI_RECOVERY_BLOCK_IO2_PPI *BlockIo2Ppi;
-  UINTN                          NumberBlockDevices;
-  UINTN                          Index;
-  EFI_PEI_BLOCK_IO_MEDIA         Media;
-  EFI_PEI_BLOCK_IO2_MEDIA        Media2;
-  PEI_FAT_VOLUME                 Volume;
-  EFI_PEI_SERVICES               **PeiServices;
+  EFI_STATUS                      Status;
+  EFI_PEI_PPI_DESCRIPTOR          *TempPpiDescriptor;
+  UINTN                           BlockIoPpiInstance;
+  EFI_PEI_RECOVERY_BLOCK_IO_PPI   *BlockIoPpi;
+  EFI_PEI_RECOVERY_BLOCK_IO2_PPI  *BlockIo2Ppi;
+  UINTN                           NumberBlockDevices;
+  UINTN                           Index;
+  EFI_PEI_BLOCK_IO_MEDIA          Media;
+  EFI_PEI_BLOCK_IO2_MEDIA         Media2;
+  PEI_FAT_VOLUME                  Volume;
+  EFI_PEI_SERVICES                **PeiServices;
 
-  PeiServices = (EFI_PEI_SERVICES **) GetPeiServicesTablePointer ();
+  PeiServices = (EFI_PEI_SERVICES **)GetPeiServicesTablePointer ();
   BlockIo2Ppi = NULL;
   BlockIoPpi  = NULL;
   //
@@ -87,19 +80,20 @@ UpdateBlocksAndVolumes (
   for (BlockIoPpiInstance = 0; BlockIoPpiInstance < PEI_FAT_MAX_BLOCK_IO_PPI; BlockIoPpiInstance++) {
     if (BlockIo2) {
       Status = PeiServicesLocatePpi (
-                &gEfiPeiVirtualBlockIo2PpiGuid,
-                BlockIoPpiInstance,
-                &TempPpiDescriptor,
-                (VOID **) &BlockIo2Ppi
-                );
+                 &gEfiPeiVirtualBlockIo2PpiGuid,
+                 BlockIoPpiInstance,
+                 &TempPpiDescriptor,
+                 (VOID **)&BlockIo2Ppi
+                 );
     } else {
       Status = PeiServicesLocatePpi (
-                &gEfiPeiVirtualBlockIoPpiGuid,
-                BlockIoPpiInstance,
-                &TempPpiDescriptor,
-                (VOID **) &BlockIoPpi
-                );
+                 &gEfiPeiVirtualBlockIoPpiGuid,
+                 BlockIoPpiInstance,
+                 &TempPpiDescriptor,
+                 (VOID **)&BlockIoPpi
+                 );
     }
+
     if (EFI_ERROR (Status)) {
       //
       // Done with all Block Io Ppis
@@ -120,12 +114,12 @@ UpdateBlocksAndVolumes (
                              &NumberBlockDevices
                              );
     }
+
     if (EFI_ERROR (Status)) {
       continue;
     }
 
     for (Index = 1; Index <= NumberBlockDevices && PrivateData->BlockDeviceCount < PEI_FAT_MAX_BLOCK_DEVICE; Index++) {
-
       if (BlockIo2) {
         Status = BlockIo2Ppi->GetBlockDeviceMediaInfo (
                                 PeiServices,
@@ -136,10 +130,11 @@ UpdateBlocksAndVolumes (
         if (EFI_ERROR (Status) || !Media2.MediaPresent) {
           continue;
         }
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockIo2        = BlockIo2Ppi;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].InterfaceType   = Media2.InterfaceType;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].LastBlock       = Media2.LastBlock;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockSize       = Media2.BlockSize;
+
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockIo2      = BlockIo2Ppi;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].InterfaceType = Media2.InterfaceType;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].LastBlock     = Media2.LastBlock;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockSize     = Media2.BlockSize;
       } else {
         Status = BlockIoPpi->GetBlockDeviceMediaInfo (
                                PeiServices,
@@ -150,23 +145,25 @@ UpdateBlocksAndVolumes (
         if (EFI_ERROR (Status) || !Media.MediaPresent) {
           continue;
         }
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockIo    = BlockIoPpi;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].DevType    = Media.DeviceType;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].LastBlock  = Media.LastBlock;
-        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockSize  = (UINT32) Media.BlockSize;
+
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockIo   = BlockIoPpi;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].DevType   = Media.DeviceType;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].LastBlock = Media.LastBlock;
+        PrivateData->BlockDevice[PrivateData->BlockDeviceCount].BlockSize = (UINT32)Media.BlockSize;
       }
 
       PrivateData->BlockDevice[PrivateData->BlockDeviceCount].IoAlign = 0;
       //
       // Not used here
       //
-      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].Logical           = FALSE;
-      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].PartitionChecked  = FALSE;
+      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].Logical          = FALSE;
+      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].PartitionChecked = FALSE;
 
-      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].PhysicalDevNo     = (UINT8) Index;
+      PrivateData->BlockDevice[PrivateData->BlockDeviceCount].PhysicalDevNo = (UINT8)Index;
       PrivateData->BlockDeviceCount++;
     }
   }
+
   //
   // Find out all logical devices
   //
@@ -177,15 +174,15 @@ UpdateBlocksAndVolumes (
   //
   PrivateData->VolumeCount = 0;
   for (Index = 0; Index < PrivateData->BlockDeviceCount; Index++) {
-    Volume.BlockDeviceNo  = Index;
-    Status                = FatGetBpbInfo (PrivateData, &Volume);
+    Volume.BlockDeviceNo = Index;
+    Status               = FatGetBpbInfo (PrivateData, &Volume);
     if (Status == EFI_SUCCESS) {
       //
       // Add the detected volume to the volume array
       //
       CopyMem (
-        (UINT8 *) &(PrivateData->Volume[PrivateData->VolumeCount]),
-        (UINT8 *) &Volume,
+        (UINT8 *)&(PrivateData->Volume[PrivateData->VolumeCount]),
+        (UINT8 *)&Volume,
         sizeof (PEI_FAT_VOLUME)
         );
       PrivateData->VolumeCount += 1;
@@ -198,17 +195,16 @@ UpdateBlocksAndVolumes (
   return EFI_SUCCESS;
 }
 
-
 /**
   BlockIo installation notification function. Find out all the current BlockIO
   PPIs in the system and add them into private data. Assume there is
 
-  @param  PeiServices             General purpose services available to every 
-                                  PEIM. 
-  @param  NotifyDescriptor        The typedef structure of the notification 
-                                  descriptor. Not used in this function. 
-  @param  Ppi                     The typedef structure of the PPI descriptor. 
-                                  Not used in this function. 
+  @param  PeiServices             General purpose services available to every
+                                  PEIM.
+  @param  NotifyDescriptor        The typedef structure of the notification
+                                  descriptor. Not used in this function.
+  @param  Ppi                     The typedef structure of the PPI descriptor.
+                                  Not used in this function.
 
   @retval EFI_SUCCESS             The function completed successfully.
 
@@ -226,29 +222,29 @@ BlockIoNotifyEntry (
   } else {
     UpdateBlocksAndVolumes (mPrivateData, FALSE);
   }
+
   return EFI_SUCCESS;
 }
-
 
 /**
   Installs the Device Recovery Module PPI, Initialize BlockIo Ppi
   installation notification
 
-  @param  FileHandle              Handle of the file being invoked. Type 
-                                  EFI_PEI_FILE_HANDLE is defined in  
-                                  FfsFindNextFile(). 
-  @param  PeiServices             Describes the list of possible PEI Services. 
+  @param  FileHandle              Handle of the file being invoked. Type
+                                  EFI_PEI_FILE_HANDLE is defined in
+                                  FfsFindNextFile().
+  @param  PeiServices             Describes the list of possible PEI Services.
 
-  @retval EFI_SUCCESS             The entry point was executed successfully. 
-  @retval EFI_OUT_OF_RESOURCES    There is no enough memory to complete the 
+  @retval EFI_SUCCESS             The entry point was executed successfully.
+  @retval EFI_OUT_OF_RESOURCES    There is no enough memory to complete the
                                   operations.
 
 **/
 EFI_STATUS
 EFIAPI
 FatPeimEntry (
-  IN EFI_PEI_FILE_HANDLE       FileHandle,
-  IN CONST EFI_PEI_SERVICES    **PeiServices
+  IN EFI_PEI_FILE_HANDLE     FileHandle,
+  IN CONST EFI_PEI_SERVICES  **PeiServices
   )
 {
   EFI_STATUS            Status;
@@ -261,38 +257,39 @@ FatPeimEntry (
   }
 
   Status = PeiServicesAllocatePages (
-            EfiBootServicesCode,
-            (sizeof (PEI_FAT_PRIVATE_DATA) - 1) / PEI_FAT_MEMMORY_PAGE_SIZE + 1,
-            &Address
-            );
+             EfiBootServicesCode,
+             (sizeof (PEI_FAT_PRIVATE_DATA) - 1) / PEI_FAT_MEMORY_PAGE_SIZE + 1,
+             &Address
+             );
   if (EFI_ERROR (Status)) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  PrivateData = (PEI_FAT_PRIVATE_DATA *) (UINTN) Address;
+  PrivateData = (PEI_FAT_PRIVATE_DATA *)(UINTN)Address;
 
   //
   // Initialize Private Data (to zero, as is required by subsequent operations)
   //
-  ZeroMem ((UINT8 *) PrivateData, sizeof (PEI_FAT_PRIVATE_DATA));
+  ZeroMem ((UINT8 *)PrivateData, sizeof (PEI_FAT_PRIVATE_DATA));
 
   PrivateData->Signature = PEI_FAT_PRIVATE_DATA_SIGNATURE;
 
   //
   // Installs Ppi
   //
-  PrivateData->DeviceRecoveryPpi.GetNumberRecoveryCapsules  = GetNumberRecoveryCapsules;
-  PrivateData->DeviceRecoveryPpi.GetRecoveryCapsuleInfo     = GetRecoveryCapsuleInfo;
-  PrivateData->DeviceRecoveryPpi.LoadRecoveryCapsule        = LoadRecoveryCapsule;
+  PrivateData->DeviceRecoveryPpi.GetNumberRecoveryCapsules = GetNumberRecoveryCapsules;
+  PrivateData->DeviceRecoveryPpi.GetRecoveryCapsuleInfo    = GetRecoveryCapsuleInfo;
+  PrivateData->DeviceRecoveryPpi.LoadRecoveryCapsule       = LoadRecoveryCapsule;
 
-  PrivateData->PpiDescriptor.Flags                          = (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST);
-  PrivateData->PpiDescriptor.Guid = &gEfiPeiDeviceRecoveryModulePpiGuid;
-  PrivateData->PpiDescriptor.Ppi  = &PrivateData->DeviceRecoveryPpi;
+  PrivateData->PpiDescriptor.Flags = (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST);
+  PrivateData->PpiDescriptor.Guid  = &gEfiPeiDeviceRecoveryModulePpiGuid;
+  PrivateData->PpiDescriptor.Ppi   = &PrivateData->DeviceRecoveryPpi;
 
   Status = PeiServicesInstallPpi (&PrivateData->PpiDescriptor);
   if (EFI_ERROR (Status)) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // Other initializations
   //
@@ -311,37 +308,36 @@ FatPeimEntry (
   //
   PrivateData->NotifyDescriptor[0].Flags =
     (
-      EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK
+     EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK
     );
-  PrivateData->NotifyDescriptor[0].Guid    = &gEfiPeiVirtualBlockIoPpiGuid;
-  PrivateData->NotifyDescriptor[0].Notify  = BlockIoNotifyEntry;
+  PrivateData->NotifyDescriptor[0].Guid   = &gEfiPeiVirtualBlockIoPpiGuid;
+  PrivateData->NotifyDescriptor[0].Notify = BlockIoNotifyEntry;
   PrivateData->NotifyDescriptor[1].Flags  =
     (
-      EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK |
-      EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST
+     EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK |
+     EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST
     );
-  PrivateData->NotifyDescriptor[1].Guid    = &gEfiPeiVirtualBlockIo2PpiGuid;
-  PrivateData->NotifyDescriptor[1].Notify  = BlockIoNotifyEntry;
+  PrivateData->NotifyDescriptor[1].Guid   = &gEfiPeiVirtualBlockIo2PpiGuid;
+  PrivateData->NotifyDescriptor[1].Notify = BlockIoNotifyEntry;
   return PeiServicesNotifyPpi (&PrivateData->NotifyDescriptor[0]);
 }
-
 
 /**
   Returns the number of DXE capsules residing on the device.
 
   This function searches for DXE capsules from the associated device and returns
-  the number and maximum size in bytes of the capsules discovered. Entry 1 is 
-  assumed to be the highest load priority and entry N is assumed to be the lowest 
+  the number and maximum size in bytes of the capsules discovered. Entry 1 is
+  assumed to be the highest load priority and entry N is assumed to be the lowest
   priority.
 
-  @param[in]  PeiServices              General-purpose services that are available 
+  @param[in]  PeiServices              General-purpose services that are available
                                        to every PEIM
   @param[in]  This                     Indicates the EFI_PEI_DEVICE_RECOVERY_MODULE_PPI
                                        instance.
-  @param[out] NumberRecoveryCapsules   Pointer to a caller-allocated UINTN. On 
-                                       output, *NumberRecoveryCapsules contains 
-                                       the number of recovery capsule images 
-                                       available for retrieval from this PEIM 
+  @param[out] NumberRecoveryCapsules   Pointer to a caller-allocated UINTN. On
+                                       output, *NumberRecoveryCapsules contains
+                                       the number of recovery capsule images
+                                       available for retrieval from this PEIM
                                        instance.
 
   @retval EFI_SUCCESS        One or more capsules were discovered.
@@ -352,9 +348,9 @@ FatPeimEntry (
 EFI_STATUS
 EFIAPI
 GetNumberRecoveryCapsules (
-  IN EFI_PEI_SERVICES                               **PeiServices,
-  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI             *This,
-  OUT UINTN                                         *NumberRecoveryCapsules
+  IN EFI_PEI_SERVICES                    **PeiServices,
+  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
+  OUT UINTN                              *NumberRecoveryCapsules
   )
 {
   EFI_STATUS            Status;
@@ -370,7 +366,7 @@ GetNumberRecoveryCapsules (
   //
   RecoveryCapsuleCount = 0;
   for (Index = 0; Index < PrivateData->VolumeCount; Index++) {
-    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr(PcdRecoveryFileName), &Handle);
+    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr (PcdRecoveryFileName), &Handle);
     if (EFI_ERROR (Status)) {
       continue;
     }
@@ -387,25 +383,24 @@ GetNumberRecoveryCapsules (
   return EFI_SUCCESS;
 }
 
-
 /**
   Returns the size and type of the requested recovery capsule.
 
   This function gets the size and type of the capsule specified by CapsuleInstance.
 
   @param[in]  PeiServices       General-purpose services that are available to every PEIM
-  @param[in]  This              Indicates the EFI_PEI_DEVICE_RECOVERY_MODULE_PPI 
+  @param[in]  This              Indicates the EFI_PEI_DEVICE_RECOVERY_MODULE_PPI
                                 instance.
-  @param[in]  CapsuleInstance   Specifies for which capsule instance to retrieve 
-                                the information.  This parameter must be between 
-                                one and the value returned by GetNumberRecoveryCapsules() 
+  @param[in]  CapsuleInstance   Specifies for which capsule instance to retrieve
+                                the information.  This parameter must be between
+                                one and the value returned by GetNumberRecoveryCapsules()
                                 in NumberRecoveryCapsules.
-  @param[out] Size              A pointer to a caller-allocated UINTN in which 
-                                the size of the requested recovery module is 
+  @param[out] Size              A pointer to a caller-allocated UINTN in which
+                                the size of the requested recovery module is
                                 returned.
-  @param[out] CapsuleType       A pointer to a caller-allocated EFI_GUID in which 
-                                the type of the requested recovery capsule is 
-                                returned.  The semantic meaning of the value 
+  @param[out] CapsuleType       A pointer to a caller-allocated EFI_GUID in which
+                                the type of the requested recovery capsule is
+                                returned.  The semantic meaning of the value
                                 returned is defined by the implementation.
 
   @retval EFI_SUCCESS        One or more capsules were discovered.
@@ -416,11 +411,11 @@ GetNumberRecoveryCapsules (
 EFI_STATUS
 EFIAPI
 GetRecoveryCapsuleInfo (
-  IN  EFI_PEI_SERVICES                              **PeiServices,
-  IN  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI            *This,
-  IN  UINTN                                         CapsuleInstance,
-  OUT UINTN                                         *Size,
-  OUT EFI_GUID                                      *CapsuleType
+  IN  EFI_PEI_SERVICES                    **PeiServices,
+  IN  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
+  IN  UINTN                               CapsuleInstance,
+  OUT UINTN                               *Size,
+  OUT EFI_GUID                            *CapsuleType
   )
 {
   EFI_STATUS            Status;
@@ -431,14 +426,12 @@ GetRecoveryCapsuleInfo (
   PEI_FILE_HANDLE       Handle;
   UINTN                 NumberRecoveryCapsules;
 
+  Handle = NULL;
+
   Status = GetNumberRecoveryCapsules (PeiServices, This, &NumberRecoveryCapsules);
 
   if (EFI_ERROR (Status)) {
     return Status;
-  }
-
-  if (FeaturePcdGet (PcdFrameworkCompatibilitySupport)) {
-    CapsuleInstance = CapsuleInstance + 1;
   }
 
   if ((CapsuleInstance == 0) || (CapsuleInstance > NumberRecoveryCapsules)) {
@@ -452,7 +445,7 @@ GetRecoveryCapsuleInfo (
   //
   RecoveryCapsuleCount = 0;
   for (Index = 0; Index < PrivateData->VolumeCount; Index++) {
-    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr(PcdRecoveryFileName), &Handle);
+    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr (PcdRecoveryFileName), &Handle);
 
     if (EFI_ERROR (Status)) {
       continue;
@@ -462,50 +455,56 @@ GetRecoveryCapsuleInfo (
       //
       // Get file size
       //
-      *Size = (UINTN) (((PEI_FAT_FILE *) Handle)->FileSize);
+      *Size = (UINTN)(((PEI_FAT_FILE *)Handle)->FileSize);
 
       //
       // Find corresponding physical block device
       //
       BlockDeviceNo = PrivateData->Volume[Index].BlockDeviceNo;
-      while (PrivateData->BlockDevice[BlockDeviceNo].Logical && BlockDeviceNo < PrivateData->BlockDeviceCount) {
+      while (BlockDeviceNo < PrivateData->BlockDeviceCount && PrivateData->BlockDevice[BlockDeviceNo].Logical) {
         BlockDeviceNo = PrivateData->BlockDevice[BlockDeviceNo].ParentDevNo;
       }
+
       //
       // Fill in the Capsule Type GUID according to the block device type
       //
       if (BlockDeviceNo < PrivateData->BlockDeviceCount) {
         if (PrivateData->BlockDevice[BlockDeviceNo].BlockIo2 != NULL) {
           switch (PrivateData->BlockDevice[BlockDeviceNo].InterfaceType) {
-          case MSG_ATAPI_DP:
-            CopyGuid (CapsuleType, &gRecoveryOnFatIdeDiskGuid);
-            break;
+            case MSG_ATAPI_DP:
+              CopyGuid (CapsuleType, &gRecoveryOnFatIdeDiskGuid);
+              break;
 
-          case MSG_USB_DP:
-            CopyGuid (CapsuleType, &gRecoveryOnFatUsbDiskGuid);
-            break;
+            case MSG_USB_DP:
+              CopyGuid (CapsuleType, &gRecoveryOnFatUsbDiskGuid);
+              break;
 
-          default:
-            break;
+            case MSG_NVME_NAMESPACE_DP:
+              CopyGuid (CapsuleType, &gRecoveryOnFatNvmeDiskGuid);
+              break;
+
+            default:
+              break;
           }
         }
+
         if (PrivateData->BlockDevice[BlockDeviceNo].BlockIo != NULL) {
           switch (PrivateData->BlockDevice[BlockDeviceNo].DevType) {
-          case LegacyFloppy:
-            CopyGuid (CapsuleType, &gRecoveryOnFatFloppyDiskGuid);
-            break;
+            case LegacyFloppy:
+              CopyGuid (CapsuleType, &gRecoveryOnFatFloppyDiskGuid);
+              break;
 
-          case IdeCDROM:
-          case IdeLS120:
-            CopyGuid (CapsuleType, &gRecoveryOnFatIdeDiskGuid);
-            break;
+            case IdeCDROM:
+            case IdeLS120:
+              CopyGuid (CapsuleType, &gRecoveryOnFatIdeDiskGuid);
+              break;
 
-          case UsbMassStorage:
-            CopyGuid (CapsuleType, &gRecoveryOnFatUsbDiskGuid);
-            break;
+            case UsbMassStorage:
+              CopyGuid (CapsuleType, &gRecoveryOnFatUsbDiskGuid);
+              break;
 
-          default:
-            break;
+            default:
+              break;
           }
         }
       }
@@ -519,19 +518,18 @@ GetRecoveryCapsuleInfo (
   return EFI_NOT_FOUND;
 }
 
-
 /**
   Loads a DXE capsule from some media into memory.
 
   This function, by whatever mechanism, retrieves a DXE capsule from some device
   and loads it into memory. Note that the published interface is device neutral.
 
-  @param[in]     PeiServices       General-purpose services that are available 
+  @param[in]     PeiServices       General-purpose services that are available
                                    to every PEIM
   @param[in]     This              Indicates the EFI_PEI_DEVICE_RECOVERY_MODULE_PPI
                                    instance.
   @param[in]     CapsuleInstance   Specifies which capsule instance to retrieve.
-  @param[out]    Buffer            Specifies a caller-allocated buffer in which 
+  @param[out]    Buffer            Specifies a caller-allocated buffer in which
                                    the requested recovery capsule will be returned.
 
   @retval EFI_SUCCESS        The capsule was loaded correctly.
@@ -542,10 +540,10 @@ GetRecoveryCapsuleInfo (
 EFI_STATUS
 EFIAPI
 LoadRecoveryCapsule (
-  IN EFI_PEI_SERVICES                             **PeiServices,
-  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI           *This,
-  IN UINTN                                        CapsuleInstance,
-  OUT VOID                                        *Buffer
+  IN EFI_PEI_SERVICES                    **PeiServices,
+  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
+  IN UINTN                               CapsuleInstance,
+  OUT VOID                               *Buffer
   )
 {
   EFI_STATUS            Status;
@@ -555,14 +553,12 @@ LoadRecoveryCapsule (
   PEI_FILE_HANDLE       Handle;
   UINTN                 NumberRecoveryCapsules;
 
+  Handle = NULL;
+
   Status = GetNumberRecoveryCapsules (PeiServices, This, &NumberRecoveryCapsules);
 
   if (EFI_ERROR (Status)) {
     return Status;
-  }
-
-  if (FeaturePcdGet (PcdFrameworkCompatibilitySupport)) {
-    CapsuleInstance = CapsuleInstance + 1;
   }
 
   if ((CapsuleInstance == 0) || (CapsuleInstance > NumberRecoveryCapsules)) {
@@ -576,19 +572,18 @@ LoadRecoveryCapsule (
   //
   RecoveryCapsuleCount = 0;
   for (Index = 0; Index < PrivateData->VolumeCount; Index++) {
-    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr(PcdRecoveryFileName), &Handle);
+    Status = FindRecoveryFile (PrivateData, Index, (CHAR16 *)PcdGetPtr (PcdRecoveryFileName), &Handle);
     if (EFI_ERROR (Status)) {
       continue;
     }
 
     if (CapsuleInstance - 1 == RecoveryCapsuleCount) {
-
       Status = FatReadFile (
-                PrivateData,
-                Handle,
-                (UINTN) (((PEI_FAT_FILE *) Handle)->FileSize),
-                Buffer
-                );
+                 PrivateData,
+                 Handle,
+                 (UINTN)(((PEI_FAT_FILE *)Handle)->FileSize),
+                 Buffer
+                 );
       return Status;
     }
 
@@ -598,22 +593,21 @@ LoadRecoveryCapsule (
   return EFI_NOT_FOUND;
 }
 
-
 /**
   Finds the recovery file on a FAT volume.
-  This function finds the the recovery file named FileName on a specified FAT volume and returns
+  This function finds the recovery file named FileName on a specified FAT volume and returns
   its FileHandle pointer.
 
-  @param  PrivateData             Global memory map for accessing global 
-                                  variables. 
-  @param  VolumeIndex             The index of the volume. 
-  @param  FileName                The recovery file name to find. 
-  @param  Handle                  The output file handle. 
+  @param  PrivateData             Global memory map for accessing global
+                                  variables.
+  @param  VolumeIndex             The index of the volume.
+  @param  FileName                The recovery file name to find.
+  @param  Handle                  The output file handle.
 
-  @retval EFI_DEVICE_ERROR        Some error occured when operating the FAT 
-                                  volume. 
-  @retval EFI_NOT_FOUND           The recovery file was not found. 
-  @retval EFI_SUCCESS             The recovery file was successfully found on the 
+  @retval EFI_DEVICE_ERROR        Some error occurred when operating the FAT
+                                  volume.
+  @retval EFI_NOT_FOUND           The recovery file was not found.
+  @retval EFI_SUCCESS             The recovery file was successfully found on the
                                   FAT volume.
 
 **/
@@ -641,17 +635,18 @@ FindRecoveryFile (
   // Construct root directory file
   //
   ZeroMem (&Parent, sizeof (PEI_FAT_FILE));
-  Parent.IsFixedRootDir   = (BOOLEAN) ((PrivateData->Volume[VolumeIndex].FatType == Fat32) ? FALSE : TRUE);
-  Parent.Attributes       = FAT_ATTR_DIRECTORY;
-  Parent.CurrentPos       = 0;
-  Parent.CurrentCluster   = Parent.IsFixedRootDir ? 0 : PrivateData->Volume[VolumeIndex].RootDirCluster;
-  Parent.StartingCluster  = Parent.CurrentCluster;
-  Parent.Volume           = &PrivateData->Volume[VolumeIndex];
+  Parent.IsFixedRootDir  = (BOOLEAN)((PrivateData->Volume[VolumeIndex].FatType == Fat32) ? FALSE : TRUE);
+  Parent.Attributes      = FAT_ATTR_DIRECTORY;
+  Parent.CurrentPos      = 0;
+  Parent.CurrentCluster  = Parent.IsFixedRootDir ? 0 : PrivateData->Volume[VolumeIndex].RootDirCluster;
+  Parent.StartingCluster = Parent.CurrentCluster;
+  Parent.Volume          = &PrivateData->Volume[VolumeIndex];
 
-  Status                  = FatSetFilePos (PrivateData, &Parent, 0);
+  Status = FatSetFilePos (PrivateData, &Parent, 0);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
+
   //
   // Search for recovery capsule in root directory
   //
@@ -681,5 +676,4 @@ FindRecoveryFile (
   *Handle = File;
 
   return EFI_SUCCESS;
-
 }

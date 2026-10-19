@@ -2,18 +2,11 @@
 
   Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
   Portions copyright (c) 2010, Apple Inc. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __PE_COFF_LOADER_H__
-#define __PE_COFF_LOADER_H__
+#pragma once
 
 // Needed for PE_COFF_LOADER_IMAGE_CONTEXT
 #include <Library/PeCoffLib.h>
@@ -22,10 +15,7 @@
 #define PE_COFF_LOADER_PROTOCOL_GUID \
   { 0xB323179B, 0x97FB, 0x477E, { 0xB0, 0xFE, 0xD8, 0x85, 0x91, 0xFA, 0x11, 0xAB } }
 
-
 typedef struct _PE_COFF_LOADER_PROTOCOL PE_COFF_LOADER_PROTOCOL;
-
-
 
 /**
   Retrieves information about a PE/COFF image.
@@ -52,10 +42,9 @@ typedef struct _PE_COFF_LOADER_PROTOCOL PE_COFF_LOADER_PROTOCOL;
 **/
 typedef
 RETURN_STATUS
-(EFIAPI *PE_COFF_LOADER_GET_IMAGE_INFO) (
+(EFIAPI *PE_COFF_LOADER_GET_IMAGE_INFO)(
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   );
-
 
 /**
   Applies relocation fixups to a PE/COFF image that was loaded with PeCoffLoaderLoadImage().
@@ -89,10 +78,9 @@ RETURN_STATUS
 **/
 typedef
 RETURN_STATUS
-(EFIAPI *PE_COFF_LOADER_RELOCATE_IMAGE) (
+(EFIAPI *PE_COFF_LOADER_RELOCATE_IMAGE)(
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   );
-
 
 /**
   Loads a PE/COFF image into memory.
@@ -127,11 +115,9 @@ RETURN_STATUS
 **/
 typedef
 RETURN_STATUS
-(EFIAPI *PE_COFF_LOADER_LOAD_IMAGE) (
+(EFIAPI *PE_COFF_LOADER_LOAD_IMAGE)(
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   );
-
-
 
 /**
   Reads contents of a PE/COFF image from a buffer in system memory.
@@ -158,23 +144,21 @@ RETURN_STATUS
 **/
 typedef
 RETURN_STATUS
-(EFIAPI *PE_COFF_LOADER_READ_FROM_MEMORY) (
+(EFIAPI *PE_COFF_LOADER_READ_FROM_MEMORY)(
   IN     VOID    *FileHandle,
   IN     UINTN   FileOffset,
   IN OUT UINTN   *ReadSize,
   OUT    VOID    *Buffer
   );
 
-
-
 /**
-  Reapply fixups on a fixed up PE32/PE32+ image to allow virutal calling at EFI
+  Reapply fixups on a fixed up PE32/PE32+ image to allow virtual calling at EFI
   runtime.
 
   This function reapplies relocation fixups to the PE/COFF image specified by ImageBase
   and ImageSize so the image will execute correctly when the PE/COFF image is mapped
   to the address specified by VirtualImageBase. RelocationData must be identical
-  to the FiuxupData buffer from the PE_COFF_LOADER_IMAGE_CONTEXT structure
+  to the FixupData buffer from the PE_COFF_LOADER_IMAGE_CONTEXT structure
   after this PE/COFF image was relocated with PeCoffLoaderRelocateImage().
 
   Note that if the platform does not maintain coherency between the instruction cache(s) and the data
@@ -192,14 +176,12 @@ RETURN_STATUS
 **/
 typedef
 VOID
-(EFIAPI *PE_COFF_LOADER_RELOCATE_IMAGE_FOR_RUNTIME) (
+(EFIAPI *PE_COFF_LOADER_RELOCATE_IMAGE_FOR_RUNTIME)(
   IN  PHYSICAL_ADDRESS        ImageBase,
   IN  PHYSICAL_ADDRESS        VirtImageBase,
   IN  UINTN                   ImageSize,
   IN  VOID                    *RelocationData
   );
-
-
 
 /**
   Unloads a loaded PE/COFF image from memory and releases its taken resource.
@@ -219,23 +201,17 @@ VOID
 **/
 typedef
 RETURN_STATUS
-(EFIAPI *PE_COFF_LOADER_UNLOAD_IMAGE) (
+(EFIAPI *PE_COFF_LOADER_UNLOAD_IMAGE)(
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   );
 
-
 struct _PE_COFF_LOADER_PROTOCOL {
-  PE_COFF_LOADER_GET_IMAGE_INFO             GetImageInfo;
-  PE_COFF_LOADER_LOAD_IMAGE                 LoadImage;
-  PE_COFF_LOADER_RELOCATE_IMAGE             RelocateImage;
-  PE_COFF_LOADER_READ_FROM_MEMORY           ReadFromMemory;
-  PE_COFF_LOADER_RELOCATE_IMAGE_FOR_RUNTIME RelocateImageForRuntime;
-  PE_COFF_LOADER_UNLOAD_IMAGE               UnloadImage;
+  PE_COFF_LOADER_GET_IMAGE_INFO                GetImageInfo;
+  PE_COFF_LOADER_LOAD_IMAGE                    LoadImage;
+  PE_COFF_LOADER_RELOCATE_IMAGE                RelocateImage;
+  PE_COFF_LOADER_READ_FROM_MEMORY              ReadFromMemory;
+  PE_COFF_LOADER_RELOCATE_IMAGE_FOR_RUNTIME    RelocateImageForRuntime;
+  PE_COFF_LOADER_UNLOAD_IMAGE                  UnloadImage;
 };
 
-
-extern EFI_GUID gPeCoffLoaderProtocolGuid;
-
-
-#endif
-
+extern EFI_GUID  gPeCoffLoaderProtocolGuid;

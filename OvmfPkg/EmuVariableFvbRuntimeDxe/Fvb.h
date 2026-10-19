@@ -1,74 +1,70 @@
 /*++
 
 Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
   FwBlockService.h
-  
+
 Abstract:
 
   Firmware volume block driver for Intel Firmware Hub (FWH) device
 
 --*/
 
-#ifndef _FW_BLOCK_SERVICE_H
-#define _FW_BLOCK_SERVICE_H
+#pragma once
 
 //
 // Fvb Protocol instance data
 //
-#define FVB_DEVICE_FROM_THIS(a)         CR (a, EFI_FW_VOL_BLOCK_DEVICE, FwVolBlockInstance, FVB_DEVICE_SIGNATURE)
-#define FVB_DEVICE_SIGNATURE            SIGNATURE_32 ('F', 'V', 'B', 'N')
+#define FVB_DEVICE_FROM_THIS(a)  CR (a, EFI_FW_VOL_BLOCK_DEVICE, FwVolBlockInstance, FVB_DEVICE_SIGNATURE)
+#define FVB_DEVICE_SIGNATURE  SIGNATURE_32 ('F', 'V', 'B', 'N')
 
 #pragma pack (1)
 
 typedef struct {
-
-  EFI_FIRMWARE_VOLUME_HEADER FvHdr;
-  EFI_FV_BLOCK_MAP_ENTRY     EndBlockMap;
-  VARIABLE_STORE_HEADER      VarHdr;
-
+  EFI_FIRMWARE_VOLUME_HEADER    FvHdr;
+  EFI_FV_BLOCK_MAP_ENTRY        EndBlockMap;
+  VARIABLE_STORE_HEADER         VarHdr;
 } FVB_FV_HDR_AND_VARS_TEMPLATE;
 
 typedef struct {
-  MEMMAP_DEVICE_PATH        MemMapDevPath;
-  EFI_DEVICE_PATH_PROTOCOL  EndDevPath;
+  MEMMAP_DEVICE_PATH          MemMapDevPath;
+  EFI_DEVICE_PATH_PROTOCOL    EndDevPath;
 } FV_DEVICE_PATH;
 
 #pragma pack ()
 
 typedef struct {
-  UINTN                               Signature;
-  FV_DEVICE_PATH                      DevicePath;
-  VOID                                *BufferPtr;
-  UINTN                               BlockSize;
-  UINTN                               Size;
-  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  FwVolBlockInstance;
+  UINTN                                 Signature;
+  FV_DEVICE_PATH                        DevicePath;
+  VOID                                  *BufferPtr;
+  UINTN                                 BlockSize;
+  UINTN                                 Size;
+  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL    FwVolBlockInstance;
 } EFI_FW_VOL_BLOCK_DEVICE;
-
 
 //
 // Constants
 //
-#define EMU_FVB_BLOCK_SIZE (FixedPcdGet32 (PcdFlashNvStorageFtwSpareSize))
-#define EMU_FVB_SIZE (2 * FixedPcdGet32 (PcdFlashNvStorageFtwSpareSize))
+#define EMU_FVB_BLOCK_SIZE \
+  EFI_PAGE_SIZE
+#define EMU_FVB_NUM_SPARE_BLOCKS \
+  EFI_SIZE_TO_PAGES ((UINTN)FixedPcdGet32 (PcdFlashNvStorageFtwSpareSize))
+#define EMU_FVB_NUM_TOTAL_BLOCKS \
+  (2 * EMU_FVB_NUM_SPARE_BLOCKS)
+#define EMU_FVB_SIZE \
+  (EMU_FVB_NUM_TOTAL_BLOCKS * EMU_FVB_BLOCK_SIZE)
 #define FTW_WRITE_QUEUE_SIZE \
   (FixedPcdGet32 (PcdFlashNvStorageFtwWorkingSize) - \
    sizeof (EFI_FAULT_TOLERANT_WORKING_BLOCK_HEADER))
-#define EMU_FV_HEADER_LENGTH OFFSET_OF (FVB_FV_HDR_AND_VARS_TEMPLATE, VarHdr)
+#define EMU_FV_HEADER_LENGTH  OFFSET_OF (FVB_FV_HDR_AND_VARS_TEMPLATE, VarHdr)
 
-#define NOT_ERASED_BIT 0
-#define ERASED_BIT     1
-#define ERASED_UINT8   0xff
-#define ERASED_UINT32  0xffffffff
+#define NOT_ERASED_BIT  0
+#define ERASED_BIT      1
+#define ERASED_UINT8    0xff
+#define ERASED_UINT32   0xffffffff
 
 //
 // Protocol APIs
@@ -136,5 +132,3 @@ FvbProtocolEraseBlocks (
   ...
   )
 ;
-
-#endif

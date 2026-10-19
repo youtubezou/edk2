@@ -1,26 +1,19 @@
 /** @file
-  Defines FileImage - the view of the file that is visible at any point, 
+  Defines FileImage - the view of the file that is visible at any point,
   as well as the event handlers for editing the file
-  
-  Copyright (c) 2005 - 2011, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
 
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _LIB_FILE_IMAGE_H_
-#define _LIB_FILE_IMAGE_H_
+#pragma once
 
 #include "HexEditor.h"
 
 /**
   Initialization function for HFileImage
- 
+
   @retval EFI_SUCCESS     The operation was successful.
 **/
 EFI_STATUS
@@ -39,7 +32,7 @@ HFileImageCleanup (
   );
 
 /**
-  Backup function for HFileImage. Only a few fields need to be backup. 
+  Backup function for HFileImage. Only a few fields need to be backup.
   This is for making the file buffer refresh as few as possible.
 
   @retval EFI_SUCCESS           The operation was successful.
@@ -58,12 +51,12 @@ HFileImageBackup (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
+  @retval EFI_LOAD_ERROR        A load error occurred.
 **/
 EFI_STATUS
 HFileImageRead (
   IN CONST CHAR16  *FileName,
-  IN BOOLEAN Recover
+  IN BOOLEAN       Recover
   );
 
 /**
@@ -73,11 +66,9 @@ HFileImageRead (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
+  @retval EFI_LOAD_ERROR        A load error occurred.
 **/
 EFI_STATUS
 HFileImageSave (
-  IN CHAR16 *FileName
+  IN CHAR16  *FileName
   );
-
-#endif

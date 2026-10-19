@@ -6,17 +6,11 @@
 
   Copyright (C) 2014, Citrix Ltd.
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-#ifndef __GNTTAB_H__
-#define __GNTTAB_H__
+
+#pragma once
 
 #include <IndustryStandard/Xen/grant_table.h>
 
@@ -33,7 +27,7 @@ XenGrantTableInit (
   );
 
 /**
-  Desinitilize the Grant Table.
+  De-initialize the Grant Table.
 **/
 VOID
 XenGrantTableDeinit (
@@ -44,7 +38,7 @@ XenGrantTableDeinit (
   Grant access to the page Frame to the domain DomainId.
 
   @param This       A pointer to XENBUS_PROTOCOL instance.
-  @param DomainId   ID of the domain to grant acces to.
+  @param DomainId   ID of the domain to grant access to.
   @param Frame      Frame Number of the page to grant access to.
   @param ReadOnly   Provide read-only or read-write access.
   @param RefPtr     Reference number of the grant will be written to this pointer.
@@ -52,11 +46,11 @@ XenGrantTableDeinit (
 EFI_STATUS
 EFIAPI
 XenBusGrantAccess (
-  IN  XENBUS_PROTOCOL *This,
-  IN  domid_t         DomainId,
-  IN  UINTN           Frame, // MFN
-  IN  BOOLEAN         ReadOnly,
-  OUT grant_ref_t     *RefPtr
+  IN  XENBUS_PROTOCOL  *This,
+  IN  domid_t          DomainId,
+  IN  UINTN            Frame, // MFN
+  IN  BOOLEAN          ReadOnly,
+  OUT grant_ref_t      *RefPtr
   );
 
 /**
@@ -72,5 +66,3 @@ XenBusGrantEndAccess (
   IN XENBUS_PROTOCOL  *This,
   IN grant_ref_t      Ref
   );
-
-#endif /* !__GNTTAB_H__ */

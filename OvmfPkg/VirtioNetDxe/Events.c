@@ -8,13 +8,7 @@
   Copyright (C) 2013, Red Hat, Inc.
   Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -32,12 +26,11 @@
                                 context, which is implementation-dependent.
 
 **/
-
 VOID
 EFIAPI
 VirtioNetIsPacketAvailable (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
   //
@@ -48,8 +41,8 @@ VirtioNetIsPacketAvailable (
   // almost no documentation in either the UEFI-2.3.1+errC spec or the
   // DWG-2.3.1, but WaitForKey does have some.
   //
-  VNET_DEV *Dev;
-  UINT16   RxCurUsed;
+  VNET_DEV  *Dev;
+  UINT16    RxCurUsed;
 
   Dev = Context;
   if (Dev->Snm.State != EfiSimpleNetworkInitialized) {
@@ -64,15 +57,15 @@ VirtioNetIsPacketAvailable (
   MemoryFence ();
 
   if (Dev->RxLastUsed != RxCurUsed) {
-    gBS->SignalEvent (&Dev->Snp.WaitForPacket);
+    gBS->SignalEvent (Dev->Snp.WaitForPacket);
   }
 }
 
 VOID
 EFIAPI
 VirtioNetExitBoot (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
   //
@@ -82,8 +75,9 @@ VirtioNetExitBoot (
   // Shut down pending transfers according to DWG-2.3.1, "25.5.1 Exit Boot
   // Services Event".
   //
-  VNET_DEV *Dev;
+  VNET_DEV  *Dev;
 
+  DEBUG ((DEBUG_VERBOSE, "%a: Context=0x%p\n", __func__, Context));
   Dev = Context;
   if (Dev->Snm.State == EfiSimpleNetworkInitialized) {
     Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, 0);

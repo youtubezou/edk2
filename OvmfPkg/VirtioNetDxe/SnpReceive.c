@@ -5,13 +5,7 @@
   Copyright (C) 2013, Red Hat, Inc.
   Copyright (c) 2006 - 2013, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -58,46 +52,46 @@
                                  interface.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioNetReceive (
-  IN EFI_SIMPLE_NETWORK_PROTOCOL *This,
-  OUT UINTN                      *HeaderSize OPTIONAL,
-  IN OUT UINTN                   *BufferSize,
-  OUT VOID                       *Buffer,
-  OUT EFI_MAC_ADDRESS            *SrcAddr    OPTIONAL,
-  OUT EFI_MAC_ADDRESS            *DestAddr   OPTIONAL,
-  OUT UINT16                     *Protocol   OPTIONAL
+  IN EFI_SIMPLE_NETWORK_PROTOCOL  *This,
+  OUT UINTN                       *HeaderSize OPTIONAL,
+  IN OUT UINTN                    *BufferSize,
+  OUT VOID                        *Buffer,
+  OUT EFI_MAC_ADDRESS             *SrcAddr    OPTIONAL,
+  OUT EFI_MAC_ADDRESS             *DestAddr   OPTIONAL,
+  OUT UINT16                      *Protocol   OPTIONAL
   )
 {
-  VNET_DEV   *Dev;
-  EFI_TPL    OldTpl;
-  EFI_STATUS Status;
-  UINT16     RxCurUsed;
-  UINT16     UsedElemIdx;
-  UINT32     DescIdx;
-  UINT32     RxLen;
-  UINTN      OrigBufferSize;
-  UINT8      *RxPtr;
-  UINT16     AvailIdx;
-  EFI_STATUS NotifyStatus;
+  VNET_DEV    *Dev;
+  EFI_TPL     OldTpl;
+  EFI_STATUS  Status;
+  UINT16      RxCurUsed;
+  UINT16      UsedElemIdx;
+  UINT32      DescIdx;
+  UINT32      RxLen;
+  UINTN       OrigBufferSize;
+  UINT8       *RxPtr;
+  UINT16      AvailIdx;
+  EFI_STATUS  NotifyStatus;
+  UINTN       RxBufOffset;
 
-  if (This == NULL || BufferSize == NULL || Buffer == NULL) {
+  if ((This == NULL) || (BufferSize == NULL) || (Buffer == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  Dev = VIRTIO_NET_FROM_SNP (This);
+  Dev    = VIRTIO_NET_FROM_SNP (This);
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
   switch (Dev->Snm.State) {
-  case EfiSimpleNetworkStopped:
-    Status = EFI_NOT_STARTED;
-    goto Exit;
-  case EfiSimpleNetworkStarted:
-    Status = EFI_DEVICE_ERROR;
-    goto Exit;
-  default:
-    break;
+    case EfiSimpleNetworkStopped:
+      Status = EFI_NOT_STARTED;
+      goto Exit;
+    case EfiSimpleNetworkStarted:
+      Status = EFI_DEVICE_ERROR;
+      goto Exit;
+    default:
+      break;
   }
 
   //
@@ -113,8 +107,8 @@ VirtioNetReceive (
   }
 
   UsedElemIdx = Dev->RxLastUsed % Dev->RxRing.QueueSize;
-  DescIdx = Dev->RxRing.Used.UsedElem[UsedElemIdx].Id;
-  RxLen   = Dev->RxRing.Used.UsedElem[UsedElemIdx].Len;
+  DescIdx     = Dev->RxRing.Used.UsedElem[UsedElemIdx].Id;
+  RxLen       = Dev->RxRing.Used.UsedElem[UsedElemIdx].Len;
 
   //
   // the virtio-net request header must be complete; we skip it
@@ -127,7 +121,7 @@ VirtioNetReceive (
   ASSERT (RxLen <= Dev->RxRing.Desc[DescIdx + 1].Len);
 
   OrigBufferSize = *BufferSize;
-  *BufferSize = RxLen;
+  *BufferSize    = RxLen;
 
   if (OrigBufferSize < RxLen) {
     Status = EFI_BUFFER_TOO_SMALL;
@@ -143,22 +137,27 @@ VirtioNetReceive (
     *HeaderSize = Dev->Snm.MediaHeaderSize;
   }
 
-  RxPtr = (UINT8 *)(UINTN) Dev->RxRing.Desc[DescIdx + 1].Addr;
+  RxBufOffset = (UINTN)(Dev->RxRing.Desc[DescIdx + 1].Addr -
+                        Dev->RxBufDeviceBase);
+  RxPtr = Dev->RxBuf + RxBufOffset;
   CopyMem (Buffer, RxPtr, RxLen);
 
   if (DestAddr != NULL) {
     CopyMem (DestAddr, RxPtr, SIZE_OF_VNET (Mac));
   }
+
   RxPtr += SIZE_OF_VNET (Mac);
 
   if (SrcAddr != NULL) {
     CopyMem (SrcAddr, RxPtr, SIZE_OF_VNET (Mac));
   }
+
   RxPtr += SIZE_OF_VNET (Mac);
 
   if (Protocol != NULL) {
-    *Protocol = (UINT16) ((RxPtr[0] << 8) | RxPtr[1]);
+    *Protocol = (UINT16)((RxPtr[0] << 8) | RxPtr[1]);
   }
+
   RxPtr += sizeof (UINT16);
 
   Status = EFI_SUCCESS;
@@ -169,16 +168,17 @@ RecycleDesc:
   //
   // virtio-0.9.5, 2.4.1 Supplying Buffers to The Device
   //
-  AvailIdx = *Dev->RxRing.Avail.Idx;
+  AvailIdx                                                   = *Dev->RxRing.Avail.Idx;
   Dev->RxRing.Avail.Ring[AvailIdx++ % Dev->RxRing.QueueSize] =
-    (UINT16) DescIdx;
+    (UINT16)DescIdx;
 
   MemoryFence ();
   *Dev->RxRing.Avail.Idx = AvailIdx;
 
   MemoryFence ();
   NotifyStatus = Dev->VirtIo->SetQueueNotify (Dev->VirtIo, VIRTIO_NET_Q_RX);
-  if (!EFI_ERROR (Status)) { // earlier error takes precedence
+  if (!EFI_ERROR (Status)) {
+    // earlier error takes precedence
     Status = NotifyStatus;
   }
 

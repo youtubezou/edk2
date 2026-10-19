@@ -5,18 +5,14 @@
   Copyright (C) 2015, Red Hat, Inc.
   Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Guid/EventGroup.h>
 #include <Library/DebugLib.h>
 #include <Library/DevicePathLib.h>
+#include <Library/DxeServicesTableLib.h>
+#include <Library/MemEncryptSevLib.h>
 #include <Library/PcdLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/UefiRuntimeLib.h>
@@ -28,12 +24,12 @@
 
 VOID
 InstallProtocolInterfaces (
-  IN EFI_FW_VOL_BLOCK_DEVICE *FvbDevice
+  IN EFI_FW_VOL_BLOCK_DEVICE  *FvbDevice
   )
 {
-  EFI_STATUS                         Status;
-  EFI_HANDLE                         FwbHandle;
-  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL *OldFwbInterface;
+  EFI_STATUS                          Status;
+  EFI_HANDLE                          FwbHandle;
+  EFI_FIRMWARE_VOLUME_BLOCK_PROTOCOL  *OldFwbInterface;
 
   ASSERT (!FeaturePcdGet (PcdSmmSmramRequire));
 
@@ -41,14 +37,17 @@ InstallProtocolInterfaces (
   // Find a handle with a matching device path that has supports FW Block
   // protocol
   //
-  Status = gBS->LocateDevicePath (&gEfiFirmwareVolumeBlockProtocolGuid,
-                  &FvbDevice->DevicePath, &FwbHandle);
+  Status = gBS->LocateDevicePath (
+                  &gEfiFirmwareVolumeBlockProtocolGuid,
+                  &FvbDevice->DevicePath,
+                  &FwbHandle
+                  );
   if (EFI_ERROR (Status)) {
     //
     // LocateDevicePath fails so install a new interface and device path
     //
     FwbHandle = NULL;
-    DEBUG ((EFI_D_INFO, "Installing QEMU flash FVB\n"));
+    DEBUG ((DEBUG_INFO, "Installing QEMU flash FVB\n"));
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &FwbHandle,
                     &gEfiFirmwareVolumeBlockProtocolGuid,
@@ -65,11 +64,11 @@ InstallProtocolInterfaces (
     Status = gBS->HandleProtocol (
                     FwbHandle,
                     &gEfiFirmwareVolumeBlockProtocolGuid,
-                    (VOID**)&OldFwbInterface
+                    (VOID **)&OldFwbInterface
                     );
     ASSERT_EFI_ERROR (Status);
 
-    DEBUG ((EFI_D_INFO, "Reinstalling FVB for QEMU flash region\n"));
+    DEBUG ((DEBUG_INFO, "Reinstalling FVB for QEMU flash region\n"));
     Status = gBS->ReinstallProtocolInterface (
                     FwbHandle,
                     &gEfiFirmwareVolumeBlockProtocolGuid,
@@ -85,14 +84,14 @@ InstallProtocolInterfaces (
   }
 }
 
-
 STATIC
 VOID
 EFIAPI
 FvbVirtualAddressChangeEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   )
+
 /*++
 
   Routine Description:
@@ -111,39 +110,38 @@ FvbVirtualAddressChangeEvent (
 
 --*/
 {
-  EFI_FW_VOL_INSTANCE *FwhInstance;
-  UINTN               Index;
+  EFI_FW_VOL_INSTANCE  *FwhInstance;
+  UINTN                Index;
 
   FwhInstance = mFvbModuleGlobal->FvInstance;
-  EfiConvertPointer (0x0, (VOID **) &mFvbModuleGlobal->FvInstance);
+  EfiConvertPointer (0x0, (VOID **)&mFvbModuleGlobal->FvInstance);
 
   //
   // Convert the base address of all the instances
   //
-  Index       = 0;
+  Index = 0;
   while (Index < mFvbModuleGlobal->NumFv) {
-    EfiConvertPointer (0x0, (VOID **) &FwhInstance->FvBase);
+    EfiConvertPointer (0x0, (VOID **)&FwhInstance->FvBase);
     FwhInstance = (EFI_FW_VOL_INSTANCE *)
-      (
-        (UINTN) ((UINT8 *) FwhInstance) +
-        FwhInstance->VolumeHeader.HeaderLength +
-        (sizeof (EFI_FW_VOL_INSTANCE) - sizeof (EFI_FIRMWARE_VOLUME_HEADER))
-      );
+                  (
+                   (UINTN)((UINT8 *)FwhInstance) +
+                   FwhInstance->VolumeHeader.HeaderLength +
+                   (sizeof (EFI_FW_VOL_INSTANCE) - sizeof (EFI_FIRMWARE_VOLUME_HEADER))
+                  );
     Index++;
   }
 
-  EfiConvertPointer (0x0, (VOID **) &mFvbModuleGlobal);
+  EfiConvertPointer (0x0, (VOID **)&mFvbModuleGlobal);
   QemuFlashConvertPointers ();
 }
-
 
 VOID
 InstallVirtualAddressChangeHandler (
   VOID
   )
 {
-  EFI_STATUS Status;
-  EFI_EVENT  VirtualAddressChangeEvent;
+  EFI_STATUS  Status;
+  EFI_EVENT   VirtualAddressChangeEvent;
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,
@@ -154,4 +152,106 @@ InstallVirtualAddressChangeHandler (
                   &VirtualAddressChangeEvent
                   );
   ASSERT_EFI_ERROR (Status);
+}
+
+EFI_STATUS
+MarkIoMemoryRangeForRuntimeAccess (
+  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
+  IN UINTN                 Length
+  )
+{
+  EFI_STATUS                       Status;
+  EFI_GCD_MEMORY_SPACE_DESCRIPTOR  GcdDescriptor;
+
+  //
+  // Mark flash region as runtime memory
+  //
+  Status = gDS->RemoveMemorySpace (
+                  BaseAddress,
+                  Length
+                  );
+
+  Status = gDS->AddMemorySpace (
+                  EfiGcdMemoryTypeMemoryMappedIo,
+                  BaseAddress,
+                  Length,
+                  EFI_MEMORY_UC | EFI_MEMORY_RUNTIME
+                  );
+  ASSERT_EFI_ERROR (Status);
+
+  Status = gDS->AllocateMemorySpace (
+                  EfiGcdAllocateAddress,
+                  EfiGcdMemoryTypeMemoryMappedIo,
+                  0,
+                  Length,
+                  &BaseAddress,
+                  gImageHandle,
+                  NULL
+                  );
+  ASSERT_EFI_ERROR (Status);
+
+  Status = gDS->GetMemorySpaceDescriptor (BaseAddress, &GcdDescriptor);
+  ASSERT_EFI_ERROR (Status);
+
+  Status = gDS->SetMemorySpaceAttributes (
+                  BaseAddress,
+                  Length,
+                  GcdDescriptor.Attributes | EFI_MEMORY_RUNTIME
+                  );
+  ASSERT_EFI_ERROR (Status);
+
+  //
+  // When SEV is active, AmdSevDxe mapped the BaseAddress with C=0 but
+  // SetMemorySpaceAttributes() remaps the range with C=1. Let's restore
+  // the mapping so that both guest and hyervisor can access the flash
+  // memory range.
+  //
+  if (MemEncryptSevIsEnabled ()) {
+    Status = MemEncryptSevClearMmioPageEncMask (
+               0,
+               BaseAddress,
+               EFI_SIZE_TO_PAGES (Length)
+               );
+    ASSERT_EFI_ERROR (Status);
+  }
+
+  return Status;
+}
+
+VOID
+SetPcdFlashNvStorageBaseAddresses (
+  VOID
+  )
+{
+  RETURN_STATUS  PcdStatus;
+
+  //
+  // Set several PCD values to point to flash
+  //
+  PcdStatus = PcdSet64S (
+                PcdFlashNvStorageVariableBase64,
+                (UINTN)PcdGet32 (PcdOvmfFlashNvStorageVariableBase)
+                );
+  ASSERT_RETURN_ERROR (PcdStatus);
+  PcdStatus = PcdSet32S (
+                PcdFlashNvStorageFtwWorkingBase,
+                PcdGet32 (PcdOvmfFlashNvStorageFtwWorkingBase)
+                );
+  ASSERT_RETURN_ERROR (PcdStatus);
+  PcdStatus = PcdSet32S (
+                PcdFlashNvStorageFtwSpareBase,
+                PcdGet32 (PcdOvmfFlashNvStorageFtwSpareBase)
+                );
+  ASSERT_RETURN_ERROR (PcdStatus);
+}
+
+VOID
+UpdateQemuFlashVariablesEnable (
+  VOID
+  )
+{
+  RETURN_STATUS  PcdStatus;
+
+  PcdStatus = PcdSetBoolS (PcdOvmfFlashVariablesEnable, TRUE);
+  ASSERT_RETURN_ERROR (PcdStatus);
 }

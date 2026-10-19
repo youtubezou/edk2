@@ -1,14 +1,8 @@
 /** @file
   Provides interface to EFI_FILE_HANDLE functionality.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -27,10 +21,10 @@
 #include <Library/PcdLib.h>
 #include <Library/PrintLib.h>
 
-CONST UINT16 gUnicodeFileTag = EFI_UNICODE_BYTE_ORDER_MARK;
+CONST UINT16  gUnicodeFileTag = EFI_UNICODE_BYTE_ORDER_MARK;
 
-#define MAX_FILE_NAME_LEN 522 // (20 * (6+5+2))+1) unicode characters from EFI FAT spec (doubled for bytes)
-#define FIND_XXXXX_FILE_BUFFER_SIZE (SIZE_OF_EFI_FILE_INFO + MAX_FILE_NAME_LEN)
+#define MAX_FILE_NAME_LEN            522// (20 * (6+5+2))+1) unicode characters from EFI FAT spec (doubled for bytes)
+#define FIND_XXXXX_FILE_BUFFER_SIZE  (SIZE_OF_EFI_FILE_INFO + MAX_FILE_NAME_LEN)
 
 /**
   This function will retrieve the information about the file for the handle
@@ -46,15 +40,15 @@ CONST UINT16 gUnicodeFileTag = EFI_UNICODE_BYTE_ORDER_MARK;
 
   @return the information about the file
 **/
-EFI_FILE_INFO*
+EFI_FILE_INFO *
 EFIAPI
 FileHandleGetInfo (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   )
 {
-  EFI_FILE_INFO   *FileInfo;
-  UINTN           FileInfoSize;
-  EFI_STATUS      Status;
+  EFI_FILE_INFO  *FileInfo;
+  UINTN          FileInfoSize;
+  EFI_STATUS     Status;
 
   if (FileHandle == NULL) {
     return (NULL);
@@ -64,31 +58,38 @@ FileHandleGetInfo (
   // Get the required size to allocate
   //
   FileInfoSize = 0;
-  FileInfo = NULL;
-  Status = FileHandle->GetInfo(FileHandle,
+  FileInfo     = NULL;
+  Status       = FileHandle->GetInfo (
+                               FileHandle,
                                &gEfiFileInfoGuid,
                                &FileInfoSize,
-                               NULL);
-  if (Status == EFI_BUFFER_TOO_SMALL){
+                               NULL
+                               );
+  if (Status == EFI_BUFFER_TOO_SMALL) {
     //
     // error is expected.  getting size to allocate
     //
-    FileInfo = AllocateZeroPool(FileInfoSize);
-    //
-    // now get the information
-    //
-    Status = FileHandle->GetInfo(FileHandle,
-                                 &gEfiFileInfoGuid,
-                                 &FileInfoSize,
-                                 FileInfo);
-    //
-    // if we got an error free the memory and return NULL
-    //
-    if (EFI_ERROR(Status) && (FileInfo != NULL)) {
-      FreePool(FileInfo);
-      FileInfo = NULL;
+    FileInfo = AllocateZeroPool (FileInfoSize);
+    if (FileInfo != NULL) {
+      //
+      // now get the information
+      //
+      Status = FileHandle->GetInfo (
+                             FileHandle,
+                             &gEfiFileInfoGuid,
+                             &FileInfoSize,
+                             FileInfo
+                             );
+      //
+      // if we got an error free the memory and return NULL
+      //
+      if (EFI_ERROR (Status)) {
+        FreePool (FileInfo);
+        FileInfo = NULL;
+      }
     }
   }
+
   return (FileInfo);
 }
 
@@ -114,22 +115,23 @@ FileHandleGetInfo (
 EFI_STATUS
 EFIAPI
 FileHandleSetInfo (
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN CONST EFI_FILE_INFO        *FileInfo
+  IN EFI_FILE_HANDLE      FileHandle,
+  IN CONST EFI_FILE_INFO  *FileInfo
   )
 {
-
-  if (FileHandle == NULL || FileInfo == NULL) {
+  if ((FileHandle == NULL) || (FileInfo == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
   //
   // Set the info
   //
-  return (FileHandle->SetInfo(FileHandle,
-                              &gEfiFileInfoGuid,
-                              (UINTN)FileInfo->Size,
-                              (EFI_FILE_INFO*)FileInfo));
+  return (FileHandle->SetInfo (
+                        FileHandle,
+                        &gEfiFileInfoGuid,
+                        (UINTN)FileInfo->Size,
+                        (EFI_FILE_INFO *)FileInfo
+                        ));
 }
 
 /**
@@ -163,10 +165,10 @@ FileHandleSetInfo (
 **/
 EFI_STATUS
 EFIAPI
-FileHandleRead(
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN OUT UINTN                  *BufferSize,
-  OUT VOID                      *Buffer
+FileHandleRead (
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN OUT UINTN        *BufferSize,
+  OUT VOID            *Buffer
   )
 {
   if (FileHandle == NULL) {
@@ -176,9 +178,8 @@ FileHandleRead(
   //
   // Perform the read based on EFI_FILE_PROTOCOL
   //
-  return (FileHandle->Read(FileHandle, BufferSize, Buffer));
+  return (FileHandle->Read (FileHandle, BufferSize, Buffer));
 }
-
 
 /**
   Write data to a file.
@@ -206,10 +207,10 @@ FileHandleRead(
 **/
 EFI_STATUS
 EFIAPI
-FileHandleWrite(
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN OUT UINTN                  *BufferSize,
-  IN VOID                       *Buffer
+FileHandleWrite (
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN OUT UINTN        *BufferSize,
+  IN VOID             *Buffer
   )
 {
   if (FileHandle == NULL) {
@@ -219,7 +220,7 @@ FileHandleWrite(
   //
   // Perform the write based on EFI_FILE_PROTOCOL
   //
-  return (FileHandle->Write(FileHandle, BufferSize, Buffer));
+  return (FileHandle->Write (FileHandle, BufferSize, Buffer));
 }
 
 /**
@@ -236,10 +237,10 @@ FileHandleWrite(
 EFI_STATUS
 EFIAPI
 FileHandleClose (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   if (FileHandle == NULL) {
     return (EFI_INVALID_PARAMETER);
@@ -248,7 +249,7 @@ FileHandleClose (
   //
   // Perform the Close based on EFI_FILE_PROTOCOL
   //
-  Status = FileHandle->Close(FileHandle);
+  Status = FileHandle->Close (FileHandle);
   return Status;
 }
 
@@ -269,10 +270,10 @@ FileHandleClose (
 EFI_STATUS
 EFIAPI
 FileHandleDelete (
-  IN EFI_FILE_HANDLE    FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   if (FileHandle == NULL) {
     return (EFI_INVALID_PARAMETER);
@@ -281,7 +282,7 @@ FileHandleDelete (
   //
   // Perform the Delete based on EFI_FILE_PROTOCOL
   //
-  Status = FileHandle->Delete(FileHandle);
+  Status = FileHandle->Delete (FileHandle);
   return Status;
 }
 
@@ -307,8 +308,8 @@ FileHandleDelete (
 EFI_STATUS
 EFIAPI
 FileHandleSetPosition (
-  IN EFI_FILE_HANDLE    FileHandle,
-  IN UINT64             Position
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN UINT64           Position
   )
 {
   if (FileHandle == NULL) {
@@ -318,7 +319,7 @@ FileHandleSetPosition (
   //
   // Perform the SetPosition based on EFI_FILE_PROTOCOL
   //
-  return (FileHandle->SetPosition(FileHandle, Position));
+  return (FileHandle->SetPosition (FileHandle, Position));
 }
 
 /**
@@ -339,19 +340,20 @@ FileHandleSetPosition (
 EFI_STATUS
 EFIAPI
 FileHandleGetPosition (
-  IN EFI_FILE_HANDLE            FileHandle,
-  OUT UINT64                    *Position
+  IN EFI_FILE_HANDLE  FileHandle,
+  OUT UINT64          *Position
   )
 {
-  if (Position == NULL || FileHandle == NULL) {
+  if ((Position == NULL) || (FileHandle == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
   //
   // Perform the GetPosition based on EFI_FILE_PROTOCOL
   //
-  return (FileHandle->GetPosition(FileHandle, Position));
+  return (FileHandle->GetPosition (FileHandle, Position));
 }
+
 /**
   Flushes data on a file
 
@@ -369,7 +371,7 @@ FileHandleGetPosition (
 EFI_STATUS
 EFIAPI
 FileHandleFlush (
-  IN EFI_FILE_HANDLE            FileHandle
+  IN EFI_FILE_HANDLE  FileHandle
   )
 {
   if (FileHandle == NULL) {
@@ -379,7 +381,7 @@ FileHandleFlush (
   //
   // Perform the Flush based on EFI_FILE_PROTOCOL
   //
-  return (FileHandle->Flush(FileHandle));
+  return (FileHandle->Flush (FileHandle));
 }
 
 /**
@@ -391,17 +393,17 @@ FileHandleFlush (
   @param[in] DirHandle          Handle to open file.
 
   @retval EFI_SUCCESS           DirHandle is a directory.
-  @retval EFI_INVALID_PARAMETER DirHandle is NULL. 
-                                The file information returns from FileHandleGetInfo is NULL. 
+  @retval EFI_INVALID_PARAMETER DirHandle is NULL.
+                                The file information returns from FileHandleGetInfo is NULL.
   @retval EFI_NOT_FOUND         DirHandle is not a directory.
 **/
 EFI_STATUS
 EFIAPI
 FileHandleIsDirectory (
-  IN EFI_FILE_HANDLE            DirHandle
+  IN EFI_FILE_HANDLE  DirHandle
   )
 {
-  EFI_FILE_INFO *DirInfo;
+  EFI_FILE_INFO  *DirInfo;
 
   if (DirHandle == NULL) {
     return (EFI_INVALID_PARAMETER);
@@ -421,6 +423,7 @@ FileHandleIsDirectory (
     //
     return (EFI_INVALID_PARAMETER);
   }
+
   if ((DirInfo->Attribute & EFI_FILE_DIRECTORY) == 0) {
     //
     // Attributes say this is not a directory
@@ -428,6 +431,7 @@ FileHandleIsDirectory (
     FreePool (DirInfo);
     return (EFI_NOT_FOUND);
   }
+
   //
   // all good...
   //
@@ -460,22 +464,22 @@ FileHandleIsDirectory (
 EFI_STATUS
 EFIAPI
 FileHandleFindFirstFile (
-  IN EFI_FILE_HANDLE            DirHandle,
-  OUT EFI_FILE_INFO             **Buffer
+  IN EFI_FILE_HANDLE  DirHandle,
+  OUT EFI_FILE_INFO   **Buffer
   )
 {
-  EFI_STATUS    Status;
-  UINTN         BufferSize;
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
 
-  if (Buffer == NULL || DirHandle == NULL) {
+  if ((Buffer == NULL) || (DirHandle == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
   //
   // verify that DirHandle is a directory
   //
-  Status = FileHandleIsDirectory(DirHandle);
-  if (EFI_ERROR(Status)) {
+  Status = FileHandleIsDirectory (DirHandle);
+  if (EFI_ERROR (Status)) {
     return (Status);
   }
 
@@ -483,17 +487,17 @@ FileHandleFindFirstFile (
   // Allocate a buffer sized to struct size + enough for the string at the end
   //
   BufferSize = FIND_XXXXX_FILE_BUFFER_SIZE;
-  *Buffer = AllocateZeroPool(BufferSize);
-  if (*Buffer == NULL){
+  *Buffer    = AllocateZeroPool (BufferSize);
+  if (*Buffer == NULL) {
     return (EFI_OUT_OF_RESOURCES);
   }
 
   //
   // reset to the beginning of the directory
   //
-  Status = FileHandleSetPosition(DirHandle, 0);
-  if (EFI_ERROR(Status)) {
-    FreePool(*Buffer);
+  Status = FileHandleSetPosition (DirHandle, 0);
+  if (EFI_ERROR (Status)) {
+    FreePool (*Buffer);
     *Buffer = NULL;
     return (Status);
   }
@@ -502,15 +506,17 @@ FileHandleFindFirstFile (
   // read in the info about the first file
   //
   Status = FileHandleRead (DirHandle, &BufferSize, *Buffer);
-  ASSERT(Status != EFI_BUFFER_TOO_SMALL);
-  if (EFI_ERROR(Status) || BufferSize == 0) {
-    FreePool(*Buffer);
+  ASSERT (Status != EFI_BUFFER_TOO_SMALL);
+  if (EFI_ERROR (Status) || (BufferSize == 0)) {
+    FreePool (*Buffer);
     *Buffer = NULL;
     if (BufferSize == 0) {
       return (EFI_NOT_FOUND);
     }
+
     return (Status);
   }
+
   return (EFI_SUCCESS);
 }
 
@@ -534,16 +540,16 @@ FileHandleFindFirstFile (
 **/
 EFI_STATUS
 EFIAPI
-FileHandleFindNextFile(
-  IN EFI_FILE_HANDLE          DirHandle,
-  OUT EFI_FILE_INFO          *Buffer,
-  OUT BOOLEAN                *NoFile
+FileHandleFindNextFile (
+  IN EFI_FILE_HANDLE  DirHandle,
+  OUT EFI_FILE_INFO   *Buffer,
+  OUT BOOLEAN         *NoFile
   )
 {
-  EFI_STATUS    Status;
-  UINTN         BufferSize;
+  EFI_STATUS  Status;
+  UINTN       BufferSize;
 
-  if (DirHandle == NULL || Buffer == NULL || NoFile == NULL) {
+  if ((DirHandle == NULL) || (Buffer == NULL) || (NoFile == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
@@ -556,16 +562,16 @@ FileHandleFindNextFile(
   // read in the info about the next file
   //
   Status = FileHandleRead (DirHandle, &BufferSize, Buffer);
-  ASSERT(Status != EFI_BUFFER_TOO_SMALL);
-  if (EFI_ERROR(Status)) {
+  ASSERT (Status != EFI_BUFFER_TOO_SMALL);
+  if (EFI_ERROR (Status)) {
     return (Status);
   }
 
   //
-  // If we read 0 bytes (but did not have erros) we already read in the last file.
+  // If we read 0 bytes (but did not have errors) we already read in the last file.
   //
   if (BufferSize == 0) {
-    FreePool(Buffer);
+    FreePool (Buffer);
     *NoFile = TRUE;
   }
 
@@ -589,20 +595,20 @@ FileHandleFindNextFile(
 EFI_STATUS
 EFIAPI
 FileHandleGetSize (
-  IN EFI_FILE_HANDLE            FileHandle,
-  OUT UINT64                    *Size
+  IN EFI_FILE_HANDLE  FileHandle,
+  OUT UINT64          *Size
   )
 {
-  EFI_FILE_INFO                 *FileInfo;
+  EFI_FILE_INFO  *FileInfo;
 
-  if (FileHandle == NULL || Size == NULL) {
+  if ((FileHandle == NULL) || (Size == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
   //
   // get the FileInfo structure
   //
-  FileInfo = FileHandleGetInfo(FileHandle);
+  FileInfo = FileHandleGetInfo (FileHandle);
   if (FileInfo == NULL) {
     return (EFI_DEVICE_ERROR);
   }
@@ -615,7 +621,7 @@ FileHandleGetSize (
   //
   // free the FileInfo memory
   //
-  FreePool(FileInfo);
+  FreePool (FileInfo);
 
   return (EFI_SUCCESS);
 }
@@ -636,12 +642,12 @@ FileHandleGetSize (
 EFI_STATUS
 EFIAPI
 FileHandleSetSize (
-  IN EFI_FILE_HANDLE            FileHandle,
-  IN UINT64                     Size
+  IN EFI_FILE_HANDLE  FileHandle,
+  IN UINT64           Size
   )
 {
-  EFI_FILE_INFO                 *FileInfo;
-  EFI_STATUS                    Status;
+  EFI_FILE_INFO  *FileInfo;
+  EFI_STATUS     Status;
 
   if (FileHandle == NULL) {
     return (EFI_INVALID_PARAMETER);
@@ -650,7 +656,7 @@ FileHandleSetSize (
   //
   // get the FileInfo structure
   //
-  FileInfo = FileHandleGetInfo(FileHandle);
+  FileInfo = FileHandleGetInfo (FileHandle);
   if (FileInfo == NULL) {
     return (EFI_DEVICE_ERROR);
   }
@@ -660,11 +666,11 @@ FileHandleSetSize (
   //
   FileInfo->FileSize = Size;
 
-  Status = FileHandleSetInfo(FileHandle, FileInfo);
+  Status = FileHandleSetInfo (FileHandle, FileInfo);
   //
   // free the FileInfo memory
   //
-  FreePool(FileInfo);
+  FreePool (FileInfo);
 
   return (Status);
 }
@@ -701,18 +707,18 @@ FileHandleSetSize (
 
   @return Destination           return the resultant string.
 **/
-CHAR16*
+CHAR16 *
 EFIAPI
 StrnCatGrowLeft (
-  IN OUT CHAR16           **Destination,
-  IN OUT UINTN            *CurrentSize,
-  IN     CONST CHAR16     *Source,
-  IN     UINTN            Count
+  IN OUT CHAR16        **Destination,
+  IN OUT UINTN         *CurrentSize,
+  IN     CONST CHAR16  *Source,
+  IN     UINTN         Count
   )
 {
-  UINTN DestinationStartSize;
-  UINTN NewSize;
-  UINTN CopySize;
+  UINTN  DestinationStartSize;
+  UINTN  NewSize;
+  UINTN  CopySize;
 
   if (Destination == NULL) {
     return (NULL);
@@ -729,19 +735,19 @@ StrnCatGrowLeft (
   // allow for NULL pointers address as Destination
   //
   if (*Destination != NULL) {
-    ASSERT(CurrentSize != 0);
-    DestinationStartSize = StrSize(*Destination);
-    ASSERT(DestinationStartSize <= *CurrentSize);
+    ASSERT (CurrentSize != 0);
+    DestinationStartSize = StrSize (*Destination);
+    ASSERT (DestinationStartSize <= *CurrentSize);
   } else {
     DestinationStartSize = 0;
-//    ASSERT(*CurrentSize == 0);
+    //    ASSERT(*CurrentSize == 0);
   }
 
   //
   // Append all of Source?
   //
   if (Count == 0) {
-    Count = StrSize(Source);
+    Count = StrSize (Source);
   }
 
   //
@@ -752,25 +758,27 @@ StrnCatGrowLeft (
     while (NewSize < (DestinationStartSize + Count)) {
       NewSize += 2 * Count;
     }
-    *Destination = ReallocatePool(*CurrentSize, NewSize, *Destination);
+
+    *Destination = ReallocatePool (*CurrentSize, NewSize, *Destination);
     *CurrentSize = NewSize;
   } else {
-    *Destination = AllocateZeroPool(Count+sizeof(CHAR16));
+    *Destination = AllocateZeroPool (Count+sizeof (CHAR16));
   }
+
   if (*Destination == NULL) {
     return NULL;
   }
 
-  CopySize = StrSize(*Destination);
-  CopyMem((*Destination)+((Count-2)/sizeof(CHAR16)), *Destination, CopySize);
-  CopyMem(*Destination, Source, Count-2);
+  CopySize = StrSize (*Destination);
+  CopyMem ((*Destination)+((Count-2)/sizeof (CHAR16)), *Destination, CopySize);
+  CopyMem (*Destination, Source, Count-2);
   return (*Destination);
 }
 
 /**
   Function to get a full filename given a EFI_FILE_HANDLE somewhere lower on the
-  directory 'stack'. If the file is a directory, then append the '\' char at the 
-  end of name string. If it's not a directory, then the last '\' should not be 
+  directory 'stack'. If the file is a directory, then append the '\' char at the
+  end of name string. If it's not a directory, then the last '\' should not be
   added.
 
   if Handle is NULL, return EFI_INVALID_PARAMETER
@@ -779,7 +787,7 @@ StrnCatGrowLeft (
   @param[out] FullFileName      pointer to pointer to generated full file name.  It
                                 is the responsibility of the caller to free this memory
                                 with a call to FreePool().
-  @retval EFI_SUCCESS           the operation was sucessful and the FullFileName is valid.
+  @retval EFI_SUCCESS           the operation was successful and the FullFileName is valid.
   @retval EFI_INVALID_PARAMETER Handle was NULL.
   @retval EFI_INVALID_PARAMETER FullFileName was NULL.
   @retval EFI_OUT_OF_RESOURCES  a memory allocation failed.
@@ -787,91 +795,105 @@ StrnCatGrowLeft (
 EFI_STATUS
 EFIAPI
 FileHandleGetFileName (
-  IN CONST EFI_FILE_HANDLE      Handle,
-  OUT CHAR16                    **FullFileName
+  IN CONST EFI_FILE_HANDLE  Handle,
+  OUT CHAR16                **FullFileName
   )
 {
-  EFI_STATUS      Status;
-  UINTN           Size;
-  EFI_FILE_HANDLE CurrentHandle;
-  EFI_FILE_HANDLE NextHigherHandle;
-  EFI_FILE_INFO   *FileInfo;
+  EFI_STATUS       Status;
+  UINTN            Size;
+  EFI_FILE_HANDLE  CurrentHandle;
+  EFI_FILE_HANDLE  NextHigherHandle;
+  EFI_FILE_INFO    *FileInfo;
 
   Size = 0;
 
   //
   // Check our parameters
   //
-  if (FullFileName == NULL || Handle == NULL) {
+  if ((FullFileName == NULL) || (Handle == NULL)) {
     return (EFI_INVALID_PARAMETER);
   }
 
   *FullFileName = NULL;
   CurrentHandle = NULL;
 
-  Status = Handle->Open(Handle, &CurrentHandle, L".", EFI_FILE_MODE_READ, 0);
-  if (!EFI_ERROR(Status)) {
+  Status = Handle->Open (Handle, &CurrentHandle, L".", EFI_FILE_MODE_READ, 0);
+  if (!EFI_ERROR (Status)) {
     //
     // Reverse out the current directory on the device
     //
-    for (;;) {
-      FileInfo = FileHandleGetInfo(CurrentHandle);
+    for ( ; ;) {
+      FileInfo = FileHandleGetInfo (CurrentHandle);
       if (FileInfo == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         break;
       } else {
         //
+        // Prepare to move to the parent directory.
+        // Also determine whether CurrentHandle refers to the Root directory.
+        //
+        Status = CurrentHandle->Open (CurrentHandle, &NextHigherHandle, L"..", EFI_FILE_MODE_READ, 0);
+        //
         // We got info... do we have a name? if yes precede the current path with it...
         //
-        if (StrLen (FileInfo->FileName) == 0) {
+        if ((StrLen (FileInfo->FileName) == 0) || EFI_ERROR (Status)) {
+          //
+          // Both FileInfo->FileName being '\0' and EFI_ERROR() suggest that
+          // CurrentHandle refers to the Root directory.  As this loop ensures
+          // FullFileName is starting with '\\' at all times, signal success
+          // and exit the loop.
+          // While FileInfo->FileName could theoretically be a value other than
+          // '\0' or '\\', '\\' is guaranteed to be supported by the
+          // specification and hence its value can safely be ignored.
+          //
+          Status = EFI_SUCCESS;
           if (*FullFileName == NULL) {
-            ASSERT((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
-            *FullFileName = StrnCatGrowLeft(FullFileName, &Size, L"\\", 0);
+            ASSERT ((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
+            *FullFileName = StrnCatGrowLeft (FullFileName, &Size, L"\\", 0);
           }
-          FreePool(FileInfo);
+
+          FreePool (FileInfo);
           break;
         } else {
           if (*FullFileName == NULL) {
-            ASSERT((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
-            *FullFileName = StrnCatGrowLeft(FullFileName, &Size, L"\\", 0);
+            ASSERT ((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
+            *FullFileName = StrnCatGrowLeft (FullFileName, &Size, L"\\", 0);
           }
-          ASSERT((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
-          *FullFileName = StrnCatGrowLeft(FullFileName, &Size, FileInfo->FileName, 0);
-          *FullFileName = StrnCatGrowLeft(FullFileName, &Size, L"\\", 0);
-          FreePool(FileInfo);
+
+          ASSERT ((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
+          *FullFileName = StrnCatGrowLeft (FullFileName, &Size, FileInfo->FileName, 0);
+          *FullFileName = StrnCatGrowLeft (FullFileName, &Size, L"\\", 0);
+          FreePool (FileInfo);
         }
       }
+
+      FileHandleClose (CurrentHandle);
       //
       // Move to the parent directory
       //
-      Status = CurrentHandle->Open (CurrentHandle, &NextHigherHandle, L"..", EFI_FILE_MODE_READ, 0);
-      if (EFI_ERROR (Status)) {
-        break;
-      }
-
-      FileHandleClose(CurrentHandle);
       CurrentHandle = NextHigherHandle;
     }
   } else if (Status == EFI_NOT_FOUND) {
     Status = EFI_SUCCESS;
-    ASSERT((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
-    *FullFileName = StrnCatGrowLeft(FullFileName, &Size, L"\\", 0);
+    ASSERT ((*FullFileName == NULL && Size == 0) || (*FullFileName != NULL));
+    *FullFileName = StrnCatGrowLeft (FullFileName, &Size, L"\\", 0);
   }
 
-  if (*FullFileName != NULL && 
-      (*FullFileName)[StrLen(*FullFileName) - 1] == L'\\' && 
-      StrLen(*FullFileName) > 1 &&
-      FileHandleIsDirectory(Handle) == EFI_NOT_FOUND
-     ) {
-    (*FullFileName)[StrLen(*FullFileName) - 1] = CHAR_NULL;
+  if ((*FullFileName != NULL) &&
+      ((*FullFileName)[StrLen (*FullFileName) - 1] == L'\\') &&
+      (StrLen (*FullFileName) > 1) &&
+      (FileHandleIsDirectory (Handle) == EFI_NOT_FOUND)
+      )
+  {
+    (*FullFileName)[StrLen (*FullFileName) - 1] = CHAR_NULL;
   }
 
   if (CurrentHandle != NULL) {
     CurrentHandle->Close (CurrentHandle);
   }
 
-  if (EFI_ERROR(Status) && *FullFileName != NULL) {
-    FreePool(*FullFileName);
+  if (EFI_ERROR (Status) && (*FullFileName != NULL)) {
+    FreePool (*FullFileName);
   }
 
   return (Status);
@@ -891,30 +913,37 @@ FileHandleGetFileName (
 
   @sa FileHandleReadLine
 **/
-CHAR16*
+CHAR16 *
 EFIAPI
-FileHandleReturnLine(
-  IN EFI_FILE_HANDLE            Handle,
-  IN OUT BOOLEAN                *Ascii
+FileHandleReturnLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN OUT BOOLEAN      *Ascii
   )
 {
-  CHAR16          *RetVal;
-  UINTN           Size;
-  EFI_STATUS      Status;
+  CHAR16      *RetVal;
+  UINTN       Size;
+  EFI_STATUS  Status;
 
-  Size = 0;
+  Size   = 0;
   RetVal = NULL;
 
-  Status = FileHandleReadLine(Handle, RetVal, &Size, FALSE, Ascii);
+  Status = FileHandleReadLine (Handle, RetVal, &Size, FALSE, Ascii);
   if (Status == EFI_BUFFER_TOO_SMALL) {
-    RetVal = AllocateZeroPool(Size);
-    Status = FileHandleReadLine(Handle, RetVal, &Size, FALSE, Ascii);
+    RetVal = AllocateZeroPool (Size);
+
+    if (RetVal == NULL) {
+      return NULL;
+    }
+
+    Status = FileHandleReadLine (Handle, RetVal, &Size, FALSE, Ascii);
   }
-  ASSERT_EFI_ERROR(Status);
-  if (EFI_ERROR(Status) && (RetVal != NULL)) {
-    FreePool(RetVal);
+
+  ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status) && (RetVal != NULL)) {
+    FreePool (RetVal);
     RetVal = NULL;
   }
+
   return (RetVal);
 }
 
@@ -948,12 +977,12 @@ FileHandleReturnLine(
 **/
 EFI_STATUS
 EFIAPI
-FileHandleReadLine(
-  IN EFI_FILE_HANDLE            Handle,
-  IN OUT CHAR16                 *Buffer,
-  IN OUT UINTN                  *Size,
-  IN BOOLEAN                    Truncate,
-  IN OUT BOOLEAN                *Ascii
+FileHandleReadLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN OUT CHAR16       *Buffer,
+  IN OUT UINTN        *Size,
+  IN BOOLEAN          Truncate,
+  IN OUT BOOLEAN      *Ascii
   )
 {
   EFI_STATUS  Status;
@@ -962,85 +991,93 @@ FileHandleReadLine(
   UINTN       CharSize;
   UINTN       CountSoFar;
   UINTN       CrCount;
+  UINTN       OldSize;
   UINT64      OriginalFilePosition;
 
-  if (Handle == NULL
-    ||Size   == NULL
-    ||(Buffer==NULL&&*Size!=0)
-   ){
+  if (  (Handle == NULL)
+     || (Size   == NULL)
+     || ((Buffer == NULL) && (*Size != 0))
+        )
+  {
     return (EFI_INVALID_PARAMETER);
-  } 
-  
-  if (Buffer != NULL && *Size != 0) {
+  }
+
+  if ((Buffer != NULL) && (*Size != 0)) {
     *Buffer = CHAR_NULL;
-  } 
-  
+  }
+
   Status = FileHandleGetSize (Handle, &FileSize);
   if (EFI_ERROR (Status)) {
     return Status;
   } else if (FileSize == 0) {
     *Ascii = TRUE;
     return EFI_SUCCESS;
-  }  
-  
-  FileHandleGetPosition(Handle, &OriginalFilePosition);
+  }
+
+  FileHandleGetPosition (Handle, &OriginalFilePosition);
   if (OriginalFilePosition == 0) {
-    CharSize = sizeof(CHAR16);
-    Status = FileHandleRead(Handle, &CharSize, &CharBuffer);
-    ASSERT_EFI_ERROR(Status);
+    CharSize = sizeof (CHAR16);
+    Status   = FileHandleRead (Handle, &CharSize, &CharBuffer);
+    ASSERT_EFI_ERROR (Status);
     if (CharBuffer == gUnicodeFileTag) {
       *Ascii = FALSE;
     } else {
       *Ascii = TRUE;
-      FileHandleSetPosition(Handle, OriginalFilePosition);
+      FileHandleSetPosition (Handle, OriginalFilePosition);
     }
   }
 
   CrCount = 0;
-  for (CountSoFar = 0;;CountSoFar++){
+  for (CountSoFar = 0; ; CountSoFar++) {
     CharBuffer = 0;
     if (*Ascii) {
-      CharSize = sizeof(CHAR8);
+      CharSize = sizeof (CHAR8);
     } else {
-      CharSize = sizeof(CHAR16);
+      CharSize = sizeof (CHAR16);
     }
-    Status = FileHandleRead(Handle, &CharSize, &CharBuffer);
-    if (  EFI_ERROR(Status)
-       || CharSize == 0
-       || (CharBuffer == L'\n' && !(*Ascii))
-       || (CharBuffer ==  '\n' && *Ascii)
-     ){
+
+    Status = FileHandleRead (Handle, &CharSize, &CharBuffer);
+    if (  EFI_ERROR (Status)
+       || (CharSize == 0)
+       || ((CharBuffer == L'\n') && !(*Ascii))
+       || ((CharBuffer ==  '\n') && *Ascii)
+          )
+    {
       break;
     } else if (
-        (CharBuffer == L'\r' && !(*Ascii)) ||
-        (CharBuffer ==  '\r' && *Ascii)
-      ) {
+               ((CharBuffer == L'\r') && !(*Ascii)) ||
+               ((CharBuffer ==  '\r') && *Ascii)
+               )
+    {
       CrCount++;
       continue;
     }
+
     //
     // if we have space save it...
     //
-    if ((CountSoFar+1-CrCount)*sizeof(CHAR16) < *Size){
-      ASSERT(Buffer != NULL);
-      ((CHAR16*)Buffer)[CountSoFar-CrCount] = CharBuffer;
-      ((CHAR16*)Buffer)[CountSoFar+1-CrCount] = CHAR_NULL;
+    if ((CountSoFar+1-CrCount)*sizeof (CHAR16) < *Size) {
+      ASSERT (Buffer != NULL);
+      ((CHAR16 *)Buffer)[CountSoFar-CrCount]   = CharBuffer;
+      ((CHAR16 *)Buffer)[CountSoFar+1-CrCount] = CHAR_NULL;
     }
   }
 
   //
   // if we ran out of space tell when...
   //
-  if ((CountSoFar+1-CrCount)*sizeof(CHAR16) > *Size){
-    *Size = (CountSoFar+1-CrCount)*sizeof(CHAR16);
+  if ((CountSoFar+1-CrCount)*sizeof (CHAR16) > *Size) {
+    OldSize = *Size;
+    *Size   = (CountSoFar+1-CrCount)*sizeof (CHAR16);
     if (!Truncate) {
-      if (Buffer != NULL && *Size != 0) {
-        ZeroMem(Buffer, *Size);
+      if ((Buffer != NULL) && (OldSize != 0)) {
+        ZeroMem (Buffer, OldSize);
       }
-      FileHandleSetPosition(Handle, OriginalFilePosition);
+
+      FileHandleSetPosition (Handle, OriginalFilePosition);
       return (EFI_BUFFER_TOO_SMALL);
     } else {
-      DEBUG((DEBUG_WARN, "The line was truncated in FileHandleReadLine"));
+      DEBUG ((DEBUG_WARN, "The line was truncated in FileHandleReadLine"));
       return (EFI_SUCCESS);
     }
   }
@@ -1050,11 +1087,11 @@ FileHandleReadLine(
 
 /**
   Function to write a line of text to a file.
-  
-  If the file is a Unicode file (with UNICODE file tag) then write the unicode 
+
+  If the file is a Unicode file (with UNICODE file tag) then write the unicode
   text.
   If the file is an ASCII file then write the ASCII text.
-  If the size of file is zero (without file tag at the beginning) then write 
+  If the size of file is zero (without file tag at the beginning) then write
   ASCII text as default.
 
   @param[in]     Handle         FileHandle to write to.
@@ -1064,16 +1101,16 @@ FileHandleReadLine(
   @retval  EFI_SUCCESS            The data was written.
                                   Buffer is NULL.
   @retval  EFI_INVALID_PARAMETER  Handle is NULL.
-  @retval  EFI_OUT_OF_RESOURCES   Unable to allocate temporary space for ASCII 
+  @retval  EFI_OUT_OF_RESOURCES   Unable to allocate temporary space for ASCII
                                   string due to out of resources.
 
   @sa FileHandleWrite
 **/
 EFI_STATUS
 EFIAPI
-FileHandleWriteLine(
-  IN EFI_FILE_HANDLE Handle,
-  IN CHAR16          *Buffer
+FileHandleWriteLine (
+  IN EFI_FILE_HANDLE  Handle,
+  IN CHAR16           *Buffer
   )
 {
   EFI_STATUS  Status;
@@ -1093,30 +1130,30 @@ FileHandleWriteLine(
   if (Handle == NULL) {
     return (EFI_INVALID_PARAMETER);
   }
-  
-  Ascii = FALSE;
+
+  Ascii       = FALSE;
   AsciiBuffer = NULL;
-  
-  Status = FileHandleGetPosition(Handle, &OriginalFilePosition);
-  if (EFI_ERROR(Status)) {
+
+  Status = FileHandleGetPosition (Handle, &OriginalFilePosition);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
-  
-  Status = FileHandleSetPosition(Handle, 0);
-  if (EFI_ERROR(Status)) {
+
+  Status = FileHandleSetPosition (Handle, 0);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
-  
-  Status = FileHandleGetSize(Handle, &FileSize);
-  if (EFI_ERROR(Status)) {
+
+  Status = FileHandleGetSize (Handle, &FileSize);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   if (FileSize == 0) {
     Ascii = TRUE;
   } else {
     CharSize = sizeof (CHAR16);
-    Status = FileHandleRead (Handle, &CharSize, &CharBuffer);
+    Status   = FileHandleRead (Handle, &CharSize, &CharBuffer);
     ASSERT_EFI_ERROR (Status);
     if (CharBuffer == gUnicodeFileTag) {
       Ascii = FALSE;
@@ -1124,53 +1161,58 @@ FileHandleWriteLine(
       Ascii = TRUE;
     }
   }
-  
-  Status = FileHandleSetPosition(Handle, OriginalFilePosition);
-  if (EFI_ERROR(Status)) {
+
+  Status = FileHandleSetPosition (Handle, OriginalFilePosition);
+  if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   if (Ascii) {
-    Size = ( StrSize(Buffer) / sizeof(CHAR16) ) * sizeof(CHAR8);
-    AsciiBuffer = (CHAR8 *)AllocateZeroPool(Size);
+    Size        = (StrSize (Buffer) / sizeof (CHAR16)) * sizeof (CHAR8);
+    AsciiBuffer = (CHAR8 *)AllocateZeroPool (Size);
     if (AsciiBuffer == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
+
     UnicodeStrToAsciiStrS (Buffer, AsciiBuffer, Size);
     for (Index = 0; Index < Size; Index++) {
-      if (!((AsciiBuffer[Index] >= 0) && (AsciiBuffer[Index] < 128))){
-        FreePool(AsciiBuffer);
+      if ((AsciiBuffer[Index] & BIT7) != 0) {
+        FreePool (AsciiBuffer);
         return EFI_INVALID_PARAMETER;
       }
     }
-    
-    Size = AsciiStrSize(AsciiBuffer) - sizeof(CHAR8);
-    Status = FileHandleWrite(Handle, &Size, AsciiBuffer);
-    if (EFI_ERROR(Status)) {
+
+    Size   = AsciiStrSize (AsciiBuffer) - sizeof (CHAR8);
+    Status = FileHandleWrite (Handle, &Size, AsciiBuffer);
+    if (EFI_ERROR (Status)) {
       FreePool (AsciiBuffer);
       return (Status);
     }
-    Size = AsciiStrSize("\r\n") - sizeof(CHAR8);
-    Status = FileHandleWrite(Handle, &Size, "\r\n");
+
+    Size   = AsciiStrSize ("\r\n") - sizeof (CHAR8);
+    Status = FileHandleWrite (Handle, &Size, "\r\n");
   } else {
     if (OriginalFilePosition == 0) {
-      Status = FileHandleSetPosition (Handle, sizeof(CHAR16));
-      if (EFI_ERROR(Status)) {
+      Status = FileHandleSetPosition (Handle, sizeof (CHAR16));
+      if (EFI_ERROR (Status)) {
         return Status;
       }
     }
-    Size = StrSize(Buffer) - sizeof(CHAR16);
-    Status = FileHandleWrite(Handle, &Size, Buffer);
-    if (EFI_ERROR(Status)) {
+
+    Size   = StrSize (Buffer) - sizeof (CHAR16);
+    Status = FileHandleWrite (Handle, &Size, Buffer);
+    if (EFI_ERROR (Status)) {
       return (Status);
     }
-    Size = StrSize(L"\r\n") - sizeof(CHAR16);
-    Status = FileHandleWrite(Handle, &Size, L"\r\n");
+
+    Size   = StrSize (L"\r\n") - sizeof (CHAR16);
+    Status = FileHandleWrite (Handle, &Size, L"\r\n");
   }
-  
+
   if (AsciiBuffer != NULL) {
     FreePool (AsciiBuffer);
   }
+
   return Status;
 }
 
@@ -1188,15 +1230,15 @@ FileHandleWriteLine(
 **/
 EFI_STATUS
 EFIAPI
-FileHandlePrintLine(
+FileHandlePrintLine (
   IN EFI_FILE_HANDLE  Handle,
   IN CONST CHAR16     *Format,
   ...
   )
 {
-  VA_LIST           Marker;
-  CHAR16            *Buffer;
-  EFI_STATUS        Status;
+  VA_LIST     Marker;
+  CHAR16      *Buffer;
+  EFI_STATUS  Status;
 
   //
   // Get a buffer to print into
@@ -1216,12 +1258,12 @@ FileHandlePrintLine(
   //
   // Print buffer into file
   //
-  Status = FileHandleWriteLine(Handle, Buffer);
+  Status = FileHandleWriteLine (Handle, Buffer);
 
   //
   // Cleanup and return
   //
-  FreePool(Buffer);
+  FreePool (Buffer);
   return (Status);
 }
 
@@ -1239,26 +1281,26 @@ FileHandlePrintLine(
 **/
 BOOLEAN
 EFIAPI
-FileHandleEof(
-  IN EFI_FILE_HANDLE Handle
+FileHandleEof (
+  IN EFI_FILE_HANDLE  Handle
   )
 {
-  EFI_FILE_INFO *Info;
-  UINT64        Pos;
-  BOOLEAN       RetVal;
+  EFI_FILE_INFO  *Info;
+  UINT64         Pos;
+  BOOLEAN        RetVal;
 
   if (Handle == NULL) {
     return (FALSE);
   }
 
-  FileHandleGetPosition(Handle, &Pos);
+  FileHandleGetPosition (Handle, &Pos);
   Info = FileHandleGetInfo (Handle);
 
   if (Info == NULL) {
     return (FALSE);
   }
 
-  FileHandleSetPosition(Handle, Pos);
+  FileHandleSetPosition (Handle, Pos);
 
   if (Pos == Info->FileSize) {
     RetVal = TRUE;

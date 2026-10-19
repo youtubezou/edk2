@@ -1,22 +1,16 @@
 /** @file
   Serial I/O status code reporting worker.
 
-  Copyright (c) 2009 - 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-                                                                                            
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "StatusCodeHandlerSmm.h"
+#include "StatusCodeHandlerMm.h"
 
 /**
   Convert status code value and extended data to readable ASCII string, send string to serial I/O device.
- 
+
   @param  CodeType         Indicates the type of status code being reported.
   @param  Value            Describes the current status of a hardware or software entity.
                            This included information about the class and subclass that is used to
@@ -36,26 +30,27 @@
 EFI_STATUS
 EFIAPI
 SerialStatusCodeReportWorker (
-  IN EFI_STATUS_CODE_TYPE     CodeType,
-  IN EFI_STATUS_CODE_VALUE    Value,
-  IN UINT32                   Instance,
-  IN EFI_GUID                 *CallerId,
-  IN EFI_STATUS_CODE_DATA     *Data OPTIONAL
+  IN EFI_STATUS_CODE_TYPE   CodeType,
+  IN EFI_STATUS_CODE_VALUE  Value,
+  IN UINT32                 Instance,
+  IN EFI_GUID               *CallerId,
+  IN EFI_STATUS_CODE_DATA   *Data OPTIONAL
   )
 {
-  CHAR8           *Filename;
-  CHAR8           *Description;
-  CHAR8           *Format;
-  CHAR8           Buffer[MAX_DEBUG_MESSAGE_LENGTH];
-  UINT32          ErrorLevel;
-  UINT32          LineNumber;
-  UINTN           CharCount;
-  BASE_LIST       Marker;
+  CHAR8      *Filename;
+  CHAR8      *Description;
+  CHAR8      *Format;
+  CHAR8      Buffer[MAX_DEBUG_MESSAGE_LENGTH];
+  UINT32     ErrorLevel;
+  UINT32     LineNumber;
+  UINTN      CharCount;
+  BASE_LIST  Marker;
 
   Buffer[0] = '\0';
 
-  if (Data != NULL &&
-      ReportStatusCodeExtractAssertInfo (CodeType, Value, Data, &Filename, &Description, &LineNumber)) {
+  if ((Data != NULL) &&
+      ReportStatusCodeExtractAssertInfo (CodeType, Value, Data, &Filename, &Description, &LineNumber))
+  {
     //
     // Print ASSERT() information into output buffer.
     //
@@ -67,15 +62,16 @@ SerialStatusCodeReportWorker (
                   LineNumber,
                   Description
                   );
-  } else if (Data != NULL &&
-             ReportStatusCodeExtractDebugInfo (Data, &ErrorLevel, &Marker, &Format)) {
+  } else if ((Data != NULL) &&
+             ReportStatusCodeExtractDebugInfo (Data, &ErrorLevel, &Marker, &Format))
+  {
     //
     // Print DEBUG() information into output buffer.
     //
     CharCount = AsciiBSPrint (
-                  Buffer, 
-                  sizeof (Buffer), 
-                  Format, 
+                  Buffer,
+                  sizeof (Buffer),
+                  Format,
                   Marker
                   );
   } else if ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE) {
@@ -83,15 +79,15 @@ SerialStatusCodeReportWorker (
     // Print ERROR information into output buffer.
     //
     CharCount = AsciiSPrint (
-                  Buffer, 
-                  sizeof (Buffer), 
-                  "ERROR: C%08x:V%08x I%x", 
-                  CodeType, 
-                  Value, 
+                  Buffer,
+                  sizeof (Buffer),
+                  "ERROR: C%08x:V%08x I%x",
+                  CodeType,
+                  Value,
                   Instance
                   );
     ASSERT (CharCount > 0);
-   
+
     if (CallerId != NULL) {
       CharCount += AsciiSPrint (
                      &Buffer[CharCount],
@@ -120,34 +116,35 @@ SerialStatusCodeReportWorker (
     // Print PROGRESS information into output buffer.
     //
     CharCount = AsciiSPrint (
-                  Buffer, 
-                  sizeof (Buffer), 
-                  "PROGRESS CODE: V%08x I%x\n\r", 
-                  Value, 
+                  Buffer,
+                  sizeof (Buffer),
+                  "PROGRESS CODE: V%08x I%x\n\r",
+                  Value,
                   Instance
                   );
-  } else if (Data != NULL &&
+  } else if ((Data != NULL) &&
              CompareGuid (&Data->Type, &gEfiStatusCodeDataTypeStringGuid) &&
-             ((EFI_STATUS_CODE_STRING_DATA *) Data)->StringType == EfiStringAscii) {
+             (((EFI_STATUS_CODE_STRING_DATA *)Data)->StringType == EfiStringAscii))
+  {
     //
     // EFI_STATUS_CODE_STRING_DATA
     //
     CharCount = AsciiSPrint (
                   Buffer,
                   sizeof (Buffer),
-                  "%a\n\r",
-                  ((EFI_STATUS_CODE_STRING_DATA *) Data)->String.Ascii
+                  "%a",
+                  ((EFI_STATUS_CODE_STRING_DATA *)Data)->String.Ascii
                   );
   } else {
     //
     // Code type is not defined.
     //
     CharCount = AsciiSPrint (
-                  Buffer, 
-                  sizeof (Buffer), 
-                  "Undefined: C%08x:V%08x I%x\n\r", 
-                  CodeType, 
-                  Value, 
+                  Buffer,
+                  sizeof (Buffer),
+                  "Undefined: C%08x:V%08x I%x\n\r",
+                  CodeType,
+                  Value,
                   Instance
                   );
   }
@@ -155,8 +152,7 @@ SerialStatusCodeReportWorker (
   //
   // Call SerialPort Lib function to do print.
   //
-  SerialPortWrite ((UINT8 *) Buffer, CharCount);
+  SerialPortWrite ((UINT8 *)Buffer, CharCount);
 
   return EFI_SUCCESS;
 }
-

@@ -2,13 +2,7 @@
   Build FV related hobs for platform.
 
   Copyright (c) 2006 - 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -19,7 +13,6 @@
 #include <Library/PeiServicesLib.h>
 #include <Library/PcdLib.h>
 
-
 /**
   Publish PEI & DXE (Decompressed) Memory based FVs to let PEI
   and DXE know about them.
@@ -29,12 +22,12 @@
 **/
 EFI_STATUS
 PeiFvInitialization (
-  VOID
+  IN EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   )
 {
-  BOOLEAN SecureS3Needed;
+  BOOLEAN  SecureS3Needed;
 
-  DEBUG ((EFI_D_INFO, "Platform PEI Firmware Volume Initialization\n"));
+  DEBUG ((DEBUG_INFO, "Platform PEI Firmware Volume Initialization\n"));
 
   //
   // Create a memory allocation HOB for the PEI FV.
@@ -44,7 +37,7 @@ PeiFvInitialization (
   BuildMemoryAllocationHob (
     PcdGet32 (PcdOvmfPeiMemFvBase),
     PcdGet32 (PcdOvmfPeiMemFvSize),
-    mS3Supported ? EfiACPIMemoryNVS : EfiBootServicesData
+    PlatformInfoHob->S3Supported ? EfiACPIMemoryNVS : EfiBootServicesData
     );
 
   //
@@ -52,7 +45,7 @@ PeiFvInitialization (
   //
   BuildFvHob (PcdGet32 (PcdOvmfDxeMemFvBase), PcdGet32 (PcdOvmfDxeMemFvSize));
 
-  SecureS3Needed = mS3Supported && FeaturePcdGet (PcdSmmSmramRequire);
+  SecureS3Needed = PlatformInfoHob->S3Supported && PlatformInfoHob->SmmSmramRequire;
 
   //
   // Create a memory allocation HOB for the DXE FV.
@@ -73,7 +66,7 @@ PeiFvInitialization (
   // of DXEFV, so let's keep away the OS from there too.
   //
   if (SecureS3Needed) {
-    UINT32 DxeMemFvEnd;
+    UINT32  DxeMemFvEnd;
 
     DxeMemFvEnd = PcdGet32 (PcdOvmfDxeMemFvBase) +
                   PcdGet32 (PcdOvmfDxeMemFvSize);
@@ -89,7 +82,7 @@ PeiFvInitialization (
   //
   PeiServicesInstallFvInfoPpi (
     NULL,
-    (VOID *)(UINTN) PcdGet32 (PcdOvmfDxeMemFvBase),
+    (VOID *)(UINTN)PcdGet32 (PcdOvmfDxeMemFvBase),
     PcdGet32 (PcdOvmfDxeMemFvSize),
     NULL,
     NULL
@@ -97,4 +90,3 @@ PeiFvInitialization (
 
   return EFI_SUCCESS;
 }
-

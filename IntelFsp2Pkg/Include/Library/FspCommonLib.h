@@ -1,18 +1,11 @@
 /** @file
 
-  Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2025, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _FSP_COMMON_LIB_H_
-#define _FSP_COMMON_LIB_H_
+#pragma once
 
 #include <FspGlobalData.h>
 #include <FspMeasurePointId.h>
@@ -26,7 +19,7 @@
 VOID
 EFIAPI
 SetFspGlobalDataPointer (
-  IN FSP_GLOBAL_DATA   *FspData
+  IN FSP_GLOBAL_DATA  *FspData
   );
 
 /**
@@ -40,24 +33,35 @@ GetFspGlobalDataPointer (
   );
 
 /**
-  This function gets back the FSP API first parameter passed by the bootlaoder.
+  This function gets back the FSP API first parameter passed by the bootloader.
 
-  @retval ApiParameter FSP API first parameter passed by the bootlaoder.
+  @retval ApiParameter FSP API first parameter passed by the bootloader.
 **/
-UINT32
+UINTN
 EFIAPI
 GetFspApiParameter (
   VOID
   );
 
 /**
-  This function gets back the FSP API second parameter passed by the bootlaoder.
+  This function gets back the FSP API second parameter passed by the bootloader.
 
-  @retval ApiParameter FSP API second parameter passed by the bootlaoder.
+  @retval ApiParameter FSP API second parameter passed by the bootloader.
 **/
-UINT32
+UINTN
 EFIAPI
 GetFspApiParameter2 (
+  VOID
+  );
+
+/**
+  This function returns the FSP entry stack pointer from address of the first API parameter.
+
+  @retval FSP entry stack pointer.
+**/
+VOID *
+EFIAPI
+GetFspEntryStack (
   VOID
   );
 
@@ -70,7 +74,7 @@ GetFspApiParameter2 (
 VOID
 EFIAPI
 SetFspApiParameter (
-  IN UINT32      Value
+  IN UINT32  Value
   );
 
 /**
@@ -82,19 +86,7 @@ SetFspApiParameter (
 VOID
 EFIAPI
 SetFspApiReturnStatus (
-  IN UINT32  ReturnStatus
-  );
-
-/**
-  This function sets the context switching stack to a new stack frame.
-
-  @param[in] NewStackTop       New core stack to be set.
-
-**/
-VOID
-EFIAPI
-SetFspCoreStackPointer (
-  IN VOID   *NewStackTop
+  IN UINTN  ReturnStatus
   );
 
 /**
@@ -106,7 +98,7 @@ SetFspCoreStackPointer (
 VOID
 EFIAPI
 SetFspPlatformDataPointer (
-  IN VOID   *PlatformData
+  IN VOID  *PlatformData
   );
 
 /**
@@ -129,7 +121,7 @@ GetFspPlatformDataPointer (
 VOID
 EFIAPI
 SetFspUpdDataPointer (
-  IN VOID    *UpdDataPtr
+  IN VOID  *UpdDataPtr
   );
 
 /**
@@ -151,7 +143,7 @@ GetFspUpdDataPointer (
 VOID
 EFIAPI
 SetFspMemoryInitUpdDataPointer (
-  IN VOID    *MemoryInitUpdPtr
+  IN VOID  *MemoryInitUpdPtr
   );
 
 /**
@@ -173,7 +165,7 @@ GetFspMemoryInitUpdDataPointer (
 VOID
 EFIAPI
 SetFspSiliconInitUpdDataPointer (
-  IN VOID    *SiliconInitUpdPtr
+  IN VOID  *SiliconInitUpdPtr
   );
 
 /**
@@ -184,6 +176,28 @@ SetFspSiliconInitUpdDataPointer (
 VOID *
 EFIAPI
 GetFspSiliconInitUpdDataPointer (
+  VOID
+  );
+
+/**
+  This function sets the smm init UPD data pointer.
+
+  @param[in] SmmInitUpdPtr   smm init UPD data pointer.
+**/
+VOID
+EFIAPI
+SetFspSmmInitUpdDataPointer (
+  IN VOID  *SmmInitUpdPtr
+  );
+
+/**
+  This function gets the smm init UPD data pointer.
+
+  @return smm init UPD data pointer.
+**/
+VOID *
+EFIAPI
+GetFspSmmInitUpdDataPointer (
   VOID
   );
 
@@ -219,7 +233,7 @@ GetFspInfoHeader (
 VOID
 EFIAPI
 SetFspInfoHeader (
-  FSP_INFO_HEADER *FspInfoHeader
+  FSP_INFO_HEADER  *FspInfoHeader
   );
 
 /**
@@ -268,7 +282,7 @@ SetFspApiCallingIndex (
 
 /**
   This function gets FSP Phase StatusCode.
-  
+
   @retval StatusCode
 **/
 UINT32
@@ -276,7 +290,6 @@ EFIAPI
 GetPhaseStatusCode (
   VOID
   );
-
 
 /**
   This function sets FSP Phase StatusCode.
@@ -298,6 +311,5 @@ SetPhaseStatusCode (
 VOID
 EFIAPI
 FspApiReturnStatusReset (
-  IN UINT32   FspResetType
+  IN EFI_STATUS  FspResetType
   );
-#endif

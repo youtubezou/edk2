@@ -3,13 +3,7 @@
   for a shell application.
 
   Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -35,16 +29,18 @@
 INTN
 EFIAPI
 ShellAppMain (
-  IN UINTN Argc,
-  IN CHAR16 **Argv
+  IN UINTN   Argc,
+  IN CHAR16  **Argv
   )
 {
   UINTN  Index;
+
   if (Argc == 1) {
     Print (L"Argv[1] = NULL\n");
   }
+
   for (Index = 1; Index < Argc; Index++) {
-    Print(L"Argv[%d]: \"%s\"\n", Index, Argv[Index]);
+    Print (L"Argv[%d]: \"%s\"\n", Index, Argv[Index]);
   }
 
   return 0;

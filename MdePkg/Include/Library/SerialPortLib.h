@@ -1,31 +1,24 @@
 /** @file
   This library class provides common serial I/O port functions.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2012 - 2014, ARM Ltd. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __SERIAL_PORT_LIB__
-#define __SERIAL_PORT_LIB__
+#pragma once
 
 #include <Uefi/UefiBaseType.h>
 #include <Protocol/SerialIo.h>
 
 /**
   Initialize the serial device hardware.
-  
+
   If no initialization is required, then return RETURN_SUCCESS.
   If the serial device was successfully initialized, then return RETURN_SUCCESS.
   If the serial device could not be initialized, then return RETURN_DEVICE_ERROR.
-  
+
   @retval RETURN_SUCCESS        The serial device was initialized.
   @retval RETURN_DEVICE_ERROR   The serial device could not be initialized.
 
@@ -37,37 +30,36 @@ SerialPortInitialize (
   );
 
 /**
-  Write data from buffer to serial device. 
- 
-  Writes NumberOfBytes data bytes from Buffer to the serial device.  
+  Write data from buffer to serial device.
+
+  Writes NumberOfBytes data bytes from Buffer to the serial device.
   The number of bytes actually written to the serial device is returned.
   If the return value is less than NumberOfBytes, then the write operation failed.
-  If Buffer is NULL, then ASSERT(). 
+  If Buffer is NULL, then ASSERT().
   If NumberOfBytes is zero, then return 0.
 
   @param  Buffer           Pointer to the data buffer to be written.
   @param  NumberOfBytes    Number of bytes to written to the serial device.
 
   @retval 0                NumberOfBytes is 0.
-  @retval >0               The number of bytes written to the serial device.  
+  @retval >0               The number of bytes written to the serial device.
                            If this value is less than NumberOfBytes, then the write operation failed.
 
 **/
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   );
 
-
 /**
-  Read data from serial device and save the datas in buffer.
- 
+  Read data from serial device and save the data in buffer.
+
   Reads NumberOfBytes data bytes from a serial device into the buffer
-  specified by Buffer. The number of bytes actually read is returned. 
+  specified by Buffer. The number of bytes actually read is returned.
   If the return value is less than NumberOfBytes, then the rest operation failed.
-  If Buffer is NULL, then ASSERT(). 
+  If Buffer is NULL, then ASSERT().
   If NumberOfBytes is zero, then return 0.
 
   @param  Buffer           Pointer to the data buffer to store the data read from the serial device.
@@ -80,8 +72,8 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8   *Buffer,
-  IN  UINTN   NumberOfBytes
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
   );
 
 /**
@@ -114,7 +106,7 @@ SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 SerialPortSetControl (
-  IN UINT32 Control
+  IN UINT32  Control
   );
 
 /**
@@ -130,17 +122,17 @@ SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortGetControl (
-  OUT UINT32 *Control
+  OUT UINT32  *Control
   );
 
 /**
-  Sets the baud rate, receive FIFO depth, transmit/receice time out, parity,
+  Sets the baud rate, receive FIFO depth, transmit/receive time out, parity,
   data bits, and stop bits on a serial device.
 
   @param BaudRate           The requested baud rate. A BaudRate value of 0 will use the
                             device's default interface speed.
                             On output, the value actually set.
-  @param ReveiveFifoDepth   The requested depth of the FIFO on the receive side of the
+  @param ReceiveFifoDepth   The requested depth of the FIFO on the receive side of the
                             serial interface. A ReceiveFifoDepth value of 0 will use
                             the device's default FIFO depth.
                             On output, the value actually set.
@@ -153,7 +145,7 @@ SerialPortGetControl (
                             DefaultParity will use the device's default parity value.
                             On output, the value actually set.
   @param DataBits           The number of data bits to use on the serial device. A DataBits
-                            vaule of 0 will use the device's default data bit setting.
+                            value of 0 will use the device's default data bit setting.
                             On output, the value actually set.
   @param StopBits           The number of stop bits to use on this serial device. A StopBits
                             value of DefaultStopBits will use the device's default number of
@@ -169,12 +161,10 @@ SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortSetAttributes (
-  IN OUT UINT64             *BaudRate,
-  IN OUT UINT32             *ReceiveFifoDepth,
-  IN OUT UINT32             *Timeout,
-  IN OUT EFI_PARITY_TYPE    *Parity,
-  IN OUT UINT8              *DataBits,
-  IN OUT EFI_STOP_BITS_TYPE *StopBits
+  IN OUT UINT64              *BaudRate,
+  IN OUT UINT32              *ReceiveFifoDepth,
+  IN OUT UINT32              *Timeout,
+  IN OUT EFI_PARITY_TYPE     *Parity,
+  IN OUT UINT8               *DataBits,
+  IN OUT EFI_STOP_BITS_TYPE  *StopBits
   );
-
-#endif

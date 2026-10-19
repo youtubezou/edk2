@@ -1,14 +1,8 @@
 /** @file
 Utility routines used by boot maintenance modules.
 
-Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -29,8 +23,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 EFI_STATUS
 EfiLibDeleteVariable (
-  IN CHAR16   *VarName,
-  IN EFI_GUID *VarGuid
+  IN CHAR16    *VarName,
+  IN EFI_GUID  *VarGuid
   )
 {
   return gRT->SetVariable (
@@ -55,11 +49,11 @@ EfiLibDeleteVariable (
 **/
 UINTN
 EfiDevicePathInstanceCount (
-  IN EFI_DEVICE_PATH_PROTOCOL      *DevicePath
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath
   )
 {
-  UINTN Count;
-  UINTN Size;
+  UINTN  Count;
+  UINTN  Size;
 
   Count = 0;
   while (GetNextDevicePathInstance (&DevicePath, &Size) != NULL) {
@@ -70,7 +64,7 @@ EfiDevicePathInstanceCount (
 }
 
 /**
-  Get a string from the Data Hub record based on 
+  Get a string from the Data Hub record based on
   a device path.
 
   @param DevPath         The device Path.
@@ -82,7 +76,7 @@ EfiDevicePathInstanceCount (
 **/
 UINT16 *
 EfiLibStrFromDatahub (
-  IN EFI_DEVICE_PATH_PROTOCOL                 *DevPath
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevPath
   )
 {
   return NULL;

@@ -1,22 +1,16 @@
 /** @file
 Elf convert solution
 
-Copyright (c) 2010 - 2014, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials are licensed and made available 
-under the terms and conditions of the BSD License which accompanies this 
-distribution.  The full text of the license may be found at 
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "WinNtInclude.h"
-
 #ifndef __GNUC__
+#define RUNTIME_FUNCTION  _WINNT_DUP_RUNTIME_FUNCTION
 #include <windows.h>
+#undef RUNTIME_FUNCTION
 #include <io.h>
 #endif
 #include <stdio.h>
@@ -24,6 +18,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <string.h>
 #include <time.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include <Common/UefiBaseTypes.h>
 #include <IndustryStandard/PeImage.h>
@@ -57,6 +52,11 @@ UINT32 mCoffOffset;
 UINT32 mTableOffset;
 
 //
+//mFileBufferSize
+//
+UINT32 mFileBufferSize;
+
+//
 //*****************************************************************************
 // Common ELF Functions
 //*****************************************************************************
@@ -86,7 +86,7 @@ CoffAddFixup(
       // Add a null entry (is it required ?)
       //
       CoffAddFixupEntry (0);
-      
+
       //
       // Pad for alignment.
       //
@@ -98,6 +98,10 @@ CoffAddFixup(
       mCoffFile,
       mCoffOffset + sizeof(EFI_IMAGE_BASE_RELOCATION) + 2 * MAX_COFF_ALIGNMENT
       );
+    if (mCoffFile == NULL) {
+      Error (NULL, 0, 4001, "Resource", "memory cannot be allocated!");
+    }
+    assert (mCoffFile != NULL);
     memset (
       mCoffFile + mCoffOffset, 0,
       sizeof(EFI_IMAGE_BASE_RELOCATION) + 2 * MAX_COFF_ALIGNMENT
@@ -153,7 +157,7 @@ IsElfHeader (
   UINT8  *FileBuffer
 )
 {
-  return (FileBuffer[EI_MAG0] == ELFMAG0 && 
+  return (FileBuffer[EI_MAG0] == ELFMAG0 &&
           FileBuffer[EI_MAG1] == ELFMAG1 &&
           FileBuffer[EI_MAG2] == ELFMAG2 &&
           FileBuffer[EI_MAG3] == ELFMAG3);
@@ -168,6 +172,7 @@ ConvertElf (
   ELF_FUNCTION_TABLE              ElfFunctions;
   UINT8                           EiClass;
 
+  mFileBufferSize = *FileLength;
   //
   // Determine ELF type and set function table pointer correctly.
   //
@@ -188,7 +193,7 @@ ConvertElf (
 
   //
   // Compute sections new address.
-  //  
+  //
   VerboseMsg ("Compute sections new address.");
   ElfFunctions.ScanSections ();
 
@@ -196,9 +201,20 @@ ConvertElf (
   // Write and relocate sections.
   //
   VerboseMsg ("Write and relocate sections.");
-  ElfFunctions.WriteSections (SECTION_TEXT);
-  ElfFunctions.WriteSections (SECTION_DATA);
-  ElfFunctions.WriteSections (SECTION_HII);
+  if (!ElfFunctions.WriteSections (SECTION_TEXT)) {
+    return FALSE;
+  }
+  if (!ElfFunctions.WriteSections (SECTION_DATA)) {
+    return FALSE;
+  }
+  if (!ElfFunctions.WriteSections (SECTION_HII)) {
+    return FALSE;
+  }
+  if (mBuildIdFlag) {
+    if (!ElfFunctions.WriteSections (SECTION_BUILD_ID)) {
+      return FALSE;
+    }
+  }
 
   //
   // Translate and write relocations.
@@ -211,6 +227,14 @@ ConvertElf (
   //
   VerboseMsg ("Write debug info.");
   ElfFunctions.WriteDebug ();
+
+  //
+  // For PRM Driver to Write export info.
+  //
+  if (mExportFlag) {
+    VerboseMsg ("Write export info.");
+    ElfFunctions.WriteExport ();
+  }
 
   //
   // Make sure image size is correct before returning the new image.
@@ -229,6 +253,6 @@ ConvertElf (
   // Free resources used by ELF functions.
   //
   ElfFunctions.CleanUp ();
-  
+
   return TRUE;
 }

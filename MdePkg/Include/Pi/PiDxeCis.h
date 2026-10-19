@@ -1,28 +1,21 @@
 /** @file
   Include file matches things in PI.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
-  PI Version 1.4
+  PI Version 1.8.A
 
 **/
 
-#ifndef __PI_DXECIS_H__
-#define __PI_DXECIS_H__
+#pragma once
 
 #include <Uefi/UefiMultiPhase.h>
 #include <Pi/PiMultiPhase.h>
 
 ///
-/// Global Coherencey Domain types - Memory type.
+/// Global Coherency Domain types - Memory type.
 ///
 typedef enum {
   ///
@@ -49,20 +42,29 @@ typedef enum {
   ///
   EfiGcdMemoryTypeMemoryMappedIo,
   ///
-  /// A memory region that is visible to the boot processor. 
-  /// This memory supports byte-addressable non-volatility. 
+  /// A memory region that is visible to the boot processor.
+  /// This memory supports byte-addressable non-volatility.
   ///
-  EfiGcdMemoryTypePersistentMemory,
+  EfiGcdMemoryTypePersistent,
+  //
+  // Keep original one for the compatibility.
+  //
+  EfiGcdMemoryTypePersistentMemory = EfiGcdMemoryTypePersistent,
   ///
   /// A memory region that provides higher reliability relative to other memory in the
   /// system. If all memory has the same reliability, then this bit is not used.
   ///
   EfiGcdMemoryTypeMoreReliable,
-  EfiGcdMemoryTypeMaximum
+  ///
+  /// A memory region that describes system memory that has not been accepted
+  /// by a corresponding call to the underlying isolation architecture.
+  ///
+  EfiGcdMemoryTypeUnaccepted,
+  EfiGcdMemoryTypeMaximum = 7
 } EFI_GCD_MEMORY_TYPE;
 
 ///
-/// Global Coherencey Domain types - IO type.
+/// Global Coherency Domain types - IO type.
 ///
 typedef enum {
   ///
@@ -85,7 +87,7 @@ typedef enum {
 
 ///
 /// The type of allocation to perform.
-/// 
+///
 typedef enum {
   ///
   /// The GCD memory space map is searched from the lowest address up to the highest address
@@ -93,22 +95,22 @@ typedef enum {
   ///
   EfiGcdAllocateAnySearchBottomUp,
   ///
-  /// The GCD memory space map is searched from the lowest address up 
+  /// The GCD memory space map is searched from the lowest address up
   /// to the specified MaxAddress looking for unallocated memory ranges.
   ///
   EfiGcdAllocateMaxAddressSearchBottomUp,
   ///
-  /// The GCD memory space map is checked to see if the memory range starting 
+  /// The GCD memory space map is checked to see if the memory range starting
   /// at the specified Address is available.
   ///
   EfiGcdAllocateAddress,
   ///
-  /// The GCD memory space map is searched from the highest address down to the lowest address 
+  /// The GCD memory space map is searched from the highest address down to the lowest address
   /// looking for unallocated memory ranges.
   ///
   EfiGcdAllocateAnySearchTopDown,
   ///
-  /// The GCD memory space map is searched from the specified MaxAddress 
+  /// The GCD memory space map is searched from the specified MaxAddress
   /// down to the lowest address looking for unallocated memory ranges.
   ///
   EfiGcdAllocateMaxAddressSearchTopDown,
@@ -117,44 +119,44 @@ typedef enum {
 
 ///
 /// EFI_GCD_MEMORY_SPACE_DESCRIPTOR.
-/// 
+///
 typedef struct {
   ///
   /// The physical address of the first byte in the memory region. Type
   /// EFI_PHYSICAL_ADDRESS is defined in the AllocatePages() function
   /// description in the UEFI 2.0 specification.
-  /// 
-  EFI_PHYSICAL_ADDRESS  BaseAddress;
+  ///
+  EFI_PHYSICAL_ADDRESS    BaseAddress;
 
   ///
   /// The number of bytes in the memory region.
-  /// 
-  UINT64                Length;
+  ///
+  UINT64                  Length;
 
   ///
   /// The bit mask of attributes that the memory region is capable of supporting. The bit
   /// mask of available attributes is defined in the GetMemoryMap() function description
   /// in the UEFI 2.0 specification.
-  /// 
-  UINT64                Capabilities;
+  ///
+  UINT64                  Capabilities;
   ///
   /// The bit mask of attributes that the memory region is currently using. The bit mask of
   /// available attributes is defined in GetMemoryMap().
-  /// 
-  UINT64                Attributes;
+  ///
+  UINT64                  Attributes;
   ///
   /// Type of the memory region. Type EFI_GCD_MEMORY_TYPE is defined in the
   /// AddMemorySpace() function description.
-  /// 
-  EFI_GCD_MEMORY_TYPE   GcdMemoryType;
+  ///
+  EFI_GCD_MEMORY_TYPE     GcdMemoryType;
 
   ///
   /// The image handle of the agent that allocated the memory resource described by
   /// PhysicalStart and NumberOfBytes. If this field is NULL, then the memory
   /// resource is not currently allocated. Type EFI_HANDLE is defined in
   /// InstallProtocolInterface() in the UEFI 2.0 specification.
-  /// 
-  EFI_HANDLE            ImageHandle;
+  ///
+  EFI_HANDLE              ImageHandle;
 
   ///
   /// The device handle for which the memory resource has been allocated. If
@@ -162,39 +164,39 @@ typedef struct {
   /// field is NULL, then the memory resource is not associated with a device that is
   /// described by a device handle. Type EFI_HANDLE is defined in
   /// InstallProtocolInterface() in the UEFI 2.0 specification.
-  /// 
-  EFI_HANDLE            DeviceHandle;
+  ///
+  EFI_HANDLE    DeviceHandle;
 } EFI_GCD_MEMORY_SPACE_DESCRIPTOR;
 
 ///
 /// EFI_GCD_IO_SPACE_DESCRIPTOR.
-/// 
+///
 typedef struct {
   ///
   /// Physical address of the first byte in the I/O region. Type
   /// EFI_PHYSICAL_ADDRESS is defined in the AllocatePages() function
   /// description in the UEFI 2.0 specification.
-  /// 
-  EFI_PHYSICAL_ADDRESS  BaseAddress;
+  ///
+  EFI_PHYSICAL_ADDRESS    BaseAddress;
 
   ///
   /// Number of bytes in the I/O region.
   ///
-  UINT64                Length;
+  UINT64                  Length;
 
-  /// 
+  ///
   /// Type of the I/O region. Type EFI_GCD_IO_TYPE is defined in the
   /// AddIoSpace() function description.
-  /// 
-  EFI_GCD_IO_TYPE       GcdIoType;
+  ///
+  EFI_GCD_IO_TYPE         GcdIoType;
 
-  /// 
+  ///
   /// The image handle of the agent that allocated the I/O resource described by
   /// PhysicalStart and NumberOfBytes. If this field is NULL, then the I/O
   /// resource is not currently allocated. Type EFI_HANDLE is defined in
   /// InstallProtocolInterface() in the UEFI 2.0 specification.
-  /// 
-  EFI_HANDLE            ImageHandle;
+  ///
+  EFI_HANDLE              ImageHandle;
 
   ///
   /// The device handle for which the I/O resource has been allocated. If ImageHandle
@@ -202,10 +204,9 @@ typedef struct {
   /// the I/O resource is not associated with a device that is described by a device handle.
   /// Type EFI_HANDLE is defined in InstallProtocolInterface() in the UEFI
   /// 2.0 specification.
-  /// 
-  EFI_HANDLE            DeviceHandle;
+  ///
+  EFI_HANDLE    DeviceHandle;
 } EFI_GCD_IO_SPACE_DESCRIPTOR;
-
 
 /**
   Adds reserved memory, system memory, or memory-mapped I/O resources to the
@@ -216,7 +217,7 @@ typedef struct {
                            of the memory resource being added.
   @param  Length           The size, in bytes, of the memory resource that
                            is being added.
-  @param  Capabilities     The bit mask of attributes that the memory 
+  @param  Capabilities     The bit mask of attributes that the memory
                            resource region supports.
 
   @retval EFI_SUCCESS            The memory resource was added to the global
@@ -224,13 +225,13 @@ typedef struct {
   @retval EFI_INVALID_PARAMETER  GcdMemoryType is invalid.
   @retval EFI_INVALID_PARAMETER  Length is zero.
   @retval EFI_OUT_OF_RESOURCES   There are not enough system resources to add
-                                 the memory resource to the global coherency 
+                                 the memory resource to the global coherency
                                  domain of the processor.
   @retval EFI_UNSUPPORTED        The processor does not support one or more bytes
-                                 of the memory resource range specified by 
+                                 of the memory resource range specified by
                                  BaseAddress and Length.
   @retval EFI_ACCESS_DENIED      One or more bytes of the memory resource range
-                                 specified by BaseAddress and Length conflicts 
+                                 specified by BaseAddress and Length conflicts
                                  with a memory resource range that was previously
                                  added to the global coherency domain of the processor.
   @retval EFI_ACCESS_DENIED      One or more bytes of the memory resource range
@@ -258,7 +259,7 @@ EFI_STATUS
   @param  Length           The size in bytes of the memory resource range that
                            is being allocated.
   @param  BaseAddress      A pointer to a physical address to allocate.
-  @param  Imagehandle      The image handle of the agent that is allocating 
+  @param  Imagehandle      The image handle of the agent that is allocating
                            the memory resource.
   @param  DeviceHandle     The device handle for which the memory resource
                            is being allocated.
@@ -298,7 +299,7 @@ EFI_STATUS
 
   @retval EFI_SUCCESS           The memory resource was freed from the global coherency domain of
                                 the processor.
-  @retval EFI_INVALID_PARAMETER Length is zero.   
+  @retval EFI_INVALID_PARAMETER Length is zero.
   @retval EFI_UNSUPPORTED       The processor does not support one or more bytes of the memory
                                 resource range specified by BaseAddress and Length.
   @retval EFI_NOT_FOUND         The memory resource range specified by BaseAddress and
@@ -323,7 +324,7 @@ EFI_STATUS
 
   @retval EFI_SUCCESS           The memory resource was removed from the global coherency
                                 domain of the processor.
-  @retval EFI_INVALID_PARAMETER Length is zero. 
+  @retval EFI_INVALID_PARAMETER Length is zero.
   @retval EFI_UNSUPPORTED       The processor does not support one or more bytes of the memory
                                 resource range specified by BaseAddress and Length.
   @retval EFI_NOT_FOUND         One or more bytes of the memory resource range specified by
@@ -370,7 +371,7 @@ EFI_STATUS
   @param  Attributes       The bit mask of attributes to set for the memory region.
 
   @retval EFI_SUCCESS           The attributes were set for the memory region.
-  @retval EFI_INVALID_PARAMETER Length is zero. 
+  @retval EFI_INVALID_PARAMETER Length is zero.
   @retval EFI_UNSUPPORTED       The processor does not support one or more bytes of the memory
                                 resource range specified by BaseAddress and Length.
   @retval EFI_UNSUPPORTED       The bit mask of attributes is not support for the memory resource
@@ -409,7 +410,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_SET_MEMORY_SPACE_CAPABILITIES) (
+(EFIAPI *EFI_SET_MEMORY_SPACE_CAPABILITIES)(
   IN EFI_PHYSICAL_ADDRESS  BaseAddress,
   IN UINT64                Length,
   IN UINT64                Capabilities
@@ -601,13 +602,11 @@ EFI_STATUS
   OUT EFI_GCD_IO_SPACE_DESCRIPTOR  **IoSpaceMap
   );
 
-
-
 /**
   Loads and executed DXE drivers from firmware volumes.
 
-  The Dispatch() function searches for DXE drivers in firmware volumes that have been 
-  installed since the last time the Dispatch() service was called. It then evaluates 
+  The Dispatch() function searches for DXE drivers in firmware volumes that have been
+  installed since the last time the Dispatch() service was called. It then evaluates
   the dependency expressions of all the DXE drivers and loads and executes those DXE
   drivers whose dependency expression evaluate to TRUE. This service must interact with
   the Security Architectural Protocol to authenticate DXE drivers before they are executed.
@@ -675,7 +674,7 @@ EFI_STATUS
   @retval EFI_VOLUME_CORRUPTED The firmware volume described by FirmwareVolumeHeader
                                and Size is corrupted.
   @retval EFI_OUT_OF_RESOURCES There are not enough system resources available to produce the
-                               EFI_FIRMWARE_VOLUME_PROTOCOL and EFI_DEVICE_PATH_PROTOCOL 
+                               EFI_FIRMWARE_VOLUME_PROTOCOL and EFI_DEVICE_PATH_PROTOCOL
                                for the firmware volume described by FirmwareVolumeHeader and Size.
 
 **/
@@ -691,8 +690,8 @@ EFI_STATUS
 // DXE Services Table
 //
 #define DXE_SERVICES_SIGNATURE            0x565245535f455844ULL
-#define DXE_SPECIFICATION_MAJOR_REVISION  1
-#define DXE_SPECIFICATION_MINOR_REVISION  40
+#define DXE_SPECIFICATION_MAJOR_REVISION  PI_SPECIFICATION_MAJOR_REVISION
+#define DXE_SPECIFICATION_MINOR_REVISION  PI_SPECIFICATION_MINOR_REVISION
 #define DXE_SERVICES_REVISION             ((DXE_SPECIFICATION_MAJOR_REVISION<<16) | (DXE_SPECIFICATION_MINOR_REVISION))
 
 typedef struct {
@@ -700,41 +699,39 @@ typedef struct {
   /// The table header for the DXE Services Table.
   /// This header contains the DXE_SERVICES_SIGNATURE and DXE_SERVICES_REVISION values.
   ///
-  EFI_TABLE_HEADER                Hdr;
+  EFI_TABLE_HEADER                     Hdr;
 
   //
   // Global Coherency Domain Services
   //
-  EFI_ADD_MEMORY_SPACE            AddMemorySpace;
-  EFI_ALLOCATE_MEMORY_SPACE       AllocateMemorySpace;
-  EFI_FREE_MEMORY_SPACE           FreeMemorySpace;
-  EFI_REMOVE_MEMORY_SPACE         RemoveMemorySpace;
-  EFI_GET_MEMORY_SPACE_DESCRIPTOR GetMemorySpaceDescriptor;
-  EFI_SET_MEMORY_SPACE_ATTRIBUTES SetMemorySpaceAttributes;
-  EFI_GET_MEMORY_SPACE_MAP        GetMemorySpaceMap;
-  EFI_ADD_IO_SPACE                AddIoSpace;
-  EFI_ALLOCATE_IO_SPACE           AllocateIoSpace;
-  EFI_FREE_IO_SPACE               FreeIoSpace;
-  EFI_REMOVE_IO_SPACE             RemoveIoSpace;
-  EFI_GET_IO_SPACE_DESCRIPTOR     GetIoSpaceDescriptor;
-  EFI_GET_IO_SPACE_MAP            GetIoSpaceMap;
+  EFI_ADD_MEMORY_SPACE                 AddMemorySpace;
+  EFI_ALLOCATE_MEMORY_SPACE            AllocateMemorySpace;
+  EFI_FREE_MEMORY_SPACE                FreeMemorySpace;
+  EFI_REMOVE_MEMORY_SPACE              RemoveMemorySpace;
+  EFI_GET_MEMORY_SPACE_DESCRIPTOR      GetMemorySpaceDescriptor;
+  EFI_SET_MEMORY_SPACE_ATTRIBUTES      SetMemorySpaceAttributes;
+  EFI_GET_MEMORY_SPACE_MAP             GetMemorySpaceMap;
+  EFI_ADD_IO_SPACE                     AddIoSpace;
+  EFI_ALLOCATE_IO_SPACE                AllocateIoSpace;
+  EFI_FREE_IO_SPACE                    FreeIoSpace;
+  EFI_REMOVE_IO_SPACE                  RemoveIoSpace;
+  EFI_GET_IO_SPACE_DESCRIPTOR          GetIoSpaceDescriptor;
+  EFI_GET_IO_SPACE_MAP                 GetIoSpaceMap;
 
   //
   // Dispatcher Services
   //
-  EFI_DISPATCH                    Dispatch;
-  EFI_SCHEDULE                    Schedule;
-  EFI_TRUST                       Trust;
+  EFI_DISPATCH                         Dispatch;
+  EFI_SCHEDULE                         Schedule;
+  EFI_TRUST                            Trust;
   //
   // Service to process a single firmware volume found in a capsule
   //
-  EFI_PROCESS_FIRMWARE_VOLUME     ProcessFirmwareVolume;
+  EFI_PROCESS_FIRMWARE_VOLUME          ProcessFirmwareVolume;
   //
   // Extensions to Global Coherency Domain Services
   //
-  EFI_SET_MEMORY_SPACE_CAPABILITIES SetMemorySpaceCapabilities;
+  EFI_SET_MEMORY_SPACE_CAPABILITIES    SetMemorySpaceCapabilities;
 } DXE_SERVICES;
 
 typedef DXE_SERVICES EFI_DXE_SERVICES;
-
-#endif

@@ -11,15 +11,11 @@
     synchronous requests and EFI_BLOCK_IO_PROTOCOL for now.
 
   Copyright (C) 2012, Red Hat, Inc.
-  Copyright (c) 2012 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017, AMD Inc, All rights reserved.<BR>
+  Copyright (c) 2024, Arm Limited. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -68,14 +64,13 @@
                                                 (Value)                    \
                                                 ))
 
-#define VIRTIO_CFG_READ(Dev, Field, Pointer) ((Dev)->VirtIo->ReadDevice (  \
+#define VIRTIO_CFG_READ(Dev, Field, Pointer)  ((Dev)->VirtIo->ReadDevice ( \
                                                 (Dev)->VirtIo,             \
                                                 OFFSET_OF_VBLK (Field),    \
                                                 SIZE_OF_VBLK (Field),      \
                                                 sizeof *(Pointer),         \
                                                 (Pointer)                  \
                                                 ))
-
 
 //
 // UEFI Spec 2.3.1 + Errata C, 12.8 EFI Block I/O Protocol
@@ -85,8 +80,8 @@
 EFI_STATUS
 EFIAPI
 VirtioBlkReset (
-  IN EFI_BLOCK_IO_PROTOCOL *This,
-  IN BOOLEAN               ExtendedVerification
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN BOOLEAN                ExtendedVerification
   )
 {
   //
@@ -148,26 +143,28 @@ STATIC
 EFI_STATUS
 EFIAPI
 VerifyReadWriteRequest (
-  IN  EFI_BLOCK_IO_MEDIA *Media,
-  IN  EFI_LBA            Lba,
-  IN  UINTN              PositiveBufferSize,
-  IN  BOOLEAN            RequestIsWrite
+  IN  EFI_BLOCK_IO_MEDIA  *Media,
+  IN  EFI_LBA             Lba,
+  IN  UINTN               PositiveBufferSize,
+  IN  BOOLEAN             RequestIsWrite
   )
 {
-  UINTN BlockCount;
+  UINTN  BlockCount;
 
   ASSERT (PositiveBufferSize > 0);
 
-  if (PositiveBufferSize > SIZE_1GB ||
-      PositiveBufferSize % Media->BlockSize > 0) {
+  if ((PositiveBufferSize > SIZE_1GB) ||
+      (PositiveBufferSize % Media->BlockSize > 0))
+  {
     return EFI_BAD_BUFFER_SIZE;
   }
+
   BlockCount = PositiveBufferSize / Media->BlockSize;
 
   //
   // Avoid unsigned wraparound on either side in the second comparison.
   //
-  if (Lba > Media->LastBlock || BlockCount - 1 > Media->LastBlock - Lba) {
+  if ((Lba > Media->LastBlock) || (BlockCount - 1 > Media->LastBlock - Lba)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -177,9 +174,6 @@ VerifyReadWriteRequest (
 
   return EFI_SUCCESS;
 }
-
-
-
 
 /**
 
@@ -231,27 +225,44 @@ VerifyReadWriteRequest (
 
   @retval EFI_DEVICE_ERROR     Failed to notify host side via VirtIo write, or
                                unable to parse host response, or host response
-                               is not VIRTIO_BLK_S_OK.
+                               is not VIRTIO_BLK_S_OK or failed to map Buffer
+                               for a bus master operation.
 
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 SynchronousRequest (
-  IN              VBLK_DEV *Dev,
-  IN              EFI_LBA  Lba,
-  IN              UINTN    BufferSize,
-  IN OUT volatile VOID     *Buffer,
-  IN              BOOLEAN  RequestIsWrite
+  IN              VBLK_DEV  *Dev,
+  IN              EFI_LBA   Lba,
+  IN              UINTN     BufferSize,
+  IN OUT volatile VOID      *Buffer,
+  IN              BOOLEAN   RequestIsWrite
   )
 {
-  UINT32                  BlockSize;
-  volatile VIRTIO_BLK_REQ Request;
-  volatile UINT8          HostStatus;
-  DESC_INDICES            Indices;
+  UINT32                   BlockSize;
+  volatile VIRTIO_BLK_REQ  *Request;
+  volatile UINT8           *HostStatus;
+  VOID                     *HostStatusBuffer;
+  DESC_INDICES             Indices;
+  VOID                     *RequestMapping;
+  VOID                     *StatusMapping;
+  VOID                     *BufferMapping;
+  EFI_PHYSICAL_ADDRESS     BufferDeviceAddress;
+  EFI_PHYSICAL_ADDRESS     HostStatusDeviceAddress;
+  EFI_PHYSICAL_ADDRESS     RequestDeviceAddress;
+  EFI_STATUS               Status;
+  EFI_STATUS               UnmapStatus;
+  EFI_TPL                  CurrentTpl;
 
   BlockSize = Dev->BlockIoMedia.BlockSize;
+
+  //
+  // Set BufferMapping and BufferDeviceAddress to suppress incorrect
+  // compiler/analyzer warnings.
+  //
+  BufferMapping       = NULL;
+  BufferDeviceAddress = 0;
 
   //
   // ensured by VirtioBlkInit()
@@ -264,22 +275,100 @@ SynchronousRequest (
   //
   ASSERT (BufferSize % BlockSize == 0);
 
+  Request = AllocateZeroPool (sizeof (*Request));
+  if (Request == NULL) {
+    return EFI_DEVICE_ERROR;
+  }
+
   //
   // Prepare virtio-blk request header, setting zero size for flush.
   // IO Priority is homogeneously 0.
   //
-  Request.Type   = RequestIsWrite ?
-                   (BufferSize == 0 ? VIRTIO_BLK_T_FLUSH : VIRTIO_BLK_T_OUT) :
-                   VIRTIO_BLK_T_IN;
-  Request.IoPrio = 0;
-  Request.Sector = MultU64x32(Lba, BlockSize / 512);
+  Request->Type = RequestIsWrite ?
+                  (BufferSize == 0 ? VIRTIO_BLK_T_FLUSH : VIRTIO_BLK_T_OUT) :
+                  VIRTIO_BLK_T_IN;
+  Request->IoPrio = 0;
+  Request->Sector = MultU64x32 (Lba, BlockSize / 512);
 
-  VirtioPrepare (&Dev->Ring, &Indices);
+  //
+  // Host status is bi-directional (we preset with a value and expect the
+  // device to update it). Allocate a host status buffer which can be mapped
+  // to access equally by both processor and the device.
+  //
+  Status = Dev->VirtIo->AllocateSharedPages (
+                          Dev->VirtIo,
+                          EFI_SIZE_TO_PAGES (sizeof *HostStatus),
+                          &HostStatusBuffer
+                          );
+  if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
+    goto FreeBlkRequest;
+  }
+
+  HostStatus = HostStatusBuffer;
+
+  //
+  // Map virtio-blk request header (must be done after request header is
+  // populated)
+  //
+  Status = VirtioMapAllBytesInSharedBuffer (
+             Dev->VirtIo,
+             VirtioOperationBusMasterRead,
+             (VOID *)Request,
+             sizeof (*Request),
+             &RequestDeviceAddress,
+             &RequestMapping
+             );
+  if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
+    goto FreeHostStatusBuffer;
+  }
+
+  //
+  // Map data buffer
+  //
+  if (BufferSize > 0) {
+    Status = VirtioMapAllBytesInSharedBuffer (
+               Dev->VirtIo,
+               (RequestIsWrite ?
+                VirtioOperationBusMasterRead :
+                VirtioOperationBusMasterWrite),
+               (VOID *)Buffer,
+               BufferSize,
+               &BufferDeviceAddress,
+               &BufferMapping
+               );
+    if (EFI_ERROR (Status)) {
+      Status = EFI_DEVICE_ERROR;
+      goto UnmapRequestBuffer;
+    }
+  }
 
   //
   // preset a host status for ourselves that we do not accept as success
   //
-  HostStatus = VIRTIO_BLK_S_IOERR;
+  *HostStatus = VIRTIO_BLK_S_IOERR;
+
+  //
+  // Map the Status Buffer with VirtioOperationBusMasterCommonBuffer so that
+  // both processor and device can access it.
+  //
+  Status = VirtioMapAllBytesInSharedBuffer (
+             Dev->VirtIo,
+             VirtioOperationBusMasterCommonBuffer,
+             HostStatusBuffer,
+             sizeof *HostStatus,
+             &HostStatusDeviceAddress,
+             &StatusMapping
+             );
+  if (EFI_ERROR (Status)) {
+    Status = EFI_DEVICE_ERROR;
+    goto UnmapDataBuffer;
+  }
+
+  CurrentTpl = gBS->RaiseTPL (TPL_NOTIFY);
+
+  VirtioPrepare (&Dev->Ring, &Indices);
 
   //
   // ensured by VirtioBlkInit() -- this predicate, in combination with the
@@ -290,8 +379,13 @@ SynchronousRequest (
   //
   // virtio-blk header in first desc
   //
-  VirtioAppendDesc (&Dev->Ring, (UINTN) &Request, sizeof Request,
-    VRING_DESC_F_NEXT, &Indices);
+  VirtioAppendDesc (
+    &Dev->Ring,
+    RequestDeviceAddress,
+    sizeof (*Request),
+    VRING_DESC_F_NEXT,
+    &Indices
+    );
 
   //
   // data buffer for read/write in second desc
@@ -310,29 +404,72 @@ SynchronousRequest (
     //
     // VRING_DESC_F_WRITE is interpreted from the host's point of view.
     //
-    VirtioAppendDesc (&Dev->Ring, (UINTN) Buffer, (UINT32) BufferSize,
+    VirtioAppendDesc (
+      &Dev->Ring,
+      BufferDeviceAddress,
+      (UINT32)BufferSize,
       VRING_DESC_F_NEXT | (RequestIsWrite ? 0 : VRING_DESC_F_WRITE),
-      &Indices);
+      &Indices
+      );
   }
 
   //
   // host status in last (second or third) desc
   //
-  VirtioAppendDesc (&Dev->Ring, (UINTN) &HostStatus, sizeof HostStatus,
-    VRING_DESC_F_WRITE, &Indices);
+  VirtioAppendDesc (
+    &Dev->Ring,
+    HostStatusDeviceAddress,
+    sizeof *HostStatus,
+    VRING_DESC_F_WRITE,
+    &Indices
+    );
 
   //
   // virtio-blk's only virtqueue is #0, called "requestq" (see Appendix D).
   //
-  if (VirtioFlush (Dev->VirtIo, 0, &Dev->Ring, &Indices,
-        NULL) == EFI_SUCCESS &&
-      HostStatus == VIRTIO_BLK_S_OK) {
-    return EFI_SUCCESS;
+  if ((VirtioFlush (
+         Dev->VirtIo,
+         0,
+         &Dev->Ring,
+         &Indices,
+         NULL
+         ) == EFI_SUCCESS) &&
+      (*HostStatus == VIRTIO_BLK_S_OK))
+  {
+    Status = EFI_SUCCESS;
+  } else {
+    Status = EFI_DEVICE_ERROR;
   }
 
-  return EFI_DEVICE_ERROR;
-}
+  gBS->RestoreTPL (CurrentTpl);
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, StatusMapping);
 
+UnmapDataBuffer:
+  if (BufferSize > 0) {
+    UnmapStatus = Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, BufferMapping);
+    if (EFI_ERROR (UnmapStatus) && !RequestIsWrite && !EFI_ERROR (Status)) {
+      //
+      // Data from the bus master may not reach the caller; fail the request.
+      //
+      Status = EFI_DEVICE_ERROR;
+    }
+  }
+
+UnmapRequestBuffer:
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, RequestMapping);
+
+FreeHostStatusBuffer:
+  Dev->VirtIo->FreeSharedPages (
+                 Dev->VirtIo,
+                 EFI_SIZE_TO_PAGES (sizeof *HostStatus),
+                 HostStatusBuffer
+                 );
+
+FreeBlkRequest:
+  FreePool ((VOID *)Request);
+
+  return Status;
+}
 
 /**
 
@@ -351,25 +488,24 @@ SynchronousRequest (
   successfully.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkReadBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL *This,
-  IN  UINT32                MediaId,
-  IN  EFI_LBA               Lba,
-  IN  UINTN                 BufferSize,
-  OUT VOID                  *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL  *This,
+  IN  UINT32                 MediaId,
+  IN  EFI_LBA                Lba,
+  IN  UINTN                  BufferSize,
+  OUT VOID                   *Buffer
   )
 {
-  VBLK_DEV   *Dev;
-  EFI_STATUS Status;
+  VBLK_DEV    *Dev;
+  EFI_STATUS  Status;
 
   if (BufferSize == 0) {
     return EFI_SUCCESS;
   }
 
-  Dev = VIRTIO_BLK_FROM_BLOCK_IO (This);
+  Dev    = VIRTIO_BLK_FROM_BLOCK_IO (This);
   Status = VerifyReadWriteRequest (
              &Dev->BlockIoMedia,
              Lba,
@@ -406,25 +542,24 @@ VirtioBlkReadBlocks (
   successfully.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkWriteBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL *This,
-  IN UINT32                MediaId,
-  IN EFI_LBA               Lba,
-  IN UINTN                 BufferSize,
-  IN VOID                  *Buffer
+  IN EFI_BLOCK_IO_PROTOCOL  *This,
+  IN UINT32                 MediaId,
+  IN EFI_LBA                Lba,
+  IN UINTN                  BufferSize,
+  IN VOID                   *Buffer
   )
 {
-  VBLK_DEV   *Dev;
-  EFI_STATUS Status;
+  VBLK_DEV    *Dev;
+  EFI_STATUS  Status;
 
   if (BufferSize == 0) {
     return EFI_SUCCESS;
   }
 
-  Dev = VIRTIO_BLK_FROM_BLOCK_IO (This);
+  Dev    = VIRTIO_BLK_FROM_BLOCK_IO (This);
   Status = VerifyReadWriteRequest (
              &Dev->BlockIoMedia,
              Lba,
@@ -444,7 +579,6 @@ VirtioBlkWriteBlocks (
            );
 }
 
-
 /**
 
   FlushBlocks() operation for virtio-blk.
@@ -461,27 +595,25 @@ VirtioBlkWriteBlocks (
   Should they do nonetheless, we do nothing, successfully.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkFlushBlocks (
-  IN EFI_BLOCK_IO_PROTOCOL *This
+  IN EFI_BLOCK_IO_PROTOCOL  *This
   )
 {
-  VBLK_DEV *Dev;
+  VBLK_DEV  *Dev;
 
   Dev = VIRTIO_BLK_FROM_BLOCK_IO (This);
   return Dev->BlockIoMedia.WriteCaching ?
-           SynchronousRequest (
-             Dev,
-             0,    // Lba
-             0,    // BufferSize
-             NULL, // Buffer
-             TRUE  // RequestIsWrite
-             ) :
-           EFI_SUCCESS;
+         SynchronousRequest (
+           Dev,
+           0,      // Lba
+           0,      // BufferSize
+           NULL,   // Buffer
+           TRUE    // RequestIsWrite
+           ) :
+         EFI_SUCCESS;
 }
-
 
 /**
 
@@ -519,17 +651,16 @@ VirtioBlkFlushBlocks (
                            the VirtIo protocol.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS          Status;
-  VIRTIO_DEVICE_PROTOCOL *VirtIo;
+  EFI_STATUS              Status;
+  VIRTIO_DEVICE_PROTOCOL  *VirtIo;
 
   //
   // Attempt to open the device with the VirtIo set of interfaces. On success,
@@ -558,11 +689,14 @@ VirtioBlkDriverBindingSupported (
   // We needed VirtIo access only transitorily, to see whether we support the
   // device or not.
   //
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
   return Status;
 }
-
 
 /**
 
@@ -579,49 +713,50 @@ VirtioBlkDriverBindingSupported (
                            virtio-blk attributes the host provides.
 
   @return                  Error codes from VirtioRingInit() or
-                           VIRTIO_CFG_READ() / VIRTIO_CFG_WRITE().
+                           VIRTIO_CFG_READ() / VIRTIO_CFG_WRITE or
+                           VirtioRingMap().
 
 **/
-
 STATIC
 EFI_STATUS
 EFIAPI
 VirtioBlkInit (
-  IN OUT VBLK_DEV *Dev
+  IN OUT VBLK_DEV  *Dev
   )
 {
-  UINT8      NextDevStat;
-  EFI_STATUS Status;
+  UINT8       NextDevStat;
+  EFI_STATUS  Status;
 
-  UINT64     Features;
-  UINT64     NumSectors;
-  UINT32     BlockSize;
-  UINT8      PhysicalBlockExp;
-  UINT8      AlignmentOffset;
-  UINT32     OptIoSize;
-  UINT16     QueueSize;
+  UINT64  Features;
+  UINT64  NumSectors;
+  UINT32  BlockSize;
+  UINT8   PhysicalBlockExp;
+  UINT8   AlignmentOffset;
+  UINT32  OptIoSize;
+  UINT16  QueueSize;
+  UINT64  RingBaseShift;
 
   PhysicalBlockExp = 0;
-  AlignmentOffset = 0;
-  OptIoSize = 0;
+  AlignmentOffset  = 0;
+  OptIoSize        = 0;
 
   //
   // Execute virtio-0.9.5, 2.2.1 Device Initialization Sequence.
   //
   NextDevStat = 0;             // step 1 -- reset device
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status      = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   NextDevStat |= VSTAT_ACK;    // step 2 -- acknowledge device presence
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   NextDevStat |= VSTAT_DRIVER; // step 3 -- we know how to drive it
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
@@ -646,6 +781,7 @@ VirtioBlkInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   if (NumSectors == 0) {
     Status = EFI_UNSUPPORTED;
     goto Failed;
@@ -656,8 +792,10 @@ VirtioBlkInit (
     if (EFI_ERROR (Status)) {
       goto Failed;
     }
-    if (BlockSize == 0 || BlockSize % 512 != 0 ||
-        ModU64x32 (NumSectors, BlockSize / 512) != 0) {
+
+    if ((BlockSize == 0) || (BlockSize % 512 != 0) ||
+        (ModU64x32 (NumSectors, BlockSize / 512) != 0))
+    {
       //
       // We can only handle a logical block consisting of whole sectors,
       // and only a disk composed of whole logical blocks.
@@ -665,17 +803,20 @@ VirtioBlkInit (
       Status = EFI_UNSUPPORTED;
       goto Failed;
     }
-  }
-  else {
+  } else {
     BlockSize = 512;
   }
 
   if (Features & VIRTIO_BLK_F_TOPOLOGY) {
-    Status = VIRTIO_CFG_READ (Dev, Topology.PhysicalBlockExp,
-               &PhysicalBlockExp);
+    Status = VIRTIO_CFG_READ (
+               Dev,
+               Topology.PhysicalBlockExp,
+               &PhysicalBlockExp
+               );
     if (EFI_ERROR (Status)) {
       goto Failed;
     }
+
     if (PhysicalBlockExp >= 32) {
       Status = EFI_UNSUPPORTED;
       goto Failed;
@@ -693,7 +834,8 @@ VirtioBlkInit (
   }
 
   Features &= VIRTIO_BLK_F_BLK_SIZE | VIRTIO_BLK_F_TOPOLOGY | VIRTIO_BLK_F_RO |
-              VIRTIO_BLK_F_FLUSH | VIRTIO_F_VERSION_1;
+              VIRTIO_BLK_F_FLUSH | VIRTIO_F_VERSION_1 |
+              VIRTIO_F_IOMMU_PLATFORM;
 
   //
   // In virtio-1.0, feature negotiation is expected to complete before queue
@@ -713,51 +855,70 @@ VirtioBlkInit (
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
+
   Status = Dev->VirtIo->GetQueueNumMax (Dev->VirtIo, &QueueSize);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
-  if (QueueSize < 3) { // SynchronousRequest() uses at most three descriptors
+
+  if (QueueSize < 3) {
+    // SynchronousRequest() uses at most three descriptors
     Status = EFI_UNSUPPORTED;
     goto Failed;
   }
 
-  Status = VirtioRingInit (QueueSize, &Dev->Ring);
+  Status = VirtioRingInit (Dev->VirtIo, QueueSize, &Dev->Ring);
   if (EFI_ERROR (Status)) {
     goto Failed;
   }
 
   //
-  // Additional steps for MMIO: align the queue appropriately, and set the
-  // size. If anything fails from here on, we must release the ring resources.
+  // If anything fails from here on, we must release the ring resources
   //
-  Status = Dev->VirtIo->SetQueueNum (Dev->VirtIo, QueueSize);
+  Status = VirtioRingMap (
+             Dev->VirtIo,
+             &Dev->Ring,
+             &RingBaseShift,
+             &Dev->RingMap
+             );
   if (EFI_ERROR (Status)) {
     goto ReleaseQueue;
   }
 
+  //
+  // Additional steps for MMIO: align the queue appropriately, and set the
+  // size. If anything fails from here on, we must unmap the ring resources.
+  //
+  Status = Dev->VirtIo->SetQueueNum (Dev->VirtIo, QueueSize);
+  if (EFI_ERROR (Status)) {
+    goto UnmapQueue;
+  }
+
   Status = Dev->VirtIo->SetQueueAlign (Dev->VirtIo, EFI_PAGE_SIZE);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
   // step 4c -- Report GPFN (guest-physical frame number) of queue.
   //
-  Status = Dev->VirtIo->SetQueueAddress (Dev->VirtIo, &Dev->Ring);
+  Status = Dev->VirtIo->SetQueueAddress (
+                          Dev->VirtIo,
+                          &Dev->Ring,
+                          RingBaseShift
+                          );
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
-
 
   //
   // step 5 -- Report understood features.
   //
   if (Dev->VirtIo->Revision < VIRTIO_SPEC_REVISION (1, 0, 0)) {
-    Features &= ~(UINT64)VIRTIO_F_VERSION_1;
-    Status = Dev->VirtIo->SetGuestFeatures (Dev->VirtIo, Features);
+    Features &= ~(UINT64)(VIRTIO_F_VERSION_1 | VIRTIO_F_IOMMU_PLATFORM);
+    Status    = Dev->VirtIo->SetGuestFeatures (Dev->VirtIo, Features);
     if (EFI_ERROR (Status)) {
-      goto ReleaseQueue;
+      goto UnmapQueue;
     }
   }
 
@@ -765,9 +926,9 @@ VirtioBlkInit (
   // step 6 -- initialization complete
   //
   NextDevStat |= VSTAT_DRIVER_OK;
-  Status = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
+  Status       = Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, NextDevStat);
   if (EFI_ERROR (Status)) {
-    goto ReleaseQueue;
+    goto UnmapQueue;
   }
 
   //
@@ -784,34 +945,52 @@ VirtioBlkInit (
   Dev->BlockIoMedia.RemovableMedia   = FALSE;
   Dev->BlockIoMedia.MediaPresent     = TRUE;
   Dev->BlockIoMedia.LogicalPartition = FALSE;
-  Dev->BlockIoMedia.ReadOnly         = (BOOLEAN) ((Features & VIRTIO_BLK_F_RO) != 0);
-  Dev->BlockIoMedia.WriteCaching     = (BOOLEAN) ((Features & VIRTIO_BLK_F_FLUSH) != 0);
+  Dev->BlockIoMedia.ReadOnly         = (BOOLEAN)((Features & VIRTIO_BLK_F_RO) != 0);
+  Dev->BlockIoMedia.WriteCaching     = (BOOLEAN)((Features & VIRTIO_BLK_F_FLUSH) != 0);
   Dev->BlockIoMedia.BlockSize        = BlockSize;
   Dev->BlockIoMedia.IoAlign          = 0;
-  Dev->BlockIoMedia.LastBlock        = DivU64x32 (NumSectors,
-                                         BlockSize / 512) - 1;
+  Dev->BlockIoMedia.LastBlock        = DivU64x32 (
+                                         NumSectors,
+                                         BlockSize / 512
+                                         ) - 1;
 
-  DEBUG ((DEBUG_INFO, "%a: LbaSize=0x%x[B] NumBlocks=0x%Lx[Lba]\n",
-    __FUNCTION__, Dev->BlockIoMedia.BlockSize,
-    Dev->BlockIoMedia.LastBlock + 1));
+  DEBUG ((
+    DEBUG_INFO,
+    "%a: LbaSize=0x%x[B] NumBlocks=0x%Lx[Lba]\n",
+    __func__,
+    Dev->BlockIoMedia.BlockSize,
+    Dev->BlockIoMedia.LastBlock + 1
+    ));
 
   if (Features & VIRTIO_BLK_F_TOPOLOGY) {
     Dev->BlockIo.Revision = EFI_BLOCK_IO_PROTOCOL_REVISION3;
 
-    Dev->BlockIoMedia.LowestAlignedLba = AlignmentOffset;
-    Dev->BlockIoMedia.LogicalBlocksPerPhysicalBlock = 1u << PhysicalBlockExp;
+    Dev->BlockIoMedia.LowestAlignedLba                 = AlignmentOffset;
+    Dev->BlockIoMedia.LogicalBlocksPerPhysicalBlock    = 1u << PhysicalBlockExp;
     Dev->BlockIoMedia.OptimalTransferLengthGranularity = OptIoSize;
 
-    DEBUG ((DEBUG_INFO, "%a: FirstAligned=0x%Lx[Lba] PhysBlkSize=0x%x[Lba]\n",
-      __FUNCTION__, Dev->BlockIoMedia.LowestAlignedLba,
-      Dev->BlockIoMedia.LogicalBlocksPerPhysicalBlock));
-    DEBUG ((DEBUG_INFO, "%a: OptimalTransferLengthGranularity=0x%x[Lba]\n",
-      __FUNCTION__, Dev->BlockIoMedia.OptimalTransferLengthGranularity));
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: FirstAligned=0x%Lx[Lba] PhysBlkSize=0x%x[Lba]\n",
+      __func__,
+      Dev->BlockIoMedia.LowestAlignedLba,
+      Dev->BlockIoMedia.LogicalBlocksPerPhysicalBlock
+      ));
+    DEBUG ((
+      DEBUG_INFO,
+      "%a: OptimalTransferLengthGranularity=0x%x[Lba]\n",
+      __func__,
+      Dev->BlockIoMedia.OptimalTransferLengthGranularity
+      ));
   }
+
   return EFI_SUCCESS;
 
+UnmapQueue:
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, Dev->RingMap);
+
 ReleaseQueue:
-  VirtioRingUninit (&Dev->Ring);
+  VirtioRingUninit (Dev->VirtIo, &Dev->Ring);
 
 Failed:
   //
@@ -824,7 +1003,6 @@ Failed:
   return Status; // reached only via Failed above
 }
 
-
 /**
 
   Uninitialize the internals of a virtio-blk device that has been successfully
@@ -833,12 +1011,11 @@ Failed:
   @param[in out]  Dev  The device to clean up.
 
 **/
-
 STATIC
 VOID
 EFIAPI
 VirtioBlkUninit (
-  IN OUT VBLK_DEV *Dev
+  IN OUT VBLK_DEV  *Dev
   )
 {
   //
@@ -848,12 +1025,12 @@ VirtioBlkUninit (
   //
   Dev->VirtIo->SetDeviceStatus (Dev->VirtIo, 0);
 
-  VirtioRingUninit (&Dev->Ring);
+  Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, Dev->RingMap);
+  VirtioRingUninit (Dev->VirtIo, &Dev->Ring);
 
-  SetMem (&Dev->BlockIo,      sizeof Dev->BlockIo,      0x00);
+  SetMem (&Dev->BlockIo, sizeof Dev->BlockIo, 0x00);
   SetMem (&Dev->BlockIoMedia, sizeof Dev->BlockIoMedia, 0x00);
 }
-
 
 /**
 
@@ -864,17 +1041,17 @@ VirtioBlkUninit (
   @param[in] Context  Pointer to the VBLK_DEV structure.
 
 **/
-
 STATIC
 VOID
 EFIAPI
 VirtioBlkExitBoot (
-  IN  EFI_EVENT Event,
-  IN  VOID      *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
-  VBLK_DEV *Dev;
+  VBLK_DEV  *Dev;
 
+  DEBUG ((DEBUG_VERBOSE, "%a: Context=0x%p\n", __func__, Context));
   //
   // Reset the device. This causes the hypervisor to forget about the virtio
   // ring.
@@ -914,26 +1091,30 @@ VirtioBlkExitBoot (
                                 or the InstallProtocolInterface() boot service.
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  VBLK_DEV   *Dev;
-  EFI_STATUS Status;
+  VBLK_DEV    *Dev;
+  EFI_STATUS  Status;
 
-  Dev = (VBLK_DEV *) AllocateZeroPool (sizeof *Dev);
+  Dev = (VBLK_DEV *)AllocateZeroPool (sizeof *Dev);
   if (Dev == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  Status = gBS->OpenProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-                  (VOID **)&Dev->VirtIo, This->DriverBindingHandle,
-                  DeviceHandle, EFI_OPEN_PROTOCOL_BY_DRIVER);
+  Status = gBS->OpenProtocol (
+                  DeviceHandle,
+                  &gVirtioDeviceProtocolGuid,
+                  (VOID **)&Dev->VirtIo,
+                  This->DriverBindingHandle,
+                  DeviceHandle,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
   if (EFI_ERROR (Status)) {
     goto FreeVirtioBlk;
   }
@@ -946,8 +1127,13 @@ VirtioBlkDriverBindingStart (
     goto CloseVirtIo;
   }
 
-  Status = gBS->CreateEvent (EVT_SIGNAL_EXIT_BOOT_SERVICES, TPL_CALLBACK,
-                  &VirtioBlkExitBoot, Dev, &Dev->ExitBoot);
+  Status = gBS->CreateEvent (
+                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
+                  TPL_CALLBACK,
+                  &VirtioBlkExitBoot,
+                  Dev,
+                  &Dev->ExitBoot
+                  );
   if (EFI_ERROR (Status)) {
     goto UninitDev;
   }
@@ -956,9 +1142,12 @@ VirtioBlkDriverBindingStart (
   // Setup complete, attempt to export the driver instance's BlockIo interface.
   //
   Dev->Signature = VBLK_SIG;
-  Status = gBS->InstallProtocolInterface (&DeviceHandle,
-                  &gEfiBlockIoProtocolGuid, EFI_NATIVE_INTERFACE,
-                  &Dev->BlockIo);
+  Status         = gBS->InstallProtocolInterface (
+                          &DeviceHandle,
+                          &gEfiBlockIoProtocolGuid,
+                          EFI_NATIVE_INTERFACE,
+                          &Dev->BlockIo
+                          );
   if (EFI_ERROR (Status)) {
     goto CloseExitBoot;
   }
@@ -972,15 +1161,18 @@ UninitDev:
   VirtioBlkUninit (Dev);
 
 CloseVirtIo:
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
 FreeVirtioBlk:
   FreePool (Dev);
 
   return Status;
 }
-
 
 /**
 
@@ -1004,19 +1196,18 @@ FreeVirtioBlk:
   @param[in] ChildHandleBuffer  Ignored (corresponding to NumberOfChildren).
 
 **/
-
 EFI_STATUS
 EFIAPI
 VirtioBlkDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL *This,
-  IN EFI_HANDLE                  DeviceHandle,
-  IN UINTN                       NumberOfChildren,
-  IN EFI_HANDLE                  *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   DeviceHandle,
+  IN UINTN                        NumberOfChildren,
+  IN EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS            Status;
-  EFI_BLOCK_IO_PROTOCOL *BlockIo;
-  VBLK_DEV              *Dev;
+  EFI_STATUS             Status;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  VBLK_DEV               *Dev;
 
   Status = gBS->OpenProtocol (
                   DeviceHandle,                  // candidate device
@@ -1035,8 +1226,11 @@ VirtioBlkDriverBindingStop (
   //
   // Handle Stop() requests for in-use driver instances gracefully.
   //
-  Status = gBS->UninstallProtocolInterface (DeviceHandle,
-                  &gEfiBlockIoProtocolGuid, &Dev->BlockIo);
+  Status = gBS->UninstallProtocolInterface (
+                  DeviceHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  &Dev->BlockIo
+                  );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1045,21 +1239,24 @@ VirtioBlkDriverBindingStop (
 
   VirtioBlkUninit (Dev);
 
-  gBS->CloseProtocol (DeviceHandle, &gVirtioDeviceProtocolGuid,
-         This->DriverBindingHandle, DeviceHandle);
+  gBS->CloseProtocol (
+         DeviceHandle,
+         &gVirtioDeviceProtocolGuid,
+         This->DriverBindingHandle,
+         DeviceHandle
+         );
 
   FreePool (Dev);
 
   return EFI_SUCCESS;
 }
 
-
 //
 // The static object that groups the Supported() (ie. probe), Start() and
 // Stop() functions of the driver together. Refer to UEFI Spec 2.3.1 + Errata
 // C, 10.1 EFI Driver Binding Protocol.
 //
-STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
+STATIC EFI_DRIVER_BINDING_PROTOCOL  gDriverBinding = {
   &VirtioBlkDriverBindingSupported,
   &VirtioBlkDriverBindingStart,
   &VirtioBlkDriverBindingStop,
@@ -1068,7 +1265,6 @@ STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
         // EfiLibInstallDriverBindingComponentName2() in VirtioBlkEntryPoint()
   NULL  // DriverBindingHandle, ditto
 };
-
 
 //
 // The purpose of the following scaffolding (EFI_COMPONENT_NAME_PROTOCOL and
@@ -1083,20 +1279,20 @@ STATIC EFI_DRIVER_BINDING_PROTOCOL gDriverBinding = {
 //
 
 STATIC
-EFI_UNICODE_STRING_TABLE mDriverNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mDriverNameTable[] = {
   { "eng;en", L"Virtio Block Driver" },
   { NULL,     NULL                   }
 };
 
 STATIC
-EFI_COMPONENT_NAME_PROTOCOL gComponentName;
+EFI_COMPONENT_NAME_PROTOCOL  gComponentName;
 
 EFI_STATUS
 EFIAPI
 VirtioBlkGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -1111,30 +1307,29 @@ VirtioBlkGetDriverName (
 EFI_STATUS
 EFIAPI
 VirtioBlkGetDeviceName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL *This,
-  IN  EFI_HANDLE                  DeviceHandle,
-  IN  EFI_HANDLE                  ChildHandle,
-  IN  CHAR8                       *Language,
-  OUT CHAR16                      **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   DeviceHandle,
+  IN  EFI_HANDLE                   ChildHandle,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
   return EFI_UNSUPPORTED;
 }
 
 STATIC
-EFI_COMPONENT_NAME_PROTOCOL gComponentName = {
+EFI_COMPONENT_NAME_PROTOCOL  gComponentName = {
   &VirtioBlkGetDriverName,
   &VirtioBlkGetDeviceName,
   "eng" // SupportedLanguages, ISO 639-2 language codes
 };
 
 STATIC
-EFI_COMPONENT_NAME2_PROTOCOL gComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)     &VirtioBlkGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) &VirtioBlkGetDeviceName,
+EFI_COMPONENT_NAME2_PROTOCOL  gComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)&VirtioBlkGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)&VirtioBlkGetDeviceName,
   "en" // SupportedLanguages, RFC 4646 language codes
 };
-
 
 //
 // Entry point of this driver.
@@ -1142,8 +1337,8 @@ EFI_COMPONENT_NAME2_PROTOCOL gComponentName2 = {
 EFI_STATUS
 EFIAPI
 VirtioBlkEntryPoint (
-  IN EFI_HANDLE       ImageHandle,
-  IN EFI_SYSTEM_TABLE *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   return EfiLibInstallDriverBindingComponentName2 (
@@ -1155,4 +1350,3 @@ VirtioBlkEntryPoint (
            &gComponentName2
            );
 }
-

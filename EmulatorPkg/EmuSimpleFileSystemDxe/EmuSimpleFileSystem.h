@@ -5,19 +5,12 @@
 
 Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
 
-#ifndef _EMU_SIMPLE_FILE_SYSTEM_H_
-#define _EMU_SIMPLE_FILE_SYSTEM_H_
+#pragma once
 
 #include "PiDxe.h"
 
@@ -36,19 +29,18 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
+extern EFI_DRIVER_BINDING_PROTOCOL   gEmuSimpleFileSystemDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL   gEmuSimpleFileSystemComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL  gEmuSimpleFileSystemComponentName2;
 
-extern EFI_DRIVER_BINDING_PROTOCOL  gEmuSimpleFileSystemDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL  gEmuSimpleFileSystemComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL gEmuSimpleFileSystemComponentName2;
-
-#define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE SIGNATURE_32 ('E', 'M', 'f', 's')
+#define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE  SIGNATURE_32 ('E', 'M', 'f', 's')
 
 typedef struct {
-  UINTN                           Signature;
-  EMU_IO_THUNK_PROTOCOL           *IoThunk;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL SimpleFileSystem;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *Io;
-  EFI_UNICODE_STRING_TABLE        *ControllerNameTable;
+  UINTN                              Signature;
+  EMU_IO_THUNK_PROTOCOL              *IoThunk;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    SimpleFileSystem;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    *Io;
+  EFI_UNICODE_STRING_TABLE           *ControllerNameTable;
 } EMU_SIMPLE_FILE_SYSTEM_PRIVATE;
 
 #define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_DATA_FROM_THIS(a) \
@@ -58,14 +50,14 @@ typedef struct {
       EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE \
       )
 
-#define EMU_EFI_FILE_PRIVATE_SIGNATURE SIGNATURE_32 ('e', 'm', 'f', 's')
+#define EMU_EFI_FILE_PRIVATE_SIGNATURE  SIGNATURE_32 ('e', 'm', 'f', 's')
 
 typedef struct {
-  UINTN                           Signature;
-  EMU_IO_THUNK_PROTOCOL           *IoThunk;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SimpleFileSystem;
-  EFI_FILE_PROTOCOL               EfiFile;
-  EFI_FILE_PROTOCOL               *Io;
+  UINTN                              Signature;
+  EMU_IO_THUNK_PROTOCOL              *IoThunk;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    *SimpleFileSystem;
+  EFI_FILE_PROTOCOL                  EfiFile;
+  EFI_FILE_PROTOCOL                  *Io;
 } EMU_EFI_FILE_PRIVATE;
 
 #define EMU_EFI_FILE_PRIVATE_DATA_FROM_THIS(a) \
@@ -74,7 +66,3 @@ typedef struct {
       EfiFile, \
       EMU_EFI_FILE_PRIVATE_SIGNATURE \
       )
-
-
-
-#endif

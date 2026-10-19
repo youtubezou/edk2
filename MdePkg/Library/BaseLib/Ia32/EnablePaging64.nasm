@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
-; Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2006 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -50,16 +44,12 @@ ASM_PFX(InternalX86EnablePaging64):
     mov     cr0, eax                    ; enable paging
     retf                                ; topmost 2 dwords hold the address
 .0:
-    DB      0x67, 0x48                    ; 32-bit address size, 64-bit operand size
-    mov     ebx, [esp]                  ; mov rbx, [esp]
-    DB      0x67, 0x48
-    mov     ecx, [esp + 8]              ; mov rcx, [esp + 8]
-    DB      0x67, 0x48
-    mov     edx, [esp + 0x10]            ; mov rdx, [esp + 10h]
-    DB      0x67, 0x48
-    mov     esp, [esp + 0x18]            ; mov rsp, [esp + 18h]
-    DB      0x48
-    add     esp, -0x20                   ; add rsp, -20h
-    call    ebx                         ; call rbx
+BITS 64
+    mov     rbx, [esp]
+    mov     rcx, [esp + 8]
+    mov     rdx, [esp + 0x10]
+    mov     rsp, [esp + 0x18]
+    add     rsp, -0x20
+    call    rbx
     hlt                                 ; no one should get here
 

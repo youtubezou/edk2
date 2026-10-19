@@ -1,49 +1,26 @@
-/*++
+/** @file
+  Functions for directory cache operation.
 
 Copyright (c) 2005, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
-Module Name:
-
-  DirectoryCache.c
-
-Abstract:
-
-  Functions for directory cache operation
-
-Revision History
-
---*/
+**/
 
 #include "Fat.h"
 
-STATIC
-VOID
-FatFreeODir (
-  IN FAT_ODIR    *ODir
-  )
-/*++
-
-Routine Description:
+/**
 
   Free the directory structure and release the memory.
 
-Arguments:
+  @param  ODir                  - The directory to be freed.
 
-  ODir                  - The directory to be freed.
-
-Returns:
-
-  None.
-
---*/
+**/
+STATIC
+VOID
+FatFreeODir (
+  IN FAT_ODIR  *ODir
+  )
 {
   FAT_DIRENT  *DirEnt;
 
@@ -63,26 +40,18 @@ Returns:
   FreePool (ODir);
 }
 
-STATIC
-FAT_ODIR *
-FatAllocateODir (
-  IN FAT_OFILE   *OFile
-  )
-/*++
-
-Routine Description:
+/**
 
   Allocate the directory structure.
 
-Arguments:
+  @param  OFile                   - The corresponding OFile.
 
-  OFile                   - The corresponding OFile.
-
-Returns:
-
-  None.
-
---*/
+**/
+STATIC
+FAT_ODIR *
+FatAllocateODir (
+  IN FAT_OFILE  *OFile
+  )
 {
   FAT_ODIR  *ODir;
 
@@ -99,32 +68,24 @@ Returns:
   return ODir;
 }
 
-VOID
-FatDiscardODir (
-  IN FAT_OFILE    *OFile
-  )
-/*++
-
-Routine Description:
+/**
 
   Discard the directory structure when an OFile will be freed.
   Volume will cache this directory if the OFile does not represent a deleted file.
 
-Arguments:
+  @param  OFile                 - The OFile whose directory structure is to be discarded.
 
-  OFile                 - The OFile whose directory structure is to be discarded.
-
-Returns:
-
-  None.
-
---*/
+**/
+VOID
+FatDiscardODir (
+  IN FAT_OFILE  *OFile
+  )
 {
   FAT_ODIR    *ODir;
   FAT_VOLUME  *Volume;
 
-  Volume  = OFile->Volume;
-  ODir    = OFile->ODir;
+  Volume = OFile->Volume;
+  ODir   = OFile->ODir;
   if (!OFile->DirEnt->Invalid) {
     //
     // If OFile does not represent a deleted file, then we will cache the directory
@@ -146,6 +107,7 @@ Returns:
       ODir = NULL;
     }
   }
+
   //
   // Release ODir Structure
   //
@@ -154,33 +116,26 @@ Returns:
   }
 }
 
-VOID
-FatRequestODir (
-  IN FAT_OFILE    *OFile
-  )
-/*++
+/**
 
-Routine Description:
 
   Request the directory structure when an OFile is newly generated.
   If the directory structure is cached by volume, then just return this directory;
   Otherwise, allocate a new one for OFile.
 
-Arguments:
+  @param  OFile                 - The OFile which requests directory structure.
 
-  OFile                 - The OFile which requests directory structure.
-
-Returns:
-
-  None.
-
---*/
+**/
+VOID
+FatRequestODir (
+  IN FAT_OFILE  *OFile
+  )
 {
-  UINTN           DirCacheTag;
-  FAT_VOLUME      *Volume;
-  FAT_ODIR        *ODir;
-  FAT_ODIR        *CurrentODir;
-  LIST_ENTRY      *CurrentODirLink;
+  UINTN       DirCacheTag;
+  FAT_VOLUME  *Volume;
+  FAT_ODIR    *ODir;
+  FAT_ODIR    *CurrentODir;
+  LIST_ENTRY  *CurrentODirLink;
 
   Volume      = OFile->Volume;
   ODir        = NULL;
@@ -188,7 +143,8 @@ Returns:
   for (CurrentODirLink  = Volume->DirCacheList.ForwardLink;
        CurrentODirLink != &Volume->DirCacheList;
        CurrentODirLink  = CurrentODirLink->ForwardLink
-      ) {
+       )
+  {
     CurrentODir = ODIR_FROM_DIRCACHELINK (CurrentODirLink);
     if (CurrentODir->DirCacheTag == DirCacheTag) {
       RemoveEntryList (&CurrentODir->DirCacheLink);
@@ -208,27 +164,20 @@ Returns:
   OFile->ODir = ODir;
 }
 
-VOID
-FatCleanupODirCache (
-  IN FAT_VOLUME         *Volume
-  )
-/*++
-
-Routine Description:
+/**
 
   Clean up all the cached directory structures when the volume is going to be abandoned.
 
-Arguments:
+  @param  Volume                - FAT file system volume.
 
-  Volume                - FAT file system volume.
-
-Returns:
-
-  None.
-
---*/
+**/
+VOID
+FatCleanupODirCache (
+  IN FAT_VOLUME  *Volume
+  )
 {
   FAT_ODIR  *ODir;
+
   while (Volume->DirCacheCount > 0) {
     ODir = ODIR_FROM_DIRCACHELINK (Volume->DirCacheList.BackLink);
     RemoveEntryList (&ODir->DirCacheLink);

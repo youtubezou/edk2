@@ -1,14 +1,8 @@
 /** @file
   Null Base Report Status Code Library instance with empty functions.
 
-  Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -49,7 +43,6 @@ CodeTypeToPostCode (
 
   return FALSE;
 }
-
 
 /**
   Extracts ASSERT() information from a status code structure.
@@ -98,7 +91,6 @@ ReportStatusCodeExtractAssertInfo (
   return FALSE;
 }
 
-
 /**
   Extracts DEBUG() information from a status code structure.
 
@@ -145,7 +137,6 @@ ReportStatusCodeExtractDebugInfo (
   return FALSE;
 }
 
-
 /**
   Reports a status code.
 
@@ -176,7 +167,6 @@ ReportStatusCode (
 {
   return EFI_SUCCESS;
 }
-
 
 /**
   Reports a status code with a Device Path Protocol as the extended data.
@@ -215,10 +205,9 @@ ReportStatusCodeWithDevicePath (
   )
 {
   ASSERT (DevicePath != NULL);
-  
+
   return EFI_SUCCESS;
 }
-
 
 /**
   Reports a status code with an extended data buffer.
@@ -266,7 +255,6 @@ ReportStatusCodeWithExtendedData (
   ASSERT (ExtendedDataSize != 0);
   return EFI_SUCCESS;
 }
-
 
 /**
   Reports a status code with full parameters.
@@ -324,17 +312,16 @@ ReportStatusCodeEx (
   return EFI_SUCCESS;
 }
 
-
 /**
   Returns TRUE if status codes of type EFI_PROGRESS_CODE are enabled
 
   This function returns TRUE if the REPORT_STATUS_CODE_PROPERTY_PROGRESS_CODE_ENABLED
-  bit of PcdReportStatusCodeProperyMask is set.  Otherwise FALSE is returned.
+  bit of PcdReportStatusCodePropertyMask is set.  Otherwise FALSE is returned.
 
   @retval  TRUE   The REPORT_STATUS_CODE_PROPERTY_PROGRESS_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is set.
+                  PcdReportStatusCodePropertyMask is set.
   @retval  FALSE  The REPORT_STATUS_CODE_PROPERTY_PROGRESS_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is clear.
+                  PcdReportStatusCodePropertyMask is clear.
 
 **/
 BOOLEAN
@@ -346,17 +333,16 @@ ReportProgressCodeEnabled (
   return FALSE;
 }
 
-
 /**
   Returns TRUE if status codes of type EFI_ERROR_CODE are enabled
 
   This function returns TRUE if the REPORT_STATUS_CODE_PROPERTY_ERROR_CODE_ENABLED
-  bit of PcdReportStatusCodeProperyMask is set.  Otherwise FALSE is returned.
+  bit of PcdReportStatusCodePropertyMask is set.  Otherwise FALSE is returned.
 
   @retval  TRUE   The REPORT_STATUS_CODE_PROPERTY_ERROR_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is set.
+                  PcdReportStatusCodePropertyMask is set.
   @retval  FALSE  The REPORT_STATUS_CODE_PROPERTY_ERROR_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is clear.
+                  PcdReportStatusCodePropertyMask is clear.
 
 **/
 BOOLEAN
@@ -368,17 +354,16 @@ ReportErrorCodeEnabled (
   return FALSE;
 }
 
-
 /**
   Returns TRUE if status codes of type EFI_DEBUG_CODE are enabled
 
   This function returns TRUE if the REPORT_STATUS_CODE_PROPERTY_DEBUG_CODE_ENABLED
-  bit of PcdReportStatusCodeProperyMask is set.  Otherwise FALSE is returned.
+  bit of PcdReportStatusCodePropertyMask is set.  Otherwise FALSE is returned.
 
   @retval  TRUE   The REPORT_STATUS_CODE_PROPERTY_DEBUG_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is set.
+                  PcdReportStatusCodePropertyMask is set.
   @retval  FALSE  The REPORT_STATUS_CODE_PROPERTY_DEBUG_CODE_ENABLED bit of
-                  PcdReportStatusCodeProperyMask is clear.
+                  PcdReportStatusCodePropertyMask is clear.
 
 **/
 BOOLEAN
@@ -389,4 +374,3 @@ ReportDebugCodeEnabled (
 {
   return FALSE;
 }
-

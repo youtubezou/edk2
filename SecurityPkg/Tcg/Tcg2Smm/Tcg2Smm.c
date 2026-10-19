@@ -9,87 +9,109 @@
 
   PhysicalPresenceCallback() and MemoryClearCallback() will receive untrusted input and do some check.
 
-Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials 
-are licensed and made available under the terms and conditions of the BSD License 
-which accompanies this distribution.  The full text of the license may be found at 
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, 
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2024, Intel Corporation. All rights reserved.<BR>
+Copyright (c) Microsoft Corporation.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "Tcg2Smm.h"
 
-typedef enum {
-  PtpInterfaceTis,
-  PtpInterfaceFifo,
-  PtpInterfaceCrb,
-  PtpInterfaceMax,
-} PTP_INTERFACE_TYPE;
+EFI_SMM_VARIABLE_PROTOCOL  *mSmmVariable  = NULL;
+TCG_NVS                    *mTcgNvs       = NULL;
+UINTN                      mPpSoftwareSmi = MAX_UINTN;
+UINTN                      mMcSoftwareSmi = MAX_UINTN;
+EFI_HANDLE                 mReadyToLockHandle;
 
 /**
-  Return PTP interface type.
+  Communication service SMI Handler entry.
 
-  @param[in] Register                Pointer to PTP register.
+  This handler takes requests to exchange Mmi channel and Nvs address between MM and DXE.
 
-  @return PTP interface type.
+  Caution: This function may receive untrusted input.
+  Communicate buffer and buffer size are external input, so this function will do basic validation.
+
+  @param[in]      DispatchHandle    The unique handle assigned to this handler by SmiHandlerRegister().
+  @param[in]      RegisterContext   Points to an optional handler context which was specified when the
+                                    handler was registered.
+  @param[in, out] CommBuffer        A pointer to a collection of data in memory that will
+                                    be conveyed from a non-SMM environment into an SMM environment.
+  @param[in, out] CommBufferSize    The size of the CommBuffer.
+
+  @retval EFI_SUCCESS               The interrupt was handled and quiesced. No other handlers
+                                    should still be called.
+  @retval EFI_UNSUPPORTED           An unknown test function was requested.
+  @retval EFI_ACCESS_DENIED         Part of the communication buffer lies in an invalid region.
+
 **/
-PTP_INTERFACE_TYPE
-GetPtpInterface (
-  IN VOID *Register
+EFI_STATUS
+EFIAPI
+TpmNvsCommunciate (
+  IN     EFI_HANDLE  DispatchHandle,
+  IN     CONST VOID  *RegisterContext,
+  IN OUT VOID        *CommBuffer,
+  IN OUT UINTN       *CommBufferSize
   )
 {
-  PTP_CRB_INTERFACE_IDENTIFIER  InterfaceId;
-  PTP_FIFO_INTERFACE_CAPABILITY InterfaceCapability;
+  EFI_STATUS              Status;
+  UINTN                   TempCommBufferSize;
+  TPM_NVS_MM_COMM_BUFFER  *CommParams;
+
+  DEBUG ((DEBUG_VERBOSE, "%a()\n", __func__));
 
   //
-  // Check interface id
+  // If input is invalid, stop processing this SMI
   //
-  InterfaceId.Uint32 = MmioRead32 ((UINTN)&((PTP_CRB_REGISTERS *)Register)->InterfaceId);
-  InterfaceCapability.Uint32 = MmioRead32 ((UINTN)&((PTP_FIFO_REGISTERS *)Register)->InterfaceCapability);
-
-  if (InterfaceId.Bits.InterfaceType == PTP_INTERFACE_IDENTIFIER_INTERFACE_TYPE_TIS) {
-    return PtpInterfaceTis;
+  if ((CommBuffer == NULL) || (CommBufferSize == NULL)) {
+    return EFI_SUCCESS;
   }
 
-  if ((InterfaceId.Bits.InterfaceType == PTP_INTERFACE_IDENTIFIER_INTERFACE_TYPE_CRB) &&
-      (InterfaceId.Bits.InterfaceVersion == PTP_INTERFACE_IDENTIFIER_INTERFACE_VERSION_CRB) &&
-      (InterfaceId.Bits.CapCRB != 0)) {
-    return PtpInterfaceCrb;
+  TempCommBufferSize = *CommBufferSize;
+
+  if (TempCommBufferSize != sizeof (TPM_NVS_MM_COMM_BUFFER)) {
+    DEBUG ((DEBUG_ERROR, "[%a] MM Communication buffer size is invalid for this handler!\n", __func__));
+    return EFI_ACCESS_DENIED;
   }
 
-  if ((InterfaceId.Bits.InterfaceType == PTP_INTERFACE_IDENTIFIER_INTERFACE_TYPE_FIFO) &&
-      (InterfaceId.Bits.InterfaceVersion == PTP_INTERFACE_IDENTIFIER_INTERFACE_VERSION_FIFO) &&
-      (InterfaceId.Bits.CapFIFO != 0) &&
-      (InterfaceCapability.Bits.InterfaceVersion == INTERFACE_CAPABILITY_INTERFACE_VERSION_PTP)) {
-    return PtpInterfaceFifo;
+  CommParams = (TPM_NVS_MM_COMM_BUFFER *)CommBuffer;
+
+  //
+  // The Primary Buffer validation
+  //
+  if (!Tcg2IsPrimaryBufferValid ((UINTN)CommBuffer, TempCommBufferSize)) {
+    DEBUG ((DEBUG_ERROR, "[%a] - MM Communication buffer in invalid location!\n", __func__));
+    return EFI_ACCESS_DENIED;
   }
 
   //
-  // No Ptp interface available
+  // The NonPrimary Buffer validation
   //
-  return PtpInterfaceMax;
+  if (!Tcg2IsNonPrimaryBufferValid (CommParams->TargetAddress, EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (sizeof (TCG_NVS))))) {
+    DEBUG ((DEBUG_ERROR, "[%a] - MM NonPrimary buffer pointed from Communication buffer in invalid location!\n", __func__));
+    return EFI_ACCESS_DENIED;
+  }
+
+  //
+  // Farm out the job to individual functions based on what was requested.
+  //
+  Status = EFI_SUCCESS;
+  switch (CommParams->Function) {
+    case TpmNvsMmExchangeInfo:
+      DEBUG ((DEBUG_VERBOSE, "[%a] - Function requested: MM_EXCHANGE_NVS_INFO\n", __func__));
+      CommParams->RegisteredPpSwiValue = mPpSoftwareSmi;
+      CommParams->RegisteredMcSwiValue = mMcSoftwareSmi;
+      mTcgNvs                          = (TCG_NVS *)(UINTN)CommParams->TargetAddress;
+      break;
+
+    default:
+      DEBUG ((DEBUG_INFO, "[%a] - Unknown function %d!\n", __func__, CommParams->Function));
+      Status = EFI_UNSUPPORTED;
+      break;
+  }
+
+  CommParams->ReturnStatus = (UINT64)Status;
+  return EFI_SUCCESS;
 }
-
-EFI_TPM2_ACPI_TABLE  mTpm2AcpiTemplate = {
-  {
-    EFI_ACPI_5_0_TRUSTED_COMPUTING_PLATFORM_2_TABLE_SIGNATURE,
-    sizeof (mTpm2AcpiTemplate),
-    EFI_TPM2_ACPI_TABLE_REVISION,
-    //
-    // Compiler initializes the remaining bytes to 0
-    // These fields should be filled in in production
-    //
-  },
-  0, // Flags
-  0, // Control Area
-  EFI_TPM2_ACPI_TABLE_START_METHOD_TIS, // StartMethod
-};
-
-EFI_SMM_VARIABLE_PROTOCOL  *mSmmVariable;
-TCG_NVS                    *mTcgNvs;
 
 /**
   Software SMI callback for TPM physical presence which is called from ACPI method.
@@ -111,17 +133,21 @@ TCG_NVS                    *mTcgNvs;
 EFI_STATUS
 EFIAPI
 PhysicalPresenceCallback (
-  IN EFI_HANDLE                  DispatchHandle,
-  IN CONST VOID                  *Context,
-  IN OUT VOID                    *CommBuffer,
-  IN OUT UINTN                   *CommBufferSize
+  IN EFI_HANDLE  DispatchHandle,
+  IN CONST VOID  *Context,
+  IN OUT VOID    *CommBuffer,
+  IN OUT UINTN   *CommBufferSize
   )
 {
-  UINT32                MostRecentRequest;
-  UINT32                Response;
-  UINT32                OperationRequest;
-  UINT32                RequestParameter;
+  UINT32  MostRecentRequest;
+  UINT32  Response;
+  UINT32  OperationRequest;
+  UINT32  RequestParameter;
 
+  if (mTcgNvs == NULL) {
+    DEBUG ((DEBUG_ERROR, "[%a] mTcgNvs has not been initialized yet\n", __func__));
+    return EFI_SUCCESS;
+  }
 
   if (mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_RETURN_REQUEST_RESPONSE_TO_OS) {
     mTcgNvs->PhysicalPresence.ReturnCode = Tcg2PhysicalPresenceLibReturnOperationResponseToOsFunction (
@@ -129,18 +155,18 @@ PhysicalPresenceCallback (
                                              &Response
                                              );
     mTcgNvs->PhysicalPresence.LastRequest = MostRecentRequest;
-    mTcgNvs->PhysicalPresence.Response = Response;
+    mTcgNvs->PhysicalPresence.Response    = Response;
     return EFI_SUCCESS;
-  } else if ((mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_SUBMIT_REQUEST_TO_BIOS) 
-          || (mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_SUBMIT_REQUEST_TO_BIOS_2)) {
-
-    OperationRequest = mTcgNvs->PhysicalPresence.Request;
-    RequestParameter = mTcgNvs->PhysicalPresence.RequestParameter;
+  } else if (  (mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_SUBMIT_REQUEST_TO_BIOS)
+            || (mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_SUBMIT_REQUEST_TO_BIOS_2))
+  {
+    OperationRequest                     = mTcgNvs->PhysicalPresence.Request;
+    RequestParameter                     = mTcgNvs->PhysicalPresence.RequestParameter;
     mTcgNvs->PhysicalPresence.ReturnCode = Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunctionEx (
                                              &OperationRequest,
                                              &RequestParameter
                                              );
-    mTcgNvs->PhysicalPresence.Request = OperationRequest;
+    mTcgNvs->PhysicalPresence.Request          = OperationRequest;
     mTcgNvs->PhysicalPresence.RequestParameter = RequestParameter;
   } else if (mTcgNvs->PhysicalPresence.Parameter == TCG_ACPI_FUNCTION_GET_USER_CONFIRMATION_STATUS_FOR_REQUEST) {
     mTcgNvs->PhysicalPresence.ReturnCode = Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction (mTcgNvs->PPRequestUserConfirm);
@@ -149,369 +175,140 @@ PhysicalPresenceCallback (
   return EFI_SUCCESS;
 }
 
-
 /**
-  Software SMI callback for MemoryClear which is called from ACPI method.
+  Notification for SMM ReadyToLock protocol.
 
-  Caution: This function may receive untrusted input.
-  Variable and ACPINvs are external input, so this function will validate
-  its data structure to be valid value.
+  @param[in] Protocol   Points to the protocol's unique identifier.
+  @param[in] Interface  Points to the interface instance.
+  @param[in] Handle     The handle on which the interface was installed.
 
-  @param[in]      DispatchHandle  The unique handle assigned to this handler by SmiHandlerRegister().
-  @param[in]      Context         Points to an optional handler context which was specified when the
-                                  handler was registered.
-  @param[in, out] CommBuffer      A pointer to a collection of data in memory that will
-                                  be conveyed from a non-SMM environment into an SMM environment.
-  @param[in, out] CommBufferSize  The size of the CommBuffer.
-
-  @retval EFI_SUCCESS             The interrupt was handled successfully.
+  @retval EFI_SUCCESS   Notification runs successfully.
 
 **/
 EFI_STATUS
 EFIAPI
-MemoryClearCallback (
-  IN EFI_HANDLE                  DispatchHandle,
-  IN CONST VOID                  *Context,
-  IN OUT VOID                    *CommBuffer,
-  IN OUT UINTN                   *CommBufferSize
-  )
-{
-  EFI_STATUS                     Status;
-  UINTN                          DataSize;
-  UINT8                          MorControl;
-
-  mTcgNvs->MemoryClear.ReturnCode = MOR_REQUEST_SUCCESS;
-  if (mTcgNvs->MemoryClear.Parameter == ACPI_FUNCTION_DSM_MEMORY_CLEAR_INTERFACE) {
-    MorControl = (UINT8) mTcgNvs->MemoryClear.Request;
-  } else if (mTcgNvs->MemoryClear.Parameter == ACPI_FUNCTION_PTS_CLEAR_MOR_BIT) {
-    DataSize = sizeof (UINT8);
-    Status = mSmmVariable->SmmGetVariable (
-                             MEMORY_OVERWRITE_REQUEST_VARIABLE_NAME,
-                             &gEfiMemoryOverwriteControlDataGuid,
-                             NULL,
-                             &DataSize,
-                             &MorControl
-                             );
-    if (EFI_ERROR (Status)) {
-      mTcgNvs->MemoryClear.ReturnCode = MOR_REQUEST_GENERAL_FAILURE;
-      DEBUG ((EFI_D_ERROR, "[TPM] Get MOR variable failure! Status = %r\n", Status));
-      return EFI_SUCCESS;
-    }
-
-    if (MOR_CLEAR_MEMORY_VALUE (MorControl) == 0x0) {
-      return EFI_SUCCESS;
-    }
-    MorControl &= ~MOR_CLEAR_MEMORY_BIT_MASK;
-  }
-
-  DataSize = sizeof (UINT8);
-  Status = mSmmVariable->SmmSetVariable (
-                           MEMORY_OVERWRITE_REQUEST_VARIABLE_NAME,
-                           &gEfiMemoryOverwriteControlDataGuid,
-                           EFI_VARIABLE_NON_VOLATILE | EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS,
-                           DataSize,
-                           &MorControl
-                           );
-  if (EFI_ERROR (Status)) { 
-    mTcgNvs->MemoryClear.ReturnCode = MOR_REQUEST_GENERAL_FAILURE;
-    DEBUG ((EFI_D_ERROR, "[TPM] Set MOR variable failure! Status = %r\n", Status));
-  }
-
-  return EFI_SUCCESS;
-}
-
-/**
-  Find the operation region in TCG ACPI table by given Name and Size,
-  and initialize it if the region is found.
-
-  @param[in, out] Table          The TPM item in ACPI table.
-  @param[in]      Name           The name string to find in TPM table.
-  @param[in]      Size           The size of the region to find.
-
-  @return                        The allocated address for the found region.
-
-**/
-VOID *
-AssignOpRegion (
-  EFI_ACPI_DESCRIPTION_HEADER    *Table,
-  UINT32                         Name,
-  UINT16                         Size
-  )
-{
-  EFI_STATUS                     Status;
-  AML_OP_REGION_32_8             *OpRegion;
-  EFI_PHYSICAL_ADDRESS           MemoryAddress;
-
-  MemoryAddress = SIZE_4GB - 1;
-
-  //
-  // Patch some pointers for the ASL code before loading the SSDT.
-  //
-  for (OpRegion  = (AML_OP_REGION_32_8 *) (Table + 1);
-       OpRegion <= (AML_OP_REGION_32_8 *) ((UINT8 *) Table + Table->Length);
-       OpRegion  = (AML_OP_REGION_32_8 *) ((UINT8 *) OpRegion + 1)) {
-    if ((OpRegion->OpRegionOp  == AML_EXT_REGION_OP) && 
-        (OpRegion->NameString  == Name) &&
-        (OpRegion->DWordPrefix == AML_DWORD_PREFIX) &&
-        (OpRegion->BytePrefix  == AML_BYTE_PREFIX)) {
-
-      Status = gBS->AllocatePages(AllocateMaxAddress, EfiACPIMemoryNVS, EFI_SIZE_TO_PAGES (Size), &MemoryAddress);
-      ASSERT_EFI_ERROR (Status);
-      ZeroMem ((VOID *)(UINTN)MemoryAddress, Size);
-      OpRegion->RegionOffset = (UINT32) (UINTN) MemoryAddress;
-      OpRegion->RegionLen    = (UINT8) Size;
-      break;
-    }
-  }
-
-  return (VOID *) (UINTN) MemoryAddress;
-}
-
-/**
-  Patch version string of Physical Presence interface supported by platform. The initial string tag in TPM 
-ACPI table is "$PV".
-
-  @param[in, out] Table          The TPM item in ACPI table.
-  @param[in]      PPVer          Version string of Physical Presence interface supported by platform.
-
-  @return                        The allocated address for the found region.
-
-**/
-EFI_STATUS
-UpdatePPVersion (
-  EFI_ACPI_DESCRIPTION_HEADER    *Table,
-  CHAR8                          *PPVer
+TcgMmReadyToLock (
+  IN CONST EFI_GUID  *Protocol,
+  IN VOID            *Interface,
+  IN EFI_HANDLE      Handle
   )
 {
   EFI_STATUS  Status;
-  UINT8       *DataPtr;
 
-  //
-  // Patch some pointers for the ASL code before loading the SSDT.
-  //
-  for (DataPtr  = (UINT8 *)(Table + 1);
-       DataPtr <= (UINT8 *) ((UINT8 *) Table + Table->Length - PHYSICAL_PRESENCE_VERSION_SIZE);
-       DataPtr += 1) {
-    if (AsciiStrCmp((CHAR8 *)DataPtr,  PHYSICAL_PRESENCE_VERSION_TAG) == 0) {
-      Status = AsciiStrCpyS((CHAR8 *)DataPtr, PHYSICAL_PRESENCE_VERSION_SIZE, PPVer);
-      DEBUG((EFI_D_INFO, "TPM2 Physical Presence Interface Version update status 0x%x\n", Status));
-      return Status;
-    }
+  Status = EFI_SUCCESS;
+
+  if (mReadyToLockHandle != NULL) {
+    Status             = gMmst->MmiHandlerUnRegister (mReadyToLockHandle);
+    mReadyToLockHandle = NULL;
   }
-
-  return EFI_NOT_FOUND;
-}
-
-/**
-  Initialize and publish TPM items in ACPI table.
-
-  @retval   EFI_SUCCESS     The TCG ACPI table is published successfully.
-  @retval   Others          The TCG ACPI table is not published.
-
-**/
-EFI_STATUS
-PublishAcpiTable (
-  VOID
-  )
-{
-  EFI_STATUS                     Status;
-  EFI_ACPI_TABLE_PROTOCOL        *AcpiTable;
-  UINTN                          TableKey;
-  EFI_ACPI_DESCRIPTION_HEADER    *Table;
-  UINTN                          TableSize;
-
-  Status = GetSectionFromFv (
-             &gEfiCallerIdGuid,
-             EFI_SECTION_RAW,
-             0,
-             (VOID **) &Table,
-             &TableSize
-             );
-  ASSERT_EFI_ERROR (Status);
-
-  //
-  // Update Table version before measuring it to PCR
-  //
-  Status = UpdatePPVersion(Table, (CHAR8 *)PcdGetPtr(PcdTcgPhysicalPresenceInterfaceVer));
-  ASSERT_EFI_ERROR (Status);
-
-  //
-  // Measure to PCR[0] with event EV_POST_CODE ACPI DATA
-  //
-  TpmMeasureAndLogData(
-    0,
-    EV_POST_CODE,
-    EV_POSTCODE_INFO_ACPI_DATA,
-    ACPI_DATA_LEN,
-    Table,
-    TableSize
-    );
-
-
-  ASSERT (Table->OemTableId == SIGNATURE_64 ('T', 'p', 'm', '2', 'T', 'a', 'b', 'l'));
-  CopyMem (Table->OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (Table->OemId) );
-  mTcgNvs = AssignOpRegion (Table, SIGNATURE_32 ('T', 'N', 'V', 'S'), (UINT16) sizeof (TCG_NVS));
-  ASSERT (mTcgNvs != NULL);
-
-  //
-  // Publish the TPM ACPI table. Table is re-checksumed.
-  //
-  Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID **) &AcpiTable);
-  ASSERT_EFI_ERROR (Status);
-
-  TableKey = 0;
-  Status = AcpiTable->InstallAcpiTable (
-                        AcpiTable,
-                        Table,
-                        TableSize,
-                        &TableKey
-                        );
-  ASSERT_EFI_ERROR (Status);
 
   return Status;
 }
 
 /**
-  Publish TPM2 ACPI table
+  The driver's common initialization routine.
 
-  @retval   EFI_SUCCESS     The TPM2 ACPI table is published successfully.
-  @retval   Others          The TPM2 ACPI table is not published.
-
-**/
-EFI_STATUS
-PublishTpm2 (
-  VOID
-  )
-{
-  EFI_STATUS                     Status;
-  EFI_ACPI_TABLE_PROTOCOL        *AcpiTable;
-  UINTN                          TableKey;
-  UINT64                         OemTableId;
-  EFI_TPM2_ACPI_CONTROL_AREA     *ControlArea;
-  PTP_INTERFACE_TYPE             InterfaceType;
-
-  //
-  // Measure to PCR[0] with event EV_POST_CODE ACPI DATA
-  //
-  TpmMeasureAndLogData(
-    0,
-    EV_POST_CODE,
-    EV_POSTCODE_INFO_ACPI_DATA,
-    ACPI_DATA_LEN,
-    &mTpm2AcpiTemplate,
-    sizeof(mTpm2AcpiTemplate)
-    );
-
-  InterfaceType = GetPtpInterface ((VOID *) (UINTN) PcdGet64 (PcdTpmBaseAddress));
-  switch (InterfaceType) {
-  case PtpInterfaceCrb:
-    mTpm2AcpiTemplate.StartMethod = EFI_TPM2_ACPI_TABLE_START_METHOD_COMMAND_RESPONSE_BUFFER_INTERFACE;
-    mTpm2AcpiTemplate.AddressOfControlArea = PcdGet64 (PcdTpmBaseAddress) + 0x40;
-    ControlArea = (EFI_TPM2_ACPI_CONTROL_AREA *)(UINTN)mTpm2AcpiTemplate.AddressOfControlArea;
-    ControlArea->CommandSize  = 0xF80;
-    ControlArea->ResponseSize = 0xF80;
-    ControlArea->Command      = PcdGet64 (PcdTpmBaseAddress) + 0x80;
-    ControlArea->Response     = PcdGet64 (PcdTpmBaseAddress) + 0x80;
-    break;
-  case PtpInterfaceFifo:
-  case PtpInterfaceTis:
-    break;
-  default:
-    DEBUG((EFI_D_ERROR, "TPM2 InterfaceType get error! %d\n", InterfaceType));
-    break;
-  }
-
-  CopyMem (mTpm2AcpiTemplate.Header.OemId, PcdGetPtr (PcdAcpiDefaultOemId), sizeof (mTpm2AcpiTemplate.Header.OemId));
-  OemTableId = PcdGet64 (PcdAcpiDefaultOemTableId);
-  CopyMem (&mTpm2AcpiTemplate.Header.OemTableId, &OemTableId, sizeof (UINT64));
-  mTpm2AcpiTemplate.Header.OemRevision      = PcdGet32 (PcdAcpiDefaultOemRevision);
-  mTpm2AcpiTemplate.Header.CreatorId        = PcdGet32 (PcdAcpiDefaultCreatorId);
-  mTpm2AcpiTemplate.Header.CreatorRevision  = PcdGet32 (PcdAcpiDefaultCreatorRevision);
-
-  //
-  // Construct ACPI table
-  //
-  Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID **) &AcpiTable);
-  ASSERT_EFI_ERROR (Status);
-
-  Status = AcpiTable->InstallAcpiTable (
-                        AcpiTable,
-                        &mTpm2AcpiTemplate,
-                        sizeof(mTpm2AcpiTemplate),
-                        &TableKey
-                        );
-  ASSERT_EFI_ERROR (Status);
-
-  return Status;
-}
-
-/**
-  The driver's entry point.
-
-  It install callbacks for TPM physical presence and MemoryClear, and locate 
+  It install callbacks for TPM physical presence and MemoryClear, and locate
   SMM variable to be used in the callback function.
 
-  @param[in] ImageHandle  The firmware allocated handle for the EFI image.  
-  @param[in] SystemTable  A pointer to the EFI System Table.
-  
   @retval EFI_SUCCESS     The entry point is executed successfully.
   @retval Others          Some error occurs when executing this entry point.
 
 **/
 EFI_STATUS
-EFIAPI
-InitializeTcgSmm (
-  IN EFI_HANDLE                  ImageHandle,
-  IN EFI_SYSTEM_TABLE            *SystemTable
+InitializeTcgCommon (
+  VOID
   )
 {
   EFI_STATUS                     Status;
   EFI_SMM_SW_DISPATCH2_PROTOCOL  *SwDispatch;
   EFI_SMM_SW_REGISTER_CONTEXT    SwContext;
-  EFI_HANDLE                     SwHandle;
+  EFI_HANDLE                     PpSwHandle;
+  EFI_HANDLE                     McSwHandle;
+  EFI_HANDLE                     NotifyHandle;
 
-  if (!CompareGuid (PcdGetPtr(PcdTpmInstanceGuid), &gEfiTpmDeviceInstanceTpm20DtpmGuid)){
-    DEBUG ((EFI_D_ERROR, "No TPM2 DTPM instance required!\n"));
+  if (!IsTpm20Dtpm ()) {
+    DEBUG ((DEBUG_ERROR, "No TPM2 DTPM instance required!\n"));
     return EFI_UNSUPPORTED;
   }
 
-  Status = PublishAcpiTable ();
+  // Initialize variables first
+  mReadyToLockHandle = NULL;
+  SwDispatch         = NULL;
+  PpSwHandle         = NULL;
+  McSwHandle         = NULL;
+  NotifyHandle       = NULL;
+  mPpSoftwareSmi     = MAX_UINTN;
+  mMcSoftwareSmi     = MAX_UINTN;
+
+  // Register a root handler to communicate the NVS region and SMI channel between MM and DXE
+  Status = gMmst->MmiHandlerRegister (TpmNvsCommunciate, &gTpmNvsMmGuid, &mReadyToLockHandle);
   ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[%a] Failed to register NVS communicate as root MM handler - %r!\n", __func__, Status));
+    goto Cleanup;
+  }
 
   //
   // Get the Sw dispatch protocol and register SMI callback functions.
   //
-  Status = gSmst->SmmLocateProtocol (&gEfiSmmSwDispatch2ProtocolGuid, NULL, (VOID**)&SwDispatch);
-  ASSERT_EFI_ERROR (Status);
-  SwContext.SwSmiInputValue = (UINTN) -1;
-  Status = SwDispatch->Register (SwDispatch, PhysicalPresenceCallback, &SwContext, &SwHandle);
+  Status = gMmst->MmLocateProtocol (&gEfiSmmSwDispatch2ProtocolGuid, NULL, (VOID **)&SwDispatch);
   ASSERT_EFI_ERROR (Status);
   if (EFI_ERROR (Status)) {
-    return Status;
+    DEBUG ((DEBUG_ERROR, "[%a] Failed to locate Sw dispatch protocol - %r!\n", __func__, Status));
+    goto Cleanup;
   }
-  mTcgNvs->PhysicalPresence.SoftwareSmi = (UINT8) SwContext.SwSmiInputValue;
 
-  SwContext.SwSmiInputValue = (UINTN) -1;
-  Status = SwDispatch->Register (SwDispatch, MemoryClearCallback, &SwContext, &SwHandle);
+  SwContext.SwSmiInputValue = (UINTN)-1;
+  Status                    = SwDispatch->Register (SwDispatch, PhysicalPresenceCallback, &SwContext, &PpSwHandle);
   ASSERT_EFI_ERROR (Status);
   if (EFI_ERROR (Status)) {
-    return Status;
+    DEBUG ((DEBUG_ERROR, "[%a] Failed to register PP callback as SW MM handler - %r!\n", __func__, Status));
+    goto Cleanup;
   }
-  mTcgNvs->MemoryClear.SoftwareSmi = (UINT8) SwContext.SwSmiInputValue;
-  
+
+  mPpSoftwareSmi = SwContext.SwSmiInputValue;
+
   //
   // Locate SmmVariableProtocol.
   //
-  Status = gSmst->SmmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID**)&mSmmVariable);
+  Status = gMmst->MmLocateProtocol (&gEfiSmmVariableProtocolGuid, NULL, (VOID **)&mSmmVariable);
   ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    // Should not happen
+    DEBUG ((DEBUG_ERROR, "[%a] Failed to locate SMM variable protocol - %r!\n", __func__, Status));
+    goto Cleanup;
+  }
 
-  //
-  // Set TPM2 ACPI table
-  //
-  Status = PublishTpm2 ();
+  // Turn off the light before leaving the room... at least, take a remote...
+  Status = gMmst->MmRegisterProtocolNotify (&gEfiMmReadyToLockProtocolGuid, TcgMmReadyToLock, &NotifyHandle);
   ASSERT_EFI_ERROR (Status);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[%a] Failed to register ready to lock notification - %r!\n", __func__, Status));
+    goto Cleanup;
+  }
 
+  Tcg2NotifyMmReady ();
 
-  return EFI_SUCCESS;
+Cleanup:
+  if (EFI_ERROR (Status)) {
+    // Something is whacked, clean up the mess...
+    if (NotifyHandle != NULL) {
+      gMmst->MmRegisterProtocolNotify (&gEfiMmReadyToLockProtocolGuid, NULL, &NotifyHandle);
+    }
+
+    if ((McSwHandle != NULL) && (SwDispatch != NULL)) {
+      SwDispatch->UnRegister (SwDispatch, McSwHandle);
+    }
+
+    if ((PpSwHandle != NULL) && (SwDispatch != NULL)) {
+      SwDispatch->UnRegister (SwDispatch, PpSwHandle);
+    }
+
+    if (mReadyToLockHandle != NULL) {
+      gMmst->MmiHandlerUnRegister (mReadyToLockHandle);
+    }
+  }
+
+  return Status;
 }
-

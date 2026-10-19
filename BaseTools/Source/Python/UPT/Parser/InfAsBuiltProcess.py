@@ -1,15 +1,9 @@
 ## @file
 # This file is used to provide method for process AsBuilt INF file. It will consumed by InfParser
 #
-# Copyright (c) 2011 - 2014, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
 #
-# This program and the accompanying materials are licensed and made available 
-# under the terms and conditions of the BSD License which accompanies this 
-# distribution. The full text of the license may be found at 
-# http://opensource.org/licenses/bsd-license.php
-#
-# THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-# WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+# SPDX-License-Identifier: BSD-2-Clause-Patent
 '''
 InfAsBuiltProcess
 '''
@@ -23,7 +17,7 @@ import Logger.Log as Logger
 from Logger import StringTable as ST
 from Logger import ToolError
 
-from Library.String import GetSplitValueList
+from Library.StringUtils import GetSplitValueList
 from Library.Misc import GetHelpStringByRemoveHashKey
 from Library.Misc import ValidFile
 from Library.Misc import ProcessLineExtender
@@ -46,7 +40,7 @@ def GetLibInstanceInfo(String, WorkSpace, LineNo, CurrentInfFileName):
     FileGuidString = ""
     VerString = ""
 
-    OrignalString = String
+    OriginalString = String
     String = String.strip()
     if not String:
         return None, None
@@ -59,12 +53,12 @@ def GetLibInstanceInfo(String, WorkSpace, LineNo, CurrentInfFileName):
     #
     # To deal with library instance specified by GUID and version
     #
-    RegFormatGuidPattern = re.compile("\s*([0-9a-fA-F]){8}-"
+    RegFormatGuidPattern = re.compile(r"\s*([0-9a-fA-F]){8}-"
                                        "([0-9a-fA-F]){4}-"
                                        "([0-9a-fA-F]){4}-"
                                        "([0-9a-fA-F]){4}-"
-                                       "([0-9a-fA-F]){12}\s*")
-    VersionPattern = re.compile('[\t\s]*\d+(\.\d+)?[\t\s]*')
+                                       r"([0-9a-fA-F]){12}\s*")
+    VersionPattern = re.compile(r'[\t\s]*\d+(\.\d+)?[\t\s]*')
     GuidMatchedObj = RegFormatGuidPattern.search(String)
 
     if String.upper().startswith('GUID') and GuidMatchedObj and 'Version' in String:
@@ -78,11 +72,11 @@ def GetLibInstanceInfo(String, WorkSpace, LineNo, CurrentInfFileName):
     #
     # To deal with library instance specified by file name
     #
-    FileLinesList = GetFileLineContent(String, WorkSpace, LineNo, OrignalString)
+    FileLinesList = GetFileLineContent(String, WorkSpace, LineNo, OriginalString)
 
 
-    ReFindFileGuidPattern = re.compile("^\s*FILE_GUID\s*=.*$")
-    ReFindVerStringPattern = re.compile("^\s*VERSION_STRING\s*=.*$")
+    ReFindFileGuidPattern = re.compile(r"^\s*FILE_GUID\s*=.*$")
+    ReFindVerStringPattern = re.compile(r"^\s*VERSION_STRING\s*=.*$")
 
     for Line in FileLinesList:
         if ReFindFileGuidPattern.match(Line):
@@ -112,8 +106,8 @@ def GetPackageListInfo(FileNameString, WorkSpace, LineNo):
 
     FileLinesList = GetFileLineContent(FileNameString, WorkSpace, LineNo, '')
 
-    RePackageHeader = re.compile('^\s*\[Packages.*\].*$')
-    ReDefineHeader = re.compile('^\s*\[Defines].*$')
+    RePackageHeader = re.compile(r'^\s*\[Packages.*\].*$')
+    ReDefineHeader = re.compile(r'^\s*\[Defines].*$')
 
     PackageHederFlag = False
     DefineHeaderFlag = False
@@ -133,7 +127,7 @@ def GetPackageListInfo(FileNameString, WorkSpace, LineNo):
             continue
 
         #
-        # Found [Packages] section 
+        # Found [Packages] section
         #
         if RePackageHeader.match(Line):
             PackageHederFlag = True
@@ -155,7 +149,7 @@ def GetPackageListInfo(FileNameString, WorkSpace, LineNo):
                                       DT.MODEL_META_DATA_HEADER,
                                       DefineSectionMacros)
 
-            if Name != None:
+            if Name is not None:
                 DefineSectionMacros[Name] = Value
                 continue
 
@@ -168,13 +162,13 @@ def GetPackageListInfo(FileNameString, WorkSpace, LineNo):
                                       FileNameString,
                                       DT.MODEL_META_DATA_PACKAGE,
                                       DefineSectionMacros)
-            if Name != None:
+            if Name is not None:
                 PackageSectionMacros[Name] = Value
                 continue
 
             #
             # Replace with Local section Macro and [Defines] section Macro.
-            #            
+            #
             Line = InfExpandMacro(Line, (FileNameString, Line, LineNo), DefineSectionMacros, PackageSectionMacros, True)
 
             Line = GetSplitValueList(Line, "#", 1)[0]
@@ -205,7 +199,7 @@ def GetFileLineContent(FileName, WorkSpace, LineNo, OriginalString):
 
     try:
         FullFileName = FullFileName.replace('\\', '/')
-        Inputfile = open(FullFileName, "rb", 0)
+        Inputfile = open(FullFileName, "r")
         try:
             FileLinesList = Inputfile.readlines()
         except BaseException:
@@ -221,69 +215,3 @@ def GetFileLineContent(FileName, WorkSpace, LineNo, OriginalString):
     FileLinesList = ProcessLineExtender(FileLinesList)
 
     return FileLinesList
-
-##
-# Get all INF files from current workspace
-#
-#
-def GetInfsFromWorkSpace(WorkSpace):
-    InfFiles = []
-    for top, dirs, files in os.walk(WorkSpace):
-        dirs = dirs # just for pylint
-        for File in files:
-            if File.upper().endswith(".INF"):
-                InfFiles.append(os.path.join(top, File))
-
-    return InfFiles
-
-##
-# Get GUID and version from library instance file
-#
-#
-def GetGuidVerFormLibInstance(Guid, Version, WorkSpace, CurrentInfFileName):
-    for InfFile in GetInfsFromWorkSpace(WorkSpace):
-        try:
-            if InfFile.strip().upper() == CurrentInfFileName.strip().upper():
-                continue
-            InfFile = InfFile.replace('\\', '/')
-            if InfFile not in GlobalData.gLIBINSTANCEDICT:
-                InfFileObj = open(InfFile, "rb", 0)
-                GlobalData.gLIBINSTANCEDICT[InfFile] = InfFileObj
-            else:
-                InfFileObj = GlobalData.gLIBINSTANCEDICT[InfFile]
-
-        except BaseException:
-            Logger.Error("InfParser",
-                         ToolError.FILE_READ_FAILURE,
-                         ST.ERR_FILE_OPEN_FAILURE,
-                         File=InfFile)
-        try:
-            FileLinesList = InfFileObj.readlines()
-            FileLinesList = ProcessLineExtender(FileLinesList)
-
-            ReFindFileGuidPattern = re.compile("^\s*FILE_GUID\s*=.*$")
-            ReFindVerStringPattern = re.compile("^\s*VERSION_STRING\s*=.*$")
-
-            for Line in FileLinesList:
-                if ReFindFileGuidPattern.match(Line):
-                    FileGuidString = Line
-                if ReFindVerStringPattern.match(Line):
-                    VerString = Line
-
-            if FileGuidString:
-                FileGuidString = GetSplitValueList(FileGuidString, '=', 1)[1]
-            if VerString:
-                VerString = GetSplitValueList(VerString, '=', 1)[1]
-
-            if FileGuidString.strip().upper() == Guid.upper() and \
-                VerString.strip().upper() == Version.upper():
-                return Guid, Version
-
-        except BaseException:
-            Logger.Error("InfParser", ToolError.FILE_READ_FAILURE, ST.ERR_FILE_OPEN_FAILURE, File=InfFile)
-        finally:
-            InfFileObj.close()
-
-    return '', ''
-
-

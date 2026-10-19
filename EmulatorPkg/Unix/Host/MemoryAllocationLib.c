@@ -2,13 +2,7 @@
 
   Copyright (c) 2011, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -36,9 +30,8 @@ AllocatePool (
   IN UINTN  AllocationSize
   )
 {
-  return (VOID*) malloc (AllocationSize);
+  return (VOID *)malloc (AllocationSize);
 }
-
 
 /**
   Allocates and zeros a buffer of type EfiBootServicesData.
@@ -59,7 +52,7 @@ AllocateZeroPool (
   IN UINTN  AllocationSize
   )
 {
-  VOID *Buffer;
+  VOID  *Buffer;
 
   Buffer = AllocatePool (AllocationSize);
   if (Buffer == NULL) {
@@ -70,7 +63,6 @@ AllocateZeroPool (
 
   return Buffer;
 }
-
 
 /**
   Reallocates a buffer of type EfiBootServicesData.
@@ -101,7 +93,7 @@ ReallocatePool (
   IN VOID   *OldBuffer  OPTIONAL
   )
 {
-  VOID *NewBuffer;
+  VOID  *NewBuffer;
 
   NewBuffer = AllocatePool (NewSize);
   if (NewBuffer == NULL) {
@@ -118,7 +110,6 @@ ReallocatePool (
 
   return NewBuffer;
 }
-
 
 /**
   Frees a buffer that was previously allocated with one of the pool allocation functions in the
@@ -137,9 +128,8 @@ ReallocatePool (
 VOID
 EFIAPI
 FreePool (
-  IN VOID   *Buffer
+  IN VOID  *Buffer
   )
 {
-  free ((void *) Buffer);
+  free ((void *)Buffer);
 }
-

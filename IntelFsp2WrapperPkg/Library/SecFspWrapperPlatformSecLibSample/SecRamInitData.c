@@ -1,14 +1,8 @@
 /** @file
   Sample to provide TempRamInitParams data.
 
-  Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -16,30 +10,58 @@
 #include <FspEas.h>
 
 typedef struct {
-  UINT32                      MicrocodeRegionBase;
-  UINT32                      MicrocodeRegionSize;
-  UINT32                      CodeRegionBase;
-  UINT32                      CodeRegionSize;
+  EFI_PHYSICAL_ADDRESS    MicrocodeRegionBase;
+  UINT64                  MicrocodeRegionSize;
+  EFI_PHYSICAL_ADDRESS    CodeRegionBase;
+  UINT64                  CodeRegionSize;
 } FSPT_CORE_UPD;
 
 typedef struct {
   FSP_UPD_HEADER    FspUpdHeader;
+  //
+  // If FSP spec version < 2.2, remove FSPT_ARCH_UPD structure.
+  // Else If FSP spec version >= 2.2 and FSP spec version < 2.4, use FSPT_ARCH_UPD structure.
+  // Else, use FSPT_ARCH2_UPD structure.
+  //
+  FSPT_ARCH2_UPD    FsptArchUpd;
   FSPT_CORE_UPD     FsptCoreUpd;
 } FSPT_UPD_CORE_DATA;
 
-GLOBAL_REMOVE_IF_UNREFERENCED CONST FSPT_UPD_CORE_DATA FsptUpdDataPtr = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST FSPT_UPD_CORE_DATA  FsptUpdDataPtr = {
   {
     0x4450555F54505346,
-    0x00,
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+    //
+    // UPD header revision must be equal or greater than 2 when the structure is compliant with FSP spec 2.2.
+    //
+    0x02,
+    {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00
+    }
+  },
+  //
+  // If FSP spec version < 2.2, remove FSPT_ARCH_UPD structure.
+  // Else If FSP spec version >= 2.2 and FSP spec version < 2.4, use FSPT_ARCH_UPD structure.
+  // Else, use FSPT_ARCH2_UPD structure.
+  //
+  {
+    0x03,
+    {
+      0x00, 0x00, 0x00
+    },
+    0x00000020,
+    0x00000000,
+    0x00000000,
+    {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00
     }
   },
   {
-    ((UINT32)FixedPcdGet64 (PcdCpuMicrocodePatchAddress) + FixedPcdGet32 (PcdFlashMicrocodeOffset)),
-    ((UINT32)FixedPcdGet64 (PcdCpuMicrocodePatchRegionSize) - FixedPcdGet32 (PcdFlashMicrocodeOffset)),
+    FixedPcdGet32 (PcdCpuMicrocodePatchAddress),
+    FixedPcdGet32 (PcdCpuMicrocodePatchRegionSize),
     FixedPcdGet32 (PcdFlashCodeCacheAddress),
     FixedPcdGet32 (PcdFlashCodeCacheSize),
   }
 };
-

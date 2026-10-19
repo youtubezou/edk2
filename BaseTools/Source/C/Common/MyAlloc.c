@@ -1,14 +1,8 @@
 /** @file
 File for memory allocation tracking functions.
 
-Copyright (c) 2004 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -33,47 +27,41 @@ STATIC MY_ALLOC_STRUCT  *MyAllocData = NULL;
 STATIC UINT32           MyAllocHeadMagik  = MYALLOC_HEAD_MAGIK;
 STATIC UINT32           MyAllocTailMagik  = MYALLOC_TAIL_MAGIK;
 
-//
-// ////////////////////////////////////////////////////////////////////////////
-//
-//
+/**
+  Check for corruptions in the allocated memory chain.  If a corruption
+  is detection program operation stops w/ an exit(1) call.
+
+  @param Final When FALSE, MyCheck() returns if the allocated memory chain
+               has not been corrupted.  When TRUE, MyCheck() returns if there
+               are no un-freed allocations.  If there are un-freed allocations,
+               they are displayed and exit(1) is called.
+  @param File Set to __FILE__ by macro expansion.
+  @param Line Set to __LINE__ by macro expansion.
+**/
 VOID
 MyCheck (
   BOOLEAN      Final,
   UINT8        File[],
   UINTN        Line
   )
-// *++
-// Description:
-//
-//  Check for corruptions in the allocated memory chain.  If a corruption
-//  is detection program operation stops w/ an exit(1) call.
-//
-// Parameters:
-//
-//  Final := When FALSE, MyCheck() returns if the allocated memory chain
-//           has not been corrupted.  When TRUE, MyCheck() returns if there
-//           are no un-freed allocations.  If there are un-freed allocations,
-//           they are displayed and exit(1) is called.
-//
-//
-//  File := Set to __FILE__ by macro expansion.
-//
-//  Line := Set to __LINE__ by macro expansion.
-//
-// Returns:
-//
-//  n/a
-//
-// --*/
-//
 {
   MY_ALLOC_STRUCT *Tmp;
 
   //
   // Check parameters.
   //
-  if (File == NULL || Line == 0) {
+  if (File == NULL) {
+    printf (
+      "\nMyCheck(Final=%u, File=NULL, Line=%u)"
+      "Invalid parameter(s).\n",
+      Final,
+      (unsigned)Line
+      );
+
+    exit (1);
+  }
+
+  if (Line == 0) {
     printf (
       "\nMyCheck(Final=%u, File=%s, Line=%u)"
       "Invalid parameter(s).\n",
@@ -150,39 +138,26 @@ MyCheck (
     }
   }
 }
-//
-// ////////////////////////////////////////////////////////////////////////////
-//
-//
+
+/**
+  Allocate a new link in the allocation chain along with enough storage
+  for the File[] string, requested Size and alignment overhead.  If
+  memory cannot be allocated or the allocation chain has been corrupted,
+  exit(1) will be called.
+
+  @param Size Number of bytes (UINT8) requested by the called.
+              Size cannot be zero.
+  @param File Set to __FILE__ by macro expansion.
+  @param Line Set to __LINE__ by macro expansion.
+
+  @return Pointer to the caller's buffer.
+**/
 VOID *
 MyAlloc (
   UINTN      Size,
   UINT8 File[],
   UINTN      Line
   )
-// *++
-// Description:
-//
-//  Allocate a new link in the allocation chain along with enough storage
-//  for the File[] string, requested Size and alignment overhead.  If
-//  memory cannot be allocated or the allocation chain has been corrupted,
-//  exit(1) will be called.
-//
-// Parameters:
-//
-//  Size := Number of bytes (UINT8) requested by the called.
-//          Size cannot be zero.
-//
-//  File := Set to __FILE__ by macro expansion.
-//
-//  Line := Set to __LINE__ by macro expansion.
-//
-// Returns:
-//
-//  Pointer to the caller's buffer.
-//
-// --*/
-//
 {
   MY_ALLOC_STRUCT *Tmp;
   UINTN           Len;
@@ -190,7 +165,18 @@ MyAlloc (
   //
   // Check for invalid parameters.
   //
-  if (Size == 0 || File == NULL || Line == 0) {
+  if (File == NULL) {
+    printf (
+      "\nMyAlloc(Size=%u, File=NULL, Line=%u)"
+      "\nInvalid parameter(s).\n",
+      (unsigned)Size,
+      (unsigned)Line
+      );
+
+    exit (1);
+  }
+
+  if (Size == 0 || Line == 0) {
     printf (
       "\nMyAlloc(Size=%u, File=%s, Line=%u)"
       "\nInvalid parameter(s).\n",
@@ -262,10 +248,19 @@ MyAlloc (
 
   return Tmp->Buffer + sizeof (UINT32);
 }
-//
-// ////////////////////////////////////////////////////////////////////////////
-//
-//
+
+/**
+  This does a MyAlloc(), memcpy() and MyFree().  There is no optimization
+  for shrinking or expanding buffers.  An invalid parameter will cause
+  MyRealloc() to fail with a call to exit(1).
+
+  @param Ptr Pointer to the caller's buffer to be re-allocated.
+  @param Size Size of new buffer.  Size cannot be zero.
+  @param File Set to __FILE__ by macro expansion.
+  @param Line Set to __LINE__ by macro expansion.
+
+  @return Pointer to new caller's buffer.
+**/
 VOID *
 MyRealloc (
   VOID       *Ptr,
@@ -273,29 +268,6 @@ MyRealloc (
   UINT8 File[],
   UINTN      Line
   )
-// *++
-// Description:
-//
-//  This does a MyAlloc(), memcpy() and MyFree().  There is no optimization
-//  for shrinking or expanding buffers.  An invalid parameter will cause
-//  MyRealloc() to fail with a call to exit(1).
-//
-// Parameters:
-//
-//  Ptr := Pointer to the caller's buffer to be re-allocated.
-//
-//  Size := Size of new buffer.  Size cannot be zero.
-//
-//  File := Set to __FILE__ by macro expansion.
-//
-//  Line := Set to __LINE__ by macro expansion.
-//
-// Returns:
-//
-//  Pointer to new caller's buffer.
-//
-// --*/
-//
 {
   MY_ALLOC_STRUCT *Tmp;
   VOID            *Buffer;
@@ -303,7 +275,19 @@ MyRealloc (
   //
   // Check for invalid parameter(s).
   //
-  if (Size == 0 || File == NULL || Line == 0) {
+  if (File == NULL) {
+    printf (
+      "\nMyRealloc(Ptr=%p, Size=%u, File=NULL, Line=%u)"
+      "\nInvalid parameter(s).\n",
+      Ptr,
+      (unsigned)Size,
+      (unsigned)Line
+      );
+
+    exit (1);
+  }
+
+  if (Size == 0 || Line == 0) {
     printf (
       "\nMyRealloc(Ptr=%p, Size=%u, File=%s, Line=%u)"
       "\nInvalid parameter(s).\n",
@@ -370,37 +354,22 @@ MyRealloc (
 
   return Buffer;
 }
-//
-// ////////////////////////////////////////////////////////////////////////////
-//
-//
+
+/**
+  Release a previously allocated buffer.  Invalid parameters will cause
+  MyFree() to fail with an exit(1) call.
+
+  @param Ptr Pointer to the caller's buffer to be freed.
+             A NULL pointer will be ignored.
+  @param File Set to __FILE__ by macro expansion.
+  @param Line Set to __LINE__ by macro expansion.
+**/
 VOID
 MyFree (
   VOID       *Ptr,
   UINT8 File[],
   UINTN      Line
   )
-// *++
-// Description:
-//
-//  Release a previously allocated buffer.  Invalid parameters will cause
-//  MyFree() to fail with an exit(1) call.
-//
-// Parameters:
-//
-//  Ptr := Pointer to the caller's buffer to be freed.
-//         A NULL pointer will be ignored.
-//
-//  File := Set to __FILE__ by macro expansion.
-//
-//  Line := Set to __LINE__ by macro expansion.
-//
-// Returns:
-//
-//  n/a
-//
-// --*/
-//
 {
   MY_ALLOC_STRUCT *Tmp;
   MY_ALLOC_STRUCT *Tmp2;
@@ -408,7 +377,18 @@ MyFree (
   //
   // Check for invalid parameter(s).
   //
-  if (File == NULL || Line == 0) {
+  if (File == NULL) {
+    printf (
+      "\nMyFree(Ptr=%p, File=NULL, Line=%u)"
+      "\nInvalid parameter(s).\n",
+      Ptr,
+      (unsigned)Line
+      );
+
+    exit (1);
+  }
+
+  if (Line == 0) {
     printf (
       "\nMyFree(Ptr=%p, File=%s, Line=%u)"
       "\nInvalid parameter(s).\n",

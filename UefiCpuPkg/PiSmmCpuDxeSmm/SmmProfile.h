@@ -1,19 +1,12 @@
 /** @file
 SMM profile header file.
 
-Copyright (c) 2012 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2012 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _SMM_PROFILE_H_
-#define _SMM_PROFILE_H_
+#pragma once
 
 #include "SmmProfileInternal.h"
 
@@ -29,7 +22,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 ActivateSmmProfile (
-  IN UINTN CpuIndex
+  IN UINTN  CpuIndex
   );
 
 /**
@@ -61,8 +54,8 @@ SmmProfileRecordSmiNum (
 **/
 VOID
 SmmProfilePFHandler (
-  UINTN Rip,
-  UINTN ErrorCode
+  UINTN  Rip,
+  UINTN  ErrorCode
   );
 
 /**
@@ -86,35 +79,71 @@ PageFaultIdtHandlerSmmProfile (
   VOID
   );
 
-
 /**
-  Check if XD feature is supported by a processor.
+  Check if feature is supported by a processor.
 
+  @param CpuIndex        The index of the CPU.
 **/
 VOID
 CheckFeatureSupported (
+  IN UINTN  CpuIndex
+  );
+
+/**
+  Initialize the protected memory ranges and the 4KB-page mapped memory ranges.
+
+**/
+VOID
+InitProtectedMemRange (
   VOID
   );
 
 /**
-  Enable XD feature.
+  This function updates memory attribute according to mProtectionMemRangeCount.
 
 **/
 VOID
-ActivateXd (
+SmmProfileUpdateMemoryAttributes (
   VOID
   );
 
 /**
-  Update page table according to protected memory ranges and the 4KB-page mapped memory ranges.
+  Get CPU Index from APIC ID.
 
 **/
-VOID
-InitPaging (
+UINTN
+GetCpuIndex (
   VOID
   );
 
-extern BOOLEAN    mXdSupported;
-extern BOOLEAN    mXdEnabled;
+/**
+  Handler for Page Fault triggered by Guard page.
 
-#endif // _SMM_PROFILE_H_
+  @param  ErrorCode  The Error code of exception.
+
+**/
+VOID
+GuardPagePFHandler (
+  UINTN  ErrorCode
+  );
+
+//
+// The flag indicates if execute-disable is supported by processor.
+//
+extern BOOLEAN  mXdSupported;
+//
+// The flag indicates if execute-disable is enabled on processor.
+//
+extern BOOLEAN  mXdEnabled;
+//
+// The flag indicates if SMM profile is enabled.
+//
+extern BOOLEAN  mSmmProfileEnabled;
+//
+// The flag indicates if #DB will be setup in #PF handler.
+//
+extern BOOLEAN  mSetupDebugTrap;
+//
+// SMI command port.
+//
+extern UINT32  mSmiCommandPort;

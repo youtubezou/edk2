@@ -2,22 +2,14 @@
   Contains function prototypes for Memory Services in DxeCore.
 
   This header file borrows the DxeCore Memory Allocation services as the primitive
-  for memory allocation. 
+  for memory allocation.
 
-  Copyright (c) 2008, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2008 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _DXE_CORE_MEMORY_ALLOCATION_SERVICES_H_
-#define _DXE_CORE_MEMORY_ALLOCATION_SERVICES_H_
-
+#pragma once
 
 /**
   Allocates pages from the memory map.
@@ -40,13 +32,11 @@
 EFI_STATUS
 EFIAPI
 CoreAllocatePages (
-  IN EFI_ALLOCATE_TYPE      Type,
-  IN EFI_MEMORY_TYPE        MemoryType,
-  IN UINTN                  NumberOfPages,
+  IN EFI_ALLOCATE_TYPE         Type,
+  IN EFI_MEMORY_TYPE           MemoryType,
+  IN UINTN                     NumberOfPages,
   IN OUT EFI_PHYSICAL_ADDRESS  *Memory
   );
-
-
 
 /**
   Frees previous allocated pages.
@@ -62,10 +52,9 @@ CoreAllocatePages (
 EFI_STATUS
 EFIAPI
 CoreFreePages (
-  IN EFI_PHYSICAL_ADDRESS   Memory,
-  IN UINTN                  NumberOfPages
+  IN EFI_PHYSICAL_ADDRESS  Memory,
+  IN UINTN                 NumberOfPages
   );
-
 
 /**
   Allocate pool of a particular type.
@@ -100,7 +89,5 @@ CoreAllocatePool (
 EFI_STATUS
 EFIAPI
 CoreFreePool (
-  IN VOID        *Buffer
+  IN VOID  *Buffer
   );
-
-#endif

@@ -1,29 +1,21 @@
 /** @file
   The header files of implementation of EFI_HTTP_PROTOCOL protocol interfaces.
 
-  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
-  (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>  
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+  (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_HTTP_IMPL_H__
-#define __EFI_HTTP_IMPL_H__
+#pragma once
 
-#define HTTP_DEFAULT_PORT        80
-#define HTTP_END_OF_HDR_STR      "\r\n\r\n"
-#define HTTP_CRLF_STR            "\r\n"
-#define HTTP_VERSION_STR         HTTP_VERSION
-#define HTTP_VERSION_CRLF_STR    " HTTP/1.1\r\n"
-#define HTTP_ERROR_OR_NOT_SUPPORT_STATUS_CODE         300
-
+#define HTTP_DEFAULT_PORT                      80
+#define HTTP_END_OF_HDR_STR                    "\r\n\r\n"
+#define HTTP_CRLF_STR                          "\r\n"
+#define HTTP_VERSION_STR                       HTTP_VERSION
+#define HTTP_VERSION_CRLF_STR                  " HTTP/1.1\r\n"
+#define HTTP_ERROR_OR_NOT_SUPPORT_STATUS_CODE  300
 
 /**
   Returns the operational parameters for the current HTTP child instance.
@@ -33,24 +25,26 @@
 
   @param[in]  This                Pointer to EFI_HTTP_PROTOCOL instance.
   @param[out] HttpConfigData      Point to buffer for operational parameters of this
-                                  HTTP instance.
+                                  HTTP instance. It is the responsibility of the caller
+                                  to allocate the memory for HttpConfigData and
+                                  HttpConfigData->AccessPoint.IPv6Node/IPv4Node. In fact,
+                                  it is recommended to allocate sufficient memory to record
+                                  IPv6Node since it is big enough for all possibilities.
 
   @retval EFI_SUCCESS             Operation succeeded.
   @retval EFI_INVALID_PARAMETER   One or more of the following conditions is TRUE:
                                   This is NULL.
                                   HttpConfigData is NULL.
-                                  HttpInstance->LocalAddressIsIPv6 is FALSE and
-                                  HttpConfigData->IPv4Node is NULL.
-                                  HttpInstance->LocalAddressIsIPv6 is TRUE and
-                                  HttpConfigData->IPv6Node is NULL.
+                                  HttpConfigData->AccessPoint.IPv4Node or
+                                  HttpConfigData->AccessPoint.IPv6Node is NULL.
   @retval EFI_NOT_STARTED         This EFI HTTP Protocol instance has not been started.
 
 **/
 EFI_STATUS
 EFIAPI
 EfiHttpGetModeData (
-  IN  EFI_HTTP_PROTOCOL         *This,
-  OUT EFI_HTTP_CONFIG_DATA      *HttpConfigData
+  IN  EFI_HTTP_PROTOCOL     *This,
+  OUT EFI_HTTP_CONFIG_DATA  *HttpConfigData
   );
 
 /**
@@ -63,7 +57,7 @@ EfiHttpGetModeData (
   connections with remote hosts, canceling all asynchronous tokens, and flush request
   and response buffers without informing the appropriate hosts.
 
-  No other EFI HTTP function can be executed by this instance until the Configure() 
+  No other EFI HTTP function can be executed by this instance until the Configure()
   function is executed and returns successfully.
 
   @param[in]  This                Pointer to EFI_HTTP_PROTOCOL instance.
@@ -73,9 +67,9 @@ EfiHttpGetModeData (
   @retval EFI_INVALID_PARAMETER   One or more of the following conditions is TRUE:
                                   This is NULL.
                                   HttpConfigData->LocalAddressIsIPv6 is FALSE and
-                                  HttpConfigData->IPv4Node is NULL.
+                                  HttpConfigData->AccessPoint.IPv4Node is NULL.
                                   HttpConfigData->LocalAddressIsIPv6 is TRUE and
-                                  HttpConfigData->IPv6Node is NULL.
+                                  HttpConfigData->AccessPoint.IPv6Node is NULL.
   @retval EFI_ALREADY_STARTED     Reinitialize this HTTP instance without calling
                                   Configure() with NULL to reset it.
   @retval EFI_DEVICE_ERROR        An unexpected system or network error occurred.
@@ -87,8 +81,8 @@ EfiHttpGetModeData (
 EFI_STATUS
 EFIAPI
 EfiHttpConfigure (
-  IN  EFI_HTTP_PROTOCOL         *This,
-  IN  EFI_HTTP_CONFIG_DATA      *HttpConfigData
+  IN  EFI_HTTP_PROTOCOL     *This,
+  IN  EFI_HTTP_CONFIG_DATA  *HttpConfigData
   );
 
 /**
@@ -120,8 +114,8 @@ EfiHttpConfigure (
 EFI_STATUS
 EFIAPI
 EfiHttpRequest (
-  IN  EFI_HTTP_PROTOCOL         *This,
-  IN  EFI_HTTP_TOKEN            *Token
+  IN  EFI_HTTP_PROTOCOL  *This,
+  IN  EFI_HTTP_TOKEN     *Token
   );
 
 /**
@@ -148,8 +142,8 @@ EfiHttpRequest (
 EFI_STATUS
 EFIAPI
 EfiHttpCancel (
-  IN  EFI_HTTP_PROTOCOL         *This,
-  IN  EFI_HTTP_TOKEN            *Token
+  IN  EFI_HTTP_PROTOCOL  *This,
+  IN  EFI_HTTP_TOKEN     *Token
   );
 
 /**
@@ -202,8 +196,8 @@ EfiHttpCancel (
 EFI_STATUS
 EFIAPI
 EfiHttpResponse (
-  IN  EFI_HTTP_PROTOCOL         *This,
-  IN  EFI_HTTP_TOKEN            *Token
+  IN  EFI_HTTP_PROTOCOL  *This,
+  IN  EFI_HTTP_TOKEN     *Token
   );
 
 /**
@@ -229,9 +223,7 @@ EfiHttpResponse (
 EFI_STATUS
 EFIAPI
 EfiHttpPoll (
-  IN  EFI_HTTP_PROTOCOL         *This
+  IN  EFI_HTTP_PROTOCOL  *This
   );
 
 extern EFI_HTTP_PROTOCOL  mEfiHttpTemplate;
-
-#endif

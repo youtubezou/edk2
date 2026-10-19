@@ -1,14 +1,8 @@
 /** @file
   Routines for HttpDxe driver to perform DNS resolution based on UEFI DNS protocols.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2017 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -25,27 +19,26 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
   @retval EFI_OUT_OF_RESOURCES    Failed to allocate needed resources.
   @retval EFI_DEVICE_ERROR        An unexpected network error occurred.
   @retval Others                  Other errors as indicated.
-  
+
 **/
 EFI_STATUS
 HttpDns4 (
-  IN     HTTP_PROTOCOL            *HttpInstance,
-  IN     CHAR16                   *HostName,
-     OUT EFI_IPv4_ADDRESS         *IpAddress                
+  IN     HTTP_PROTOCOL  *HttpInstance,
+  IN     CHAR16         *HostName,
+  OUT EFI_IPv4_ADDRESS  *IpAddress
   )
 {
-  EFI_STATUS                      Status;
-  EFI_DNS4_PROTOCOL               *Dns4;
-  EFI_DNS4_CONFIG_DATA            Dns4CfgData;
-  EFI_DNS4_COMPLETION_TOKEN       Token;
-  BOOLEAN                         IsDone;
-  HTTP_SERVICE                    *Service;
-  EFI_HANDLE                      Dns4Handle;
-  EFI_IP4_CONFIG2_PROTOCOL        *Ip4Config2;
-  UINTN                           DnsServerListCount;
-  EFI_IPv4_ADDRESS                *DnsServerList;
-  UINTN                           DataSize;
-  
+  EFI_STATUS                 Status;
+  EFI_DNS4_PROTOCOL          *Dns4;
+  EFI_DNS4_CONFIG_DATA       Dns4CfgData;
+  EFI_DNS4_COMPLETION_TOKEN  Token;
+  BOOLEAN                    IsDone;
+  HTTP_SERVICE               *Service;
+  EFI_HANDLE                 Dns4Handle;
+  EFI_IP4_CONFIG2_PROTOCOL   *Ip4Config2;
+  UINTN                      DnsServerListCount;
+  EFI_IPv4_ADDRESS           *DnsServerList;
+  UINTN                      DataSize;
 
   Service = HttpInstance->Service;
   ASSERT (Service != NULL);
@@ -57,7 +50,7 @@ HttpDns4 (
   //
   // Get DNS server list from EFI IPv4 Configuration II protocol.
   //
-  Status = gBS->HandleProtocol (Service->ControllerHandle, &gEfiIp4Config2ProtocolGuid, (VOID **) &Ip4Config2);
+  Status = gBS->HandleProtocol (Service->ControllerHandle, &gEfiIp4Config2ProtocolGuid, (VOID **)&Ip4Config2);
   if (!EFI_ERROR (Status)) {
     //
     // Get the required size.
@@ -70,7 +63,7 @@ HttpDns4 (
         return EFI_OUT_OF_RESOURCES;
       }
 
-      Status   = Ip4Config2->GetData (Ip4Config2, Ip4Config2DataTypeDnsServer, &DataSize, DnsServerList);
+      Status = Ip4Config2->GetData (Ip4Config2, Ip4Config2DataTypeDnsServer, &DataSize, DnsServerList);
       if (EFI_ERROR (Status)) {
         FreePool (DnsServerList);
         DnsServerList = NULL;
@@ -82,25 +75,25 @@ HttpDns4 (
 
   Dns4Handle = NULL;
   Dns4       = NULL;
-  
+
   //
   // Create a DNS child instance and get the protocol.
   //
   Status = NetLibCreateServiceChild (
              Service->ControllerHandle,
-             Service->ImageHandle,
+             Service->Ip4DriverBindingHandle,
              &gEfiDns4ServiceBindingProtocolGuid,
              &Dns4Handle
              );
   if (EFI_ERROR (Status)) {
     goto Exit;
-  }  
+  }
 
   Status = gBS->OpenProtocol (
                   Dns4Handle,
                   &gEfiDns4ProtocolGuid,
-                  (VOID **) &Dns4,
-                  Service->ImageHandle,
+                  (VOID **)&Dns4,
+                  Service->Ip4DriverBindingHandle,
                   Service->ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
@@ -115,20 +108,23 @@ HttpDns4 (
   Dns4CfgData.DnsServerListCount = DnsServerListCount;
   Dns4CfgData.DnsServerList      = DnsServerList;
   Dns4CfgData.UseDefaultSetting  = HttpInstance->IPv4Node.UseDefaultAddress;
+  Dns4CfgData.RetryInterval      = PcdGet32 (PcdHttpDnsRetryInterval);
+  Dns4CfgData.RetryCount         = PcdGet32 (PcdHttpDnsRetryCount);
   if (!Dns4CfgData.UseDefaultSetting) {
     IP4_COPY_ADDRESS (&Dns4CfgData.StationIp, &HttpInstance->IPv4Node.LocalAddress);
     IP4_COPY_ADDRESS (&Dns4CfgData.SubnetMask, &HttpInstance->IPv4Node.LocalSubnet);
   }
-  Dns4CfgData.EnableDnsCache     = TRUE;
-  Dns4CfgData.Protocol           = EFI_IP_PROTO_UDP;
-  Status = Dns4->Configure (
-                   Dns4,
-                   &Dns4CfgData
-                   );
+
+  Dns4CfgData.EnableDnsCache = TRUE;
+  Dns4CfgData.Protocol       = EFI_IP_PROTO_UDP;
+  Status                     = Dns4->Configure (
+                                       Dns4,
+                                       &Dns4CfgData
+                                       );
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
-  
+
   //
   // Create event to set the is done flag when name resolution is finished.
   //
@@ -149,7 +145,7 @@ HttpDns4 (
   //
   Token.Status = EFI_NOT_READY;
   IsDone       = FALSE;
-  Status = Dns4->HostNameToIp (Dns4, HostName, &Token);
+  Status       = Dns4->HostNameToIp (Dns4, HostName, &Token);
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
@@ -161,16 +157,18 @@ HttpDns4 (
   //
   // Name resolution is done, check result.
   //
-  Status = Token.Status;  
+  Status = Token.Status;
   if (!EFI_ERROR (Status)) {
     if (Token.RspData.H2AData == NULL) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
-    if (Token.RspData.H2AData->IpCount == 0 || Token.RspData.H2AData->IpList == NULL) {
+
+    if ((Token.RspData.H2AData->IpCount == 0) || (Token.RspData.H2AData->IpList == NULL)) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
+
     //
     // We just return the first IP address from DNS protocol.
     //
@@ -179,24 +177,26 @@ HttpDns4 (
   }
 
 Exit:
-  
+
   if (Token.Event != NULL) {
     gBS->CloseEvent (Token.Event);
   }
+
   if (Token.RspData.H2AData != NULL) {
     if (Token.RspData.H2AData->IpList != NULL) {
       FreePool (Token.RspData.H2AData->IpList);
     }
+
     FreePool (Token.RspData.H2AData);
   }
 
   if (Dns4 != NULL) {
     Dns4->Configure (Dns4, NULL);
-    
+
     gBS->CloseProtocol (
            Dns4Handle,
            &gEfiDns4ProtocolGuid,
-           Service->ImageHandle,
+           Service->Ip4DriverBindingHandle,
            Service->ControllerHandle
            );
   }
@@ -204,7 +204,7 @@ Exit:
   if (Dns4Handle != NULL) {
     NetLibDestroyServiceChild (
       Service->ControllerHandle,
-      Service->ImageHandle,
+      Service->Ip4DriverBindingHandle,
       &gEfiDns4ServiceBindingProtocolGuid,
       Dns4Handle
       );
@@ -213,7 +213,7 @@ Exit:
   if (DnsServerList != NULL) {
     FreePool (DnsServerList);
   }
-  
+
   return Status;
 }
 
@@ -228,52 +228,51 @@ Exit:
   @retval EFI_OUT_OF_RESOURCES    Failed to allocate needed resources.
   @retval EFI_DEVICE_ERROR        An unexpected network error occurred.
   @retval Others                  Other errors as indicated.
-  
+
 **/
 EFI_STATUS
 HttpDns6 (
-  IN     HTTP_PROTOCOL            *HttpInstance,
-  IN     CHAR16                   *HostName,
-     OUT EFI_IPv6_ADDRESS         *IpAddress                
+  IN     HTTP_PROTOCOL  *HttpInstance,
+  IN     CHAR16         *HostName,
+  OUT EFI_IPv6_ADDRESS  *IpAddress
   )
 {
-  EFI_STATUS                      Status;
-  HTTP_SERVICE                    *Service;
-  EFI_DNS6_PROTOCOL               *Dns6;
-  EFI_DNS6_CONFIG_DATA            Dns6ConfigData;
-  EFI_DNS6_COMPLETION_TOKEN       Token;
-  EFI_HANDLE                      Dns6Handle;
-  EFI_IP6_CONFIG_PROTOCOL         *Ip6Config;
-  EFI_IPv6_ADDRESS                *DnsServerList;
-  UINTN                           DnsServerListCount;
-  UINTN                           DataSize;
-  BOOLEAN                         IsDone;
-  
+  EFI_STATUS                 Status;
+  HTTP_SERVICE               *Service;
+  EFI_DNS6_PROTOCOL          *Dns6;
+  EFI_DNS6_CONFIG_DATA       Dns6ConfigData;
+  EFI_DNS6_COMPLETION_TOKEN  Token;
+  EFI_HANDLE                 Dns6Handle;
+  EFI_IP6_CONFIG_PROTOCOL    *Ip6Config;
+  EFI_IPv6_ADDRESS           *DnsServerList;
+  UINTN                      DnsServerListCount;
+  UINTN                      DataSize;
+  BOOLEAN                    IsDone;
 
   Service = HttpInstance->Service;
   ASSERT (Service != NULL);
 
-  DnsServerList       = NULL;
-  DnsServerListCount  = 0;
-  Dns6                = NULL;
-  Dns6Handle          = NULL;
+  DnsServerList      = NULL;
+  DnsServerListCount = 0;
+  Dns6               = NULL;
+  Dns6Handle         = NULL;
   ZeroMem (&Token, sizeof (EFI_DNS6_COMPLETION_TOKEN));
-  
+
   //
   // Get DNS server list from EFI IPv6 Configuration protocol.
   //
-  Status = gBS->HandleProtocol (Service->ControllerHandle, &gEfiIp6ConfigProtocolGuid, (VOID **) &Ip6Config);
+  Status = gBS->HandleProtocol (Service->ControllerHandle, &gEfiIp6ConfigProtocolGuid, (VOID **)&Ip6Config);
   if (!EFI_ERROR (Status)) {
     //
     // Get the required size.
     //
     DataSize = 0;
-    Status = Ip6Config->GetData (Ip6Config, Ip6ConfigDataTypeDnsServer, &DataSize, NULL);
+    Status   = Ip6Config->GetData (Ip6Config, Ip6ConfigDataTypeDnsServer, &DataSize, NULL);
     if (Status == EFI_BUFFER_TOO_SMALL) {
       DnsServerList = AllocatePool (DataSize);
       if (DnsServerList == NULL) {
         return EFI_OUT_OF_RESOURCES;
-      }  
+      }
 
       Status = Ip6Config->GetData (Ip6Config, Ip6ConfigDataTypeDnsServer, &DataSize, DnsServerList);
       if (EFI_ERROR (Status)) {
@@ -290,19 +289,19 @@ HttpDns6 (
   //
   Status = NetLibCreateServiceChild (
              Service->ControllerHandle,
-             Service->ImageHandle,
+             Service->Ip6DriverBindingHandle,
              &gEfiDns6ServiceBindingProtocolGuid,
              &Dns6Handle
              );
   if (EFI_ERROR (Status)) {
     goto Exit;
-  } 
-  
+  }
+
   Status = gBS->OpenProtocol (
                   Dns6Handle,
                   &gEfiDns6ProtocolGuid,
-                  (VOID **) &Dns6,
-                  Service->ImageHandle,
+                  (VOID **)&Dns6,
+                  Service->Ip6DriverBindingHandle,
                   Service->ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
                   );
@@ -318,6 +317,8 @@ HttpDns6 (
   Dns6ConfigData.DnsServerList  = DnsServerList;
   Dns6ConfigData.EnableDnsCache = TRUE;
   Dns6ConfigData.Protocol       = EFI_IP_PROTO_UDP;
+  Dns6ConfigData.RetryInterval  = PcdGet32 (PcdHttpDnsRetryInterval);
+  Dns6ConfigData.RetryCount     = PcdGet32 (PcdHttpDnsRetryCount);
   IP6_COPY_ADDRESS (&Dns6ConfigData.StationIp, &HttpInstance->Ipv6Node.LocalAddress);
   Status = Dns6->Configure (
                    Dns6,
@@ -358,42 +359,46 @@ HttpDns6 (
   //
   // Name resolution is done, check result.
   //
-  Status = Token.Status;  
+  Status = Token.Status;
   if (!EFI_ERROR (Status)) {
     if (Token.RspData.H2AData == NULL) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
-    if (Token.RspData.H2AData->IpCount == 0 || Token.RspData.H2AData->IpList == NULL) {
+
+    if ((Token.RspData.H2AData->IpCount == 0) || (Token.RspData.H2AData->IpList == NULL)) {
       Status = EFI_DEVICE_ERROR;
       goto Exit;
     }
+
     //
     // We just return the first IPv6 address from DNS protocol.
     //
     IP6_COPY_ADDRESS (IpAddress, Token.RspData.H2AData->IpList);
     Status = EFI_SUCCESS;
   }
-  
+
 Exit:
 
   if (Token.Event != NULL) {
     gBS->CloseEvent (Token.Event);
   }
+
   if (Token.RspData.H2AData != NULL) {
     if (Token.RspData.H2AData->IpList != NULL) {
       FreePool (Token.RspData.H2AData->IpList);
     }
+
     FreePool (Token.RspData.H2AData);
   }
 
   if (Dns6 != NULL) {
     Dns6->Configure (Dns6, NULL);
-    
+
     gBS->CloseProtocol (
            Dns6Handle,
            &gEfiDns6ProtocolGuid,
-           Service->ImageHandle,
+           Service->Ip6DriverBindingHandle,
            Service->ControllerHandle
            );
   }
@@ -401,7 +406,7 @@ Exit:
   if (Dns6Handle != NULL) {
     NetLibDestroyServiceChild (
       Service->ControllerHandle,
-      Service->ImageHandle,
+      Service->Ip6DriverBindingHandle,
       &gEfiDns6ServiceBindingProtocolGuid,
       Dns6Handle
       );
@@ -410,6 +415,6 @@ Exit:
   if (DnsServerList != NULL) {
     FreePool (DnsServerList);
   }
-  
-  return Status;  
+
+  return Status;
 }

@@ -1,25 +1,18 @@
 /** @file
   Implement image authentication status check in UEFI2.3.1.
 
-Copyright (c) 2012, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2012 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiDxe.h>
 #include <Library/SecurityManagementLib.h>
 
-
 /**
   Check image authentication status returned from Section Extraction Protocol
-  
-  @param[in]    AuthenticationStatus  This is the authentication status returned from 
+
+  @param[in]    AuthenticationStatus  This is the authentication status returned from
                              the Section Extraction Protocol when reading the input file.
   @param[in]    File       This is a pointer to the device path of the file that is
                            being dispatched. This will optionally be used for logging.
@@ -37,11 +30,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 EFI_STATUS
 EFIAPI
 DxeImageAuthenticationStatusHandler (
-  IN  UINT32                           AuthenticationStatus,
-  IN  CONST EFI_DEVICE_PATH_PROTOCOL   *File,
-  IN  VOID                             *FileBuffer,
-  IN  UINTN                            FileSize,
-  IN  BOOLEAN                          BootPolicy
+  IN  UINT32                          AuthenticationStatus,
+  IN  CONST EFI_DEVICE_PATH_PROTOCOL  *File  OPTIONAL,
+  IN  VOID                            *FileBuffer,
+  IN  UINTN                           FileSize,
+  IN  BOOLEAN                         BootPolicy
   )
 {
   if ((AuthenticationStatus & EFI_AUTH_STATUS_IMAGE_SIGNED) != 0) {
@@ -53,9 +46,8 @@ DxeImageAuthenticationStatusHandler (
   return EFI_SUCCESS;
 }
 
-
 /**
-  Register image authenticaion status check handler.
+  Register image authentication status check handler.
 
   @param  ImageHandle   ImageHandle of the loaded driver.
   @param  SystemTable   Pointer to the EFI System Table.

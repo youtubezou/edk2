@@ -1,14 +1,8 @@
 /** @file
   Debug Port Library implementation based on serial port.
 
-  Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -21,7 +15,7 @@
 /**
   Initialize the debug port.
 
-  This function will initialize debug port to get it ready for data transmition. If
+  This function will initialize debug port to get it ready for data transmission. If
   certain Debug Communication Library instance has to save some private data in the
   stack, this function must work on the mode that doesn't return to the caller, then
   the caller needs to wrap up all rest of logic after DebugPortInitialize() into one
@@ -61,11 +55,11 @@ DebugPortInitialize (
   IN DEBUG_PORT_CONTINUE  Function
   )
 {
-  RETURN_STATUS      Status;
+  RETURN_STATUS  Status;
 
   Status = SerialPortInitialize ();
-  if (RETURN_ERROR(Status)) {
-    DEBUG ((EFI_D_ERROR, "Debug Serial Port: Initialization failed!\n")); 
+  if (RETURN_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Debug Serial Port: Initialization failed!\n"));
   }
 
   if (Function != NULL) {
@@ -76,7 +70,7 @@ DebugPortInitialize (
 }
 
 /**
-  Read data from debug device and save the datas in buffer.
+  Read data from debug device and save the data in a buffer.
 
   Reads NumberOfBytes data bytes from a debug device into the buffer
   specified by Buffer. The number of bytes actually read is returned.
@@ -95,13 +89,13 @@ DebugPortInitialize (
 UINTN
 EFIAPI
 DebugPortReadBuffer (
-  IN DEBUG_PORT_HANDLE     Handle,
-  IN UINT8                 *Buffer,
-  IN UINTN                 NumberOfBytes,
-  IN UINTN                 Timeout
+  IN DEBUG_PORT_HANDLE  Handle,
+  IN UINT8              *Buffer,
+  IN UINTN              NumberOfBytes,
+  IN UINTN              Timeout
   )
 {
-  if (NumberOfBytes != 1 || Buffer == NULL || Timeout != 0) {
+  if ((NumberOfBytes != 1) || (Buffer == NULL) || (Timeout != 0)) {
     return 0;
   }
 
@@ -128,9 +122,9 @@ DebugPortReadBuffer (
 UINTN
 EFIAPI
 DebugPortWriteBuffer (
-  IN DEBUG_PORT_HANDLE     Handle,
-  IN UINT8                 *Buffer,
-  IN UINTN                 NumberOfBytes
+  IN DEBUG_PORT_HANDLE  Handle,
+  IN UINT8              *Buffer,
+  IN UINTN              NumberOfBytes
   )
 {
   return SerialPortWrite (Buffer, NumberOfBytes);
@@ -152,9 +146,8 @@ DebugPortWriteBuffer (
 BOOLEAN
 EFIAPI
 DebugPortPollBuffer (
-  IN DEBUG_PORT_HANDLE     Handle
+  IN DEBUG_PORT_HANDLE  Handle
   )
 {
   return SerialPortPoll ();
 }
-

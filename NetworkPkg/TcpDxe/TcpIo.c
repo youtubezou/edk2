@@ -3,13 +3,7 @@
 
   Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -31,11 +25,11 @@
 VOID
 EFIAPI
 TcpRxCallback (
-  IN EFI_STATUS                       Status,
-  IN UINT8                            IcmpErr,
-  IN EFI_NET_SESSION_DATA             *NetSession,
-  IN NET_BUF                          *Pkt,
-  IN VOID                             *Context    OPTIONAL
+  IN EFI_STATUS            Status,
+  IN UINT8                 IcmpErr,
+  IN EFI_NET_SESSION_DATA  *NetSession,
+  IN NET_BUF               *Pkt,
+  IN VOID                  *Context    OPTIONAL
   )
 {
   if (EFI_SUCCESS == Status) {
@@ -73,20 +67,19 @@ TcpSendIpPacket (
   IN UINT8           Version
   )
 {
-  EFI_STATUS       Status;
-  IP_IO            *IpIo;
-  IP_IO_OVERRIDE   Override;
-  SOCKET           *Sock;
-  VOID             *IpSender;
+  EFI_STATUS      Status;
+  IP_IO           *IpIo;
+  IP_IO_OVERRIDE  Override;
+  SOCKET          *Sock;
+  VOID            *IpSender;
   TCP_PROTO_DATA  *TcpProto;
 
   if (NULL == Tcb) {
-
     IpIo     = NULL;
     IpSender = IpIoFindSender (&IpIo, Version, Src);
 
     if (IpSender == NULL) {
-      DEBUG ((EFI_D_WARN, "TcpSendIpPacket: No appropriate IpSender.\n"));
+      DEBUG ((DEBUG_WARN, "TcpSendIpPacket: No appropriate IpSender.\n"));
       return -1;
     }
 
@@ -101,9 +94,8 @@ TcpSendIpPacket (
       IpSender = NULL;
     }
   } else {
-
     Sock     = Tcb->Sk;
-    TcpProto = (TCP_PROTO_DATA *) Sock->ProtoReserved;
+    TcpProto = (TCP_PROTO_DATA *)Sock->ProtoReserved;
     IpIo     = TcpProto->TcpService->IpIo;
     IpSender = Tcb->IpInfo;
 
@@ -136,7 +128,7 @@ TcpSendIpPacket (
   Status = IpIoSend (IpIo, Nbuf, IpSender, NULL, NULL, Dest, &Override);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((EFI_D_ERROR, "TcpSendIpPacket: return %r error\n", Status));
+    DEBUG ((DEBUG_ERROR, "TcpSendIpPacket: return %r error\n", Status));
     return -1;
   }
 
@@ -168,8 +160,8 @@ Tcp6RefreshNeighbor (
   IN UINT32          Timeout
   )
 {
-  IP_IO            *IpIo;
-  SOCKET           *Sock;
+  IP_IO           *IpIo;
+  SOCKET          *Sock;
   TCP_PROTO_DATA  *TcpProto;
 
   if (NULL == Tcb) {
@@ -177,16 +169,14 @@ Tcp6RefreshNeighbor (
     IpIoFindSender (&IpIo, IP_VERSION_6, Neighbor);
 
     if (IpIo == NULL) {
-      DEBUG ((EFI_D_WARN, "Tcp6AddNeighbor: No appropriate IpIo.\n"));
+      DEBUG ((DEBUG_WARN, "Tcp6AddNeighbor: No appropriate IpIo.\n"));
       return EFI_NOT_STARTED;
     }
-
   } else {
     Sock     = Tcb->Sk;
-    TcpProto = (TCP_PROTO_DATA *) Sock->ProtoReserved;
+    TcpProto = (TCP_PROTO_DATA *)Sock->ProtoReserved;
     IpIo     = TcpProto->TcpService->IpIo;
   }
 
   return IpIoRefreshNeighbor (IpIo, Neighbor, Timeout);
 }
-

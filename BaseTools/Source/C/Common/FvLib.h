@@ -1,19 +1,12 @@
 /** @file
 These functions assist in parsing and manipulating a Firmware Volume.
-  
-Copyright (c) 2004 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_FV_LIB_H
-#define _EFI_FV_LIB_H
+#pragma once
 
 //
 // Include files
@@ -183,7 +176,7 @@ Routine Description:
   It in no way validate the FFS file.
 
 Arguments:
-  
+
   ErasePolarity The erase polarity for the file state bits.
   FfsHeader     Pointer to a FFS file.
 
@@ -192,4 +185,3 @@ Returns:
   UINT8   The hightest set state of the file.
 
 --*/
-#endif

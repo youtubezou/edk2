@@ -1,25 +1,19 @@
 /** @file
-  Support routines for memory allocation routines based 
+  Support routines for memory allocation routines based
   on SMM Services Table services for SMM phase drivers, with memory profile support.
-  
+
   The PI System Management Mode Core Interface Specification only allows the use
-  of EfiRuntimeServicesCode and EfiRuntimeServicesData memory types for memory 
-  allocations through the SMM Services Table as the SMRAM space should be 
+  of EfiRuntimeServicesCode and EfiRuntimeServicesData memory types for memory
+  allocations through the SMM Services Table as the SMRAM space should be
   reserved after BDS phase.  The functions in the Memory Allocation Library use
-  EfiBootServicesData as the default memory allocation type.  For this SMM 
-  specific instance of the Memory Allocation Library, EfiRuntimeServicesData 
-  is used as the default memory type for all allocations. In addition, 
-  allocation for the Reserved memory types are not supported and will always 
+  EfiBootServicesData as the default memory allocation type.  For this SMM
+  specific instance of the Memory Allocation Library, EfiRuntimeServicesData
+  is used as the default memory type for all allocations. In addition,
+  allocation for the Reserved memory types are not supported and will always
   return NULL.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php.                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -39,10 +33,10 @@ UINTN                 mSmramRangeCount;
 
 /**
   The constructor function caches SMRAM ranges that are present in the system.
-    
+
   It will ASSERT() if SMM Access2 Protocol doesn't exist.
   It will ASSERT() if SMRAM ranges can't be got.
-  It will ASSERT() if Resource can't be allocated for cache SMRAM range. 
+  It will ASSERT() if Resource can't be allocated for cache SMRAM range.
   It will always return EFI_SUCCESS.
 
   @param  ImageHandle   The firmware allocated handle for the EFI image.
@@ -66,8 +60,8 @@ SmmMemoryAllocationLibConstructor (
   // Locate SMM Access2 Protocol
   //
   Status = gBS->LocateProtocol (
-                  &gEfiSmmAccess2ProtocolGuid, 
-                  NULL, 
+                  &gEfiSmmAccess2ProtocolGuid,
+                  NULL,
                   (VOID **)&SmmAccess
                   );
   ASSERT_EFI_ERROR (Status);
@@ -75,11 +69,11 @@ SmmMemoryAllocationLibConstructor (
   //
   // Get SMRAM range information
   //
-  Size = 0;
+  Size   = 0;
   Status = SmmAccess->GetCapabilities (SmmAccess, &Size, NULL);
   ASSERT (Status == EFI_BUFFER_TOO_SMALL);
 
-  mSmramRanges = (EFI_SMRAM_DESCRIPTOR *) AllocatePool (Size);
+  mSmramRanges = (EFI_SMRAM_DESCRIPTOR *)AllocatePool (Size);
   ASSERT (mSmramRanges != NULL);
 
   Status = SmmAccess->GetCapabilities (SmmAccess, &Size, mSmramRanges);
@@ -91,7 +85,7 @@ SmmMemoryAllocationLibConstructor (
 }
 
 /**
-  If SMM driver exits with an error, it must call this routine 
+  If SMM driver exits with an error, it must call this routine
   to free the allocated resource before the exiting.
 
   @param[in]  ImageHandle   The firmware allocated handle for the EFI image.
@@ -122,14 +116,15 @@ SmmMemoryAllocationLibDestructor (
 BOOLEAN
 EFIAPI
 BufferInSmram (
-  IN VOID *Buffer
+  IN VOID  *Buffer
   )
 {
   UINTN  Index;
 
-  for (Index = 0; Index < mSmramRangeCount; Index ++) {
-    if (((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer >= mSmramRanges[Index].CpuStart) && 
-        ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer < (mSmramRanges[Index].CpuStart + mSmramRanges[Index].PhysicalSize))) {
+  for (Index = 0; Index < mSmramRangeCount; Index++) {
+    if (((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer >= mSmramRanges[Index].CpuStart) &&
+        ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer < (mSmramRanges[Index].CpuStart + mSmramRanges[Index].PhysicalSize)))
+    {
       return TRUE;
     }
   }
@@ -140,9 +135,9 @@ BufferInSmram (
 /**
   Allocates one or more 4KB pages of a certain memory type.
 
-  Allocates the number of 4KB pages of a certain memory type and returns a pointer 
-  to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  If 
-  Pages is 0, then NULL is returned.   If there is not enough memory remaining to 
+  Allocates the number of 4KB pages of a certain memory type and returns a pointer
+  to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  If
+  Pages is 0, then NULL is returned.   If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  MemoryType            The type of memory to allocate.
@@ -153,12 +148,12 @@ BufferInSmram (
 **/
 VOID *
 InternalAllocatePages (
-  IN EFI_MEMORY_TYPE  MemoryType,  
+  IN EFI_MEMORY_TYPE  MemoryType,
   IN UINTN            Pages
   )
 {
   EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  Memory; 
+  EFI_PHYSICAL_ADDRESS  Memory;
 
   if (Pages == 0) {
     return NULL;
@@ -168,15 +163,16 @@ InternalAllocatePages (
   if (EFI_ERROR (Status)) {
     return NULL;
   }
-  return (VOID *) (UINTN) Memory;
+
+  return (VOID *)(UINTN)Memory;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiRuntimeServicesData.
 
-  Allocates the number of 4KB pages of type EfiRuntimeServicesData and returns a pointer 
-  to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  If 
-  Pages is 0, then NULL is returned.  If there is not enough memory remaining to 
+  Allocates the number of 4KB pages of type EfiRuntimeServicesData and returns a pointer
+  to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  If
+  Pages is 0, then NULL is returned.  If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  Pages                 The number of 4 KB pages to allocate.
@@ -195,23 +191,24 @@ AllocatePages (
   Buffer = InternalAllocatePages (EfiRuntimeServicesData, Pages);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_PAGES,
       EfiRuntimeServicesData,
       Buffer,
-      EFI_PAGES_TO_SIZE(Pages),
+      EFI_PAGES_TO_SIZE (Pages),
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiRuntimeServicesData.
 
-  Allocates the number of 4KB pages of type EfiRuntimeServicesData and returns a 
-  pointer to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  
-  If Pages is 0, then NULL is returned.  If there is not enough memory remaining 
+  Allocates the number of 4KB pages of type EfiRuntimeServicesData and returns a
+  pointer to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.
+  If Pages is 0, then NULL is returned.  If there is not enough memory remaining
   to satisfy the request, then NULL is returned.
 
   @param  Pages                 The number of 4 KB pages to allocate.
@@ -230,23 +227,24 @@ AllocateRuntimePages (
   Buffer = InternalAllocatePages (EfiRuntimeServicesData, Pages);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_RUNTIME_PAGES,
       EfiRuntimeServicesData,
       Buffer,
-      EFI_PAGES_TO_SIZE(Pages),
+      EFI_PAGES_TO_SIZE (Pages),
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiReservedMemoryType.
 
-  Allocates the number of 4KB pages of type EfiReservedMemoryType and returns a 
-  pointer to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.  
-  If Pages is 0, then NULL is returned.  If there is not enough memory remaining 
+  Allocates the number of 4KB pages of type EfiReservedMemoryType and returns a
+  pointer to the allocated buffer.  The buffer returned is aligned on a 4KB boundary.
+  If Pages is 0, then NULL is returned.  If there is not enough memory remaining
   to satisfy the request, then NULL is returned.
 
   @param  Pages                 The number of 4 KB pages to allocate.
@@ -267,15 +265,15 @@ AllocateReservedPages (
   Frees one or more 4KB pages that were previously allocated with one of the page allocation
   functions in the Memory Allocation Library.
 
-  Frees the number of 4KB pages specified by Pages from the buffer specified by Buffer.  
-  Buffer must have been allocated on a previous call to the page allocation services 
-  of the Memory Allocation Library.  If it is not possible to free allocated pages, 
+  Frees the number of 4KB pages specified by Pages from the buffer specified by Buffer.
+  Buffer must have been allocated on a previous call to the page allocation services
+  of the Memory Allocation Library.  If it is not possible to free allocated pages,
   then this function will perform no actions.
-  
-  If Buffer was not allocated with a page allocation function in the Memory Allocation 
+
+  If Buffer was not allocated with a page allocation function in the Memory Allocation
   Library, then ASSERT().
   If Pages is zero, then ASSERT().
- 
+
   @param  Buffer                The pointer to the buffer of pages to free.
   @param  Pages                 The number of 4 KB pages to free.
 
@@ -295,30 +293,31 @@ FreePages (
     // When Buffer is in SMRAM range, it should be allocated by gSmst->SmmAllocatePages() service.
     // So, gSmst->SmmFreePages() service is used to free it.
     //
-    Status = gSmst->SmmFreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
+    Status = gSmst->SmmFreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
   } else {
     //
     // When Buffer is out of SMRAM range, it should be allocated by gBS->AllocatePages() service.
     // So, gBS->FreePages() service is used to free it.
     //
-    Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
+    Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
   }
+
   ASSERT_EFI_ERROR (Status);
 }
 
 /**
   Allocates one or more 4KB pages of a certain memory type at a specified alignment.
 
-  Allocates the number of 4KB pages specified by Pages of a certain memory type 
-  with an alignment specified by Alignment.  The allocated buffer is returned.  
-  If Pages is 0, then NULL is returned. If there is not enough memory at the 
+  Allocates the number of 4KB pages specified by Pages of a certain memory type
+  with an alignment specified by Alignment.  The allocated buffer is returned.
+  If Pages is 0, then NULL is returned. If there is not enough memory at the
   specified alignment remaining to satisfy the request, then NULL is returned.
   If Alignment is not a power of two and Alignment is not zero, then ASSERT().
   If Pages plus EFI_SIZE_TO_PAGES (Alignment) overflows, then ASSERT().
 
   @param  MemoryType            The type of memory to allocate.
   @param  Pages                 The number of 4 KB pages to allocate.
-  @param  Alignment             The requested alignment of the allocation.  
+  @param  Alignment             The requested alignment of the allocation.
                                 Must be a power of two.
                                 If Alignment is zero, then byte alignment is used.
 
@@ -327,7 +326,7 @@ FreePages (
 **/
 VOID *
 InternalAllocateAlignedPages (
-  IN EFI_MEMORY_TYPE  MemoryType,  
+  IN EFI_MEMORY_TYPE  MemoryType,
   IN UINTN            Pages,
   IN UINTN            Alignment
   )
@@ -343,27 +342,29 @@ InternalAllocateAlignedPages (
   // Alignment must be a power of two or zero.
   //
   ASSERT ((Alignment & (Alignment - 1)) == 0);
- 
+
   if (Pages == 0) {
     return NULL;
   }
+
   if (Alignment > EFI_PAGE_SIZE) {
     //
     // Calculate the total number of pages since alignment is larger than page size.
     //
-    AlignmentMask  = Alignment - 1;
-    RealPages      = Pages + EFI_SIZE_TO_PAGES (Alignment);
+    AlignmentMask = Alignment - 1;
+    RealPages     = Pages + EFI_SIZE_TO_PAGES (Alignment);
     //
     // Make sure that Pages plus EFI_SIZE_TO_PAGES (Alignment) does not overflow.
     //
     ASSERT (RealPages > Pages);
- 
-    Status         = gSmst->SmmAllocatePages (AllocateAnyPages, MemoryType, RealPages, &Memory);
+
+    Status = gSmst->SmmAllocatePages (AllocateAnyPages, MemoryType, RealPages, &Memory);
     if (EFI_ERROR (Status)) {
       return NULL;
     }
-    AlignedMemory  = ((UINTN) Memory + AlignmentMask) & ~AlignmentMask;
-    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN) Memory);
+
+    AlignedMemory  = ((UINTN)Memory + AlignmentMask) & ~AlignmentMask;
+    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN)Memory);
     if (UnalignedPages > 0) {
       //
       // Free first unaligned page(s).
@@ -371,7 +372,8 @@ InternalAllocateAlignedPages (
       Status = gSmst->SmmFreePages (Memory, UnalignedPages);
       ASSERT_EFI_ERROR (Status);
     }
-    Memory         = (EFI_PHYSICAL_ADDRESS) (AlignedMemory + EFI_PAGES_TO_SIZE (Pages));
+
+    Memory         = AlignedMemory + EFI_PAGES_TO_SIZE (Pages);
     UnalignedPages = RealPages - Pages - UnalignedPages;
     if (UnalignedPages > 0) {
       //
@@ -388,24 +390,26 @@ InternalAllocateAlignedPages (
     if (EFI_ERROR (Status)) {
       return NULL;
     }
-    AlignedMemory  = (UINTN) Memory;
+
+    AlignedMemory = (UINTN)Memory;
   }
-  return (VOID *) AlignedMemory;
+
+  return (VOID *)AlignedMemory;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiRuntimeServicesData at a specified alignment.
 
-  Allocates the number of 4KB pages specified by Pages of type EfiRuntimeServicesData 
-  with an alignment specified by Alignment.  The allocated buffer is returned.  
-  If Pages is 0, then NULL is returned.  If there is not enough memory at the 
+  Allocates the number of 4KB pages specified by Pages of type EfiRuntimeServicesData
+  with an alignment specified by Alignment.  The allocated buffer is returned.
+  If Pages is 0, then NULL is returned.  If there is not enough memory at the
   specified alignment remaining to satisfy the request, then NULL is returned.
-  
+
   If Alignment is not a power of two and Alignment is not zero, then ASSERT().
   If Pages plus EFI_SIZE_TO_PAGES (Alignment) overflows, then ASSERT().
 
   @param  Pages                 The number of 4 KB pages to allocate.
-  @param  Alignment             The requested alignment of the allocation.  
+  @param  Alignment             The requested alignment of the allocation.
                                 Must be a power of two.
                                 If Alignment is zero, then byte alignment is used.
 
@@ -424,30 +428,31 @@ AllocateAlignedPages (
   Buffer = InternalAllocateAlignedPages (EfiRuntimeServicesData, Pages, Alignment);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_ALIGNED_PAGES,
       EfiRuntimeServicesData,
       Buffer,
-      EFI_PAGES_TO_SIZE(Pages),
+      EFI_PAGES_TO_SIZE (Pages),
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiRuntimeServicesData at a specified alignment.
 
-  Allocates the number of 4KB pages specified by Pages of type EfiRuntimeServicesData 
-  with an alignment specified by Alignment.  The allocated buffer is returned.  
-  If Pages is 0, then NULL is returned.  If there is not enough memory at the 
+  Allocates the number of 4KB pages specified by Pages of type EfiRuntimeServicesData
+  with an alignment specified by Alignment.  The allocated buffer is returned.
+  If Pages is 0, then NULL is returned.  If there is not enough memory at the
   specified alignment remaining to satisfy the request, then NULL is returned.
-  
+
   If Alignment is not a power of two and Alignment is not zero, then ASSERT().
   If Pages plus EFI_SIZE_TO_PAGES (Alignment) overflows, then ASSERT().
 
   @param  Pages                 The number of 4 KB pages to allocate.
-  @param  Alignment             The requested alignment of the allocation.  
+  @param  Alignment             The requested alignment of the allocation.
                                 Must be a power of two.
                                 If Alignment is zero, then byte alignment is used.
 
@@ -466,30 +471,31 @@ AllocateAlignedRuntimePages (
   Buffer = InternalAllocateAlignedPages (EfiRuntimeServicesData, Pages, Alignment);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_ALIGNED_RUNTIME_PAGES,
       EfiRuntimeServicesData,
       Buffer,
-      EFI_PAGES_TO_SIZE(Pages),
+      EFI_PAGES_TO_SIZE (Pages),
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates one or more 4KB pages of type EfiReservedMemoryType at a specified alignment.
 
-  Allocates the number of 4KB pages specified by Pages of type EfiReservedMemoryType 
-  with an alignment specified by Alignment.  The allocated buffer is returned.  
-  If Pages is 0, then NULL is returned.  If there is not enough memory at the 
+  Allocates the number of 4KB pages specified by Pages of type EfiReservedMemoryType
+  with an alignment specified by Alignment.  The allocated buffer is returned.
+  If Pages is 0, then NULL is returned.  If there is not enough memory at the
   specified alignment remaining to satisfy the request, then NULL is returned.
-  
+
   If Alignment is not a power of two and Alignment is not zero, then ASSERT().
   If Pages plus EFI_SIZE_TO_PAGES (Alignment) overflows, then ASSERT().
 
   @param  Pages                 The number of 4 KB pages to allocate.
-  @param  Alignment             The requested alignment of the allocation.  
+  @param  Alignment             The requested alignment of the allocation.
                                 Must be a power of two.
                                 If Alignment is zero, then byte alignment is used.
 
@@ -510,15 +516,15 @@ AllocateAlignedReservedPages (
   Frees one or more 4KB pages that were previously allocated with one of the aligned page
   allocation functions in the Memory Allocation Library.
 
-  Frees the number of 4KB pages specified by Pages from the buffer specified by 
-  Buffer.  Buffer must have been allocated on a previous call to the aligned page 
-  allocation services of the Memory Allocation Library.  If it is not possible to 
+  Frees the number of 4KB pages specified by Pages from the buffer specified by
+  Buffer.  Buffer must have been allocated on a previous call to the aligned page
+  allocation services of the Memory Allocation Library.  If it is not possible to
   free allocated pages, then this function will perform no actions.
-  
-  If Buffer was not allocated with an aligned page allocation function in the 
+
+  If Buffer was not allocated with an aligned page allocation function in the
   Memory Allocation Library, then ASSERT().
   If Pages is zero, then ASSERT().
-  
+
   @param  Buffer                The pointer to the buffer of pages to free.
   @param  Pages                 The number of 4 KB pages to free.
 
@@ -538,23 +544,24 @@ FreeAlignedPages (
     // When Buffer is in SMRAM range, it should be allocated by gSmst->SmmAllocatePages() service.
     // So, gSmst->SmmFreePages() service is used to free it.
     //
-    Status = gSmst->SmmFreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
+    Status = gSmst->SmmFreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
   } else {
     //
     // When Buffer is out of SMRAM range, it should be allocated by gBS->AllocatePages() service.
     // So, gBS->FreePages() service is used to free it.
     //
-    Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
+    Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
   }
+
   ASSERT_EFI_ERROR (Status);
 }
 
 /**
   Allocates a buffer of a certain pool type.
 
-  Allocates the number bytes specified by AllocationSize of a certain pool type 
-  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a 
-  valid buffer of 0 size is returned.  If there is not enough memory remaining to 
+  Allocates the number bytes specified by AllocationSize of a certain pool type
+  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a
+  valid buffer of 0 size is returned.  If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  MemoryType            The type of memory to allocate.
@@ -565,7 +572,7 @@ FreeAlignedPages (
 **/
 VOID *
 InternalAllocatePool (
-  IN EFI_MEMORY_TYPE  MemoryType,  
+  IN EFI_MEMORY_TYPE  MemoryType,
   IN UINTN            AllocationSize
   )
 {
@@ -576,15 +583,16 @@ InternalAllocatePool (
   if (EFI_ERROR (Status)) {
     Memory = NULL;
   }
+
   return Memory;
 }
 
 /**
   Allocates a buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData 
-  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a 
-  valid buffer of 0 size is returned.  If there is not enough memory remaining to 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData
+  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a
+  valid buffer of 0 size is returned.  If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate.
@@ -603,7 +611,7 @@ AllocatePool (
   Buffer = InternalAllocatePool (EfiRuntimeServicesData, AllocationSize);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -611,15 +619,16 @@ AllocatePool (
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates a buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData 
-  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a 
-  valid buffer of 0 size is returned.  If there is not enough memory remaining to 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData
+  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a
+  valid buffer of 0 size is returned.  If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate.
@@ -638,7 +647,7 @@ AllocateRuntimePool (
   Buffer = InternalAllocatePool (EfiRuntimeServicesData, AllocationSize);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_RUNTIME_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -646,15 +655,16 @@ AllocateRuntimePool (
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates a buffer of type EfiReservedMemoryType.
 
-  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType 
-  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a 
-  valid buffer of 0 size is returned.  If there is not enough memory remaining to 
+  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType
+  and returns a pointer to the allocated buffer.  If AllocationSize is 0, then a
+  valid buffer of 0 size is returned.  If there is not enough memory remaining to
   satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate.
@@ -674,9 +684,9 @@ AllocateReservedPool (
 /**
   Allocates and zeros a buffer of a certain pool type.
 
-  Allocates the number bytes specified by AllocationSize of a certain pool type, 
-  clears the buffer with zeros, and returns a pointer to the allocated buffer.  
-  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is 
+  Allocates the number bytes specified by AllocationSize of a certain pool type,
+  clears the buffer with zeros, and returns a pointer to the allocated buffer.
+  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is
   not enough memory remaining to satisfy the request, then NULL is returned.
 
   @param  PoolType              The type of memory to allocate.
@@ -687,9 +697,9 @@ AllocateReservedPool (
 **/
 VOID *
 InternalAllocateZeroPool (
-  IN EFI_MEMORY_TYPE  PoolType,  
+  IN EFI_MEMORY_TYPE  PoolType,
   IN UINTN            AllocationSize
-  ) 
+  )
 {
   VOID  *Memory;
 
@@ -697,15 +707,16 @@ InternalAllocateZeroPool (
   if (Memory != NULL) {
     Memory = ZeroMem (Memory, AllocationSize);
   }
+
   return Memory;
 }
 
 /**
   Allocates and zeros a buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData, 
-  clears the buffer with zeros, and returns a pointer to the allocated buffer.  
-  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData,
+  clears the buffer with zeros, and returns a pointer to the allocated buffer.
+  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is
   not enough memory remaining to satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate and zero.
@@ -724,7 +735,7 @@ AllocateZeroPool (
   Buffer = InternalAllocateZeroPool (EfiRuntimeServicesData, AllocationSize);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_ZERO_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -732,15 +743,16 @@ AllocateZeroPool (
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates and zeros a buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData, 
-  clears the buffer with zeros, and returns a pointer to the allocated buffer.  
-  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData,
+  clears the buffer with zeros, and returns a pointer to the allocated buffer.
+  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is
   not enough memory remaining to satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate and zero.
@@ -759,7 +771,7 @@ AllocateRuntimeZeroPool (
   Buffer = InternalAllocateZeroPool (EfiRuntimeServicesData, AllocationSize);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_RUNTIME_ZERO_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -767,15 +779,16 @@ AllocateRuntimeZeroPool (
       NULL
       );
   }
+
   return Buffer;
 }
 
 /**
   Allocates and zeros a buffer of type EfiReservedMemoryType.
 
-  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType, 
-  clears the   buffer with zeros, and returns a pointer to the allocated buffer.  
-  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is 
+  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType,
+  clears the   buffer with zeros, and returns a pointer to the allocated buffer.
+  If AllocationSize is 0, then a valid buffer of 0 size is returned.  If there is
   not enough memory remaining to satisfy the request, then NULL is returned.
 
   @param  AllocationSize        The number of bytes to allocate and zero.
@@ -795,12 +808,12 @@ AllocateReservedZeroPool (
 /**
   Copies a buffer to an allocated buffer of a certain pool type.
 
-  Allocates the number bytes specified by AllocationSize of a certain pool type, 
-  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns 
-  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer 
-  of 0 size is returned.  If there is not enough memory remaining to satisfy the 
+  Allocates the number bytes specified by AllocationSize of a certain pool type,
+  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns
+  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer
+  of 0 size is returned.  If there is not enough memory remaining to satisfy the
   request, then NULL is returned. If Buffer is NULL, then ASSERT().
-  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT(). 
+  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT().
 
   @param  PoolType              The type of pool to allocate.
   @param  AllocationSize        The number of bytes to allocate and zero.
@@ -811,34 +824,35 @@ AllocateReservedZeroPool (
 **/
 VOID *
 InternalAllocateCopyPool (
-  IN EFI_MEMORY_TYPE  PoolType,  
+  IN EFI_MEMORY_TYPE  PoolType,
   IN UINTN            AllocationSize,
   IN CONST VOID       *Buffer
-  ) 
+  )
 {
   VOID  *Memory;
 
   ASSERT (Buffer != NULL);
-  ASSERT (AllocationSize <= (MAX_ADDRESS - (UINTN) Buffer + 1));
+  ASSERT (AllocationSize <= (MAX_ADDRESS - (UINTN)Buffer + 1));
 
   Memory = InternalAllocatePool (PoolType, AllocationSize);
   if (Memory != NULL) {
-     Memory = CopyMem (Memory, Buffer, AllocationSize);
+    Memory = CopyMem (Memory, Buffer, AllocationSize);
   }
+
   return Memory;
-} 
+}
 
 /**
   Copies a buffer to an allocated buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData, 
-  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns 
-  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer 
-  of 0 size is returned.  If there is not enough memory remaining to satisfy the 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData,
+  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns
+  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer
+  of 0 size is returned.  If there is not enough memory remaining to satisfy the
   request, then NULL is returned.
-  
+
   If Buffer is NULL, then ASSERT().
-  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT(). 
+  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT().
 
   @param  AllocationSize        The number of bytes to allocate and zero.
   @param  Buffer                The buffer to copy to the allocated buffer.
@@ -858,7 +872,7 @@ AllocateCopyPool (
   NewBuffer = InternalAllocateCopyPool (EfiRuntimeServicesData, AllocationSize, Buffer);
   if (NewBuffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_COPY_POOL,
       EfiRuntimeServicesData,
       NewBuffer,
@@ -866,20 +880,21 @@ AllocateCopyPool (
       NULL
       );
   }
+
   return NewBuffer;
 }
 
 /**
   Copies a buffer to an allocated buffer of type EfiRuntimeServicesData.
 
-  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData, 
-  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns 
-  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer 
-  of 0 size is returned.  If there is not enough memory remaining to satisfy the 
+  Allocates the number bytes specified by AllocationSize of type EfiRuntimeServicesData,
+  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns
+  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer
+  of 0 size is returned.  If there is not enough memory remaining to satisfy the
   request, then NULL is returned.
-  
+
   If Buffer is NULL, then ASSERT().
-  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT(). 
+  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT().
 
   @param  AllocationSize        The number of bytes to allocate and zero.
   @param  Buffer                The buffer to copy to the allocated buffer.
@@ -899,7 +914,7 @@ AllocateRuntimeCopyPool (
   NewBuffer = InternalAllocateCopyPool (EfiRuntimeServicesData, AllocationSize, Buffer);
   if (NewBuffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_ALLOCATE_RUNTIME_COPY_POOL,
       EfiRuntimeServicesData,
       NewBuffer,
@@ -907,20 +922,21 @@ AllocateRuntimeCopyPool (
       NULL
       );
   }
+
   return NewBuffer;
 }
 
 /**
   Copies a buffer to an allocated buffer of type EfiReservedMemoryType.
 
-  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType, 
-  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns 
-  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer 
-  of 0 size is returned.  If there is not enough memory remaining to satisfy the 
+  Allocates the number bytes specified by AllocationSize of type EfiReservedMemoryType,
+  copies AllocationSize bytes from Buffer to the newly allocated buffer, and returns
+  a pointer to the allocated buffer.  If AllocationSize is 0, then a valid buffer
+  of 0 size is returned.  If there is not enough memory remaining to satisfy the
   request, then NULL is returned.
-  
+
   If Buffer is NULL, then ASSERT().
-  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT(). 
+  If AllocationSize is greater than (MAX_ADDRESS - Buffer + 1), then ASSERT().
 
   @param  AllocationSize        The number of bytes to allocate and zero.
   @param  Buffer                The buffer to copy to the allocated buffer.
@@ -942,19 +958,19 @@ AllocateReservedCopyPool (
   Reallocates a buffer of a specified memory type.
 
   Allocates and zeros the number bytes specified by NewSize from memory of the type
-  specified by PoolType.  If OldBuffer is not NULL, then the smaller of OldSize and 
-  NewSize bytes are copied from OldBuffer to the newly allocated buffer, and 
-  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.  
-  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not 
+  specified by PoolType.  If OldBuffer is not NULL, then the smaller of OldSize and
+  NewSize bytes are copied from OldBuffer to the newly allocated buffer, and
+  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.
+  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not
   enough memory remaining to satisfy the request, then NULL is returned.
-  
-  If the allocation of the new buffer is successful and the smaller of NewSize 
+
+  If the allocation of the new buffer is successful and the smaller of NewSize
   and OldSize is greater than (MAX_ADDRESS - OldBuffer + 1), then ASSERT().
 
   @param  PoolType       The type of pool to allocate.
   @param  OldSize        The size, in bytes, of OldBuffer.
   @param  NewSize        The size, in bytes, of the buffer to reallocate.
-  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an 
+  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an
                          optional parameter that may be NULL.
 
   @return A pointer to the allocated buffer or NULL if allocation fails.
@@ -962,7 +978,7 @@ AllocateReservedCopyPool (
 **/
 VOID *
 InternalReallocatePool (
-  IN EFI_MEMORY_TYPE  PoolType,  
+  IN EFI_MEMORY_TYPE  PoolType,
   IN UINTN            OldSize,
   IN UINTN            NewSize,
   IN VOID             *OldBuffer  OPTIONAL
@@ -971,10 +987,11 @@ InternalReallocatePool (
   VOID  *NewBuffer;
 
   NewBuffer = InternalAllocateZeroPool (PoolType, NewSize);
-  if (NewBuffer != NULL && OldBuffer != NULL) {
+  if ((NewBuffer != NULL) && (OldBuffer != NULL)) {
     CopyMem (NewBuffer, OldBuffer, MIN (OldSize, NewSize));
     FreePool (OldBuffer);
   }
+
   return NewBuffer;
 }
 
@@ -982,18 +999,18 @@ InternalReallocatePool (
   Reallocates a buffer of type EfiRuntimeServicesData.
 
   Allocates and zeros the number bytes specified by NewSize from memory of type
-  EfiRuntimeServicesData.  If OldBuffer is not NULL, then the smaller of OldSize and 
-  NewSize bytes are copied from OldBuffer to the newly allocated buffer, and 
-  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.  
-  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not 
+  EfiRuntimeServicesData.  If OldBuffer is not NULL, then the smaller of OldSize and
+  NewSize bytes are copied from OldBuffer to the newly allocated buffer, and
+  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.
+  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not
   enough memory remaining to satisfy the request, then NULL is returned.
-  
-  If the allocation of the new buffer is successful and the smaller of NewSize 
+
+  If the allocation of the new buffer is successful and the smaller of NewSize
   and OldSize is greater than (MAX_ADDRESS - OldBuffer + 1), then ASSERT().
 
   @param  OldSize        The size, in bytes, of OldBuffer.
   @param  NewSize        The size, in bytes, of the buffer to reallocate.
-  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an 
+  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an
                          optional parameter that may be NULL.
 
   @return A pointer to the allocated buffer or NULL if allocation fails.
@@ -1012,7 +1029,7 @@ ReallocatePool (
   Buffer = InternalReallocatePool (EfiRuntimeServicesData, OldSize, NewSize, OldBuffer);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_REALLOCATE_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -1020,6 +1037,7 @@ ReallocatePool (
       NULL
       );
   }
+
   return Buffer;
 }
 
@@ -1027,18 +1045,18 @@ ReallocatePool (
   Reallocates a buffer of type EfiRuntimeServicesData.
 
   Allocates and zeros the number bytes specified by NewSize from memory of type
-  EfiRuntimeServicesData.  If OldBuffer is not NULL, then the smaller of OldSize 
-  and NewSize bytes are copied from OldBuffer to the newly allocated buffer, and 
-  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.  
-  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not 
+  EfiRuntimeServicesData.  If OldBuffer is not NULL, then the smaller of OldSize
+  and NewSize bytes are copied from OldBuffer to the newly allocated buffer, and
+  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.
+  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not
   enough memory remaining to satisfy the request, then NULL is returned.
 
-  If the allocation of the new buffer is successful and the smaller of NewSize 
+  If the allocation of the new buffer is successful and the smaller of NewSize
   and OldSize is greater than (MAX_ADDRESS - OldBuffer + 1), then ASSERT().
 
   @param  OldSize        The size, in bytes, of OldBuffer.
   @param  NewSize        The size, in bytes, of the buffer to reallocate.
-  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an 
+  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an
                          optional parameter that may be NULL.
 
   @return A pointer to the allocated buffer or NULL if allocation fails.
@@ -1057,7 +1075,7 @@ ReallocateRuntimePool (
   Buffer = InternalReallocatePool (EfiRuntimeServicesData, OldSize, NewSize, OldBuffer);
   if (Buffer != NULL) {
     MemoryProfileLibRecord (
-      (PHYSICAL_ADDRESS) (UINTN) RETURN_ADDRESS(0),
+      (PHYSICAL_ADDRESS)(UINTN)RETURN_ADDRESS (0),
       MEMORY_PROFILE_ACTION_LIB_REALLOCATE_RUNTIME_POOL,
       EfiRuntimeServicesData,
       Buffer,
@@ -1065,6 +1083,7 @@ ReallocateRuntimePool (
       NULL
       );
   }
+
   return Buffer;
 }
 
@@ -1072,18 +1091,18 @@ ReallocateRuntimePool (
   Reallocates a buffer of type EfiReservedMemoryType.
 
   Allocates and zeros the number bytes specified by NewSize from memory of type
-  EfiReservedMemoryType.  If OldBuffer is not NULL, then the smaller of OldSize 
-  and NewSize bytes are copied from OldBuffer to the newly allocated buffer, and 
-  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.  
-  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not 
+  EfiReservedMemoryType.  If OldBuffer is not NULL, then the smaller of OldSize
+  and NewSize bytes are copied from OldBuffer to the newly allocated buffer, and
+  OldBuffer is freed.  A pointer to the newly allocated buffer is returned.
+  If NewSize is 0, then a valid buffer of 0 size is  returned.  If there is not
   enough memory remaining to satisfy the request, then NULL is returned.
 
-  If the allocation of the new buffer is successful and the smaller of NewSize 
+  If the allocation of the new buffer is successful and the smaller of NewSize
   and OldSize is greater than (MAX_ADDRESS - OldBuffer + 1), then ASSERT().
 
   @param  OldSize        The size, in bytes, of OldBuffer.
   @param  NewSize        The size, in bytes, of the buffer to reallocate.
-  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an 
+  @param  OldBuffer      The buffer to copy to the allocated buffer.  This is an
                          optional parameter that may be NULL.
 
   @return A pointer to the allocated buffer or NULL if allocation fails.
@@ -1101,15 +1120,15 @@ ReallocateReservedPool (
 }
 
 /**
-  Frees a buffer that was previously allocated with one of the pool allocation 
+  Frees a buffer that was previously allocated with one of the pool allocation
   functions in the Memory Allocation Library.
 
-  Frees the buffer specified by Buffer.  Buffer must have been allocated on a 
-  previous call to the pool allocation services of the Memory Allocation Library.  
-  If it is not possible to free pool resources, then this function will perform 
+  Frees the buffer specified by Buffer.  Buffer must have been allocated on a
+  previous call to the pool allocation services of the Memory Allocation Library.
+  If it is not possible to free pool resources, then this function will perform
   no actions.
-  
-  If Buffer was not allocated with a pool allocation function in the Memory 
+
+  If Buffer was not allocated with a pool allocation function in the Memory
   Allocation Library, then ASSERT().
 
   @param  Buffer                The pointer to the buffer to free.
@@ -1118,10 +1137,10 @@ ReallocateReservedPool (
 VOID
 EFIAPI
 FreePool (
-  IN VOID   *Buffer
+  IN VOID  *Buffer
   )
 {
-  EFI_STATUS    Status;
+  EFI_STATUS  Status;
 
   if (BufferInSmram (Buffer)) {
     //
@@ -1136,5 +1155,6 @@ FreePool (
     //
     Status = gBS->FreePool (Buffer);
   }
+
   ASSERT_EFI_ERROR (Status);
 }

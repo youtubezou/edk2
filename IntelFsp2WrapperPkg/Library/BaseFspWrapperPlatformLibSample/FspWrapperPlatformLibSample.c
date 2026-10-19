@@ -2,13 +2,7 @@
   Sample to provide FSP wrapper related function.
 
   Copyright (c) 2014 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,13 +14,13 @@
 
   @note At this point, memory is NOT ready, PeiServices are available to use.
 
-  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data strcture.
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
 
 **/
 VOID
 EFIAPI
 UpdateFspmUpdData (
-  IN OUT VOID        *FspUpdRgnPtr
+  IN OUT VOID  *FspUpdRgnPtr
   )
 {
 }
@@ -34,13 +28,13 @@ UpdateFspmUpdData (
 /**
   This function overrides the default configurations in the FSP-S UPD data region.
 
-  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data strcture.
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
 
 **/
 VOID
 EFIAPI
 UpdateFspsUpdData (
-  IN OUT VOID        *FspUpdRgnPtr
+  IN OUT VOID  *FspUpdRgnPtr
   )
 {
 }
@@ -75,8 +69,8 @@ UpdateTempRamExitParam (
 EFI_STATUS
 EFIAPI
 GetS3MemoryInfo (
-  OUT UINT64               *S3PeiMemSize,
-  OUT EFI_PHYSICAL_ADDRESS *S3PeiMemBase
+  OUT UINT64                *S3PeiMemSize,
+  OUT EFI_PHYSICAL_ADDRESS  *S3PeiMemBase
   )
 {
   return EFI_UNSUPPORTED;
@@ -92,12 +86,26 @@ GetS3MemoryInfo (
 VOID
 EFIAPI
 CallFspWrapperResetSystem (
-  IN UINT32    FspStatusResetType
+  IN EFI_STATUS  FspStatusResetType
   )
 {
   //
   // Perform reset according to the type.
   //
 
-  CpuDeadLoop();
+  CpuDeadLoop ();
+}
+
+/**
+  This function overrides the default configurations in the FSP-I UPD data region.
+
+  @param[in,out] FspUpdRgnPtr   A pointer to the UPD data region data structure.
+
+**/
+VOID
+EFIAPI
+UpdateFspiUpdData (
+  IN OUT VOID  *FspUpdRgnPtr
+  )
+{
 }

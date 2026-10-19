@@ -3,18 +3,11 @@
 
   Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _IP6_CONFIGNV_H_
-#define _IP6_CONFIGNV_H_
+#pragma once
 
 #include "Ip6NvData.h"
 #include "Ip6ConfigImpl.h"
@@ -22,10 +15,10 @@
 extern UINT8  Ip6ConfigBin[];
 extern UINT8  Ip6DxeStrings[];
 
-#define IP6_ETHERNET              L"Ethernet"
-#define IP6_EXPERIMENTAL_ETHERNET L"Experimental Ethernet"
-#define IP6_ADDRESS_DELIMITER     L' '
-#define IP6_LINK_LOCAL_PREFIX     L"FE80::"
+#define IP6_ETHERNET               L"Ethernet"
+#define IP6_EXPERIMENTAL_ETHERNET  L"Experimental Ethernet"
+#define IP6_ADDRESS_DELIMITER      L' '
+#define IP6_LINK_LOCAL_PREFIX      L"FE80::"
 
 typedef enum {
   Ip6InterfaceTypeEthernet = 1,
@@ -51,7 +44,7 @@ typedef enum {
 **/
 EFI_STATUS
 Ip6ConfigFormInit (
-  IN OUT IP6_CONFIG_INSTANCE     *Instance
+  IN OUT IP6_CONFIG_INSTANCE  *Instance
   );
 
 /**
@@ -62,7 +55,5 @@ Ip6ConfigFormInit (
 **/
 VOID
 Ip6ConfigFormUnload (
-  IN OUT IP6_CONFIG_INSTANCE     *Instance
+  IN OUT IP6_CONFIG_INSTANCE  *Instance
   );
-
-#endif

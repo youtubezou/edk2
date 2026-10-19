@@ -5,13 +5,7 @@
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,7 +14,6 @@
 #include <Library/DebugLib.h>
 #include <Library/IoLib.h>
 #include <Library/RealTimeClockLib.h>
-
 
 /**
   Returns the current time and date information, and the time-keeping capabilities
@@ -48,7 +41,6 @@ LibGetTime (
   return EFI_DEVICE_ERROR;
 }
 
-
 /**
   Sets the current local time and date information.
 
@@ -56,13 +48,13 @@ LibGetTime (
 
   @retval EFI_SUCCESS           The operation completed successfully.
   @retval EFI_INVALID_PARAMETER A time field is out of range.
-  @retval EFI_DEVICE_ERROR      The time could not be set due due to hardware error.
+  @retval EFI_DEVICE_ERROR      The time could not be set due to hardware error.
 
 **/
 EFI_STATUS
 EFIAPI
 LibSetTime (
-  IN EFI_TIME                *Time
+  IN EFI_TIME  *Time
   )
 {
   //
@@ -70,7 +62,6 @@ LibSetTime (
   //
   return EFI_DEVICE_ERROR;
 }
-
 
 /**
   Returns the current wakeup alarm clock setting.
@@ -87,15 +78,14 @@ LibSetTime (
 EFI_STATUS
 EFIAPI
 LibGetWakeupTime (
-  OUT BOOLEAN     *Enabled,
-  OUT BOOLEAN     *Pending,
-  OUT EFI_TIME    *Time
+  OUT BOOLEAN   *Enabled,
+  OUT BOOLEAN   *Pending,
+  OUT EFI_TIME  *Time
   )
 {
   // Not a required feature
   return EFI_UNSUPPORTED;
 }
-
 
 /**
   Sets the system wakeup alarm clock time.
@@ -113,15 +103,13 @@ LibGetWakeupTime (
 EFI_STATUS
 EFIAPI
 LibSetWakeupTime (
-  IN BOOLEAN      Enabled,
-  OUT EFI_TIME    *Time
+  IN BOOLEAN    Enabled,
+  OUT EFI_TIME  *Time
   )
 {
   // Not a required feature
   return EFI_UNSUPPORTED;
 }
-
-
 
 /**
   This is the declaration of an EFI image entry point. This can be the entry point to an application
@@ -136,40 +124,12 @@ LibSetWakeupTime (
 EFI_STATUS
 EFIAPI
 LibRtcInitialize (
-  IN EFI_HANDLE                            ImageHandle,
-  IN EFI_SYSTEM_TABLE                      *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   //
-  // Do some initialization if reqruied to turn on the RTC
+  // Do some initialization if required to turn on the RTC
   //
   return EFI_SUCCESS;
 }
-
-
-/**
-  Fixup internal data so that EFI can be call in virtual mode.
-  Call the passed in Child Notify event and convert any pointers in
-  lib to virtual mode.
-
-  @param[in]    Event   The Event that is being processed
-  @param[in]    Context Event Context
-**/
-VOID
-EFIAPI
-LibRtcVirtualNotifyEvent (
-  IN EFI_EVENT        Event,
-  IN VOID             *Context
-  )
-{
-  //
-  // Only needed if you are going to support the OS calling RTC functions in virtual mode.
-  // You will need to call EfiConvertPointer (). To convert any stored physical addresses
-  // to virtual address. After the OS transistions to calling in virtual mode, all future
-  // runtime calls will be made in virtual mode.
-  //
-  return;
-}
-
-
-

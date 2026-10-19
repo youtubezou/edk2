@@ -2,21 +2,14 @@
   Provides global variables that are pointers to the UEFI HII related protocols.
   All of the UEFI HII related protocols are optional, so the consumers of this
   library class must verify that the global variable pointers are not NULL before
-  use.   
+  use.
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __UEFI_HII_SERVICES_LIB_H__
-#define __UEFI_HII_SERVICES_LIB_H__
+#pragma once
 
 #include <Protocol/HiiFont.h>
 #include <Protocol/HiiString.h>
@@ -48,5 +41,3 @@ extern EFI_HII_DATABASE_PROTOCOL  *gHiiDatabase;
 /// The pointer to the UEFI HII Config Rounting Protocol.
 ///
 extern EFI_HII_CONFIG_ROUTING_PROTOCOL  *gHiiConfigRouting;
-
-#endif

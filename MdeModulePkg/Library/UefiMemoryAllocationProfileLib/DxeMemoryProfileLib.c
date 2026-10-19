@@ -1,27 +1,19 @@
 /** @file
   Support routines for memory profile for Dxe phase drivers.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php.                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-
 #include <Uefi.h>
-
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
 
 #include <Guid/MemoryProfile.h>
 
-EDKII_MEMORY_PROFILE_PROTOCOL *mLibProfileProtocol;
+EDKII_MEMORY_PROFILE_PROTOCOL  *mLibProfileProtocol;
 
 /**
   The constructor function initializes memory profile for DXE phase.
@@ -39,12 +31,12 @@ MemoryProfileLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS           Status;
+  EFI_STATUS  Status;
 
   Status = gBS->LocateProtocol (
                   &gEdkiiMemoryProfileGuid,
                   NULL,
-                  (VOID **) &mLibProfileProtocol
+                  (VOID **)&mLibProfileProtocol
                   );
   if (EFI_ERROR (Status)) {
     mLibProfileProtocol = NULL;
@@ -78,17 +70,18 @@ MemoryProfileLibConstructor (
 EFI_STATUS
 EFIAPI
 MemoryProfileLibRecord (
-  IN PHYSICAL_ADDRESS           CallerAddress,
-  IN MEMORY_PROFILE_ACTION      Action,
-  IN EFI_MEMORY_TYPE            MemoryType,
-  IN VOID                       *Buffer,
-  IN UINTN                      Size,
-  IN CHAR8                      *ActionString OPTIONAL
+  IN PHYSICAL_ADDRESS       CallerAddress,
+  IN MEMORY_PROFILE_ACTION  Action,
+  IN EFI_MEMORY_TYPE        MemoryType,
+  IN VOID                   *Buffer,
+  IN UINTN                  Size,
+  IN CHAR8                  *ActionString OPTIONAL
   )
 {
   if (mLibProfileProtocol == NULL) {
     return EFI_UNSUPPORTED;
   }
+
   return mLibProfileProtocol->Record (
                                 mLibProfileProtocol,
                                 CallerAddress,
@@ -99,4 +92,3 @@ MemoryProfileLibRecord (
                                 ActionString
                                 );
 }
-

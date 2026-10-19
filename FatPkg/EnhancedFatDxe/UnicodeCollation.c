@@ -2,14 +2,8 @@
   Unicode Collation Support component that hides the trivial difference of Unicode Collation
   and Unicode collation 2 Protocol.
 
-  Copyright (c) 2007 - 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials are licensed and made available
-under the terms and conditions of the BSD License which accompanies this
-distribution. The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -34,10 +28,10 @@ EFI_UNICODE_COLLATION_PROTOCOL  *mUnicodeCollationInterface = NULL;
 **/
 EFI_STATUS
 InitializeUnicodeCollationSupportWorker (
-  IN EFI_HANDLE         AgentHandle,
-  IN EFI_GUID           *ProtocolGuid,
-  IN CONST CHAR16       *VariableName,
-  IN CONST CHAR8        *DefaultLanguage
+  IN EFI_HANDLE    AgentHandle,
+  IN EFI_GUID      *ProtocolGuid,
+  IN CONST CHAR16  *VariableName,
+  IN CONST CHAR8   *DefaultLanguage
   )
 {
   EFI_STATUS                      ReturnStatus;
@@ -46,7 +40,6 @@ InitializeUnicodeCollationSupportWorker (
   UINTN                           Index;
   EFI_HANDLE                      *Handles;
   EFI_UNICODE_COLLATION_PROTOCOL  *Uci;
-  BOOLEAN                         Iso639Language;
   CHAR8                           *Language;
   CHAR8                           *BestLanguage;
 
@@ -61,8 +54,7 @@ InitializeUnicodeCollationSupportWorker (
     return Status;
   }
 
-  Iso639Language = (BOOLEAN) (ProtocolGuid == &gEfiUnicodeCollationProtocolGuid);
-  GetEfiGlobalVariable2 (VariableName, (VOID**) &Language, NULL);
+  GetEfiGlobalVariable2 (VariableName, (VOID **)&Language, NULL);
 
   ReturnStatus = EFI_UNSUPPORTED;
   for (Index = 0; Index < NumHandles; Index++) {
@@ -72,7 +64,7 @@ InitializeUnicodeCollationSupportWorker (
     Status = gBS->OpenProtocol (
                     Handles[Index],
                     ProtocolGuid,
-                    (VOID **) &Uci,
+                    (VOID **)&Uci,
                     AgentHandle,
                     NULL,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -83,11 +75,11 @@ InitializeUnicodeCollationSupportWorker (
 
     //
     // Find the best matching matching language from the supported languages
-    // of Unicode Collation (2) protocol. 
+    // of Unicode Collation (2) protocol.
     //
     BestLanguage = GetBestLanguage (
                      Uci->SupportedLanguages,
-                     Iso639Language,
+                     FALSE,
                      (Language == NULL) ? "" : Language,
                      DefaultLanguage,
                      NULL
@@ -95,7 +87,7 @@ InitializeUnicodeCollationSupportWorker (
     if (BestLanguage != NULL) {
       FreePool (BestLanguage);
       mUnicodeCollationInterface = Uci;
-      ReturnStatus = EFI_SUCCESS;
+      ReturnStatus               = EFI_SUCCESS;
       break;
     }
   }
@@ -124,11 +116,10 @@ InitializeUnicodeCollationSupportWorker (
 **/
 EFI_STATUS
 InitializeUnicodeCollationSupport (
-  IN EFI_HANDLE    AgentHandle
+  IN EFI_HANDLE  AgentHandle
   )
 {
-
-  EFI_STATUS       Status;
+  EFI_STATUS  Status;
 
   Status = EFI_UNSUPPORTED;
 
@@ -139,24 +130,11 @@ InitializeUnicodeCollationSupport (
              AgentHandle,
              &gEfiUnicodeCollation2ProtocolGuid,
              L"PlatformLang",
-             (CONST CHAR8 *) PcdGetPtr (PcdUefiVariableDefaultPlatformLang)
+             (CONST CHAR8 *)PcdGetPtr (PcdUefiVariableDefaultPlatformLang)
              );
-  //
-  // If the attempt to use Unicode Collation 2 Protocol fails, then we fall back
-  // on the ISO 639-2 Unicode Collation Protocol.
-  //
-  if (EFI_ERROR (Status)) {
-    Status = InitializeUnicodeCollationSupportWorker (
-               AgentHandle,
-               &gEfiUnicodeCollationProtocolGuid,
-               L"Lang",
-               (CONST CHAR8 *) PcdGetPtr (PcdUefiVariableDefaultLang)
-               );
-  }
 
   return Status;
 }
-
 
 /**
   Performs a case-insensitive comparison of two Null-terminated Unicode strings.
@@ -170,10 +148,14 @@ InitializeUnicodeCollationSupport (
 **/
 INTN
 FatStriCmp (
-  IN CHAR16       *S1,
-  IN CHAR16       *S2
+  IN CHAR16  *S1,
+  IN CHAR16  *S2
   )
 {
+  //
+  // ASSERT s1 and s2 are shorter than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
   ASSERT (StrSize (S1) != 0);
   ASSERT (StrSize (S2) != 0);
   ASSERT (mUnicodeCollationInterface != NULL);
@@ -185,46 +167,49 @@ FatStriCmp (
                                        );
 }
 
-
 /**
   Uppercase a string.
 
-  @param  Str                   The string which will be upper-cased.
+  @param  String                   The string which will be upper-cased.
 
-  @return None.
 
 **/
 VOID
 FatStrUpr (
-  IN OUT CHAR16   *String
+  IN OUT CHAR16  *String
   )
 {
+  //
+  // ASSERT String is shorter than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
   ASSERT (StrSize (String) != 0);
   ASSERT (mUnicodeCollationInterface != NULL);
 
   mUnicodeCollationInterface->StrUpr (mUnicodeCollationInterface, String);
 }
 
-
 /**
   Lowercase a string
 
-  @param  Str                   The string which will be lower-cased.
+  @param  String                   The string which will be lower-cased.
 
-  @return None
 
 **/
 VOID
 FatStrLwr (
-  IN OUT CHAR16   *String
+  IN OUT CHAR16  *String
   )
 {
+  //
+  // ASSERT String is shorter than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
   ASSERT (StrSize (String) != 0);
   ASSERT (mUnicodeCollationInterface != NULL);
 
   mUnicodeCollationInterface->StrLwr (mUnicodeCollationInterface, String);
 }
-
 
 /**
   Convert FAT string to unicode string.
@@ -238,19 +223,22 @@ FatStrLwr (
 **/
 VOID
 FatFatToStr (
-  IN  UINTN                            FatSize,
-  IN  CHAR8                            *Fat,
-  OUT CHAR16                           *String
+  IN  UINTN   FatSize,
+  IN  CHAR8   *Fat,
+  OUT CHAR16  *String
   )
 {
   ASSERT (Fat != NULL);
+  //
+  // ASSERT String is shorter than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
   ASSERT (String != NULL);
-  ASSERT (((UINTN) String & 0x01) == 0);
+  ASSERT (((UINTN)String & 0x01) == 0);
   ASSERT (mUnicodeCollationInterface != NULL);
 
   mUnicodeCollationInterface->FatToStr (mUnicodeCollationInterface, FatSize, Fat, String);
 }
-
 
 /**
   Convert unicode string to Fat string.
@@ -265,12 +253,16 @@ FatFatToStr (
 **/
 BOOLEAN
 FatStrToFat (
-  IN  CHAR16                          *String,
-  IN  UINTN                           FatSize,
-  OUT CHAR8                           *Fat
+  IN  CHAR16  *String,
+  IN  UINTN   FatSize,
+  OUT CHAR8   *Fat
   )
 {
   ASSERT (Fat != NULL);
+  //
+  // ASSERT String is shorter than PcdMaximumUnicodeStringLength.
+  // Length tests are performed inside StrLen().
+  //
   ASSERT (StrSize (String) != 0);
   ASSERT (mUnicodeCollationInterface != NULL);
 

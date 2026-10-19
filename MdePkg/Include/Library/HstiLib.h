@@ -2,18 +2,11 @@
   Provides services to create, get and update HSTI table in AIP protocol.
 
   Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __HSTI_LIB_H__
-#define __HSTI_LIB_H__
+#pragma once
 
 /**
   Publish HSTI table in AIP protocol.
@@ -34,8 +27,8 @@
 EFI_STATUS
 EFIAPI
 HstiLibSetTable (
-  IN VOID                     *Hsti,
-  IN UINTN                    HstiSize
+  IN VOID   *Hsti,
+  IN UINTN  HstiSize
   );
 
 /**
@@ -57,10 +50,10 @@ HstiLibSetTable (
 EFI_STATUS
 EFIAPI
 HstiLibGetTable (
-  IN UINT32                   Role,
-  IN CHAR16                   *ImplementationID OPTIONAL,
-  OUT VOID                    **Hsti,
-  OUT UINTN                   *HstiSize
+  IN UINT32  Role,
+  IN CHAR16  *ImplementationID OPTIONAL,
+  OUT VOID   **Hsti,
+  OUT UINTN  *HstiSize
   );
 
 /**
@@ -81,10 +74,10 @@ HstiLibGetTable (
 EFI_STATUS
 EFIAPI
 HstiLibSetFeaturesVerified (
-  IN UINT32                   Role,
-  IN CHAR16                   *ImplementationID, OPTIONAL
-  IN UINT32                   ByteIndex,
-  IN UINT8                    BitMask
+  IN UINT32  Role,
+  IN CHAR16  *ImplementationID  OPTIONAL,
+  IN UINT32  ByteIndex,
+  IN UINT8   BitMask
   );
 
 /**
@@ -105,10 +98,10 @@ HstiLibSetFeaturesVerified (
 EFI_STATUS
 EFIAPI
 HstiLibClearFeaturesVerified (
-  IN UINT32                   Role,
-  IN CHAR16                   *ImplementationID, OPTIONAL
-  IN UINT32                   ByteIndex,
-  IN UINT8                    BitMask
+  IN UINT32  Role,
+  IN CHAR16  *ImplementationID  OPTIONAL,
+  IN UINT32  ByteIndex,
+  IN UINT8   BitMask
   );
 
 /**
@@ -128,9 +121,9 @@ HstiLibClearFeaturesVerified (
 EFI_STATUS
 EFIAPI
 HstiLibAppendErrorString (
-  IN UINT32                   Role,
-  IN CHAR16                   *ImplementationID, OPTIONAL
-  IN CHAR16                   *ErrorString
+  IN UINT32  Role,
+  IN CHAR16  *ImplementationID  OPTIONAL,
+  IN CHAR16  *ErrorString
   );
 
 /**
@@ -150,9 +143,7 @@ HstiLibAppendErrorString (
 EFI_STATUS
 EFIAPI
 HstiLibSetErrorString (
-  IN UINT32                   Role,
-  IN CHAR16                   *ImplementationID, OPTIONAL
-  IN CHAR16                   *ErrorString
+  IN UINT32  Role,
+  IN CHAR16  *ImplementationID  OPTIONAL,
+  IN CHAR16  *ErrorString
   );
-
-#endif

@@ -4,13 +4,7 @@
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
@@ -37,14 +31,13 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/PcdLib.h>
 #include <Library/DevicePathLib.h>
 
-
 typedef struct {
-  UINT64                      FvLength;
-  EFI_FIRMWARE_VOLUME_HEADER  FvbInfo;
+  UINT64                        FvLength;
+  EFI_FIRMWARE_VOLUME_HEADER    FvbInfo;
   //
   // EFI_FV_BLOCK_MAP_ENTRY    ExtraBlockMap[n];//n=0
   //
-  EFI_FV_BLOCK_MAP_ENTRY      End[1];
+  EFI_FV_BLOCK_MAP_ENTRY        End[1];
 } EFI_FVB_MEDIA_INFO;
 
 EFI_FVB_MEDIA_INFO  mPlatformFvbMediaInfo[] = {
@@ -61,10 +54,10 @@ EFI_FVB_MEDIA_INFO  mPlatformFvbMediaInfo[] = {
       FixedPcdGet32 (PcdEmuFlashFvRecoverySize),
       EFI_FVH_SIGNATURE,
       EFI_FVB2_READ_ENABLED_CAP |
-        EFI_FVB2_READ_STATUS |
-        EFI_FVB2_WRITE_ENABLED_CAP |
-        EFI_FVB2_WRITE_STATUS |
-        EFI_FVB2_ERASE_POLARITY,
+      EFI_FVB2_READ_STATUS |
+      EFI_FVB2_WRITE_ENABLED_CAP |
+      EFI_FVB2_WRITE_STATUS |
+      EFI_FVB2_ERASE_POLARITY,
       sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY),
       0,  // CheckSum
       0,  // ExtHeaderOffset
@@ -105,10 +98,10 @@ EFI_FVB_MEDIA_INFO  mPlatformFvbMediaInfo[] = {
       FixedPcdGet32 (PcdEmuFlashNvStorageEventLogSize),
       EFI_FVH_SIGNATURE,
       EFI_FVB2_READ_ENABLED_CAP |
-        EFI_FVB2_READ_STATUS |
-        EFI_FVB2_WRITE_ENABLED_CAP |
-        EFI_FVB2_WRITE_STATUS |
-        EFI_FVB2_ERASE_POLARITY,
+      EFI_FVB2_READ_STATUS |
+      EFI_FVB2_WRITE_ENABLED_CAP |
+      EFI_FVB2_WRITE_STATUS |
+      EFI_FVB2_ERASE_POLARITY,
       sizeof (EFI_FIRMWARE_VOLUME_HEADER) + sizeof (EFI_FV_BLOCK_MAP_ENTRY),
       0,  // CheckSum
       0,  // ExtHeaderOffset
@@ -119,9 +112,9 @@ EFI_FVB_MEDIA_INFO  mPlatformFvbMediaInfo[] = {
       {
         {
           (FixedPcdGet32 (PcdFlashNvStorageVariableSize) + \
-          FixedPcdGet32 (PcdFlashNvStorageFtwWorkingSize) + \
-          FixedPcdGet32 (PcdFlashNvStorageFtwSpareSize) + \
-          FixedPcdGet32 (PcdEmuFlashNvStorageEventLogSize)) / FixedPcdGet32 (PcdEmuFirmwareBlockSize),
+            FixedPcdGet32 (PcdFlashNvStorageFtwWorkingSize) + \
+            FixedPcdGet32 (PcdFlashNvStorageFtwSpareSize) + \
+            FixedPcdGet32 (PcdEmuFlashNvStorageEventLogSize)) / FixedPcdGet32 (PcdEmuFirmwareBlockSize),
           FixedPcdGet32 (PcdEmuFirmwareBlockSize),
         }
       }
@@ -137,11 +130,11 @@ EFI_FVB_MEDIA_INFO  mPlatformFvbMediaInfo[] = {
 
 EFI_STATUS
 GetFvbInfo (
-  IN  UINT64                        FvLength,
-  OUT EFI_FIRMWARE_VOLUME_HEADER    **FvbInfo
+  IN  UINT64                      FvLength,
+  OUT EFI_FIRMWARE_VOLUME_HEADER  **FvbInfo
   )
 {
-  UINTN Index;
+  UINTN  Index;
 
   for (Index = 0; Index < sizeof (mPlatformFvbMediaInfo) / sizeof (EFI_FVB_MEDIA_INFO); Index += 1) {
     if (mPlatformFvbMediaInfo[Index].FvLength == FvLength) {

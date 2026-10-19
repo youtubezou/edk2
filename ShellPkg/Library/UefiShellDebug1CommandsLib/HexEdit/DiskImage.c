@@ -1,36 +1,30 @@
 /** @file
   Functions to deal with Disk buffer.
 
-  Copyright (c) 2005 - 2016, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2005 - 2018, Intel Corporation. All rights reserved. <BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "HexEditor.h"
 #include <Protocol/BlockIo.h>
 
-extern EFI_HANDLE                 HImageHandleBackup;
-extern HEFI_EDITOR_BUFFER_IMAGE   HBufferImage;
+extern EFI_HANDLE                HImageHandleBackup;
+extern HEFI_EDITOR_BUFFER_IMAGE  HBufferImage;
 
-extern BOOLEAN                    HBufferImageNeedRefresh;
-extern BOOLEAN                    HBufferImageOnlyLineNeedRefresh;
-extern BOOLEAN                    HBufferImageMouseNeedRefresh;
+extern BOOLEAN  HBufferImageNeedRefresh;
+extern BOOLEAN  HBufferImageOnlyLineNeedRefresh;
+extern BOOLEAN  HBufferImageMouseNeedRefresh;
 
 extern HEFI_EDITOR_GLOBAL_EDITOR  HMainEditor;
 
-HEFI_EDITOR_DISK_IMAGE            HDiskImage;
-HEFI_EDITOR_DISK_IMAGE            HDiskImageBackupVar;
+HEFI_EDITOR_DISK_IMAGE  HDiskImage;
+HEFI_EDITOR_DISK_IMAGE  HDiskImageBackupVar;
 
 //
 // for basic initialization of HDiskImage
 //
-HEFI_EDITOR_DISK_IMAGE            HDiskImageConst = {
+HEFI_EDITOR_DISK_IMAGE  HDiskImageConst = {
   NULL,
   0,
   0,
@@ -39,9 +33,9 @@ HEFI_EDITOR_DISK_IMAGE            HDiskImageConst = {
 
 /**
   Initialization function for HDiskImage.
- 
+
   @retval EFI_SUCCESS     The operation was successful.
-  @retval EFI_LOAD_ERROR  A load error occured.
+  @retval EFI_LOAD_ERROR  A load error occurred.
 **/
 EFI_STATUS
 HDiskImageInit (
@@ -59,7 +53,7 @@ HDiskImageInit (
 }
 
 /**
-  Backup function for HDiskImage. Only a few fields need to be backup.   
+  Backup function for HDiskImage. Only a few fields need to be backup.
   This is for making the Disk buffer refresh as few as possible.
 
   @retval EFI_SUCCESS           The operation was successful.
@@ -76,13 +70,13 @@ HDiskImageBackup (
   //
   SHELL_FREE_NON_NULL (HDiskImageBackupVar.Name);
 
-  HDiskImageBackupVar.Name = CatSPrint(NULL, L"%s", HDiskImage.Name);
+  HDiskImageBackupVar.Name = CatSPrint (NULL, L"%s", HDiskImage.Name);
   if (HDiskImageBackupVar.Name == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  HDiskImageBackupVar.Offset  = HDiskImage.Offset;
-  HDiskImageBackupVar.Size    = HDiskImage.Size;
+  HDiskImageBackupVar.Offset = HDiskImage.Offset;
+  HDiskImageBackupVar.Size   = HDiskImage.Size;
 
   return EFI_SUCCESS;
 }
@@ -115,34 +109,30 @@ HDiskImageCleanup (
 **/
 EFI_STATUS
 HDiskImageSetDiskNameOffsetSize (
-  IN CONST CHAR16   *Str,
-  IN UINTN    Offset,
-  IN UINTN    Size
+  IN CONST CHAR16  *Str,
+  IN UINTN         Offset,
+  IN UINTN         Size
   )
 {
-  UINTN Len;
-  UINTN Index;
+  if (Str == HDiskImage.Name) {
+    //
+    // This function might be called using HDiskImage.FileName as Str.
+    // Directly return without updating HDiskImage.FileName.
+    //
+    return EFI_SUCCESS;
+  }
 
   //
   // free the old file name
   //
   SHELL_FREE_NON_NULL (HDiskImage.Name);
-
-  Len             = StrLen (Str);
-
-  HDiskImage.Name = AllocateZeroPool (2 * (Len + 1));
+  HDiskImage.Name = AllocateCopyPool (StrSize (Str), Str);
   if (HDiskImage.Name == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
 
-  for (Index = 0; Index < Len; Index++) {
-    HDiskImage.Name[Index] = Str[Index];
-  }
-
-  HDiskImage.Name[Len]  = L'\0';
-
-  HDiskImage.Offset     = Offset;
-  HDiskImage.Size       = Size;
+  HDiskImage.Offset = Offset;
+  HDiskImage.Size   = Size;
 
   return EFI_SUCCESS;
 }
@@ -157,15 +147,15 @@ HDiskImageSetDiskNameOffsetSize (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
-  @retval EFI_INVALID_PARAMETER A parameter was invalid.  
+  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_INVALID_PARAMETER A parameter was invalid.
 **/
 EFI_STATUS
 HDiskImageRead (
-  IN CONST CHAR16   *DeviceName,
-  IN UINTN    Offset,
-  IN UINTN    Size,
-  IN BOOLEAN  Recover
+  IN CONST CHAR16  *DeviceName,
+  IN UINTN         Offset,
+  IN UINTN         Size,
+  IN BOOLEAN       Recover
   )
 {
   CONST EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
@@ -175,46 +165,49 @@ HDiskImageRead (
   EFI_BLOCK_IO_PROTOCOL           *BlkIo;
   EFI_STATUS                      Status;
 
-  VOID                            *Buffer;
-  CHAR16                          *Str;
-  UINTN                           Bytes;
+  VOID    *Buffer;
+  CHAR16  *Str;
+  UINTN   Bytes;
 
-  HEFI_EDITOR_LINE                *Line;
+  HEFI_EDITOR_LINE  *Line;
 
   HBufferImage.BufferType = FileTypeDiskBuffer;
 
-  DevicePath              = gEfiShellProtocol->GetDevicePathFromMap(DeviceName);
+  DevicePath = gEfiShellProtocol->GetDevicePathFromMap (DeviceName);
   if (DevicePath == NULL) {
     StatusBarSetStatusString (L"Cannot Find Device");
     return EFI_INVALID_PARAMETER;
   }
-  DupDevicePath = DuplicateDevicePath(DevicePath);
+
+  DupDevicePath        = DuplicateDevicePath (DevicePath);
   DupDevicePathForFree = DupDevicePath;
   //
   // get blkio interface
   //
-  Status = gBS->LocateDevicePath(&gEfiBlockIoProtocolGuid,&DupDevicePath,&Handle);
-  FreePool(DupDevicePathForFree);
+  Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid, &DupDevicePath, &Handle);
+  FreePool (DupDevicePathForFree);
   if (EFI_ERROR (Status)) {
     StatusBarSetStatusString (L"Read Disk Failed");
     return Status;
   }
-  Status = gBS->OpenProtocol(Handle, &gEfiBlockIoProtocolGuid, (VOID**)&BlkIo, gImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+
+  Status = gBS->OpenProtocol (Handle, &gEfiBlockIoProtocolGuid, (VOID **)&BlkIo, gImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
   if (EFI_ERROR (Status)) {
     StatusBarSetStatusString (L"Read Disk Failed");
     return Status;
   }
+
   //
   // if Offset exceeds LastBlock,
   //   return error
   //
-  if (Offset > BlkIo->Media->LastBlock || Offset + Size > BlkIo->Media->LastBlock) {
+  if ((Offset > BlkIo->Media->LastBlock) || (Offset + Size > BlkIo->Media->LastBlock)) {
     StatusBarSetStatusString (L"Invalid Offset + Size");
     return EFI_LOAD_ERROR;
   }
 
-  Bytes   = BlkIo->Media->BlockSize * Size;
-  Buffer  = AllocateZeroPool (Bytes);
+  Bytes  = BlkIo->Media->BlockSize * Size;
+  Buffer = AllocateZeroPool (Bytes);
 
   if (Buffer == NULL) {
     StatusBarSetStatusString (L"Read Disk Failed");
@@ -256,25 +249,26 @@ HDiskImageRead (
     StatusBarSetStatusString (L"Read Disk Failed");
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // initialize some variables
   //
-  HDiskImage.BlockSize                = BlkIo->Media->BlockSize;
+  HDiskImage.BlockSize = BlkIo->Media->BlockSize;
 
   HBufferImage.DisplayPosition.Row    = 2;
   HBufferImage.DisplayPosition.Column = 10;
 
-  HBufferImage.MousePosition.Row      = 2;
-  HBufferImage.MousePosition.Column   = 10;
+  HBufferImage.MousePosition.Row    = 2;
+  HBufferImage.MousePosition.Column = 10;
 
-  HBufferImage.LowVisibleRow          = 1;
-  HBufferImage.HighBits               = TRUE;
+  HBufferImage.LowVisibleRow = 1;
+  HBufferImage.HighBits      = TRUE;
 
-  HBufferImage.BufferPosition.Row     = 1;
-  HBufferImage.BufferPosition.Column  = 1;
+  HBufferImage.BufferPosition.Row    = 1;
+  HBufferImage.BufferPosition.Column = 1;
 
   if (!Recover) {
-    Str = CatSPrint(NULL, L"%d Lines Read", HBufferImage.NumLines);
+    Str = CatSPrint (NULL, L"%d Lines Read", HBufferImage.NumLines);
     if (Str == NULL) {
       StatusBarSetStatusString (L"Read Disk Failed");
       return EFI_OUT_OF_RESOURCES;
@@ -285,7 +279,6 @@ HDiskImageRead (
 
     HMainEditor.SelectStart = 0;
     HMainEditor.SelectEnd   = 0;
-
   }
 
   //
@@ -293,11 +286,11 @@ HDiskImageRead (
   //
   if (HBufferImage.Lines != NULL) {
     HBufferImage.CurrentLine = CR (
-                                HBufferImage.ListHead->ForwardLink,
-                                HEFI_EDITOR_LINE,
-                                Link,
-                                EFI_EDITOR_LINE_LIST
-                                );
+                                 HBufferImage.ListHead->ForwardLink,
+                                 HEFI_EDITOR_LINE,
+                                 Link,
+                                 EFI_EDITOR_LINE_LIST
+                                 );
   } else {
     //
     // create a dummy line
@@ -329,17 +322,16 @@ HDiskImageRead (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occured.
-  @retval EFI_INVALID_PARAMETER A parameter was invalid.  
+  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_INVALID_PARAMETER A parameter was invalid.
 **/
 EFI_STATUS
 HDiskImageSave (
-  IN CHAR16 *DeviceName,
-  IN UINTN  Offset,
-  IN UINTN  Size
+  IN CHAR16  *DeviceName,
+  IN UINTN   Offset,
+  IN UINTN   Size
   )
 {
-
   CONST EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
   EFI_DEVICE_PATH_PROTOCOL        *DupDevicePath;
   EFI_DEVICE_PATH_PROTOCOL        *DupDevicePathForFree;
@@ -358,35 +350,38 @@ HDiskImageSave (
 
   HBufferImage.BufferType = FileTypeDiskBuffer;
 
-  DevicePath              = gEfiShellProtocol->GetDevicePathFromMap(DeviceName);
+  DevicePath = gEfiShellProtocol->GetDevicePathFromMap (DeviceName);
   if (DevicePath == NULL) {
-//    StatusBarSetStatusString (L"Cannot Find Device");
+    //    StatusBarSetStatusString (L"Cannot Find Device");
     return EFI_INVALID_PARAMETER;
   }
-  DupDevicePath = DuplicateDevicePath(DevicePath);
+
+  DupDevicePath        = DuplicateDevicePath (DevicePath);
   DupDevicePathForFree = DupDevicePath;
 
   //
   // get blkio interface
   //
-  Status = gBS->LocateDevicePath(&gEfiBlockIoProtocolGuid,&DupDevicePath,&Handle);
-  FreePool(DupDevicePathForFree);
+  Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid, &DupDevicePath, &Handle);
+  FreePool (DupDevicePathForFree);
   if (EFI_ERROR (Status)) {
-//    StatusBarSetStatusString (L"Read Disk Failed");
-    return Status;
-  }
-  Status = gBS->OpenProtocol(Handle, &gEfiBlockIoProtocolGuid, (VOID**)&BlkIo, gImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-  if (EFI_ERROR (Status)) {
-//    StatusBarSetStatusString (L"Read Disk Failed");
+    //    StatusBarSetStatusString (L"Read Disk Failed");
     return Status;
   }
 
-  Bytes   = BlkIo->Media->BlockSize * Size;
-  Buffer  = AllocateZeroPool (Bytes);
+  Status = gBS->OpenProtocol (Handle, &gEfiBlockIoProtocolGuid, (VOID **)&BlkIo, gImageHandle, NULL, EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+  if (EFI_ERROR (Status)) {
+    //    StatusBarSetStatusString (L"Read Disk Failed");
+    return Status;
+  }
+
+  Bytes  = BlkIo->Media->BlockSize * Size;
+  Buffer = AllocateZeroPool (Bytes);
 
   if (Buffer == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
+
   //
   // concatenate the line list to a buffer
   //
@@ -412,6 +407,7 @@ HDiskImageSave (
   if (EFI_ERROR (Status)) {
     return EFI_LOAD_ERROR;
   }
+
   //
   // now not modified
   //

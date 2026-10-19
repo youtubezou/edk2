@@ -1,14 +1,8 @@
 /** @file
   Implementation of synchronization functions.
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,19 +12,22 @@
   Microsoft Visual Studio 7.1 Function Prototypes for read write barrier Intrinsics.
 **/
 
-void    _ReadWriteBarrier (void);
+void
+_ReadWriteBarrier (
+  void
+  );
+
 #pragma intrinsic(_ReadWriteBarrier)
 
-
-#define SPIN_LOCK_RELEASED          ((UINTN) 1)
-#define SPIN_LOCK_ACQUIRED          ((UINTN) 2)
+#define SPIN_LOCK_RELEASED  ((UINTN) 1)
+#define SPIN_LOCK_ACQUIRED  ((UINTN) 2)
 
 /**
   Retrieves the architecture specific spin lock alignment requirements for
   optimal spin lock performance.
 
   This function retrieves the spin lock alignment requirements for optimal
-  performance on a given CPU architecture. The spin lock alignment is byte alignment. 
+  performance on a given CPU architecture. The spin lock alignment is byte alignment.
   It must be a power of two and is returned by this function. If there are no alignment
   requirements, then 1 must be returned. The spin lock synchronization
   functions must function correctly if the spin lock size and alignment values
@@ -69,14 +66,14 @@ GetSpinLockProperties (
 SPIN_LOCK *
 EFIAPI
 InitializeSpinLock (
-  OUT      SPIN_LOCK                 *SpinLock
+  OUT      SPIN_LOCK  *SpinLock
   )
 {
   ASSERT (SpinLock != NULL);
 
-  _ReadWriteBarrier();
+  _ReadWriteBarrier ();
   *SpinLock = SPIN_LOCK_RELEASED;
-  _ReadWriteBarrier();
+  _ReadWriteBarrier ();
 
   return SpinLock;
 }
@@ -104,7 +101,7 @@ InitializeSpinLock (
 SPIN_LOCK *
 EFIAPI
 AcquireSpinLock (
-  IN OUT  SPIN_LOCK                 *SpinLock
+  IN OUT  SPIN_LOCK  *SpinLock
   )
 {
   UINT64  Current;
@@ -124,7 +121,7 @@ AcquireSpinLock (
     //
     // Get the current timer value
     //
-    Current = GetPerformanceCounter();
+    Current = GetPerformanceCounter ();
 
     //
     // Initialize local variables
@@ -148,23 +145,27 @@ AcquireSpinLock (
     if (Cycle < 0) {
       Cycle = -Cycle;
     }
+
     Cycle++;
 
     while (!AcquireSpinLockOrFail (SpinLock)) {
       CpuPause ();
       Previous = Current;
-      Current  = GetPerformanceCounter();
-      Delta = (INT64) (Current - Previous);
+      Current  = GetPerformanceCounter ();
+      Delta    = (INT64)(Current - Previous);
       if (Start > End) {
         Delta = -Delta;
       }
+
       if (Delta < 0) {
         Delta += Cycle;
       }
+
       Total += Delta;
       ASSERT (Total < Timeout);
     }
   }
+
   return SpinLock;
 }
 
@@ -188,12 +189,12 @@ AcquireSpinLock (
 BOOLEAN
 EFIAPI
 AcquireSpinLockOrFail (
-  IN OUT  SPIN_LOCK                 *SpinLock
+  IN OUT  SPIN_LOCK  *SpinLock
   )
 {
-  SPIN_LOCK   LockValue;
-  VOID        *Result;
-  
+  SPIN_LOCK  LockValue;
+  VOID       *Result;
+
   ASSERT (SpinLock != NULL);
 
   LockValue = *SpinLock;
@@ -201,13 +202,13 @@ AcquireSpinLockOrFail (
 
   _ReadWriteBarrier ();
   Result = InterlockedCompareExchangePointer (
-             (VOID**)SpinLock,
-             (VOID*)SPIN_LOCK_RELEASED,
-             (VOID*)SPIN_LOCK_ACQUIRED
-           );
+             (VOID **)SpinLock,
+             (VOID *)SPIN_LOCK_RELEASED,
+             (VOID *)SPIN_LOCK_ACQUIRED
+             );
 
   _ReadWriteBarrier ();
-  return (BOOLEAN) (Result == (VOID*) SPIN_LOCK_RELEASED);
+  return (BOOLEAN)(Result == (VOID *)SPIN_LOCK_RELEASED);
 }
 
 /**
@@ -227,10 +228,10 @@ AcquireSpinLockOrFail (
 SPIN_LOCK *
 EFIAPI
 ReleaseSpinLock (
-  IN OUT  SPIN_LOCK                 *SpinLock
+  IN OUT  SPIN_LOCK  *SpinLock
   )
 {
-  SPIN_LOCK    LockValue;
+  SPIN_LOCK  LockValue;
 
   ASSERT (SpinLock != NULL);
 
@@ -249,8 +250,7 @@ ReleaseSpinLock (
 
   Performs an atomic increment of the 32-bit unsigned integer specified by
   Value and returns the incremented value. The increment operation must be
-  performed using MP safe mechanisms. The state of the return value is not
-  guaranteed to be MP safe.
+  performed using MP safe mechanisms.
 
   If Value is NULL, then ASSERT().
 
@@ -262,7 +262,7 @@ ReleaseSpinLock (
 UINT32
 EFIAPI
 InterlockedIncrement (
-  IN      UINT32                    *Value
+  IN      volatile UINT32  *Value
   )
 {
   ASSERT (Value != NULL);
@@ -274,8 +274,7 @@ InterlockedIncrement (
 
   Performs an atomic decrement of the 32-bit unsigned integer specified by
   Value and returns the decremented value. The decrement operation must be
-  performed using MP safe mechanisms. The state of the return value is not
-  guaranteed to be MP safe.
+  performed using MP safe mechanisms.
 
   If Value is NULL, then ASSERT().
 
@@ -287,7 +286,7 @@ InterlockedIncrement (
 UINT32
 EFIAPI
 InterlockedDecrement (
-  IN      UINT32                    *Value
+  IN      volatile UINT32  *Value
   )
 {
   ASSERT (Value != NULL);
@@ -316,9 +315,9 @@ InterlockedDecrement (
 UINT16
 EFIAPI
 InterlockedCompareExchange16 (
-  IN OUT  UINT16                    *Value,
-  IN      UINT16                    CompareValue,
-  IN      UINT16                    ExchangeValue
+  IN OUT  volatile UINT16  *Value,
+  IN      UINT16           CompareValue,
+  IN      UINT16           ExchangeValue
   )
 {
   ASSERT (Value != NULL);
@@ -347,9 +346,9 @@ InterlockedCompareExchange16 (
 UINT32
 EFIAPI
 InterlockedCompareExchange32 (
-  IN OUT  UINT32                    *Value,
-  IN      UINT32                    CompareValue,
-  IN      UINT32                    ExchangeValue
+  IN OUT  volatile UINT32  *Value,
+  IN      UINT32           CompareValue,
+  IN      UINT32           ExchangeValue
   )
 {
   ASSERT (Value != NULL);
@@ -377,9 +376,9 @@ InterlockedCompareExchange32 (
 UINT64
 EFIAPI
 InterlockedCompareExchange64 (
-  IN OUT  UINT64                    *Value,
-  IN      UINT64                    CompareValue,
-  IN      UINT64                    ExchangeValue
+  IN OUT  volatile UINT64  *Value,
+  IN      UINT64           CompareValue,
+  IN      UINT64           ExchangeValue
   )
 {
   ASSERT (Value != NULL);
@@ -407,28 +406,28 @@ InterlockedCompareExchange64 (
 VOID *
 EFIAPI
 InterlockedCompareExchangePointer (
-  IN OUT  VOID                      **Value,
-  IN      VOID                      *CompareValue,
-  IN      VOID                      *ExchangeValue
+  IN OUT  VOID                      *volatile  *Value,
+  IN      VOID                                 *CompareValue,
+  IN      VOID                                 *ExchangeValue
   )
 {
   UINT8  SizeOfValue;
 
-  SizeOfValue = (UINT8) sizeof (*Value);
+  SizeOfValue = (UINT8)sizeof (*Value);
 
   switch (SizeOfValue) {
     case sizeof (UINT32):
-      return (VOID*)(UINTN)InterlockedCompareExchange32 (
-                             (UINT32*)Value,
-                             (UINT32)(UINTN)CompareValue,
-                             (UINT32)(UINTN)ExchangeValue
-                             );
+      return (VOID *)(UINTN)InterlockedCompareExchange32 (
+                              (volatile UINT32 *)Value,
+                              (UINT32)(UINTN)CompareValue,
+                              (UINT32)(UINTN)ExchangeValue
+                              );
     case sizeof (UINT64):
-      return (VOID*)(UINTN)InterlockedCompareExchange64 (
-                             (UINT64*)Value,
-                             (UINT64)(UINTN)CompareValue,
-                             (UINT64)(UINTN)ExchangeValue
-                             );
+      return (VOID *)(UINTN)InterlockedCompareExchange64 (
+                              (volatile UINT64 *)Value,
+                              (UINT64)(UINTN)CompareValue,
+                              (UINT64)(UINTN)ExchangeValue
+                              );
     default:
       ASSERT (FALSE);
       return NULL;

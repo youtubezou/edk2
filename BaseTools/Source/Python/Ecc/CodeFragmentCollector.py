@@ -1,33 +1,29 @@
 ## @file
 # preprocess source file
 #
-#  Copyright (c) 2007 - 2014, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 ##
 # Import Modules
 #
 
+from __future__ import print_function
+from __future__ import absolute_import
 import re
 import Common.LongFilePathOs as os
 import sys
+import antlr4 as antlr
+from Ecc.CParser4.CLexer import CLexer
+from Ecc.CParser4.CParser import CParser
 
-import antlr3
-from CLexer import CLexer
-from CParser import CParser
 
-import FileProfile
-from CodeFragment import Comment
-from CodeFragment import PP_Directive
-from ParserWarning import Warning
+from Ecc import FileProfile
+from Ecc.CodeFragment import Comment
+from Ecc.CodeFragment import PP_Directive
+from Ecc.ParserWarning import Warning
 
 
 ##define T_CHAR_SPACE                ' '
@@ -46,7 +42,7 @@ from ParserWarning import Warning
 T_CHAR_BACKSLASH, T_CHAR_DOUBLE_QUOTE, T_CHAR_SINGLE_QUOTE, T_CHAR_STAR, T_CHAR_HASH) = \
 (' ', '\0', '\r', '\t', '\n', '/', '\\', '\"', '\'', '*', '#')
 
-SEPERATOR_TUPLE = ('=', '|', ',', '{', '}') 
+SEPERATOR_TUPLE = ('=', '|', ',', '{', '}')
 
 (T_COMMENT_TWO_SLASH, T_COMMENT_SLASH_STAR) = (0, 1)
 
@@ -58,7 +54,7 @@ SEPERATOR_TUPLE = ('=', '|', ',', '{', '}')
 #
 # GetNext*** procedures mean these procedures will get next token first, then make judgement.
 # Get*** procedures mean these procedures will make judgement on current token only.
-#        
+#
 class CodeFragmentCollector:
     ## The constructor
     #
@@ -71,43 +67,7 @@ class CodeFragmentCollector:
         self.FileName = FileName
         self.CurrentLineNumber = 1
         self.CurrentOffsetWithinLine = 0
-
-        self.__Token = ""
-        self.__SkippedChars = ""
-
-    ## __IsWhiteSpace() method
-    #
-    #   Whether char at current FileBufferPos is whitespace
-    #
-    #   @param  self        The object pointer
-    #   @param  Char        The char to test
-    #   @retval True        The char is a kind of white space
-    #   @retval False       The char is NOT a kind of white space
-    #
-    def __IsWhiteSpace(self, Char):
-        if Char in (T_CHAR_NULL, T_CHAR_CR, T_CHAR_SPACE, T_CHAR_TAB, T_CHAR_LF):
-            return True
-        else:
-            return False
-
-    ## __SkipWhiteSpace() method
-    #
-    #   Skip white spaces from current char, return number of chars skipped
-    #
-    #   @param  self        The object pointer
-    #   @retval Count       The number of chars skipped
-    #
-    def __SkipWhiteSpace(self):
-        Count = 0
-        while not self.__EndOfFile():
-            Count += 1
-            if self.__CurrentChar() in (T_CHAR_NULL, T_CHAR_CR, T_CHAR_LF, T_CHAR_SPACE, T_CHAR_TAB):
-                self.__SkippedChars += str(self.__CurrentChar())
-                self.__GetOneChar()
-
-            else:
-                Count = Count - 1
-                return Count
+        self.TokenReleaceList = []
 
     ## __EndOfFile() method
     #
@@ -122,7 +82,7 @@ class CodeFragmentCollector:
         SizeOfLastLine = NumberOfLines
         if NumberOfLines > 0:
             SizeOfLastLine = len(self.Profile.FileLinesList[-1])
-            
+
         if self.CurrentLineNumber == NumberOfLines and self.CurrentOffsetWithinLine >= SizeOfLastLine - 1:
             return True
         elif self.CurrentLineNumber > NumberOfLines:
@@ -130,21 +90,6 @@ class CodeFragmentCollector:
         else:
             return False
 
-    ## __EndOfLine() method
-    #
-    #   Judge current buffer pos is at line end
-    #
-    #   @param  self        The object pointer
-    #   @retval True        Current File buffer position is at line end
-    #   @retval False       Current File buffer position is NOT at line end
-    #
-    def __EndOfLine(self):
-        SizeOfCurrentLine = len(self.Profile.FileLinesList[self.CurrentLineNumber - 1])
-        if self.CurrentOffsetWithinLine >= SizeOfCurrentLine - 1:
-            return True
-        else:
-            return False
-    
     ## Rewind() method
     #
     #   Reset file data buffer to the initial state
@@ -154,32 +99,13 @@ class CodeFragmentCollector:
     def Rewind(self):
         self.CurrentLineNumber = 1
         self.CurrentOffsetWithinLine = 0
-    
-    ## __UndoOneChar() method
-    #
-    #   Go back one char in the file buffer
-    #
-    #   @param  self        The object pointer
-    #   @retval True        Successfully go back one char
-    #   @retval False       Not able to go back one char as file beginning reached
-    #    
-    def __UndoOneChar(self):
-        
-        if self.CurrentLineNumber == 1 and self.CurrentOffsetWithinLine == 0:
-            return False
-        elif self.CurrentOffsetWithinLine == 0:
-            self.CurrentLineNumber -= 1
-            self.CurrentOffsetWithinLine = len(self.__CurrentLine()) - 1
-        else:
-            self.CurrentOffsetWithinLine -= 1
-        return True
-        
+
     ## __GetOneChar() method
     #
     #   Move forward one char in the file buffer
     #
     #   @param  self        The object pointer
-    #  
+    #
     def __GetOneChar(self):
         if self.CurrentOffsetWithinLine == len(self.Profile.FileLinesList[self.CurrentLineNumber - 1]) - 1:
                 self.CurrentLineNumber += 1
@@ -193,13 +119,13 @@ class CodeFragmentCollector:
     #
     #   @param  self        The object pointer
     #   @retval Char        Current char
-    #  
+    #
     def __CurrentChar(self):
         CurrentChar = self.Profile.FileLinesList[self.CurrentLineNumber - 1][self.CurrentOffsetWithinLine]
 #        if CurrentChar > 255:
 #            raise Warning("Non-Ascii char found At Line %d, offset %d" % (self.CurrentLineNumber, self.CurrentOffsetWithinLine), self.FileName, self.CurrentLineNumber)
         return CurrentChar
-    
+
     ## __NextChar() method
     #
     #   Get the one char pass the char pointed to by the file buffer pointer
@@ -212,7 +138,7 @@ class CodeFragmentCollector:
             return self.Profile.FileLinesList[self.CurrentLineNumber][0]
         else:
             return self.Profile.FileLinesList[self.CurrentLineNumber - 1][self.CurrentOffsetWithinLine + 1]
-        
+
     ## __SetCurrentCharValue() method
     #
     #   Modify the value of current char
@@ -222,7 +148,7 @@ class CodeFragmentCollector:
     #
     def __SetCurrentCharValue(self, Value):
         self.Profile.FileLinesList[self.CurrentLineNumber - 1][self.CurrentOffsetWithinLine] = Value
-        
+
     ## __SetCharValue() method
     #
     #   Modify the value of current char
@@ -232,7 +158,7 @@ class CodeFragmentCollector:
     #
     def __SetCharValue(self, Line, Offset, Value):
         self.Profile.FileLinesList[Line - 1][Offset] = Value
-        
+
     ## __CurrentLine() method
     #
     #   Get the list that contains current line contents
@@ -242,33 +168,7 @@ class CodeFragmentCollector:
     #
     def __CurrentLine(self):
         return self.Profile.FileLinesList[self.CurrentLineNumber - 1]
-    
-    ## __InsertComma() method
-    #
-    #   Insert ',' to replace PP
-    #
-    #   @param  self        The object pointer
-    #   @retval List        current line contents
-    #
-    def __InsertComma(self, Line):
-        
-        
-        if self.Profile.FileLinesList[Line - 1][0] != T_CHAR_HASH:
-            BeforeHashPart = str(self.Profile.FileLinesList[Line - 1]).split(T_CHAR_HASH)[0]
-            if BeforeHashPart.rstrip().endswith(T_CHAR_COMMA) or BeforeHashPart.rstrip().endswith(';'):
-                return
-        
-        if Line - 2 >= 0 and str(self.Profile.FileLinesList[Line - 2]).rstrip().endswith(','):
-            return
-        
-        if Line - 2 >= 0 and str(self.Profile.FileLinesList[Line - 2]).rstrip().endswith(';'):
-            return
-        
-        if str(self.Profile.FileLinesList[Line]).lstrip().startswith(',') or str(self.Profile.FileLinesList[Line]).lstrip().startswith(';'):
-            return
-        
-        self.Profile.FileLinesList[Line - 1].insert(self.CurrentOffsetWithinLine, ',')
-        
+
     ## PreprocessFile() method
     #
     #   Preprocess file contents, replace comments with spaces.
@@ -277,7 +177,7 @@ class CodeFragmentCollector:
     #   !include statement should be expanded at the same FileLinesList[CurrentLineNumber - 1]
     #
     #   @param  self        The object pointer
-    #   
+    #
     def PreprocessFile(self):
 
         self.Rewind()
@@ -289,27 +189,27 @@ class CodeFragmentCollector:
         PPDirectiveObj = None
         # HashComment in quoted string " " is ignored.
         InString = False
-        InCharLiteral = False 
-        
+        InCharLiteral = False
+
         self.Profile.FileLinesList = [list(s) for s in self.Profile.FileLinesListFromFile]
         while not self.__EndOfFile():
-            
+
             if not InComment and self.__CurrentChar() == T_CHAR_DOUBLE_QUOTE:
                 InString = not InString
-                
+
             if not InComment and self.__CurrentChar() == T_CHAR_SINGLE_QUOTE:
                 InCharLiteral = not InCharLiteral
             # meet new line, then no longer in a comment for // and '#'
             if self.__CurrentChar() == T_CHAR_LF:
-                if HashComment and PPDirectiveObj != None:
+                if HashComment and PPDirectiveObj is not None:
                     if PPDirectiveObj.Content.rstrip(T_CHAR_CR).endswith(T_CHAR_BACKSLASH):
                         PPDirectiveObj.Content += T_CHAR_LF
                         PPExtend = True
                     else:
                         PPExtend = False
-                        
+
                 EndLinePos = (self.CurrentLineNumber, self.CurrentOffsetWithinLine)
-                
+
                 if InComment and DoubleSlashComment:
                     InComment = False
                     DoubleSlashComment = False
@@ -324,17 +224,17 @@ class CodeFragmentCollector:
                     PPDirectiveObj.EndPos = EndLinePos
                     FileProfile.PPDirectiveList.append(PPDirectiveObj)
                     PPDirectiveObj = None
-                
+
                 if InString or InCharLiteral:
                     CurrentLine = "".join(self.__CurrentLine())
                     if CurrentLine.rstrip(T_CHAR_LF).rstrip(T_CHAR_CR).endswith(T_CHAR_BACKSLASH):
                         SlashIndex = CurrentLine.rindex(T_CHAR_BACKSLASH)
                         self.__SetCharValue(self.CurrentLineNumber, SlashIndex, T_CHAR_SPACE)
-                
+
                 if InComment and not DoubleSlashComment and not HashComment:
                     CommentObj.Content += T_CHAR_LF
                 self.CurrentLineNumber += 1
-                self.CurrentOffsetWithinLine = 0    
+                self.CurrentOffsetWithinLine = 0
             # check for */ comment end
             elif InComment and not DoubleSlashComment and not HashComment and self.__CurrentChar() == T_CHAR_STAR and self.__NextChar() == T_CHAR_SLASH:
                 CommentObj.Content += self.__CurrentChar()
@@ -348,7 +248,7 @@ class CodeFragmentCollector:
                 self.__GetOneChar()
                 InComment = False
             # set comments to spaces
-            elif InComment:                   
+            elif InComment:
                 if HashComment:
                     # // follows hash PP directive
                     if self.__CurrentChar() == T_CHAR_SLASH and self.__NextChar() == T_CHAR_SLASH:
@@ -374,7 +274,7 @@ class CodeFragmentCollector:
             # check for '#' comment
             elif self.__CurrentChar() == T_CHAR_HASH and not InString and not InCharLiteral:
                 InComment = True
-                HashComment = True 
+                HashComment = True
                 PPDirectiveObj = PP_Directive('', (self.CurrentLineNumber, self.CurrentOffsetWithinLine), None)
             # check for /* comment start
             elif self.__CurrentChar() == T_CHAR_SLASH and self.__NextChar() == T_CHAR_STAR:
@@ -388,9 +288,9 @@ class CodeFragmentCollector:
                 InComment = True
             else:
                 self.__GetOneChar()
-        
+
         EndLinePos = (self.CurrentLineNumber, self.CurrentOffsetWithinLine)
-                
+
         if InComment and DoubleSlashComment:
             CommentObj.EndPos = EndLinePos
             FileProfile.CommentList.append(CommentObj)
@@ -411,27 +311,27 @@ class CodeFragmentCollector:
         PPDirectiveObj = None
         # HashComment in quoted string " " is ignored.
         InString = False
-        InCharLiteral = False 
+        InCharLiteral = False
 
         self.Profile.FileLinesList = [list(s) for s in self.Profile.FileLinesListFromFile]
         while not self.__EndOfFile():
-            
+
             if not InComment and self.__CurrentChar() == T_CHAR_DOUBLE_QUOTE:
                 InString = not InString
-                
+
             if not InComment and self.__CurrentChar() == T_CHAR_SINGLE_QUOTE:
                 InCharLiteral = not InCharLiteral
             # meet new line, then no longer in a comment for // and '#'
             if self.__CurrentChar() == T_CHAR_LF:
-                if HashComment and PPDirectiveObj != None:
+                if HashComment and PPDirectiveObj is not None:
                     if PPDirectiveObj.Content.rstrip(T_CHAR_CR).endswith(T_CHAR_BACKSLASH):
                         PPDirectiveObj.Content += T_CHAR_LF
                         PPExtend = True
                     else:
                         PPExtend = False
-                        
+
                 EndLinePos = (self.CurrentLineNumber, self.CurrentOffsetWithinLine)
-                
+
                 if InComment and DoubleSlashComment:
                     InComment = False
                     DoubleSlashComment = False
@@ -446,17 +346,17 @@ class CodeFragmentCollector:
                     PPDirectiveObj.EndPos = EndLinePos
                     FileProfile.PPDirectiveList.append(PPDirectiveObj)
                     PPDirectiveObj = None
-                
+
                 if InString or InCharLiteral:
                     CurrentLine = "".join(self.__CurrentLine())
                     if CurrentLine.rstrip(T_CHAR_LF).rstrip(T_CHAR_CR).endswith(T_CHAR_BACKSLASH):
                         SlashIndex = CurrentLine.rindex(T_CHAR_BACKSLASH)
                         self.__SetCharValue(self.CurrentLineNumber, SlashIndex, T_CHAR_SPACE)
-                
+
                 if InComment and not DoubleSlashComment and not HashComment:
                     CommentObj.Content += T_CHAR_LF
                 self.CurrentLineNumber += 1
-                self.CurrentOffsetWithinLine = 0    
+                self.CurrentOffsetWithinLine = 0
             # check for */ comment end
             elif InComment and not DoubleSlashComment and not HashComment and self.__CurrentChar() == T_CHAR_STAR and self.__NextChar() == T_CHAR_SLASH:
                 CommentObj.Content += self.__CurrentChar()
@@ -470,7 +370,7 @@ class CodeFragmentCollector:
                 self.__GetOneChar()
                 InComment = False
             # set comments to spaces
-            elif InComment:                   
+            elif InComment:
                 if HashComment:
                     # // follows hash PP directive
                     if self.__CurrentChar() == T_CHAR_SLASH and self.__NextChar() == T_CHAR_SLASH:
@@ -496,7 +396,7 @@ class CodeFragmentCollector:
             # check for '#' comment
             elif self.__CurrentChar() == T_CHAR_HASH and not InString and not InCharLiteral:
                 InComment = True
-                HashComment = True 
+                HashComment = True
                 PPDirectiveObj = PP_Directive('', (self.CurrentLineNumber, self.CurrentOffsetWithinLine), None)
             # check for /* comment start
             elif self.__CurrentChar() == T_CHAR_SLASH and self.__NextChar() == T_CHAR_STAR:
@@ -512,7 +412,7 @@ class CodeFragmentCollector:
                 self.__GetOneChar()
 
         EndLinePos = (self.CurrentLineNumber, self.CurrentOffsetWithinLine)
-                
+
         if InComment and DoubleSlashComment:
             CommentObj.EndPos = EndLinePos
             FileProfile.CommentList.append(CommentObj)
@@ -535,12 +435,15 @@ class CodeFragmentCollector:
         FileStringContents = ''
         for fileLine in self.Profile.FileLinesList:
             FileStringContents += fileLine
-        cStream = antlr3.StringStream(FileStringContents)
+        for Token in self.TokenReleaceList:
+            if Token in FileStringContents:
+                FileStringContents = FileStringContents.replace(Token, 'TOKENSTRING')
+        cStream = antlr.InputStream(FileStringContents)
         lexer = CLexer(cStream)
-        tStream = antlr3.CommonTokenStream(lexer)
+        tStream = antlr.CommonTokenStream(lexer)
         parser = CParser(tStream)
         parser.translation_unit()
-        
+
     def ParseFileWithClearedPPDirective(self):
         self.PreprocessFileWithClear()
         # restore from ListOfList to ListOfString
@@ -548,12 +451,12 @@ class CodeFragmentCollector:
         FileStringContents = ''
         for fileLine in self.Profile.FileLinesList:
             FileStringContents += fileLine
-        cStream = antlr3.StringStream(FileStringContents)
+        cStream = antlr.InputStream(FileStringContents)
         lexer = CLexer(cStream)
-        tStream = antlr3.CommonTokenStream(lexer)
+        tStream = antlr.CommonTokenStream(lexer)
         parser = CParser(tStream)
         parser.translation_unit()
-        
+
     def CleanFileProfileBuffer(self):
         FileProfile.CommentList = []
         FileProfile.PPDirectiveList = []
@@ -564,61 +467,61 @@ class CodeFragmentCollector:
         FileProfile.StructUnionDefinitionList = []
         FileProfile.TypedefDefinitionList = []
         FileProfile.FunctionCallingList = []
-        
+
     def PrintFragments(self):
-        
-        print '################# ' + self.FileName + '#####################'
-        
-        print '/****************************************/'
-        print '/*************** COMMENTS ***************/'
-        print '/****************************************/'
+
+        print('################# ' + self.FileName + '#####################')
+
+        print('/****************************************/')
+        print('/*************** COMMENTS ***************/')
+        print('/****************************************/')
         for comment in FileProfile.CommentList:
-            print str(comment.StartPos) + comment.Content
-        
-        print '/****************************************/'
-        print '/********* PREPROCESS DIRECTIVES ********/'
-        print '/****************************************/'
+            print(str(comment.StartPos) + comment.Content)
+
+        print('/****************************************/')
+        print('/********* PREPROCESS DIRECTIVES ********/')
+        print('/****************************************/')
         for pp in FileProfile.PPDirectiveList:
-            print str(pp.StartPos) + pp.Content
-        
-        print '/****************************************/'
-        print '/********* VARIABLE DECLARATIONS ********/'
-        print '/****************************************/'
+            print(str(pp.StartPos) + pp.Content)
+
+        print('/****************************************/')
+        print('/********* VARIABLE DECLARATIONS ********/')
+        print('/****************************************/')
         for var in FileProfile.VariableDeclarationList:
-            print str(var.StartPos) + var.Modifier + ' '+ var.Declarator
-            
-        print '/****************************************/'
-        print '/********* FUNCTION DEFINITIONS *********/'
-        print '/****************************************/'
+            print(str(var.StartPos) + var.Modifier + ' '+ var.Declarator)
+
+        print('/****************************************/')
+        print('/********* FUNCTION DEFINITIONS *********/')
+        print('/****************************************/')
         for func in FileProfile.FunctionDefinitionList:
-            print str(func.StartPos) + func.Modifier + ' '+ func.Declarator + ' ' + str(func.NamePos)
-            
-        print '/****************************************/'
-        print '/************ ENUMERATIONS **************/'
-        print '/****************************************/'
+            print(str(func.StartPos) + func.Modifier + ' '+ func.Declarator + ' ' + str(func.NamePos))
+
+        print('/****************************************/')
+        print('/************ ENUMERATIONS **************/')
+        print('/****************************************/')
         for enum in FileProfile.EnumerationDefinitionList:
-            print str(enum.StartPos) + enum.Content
-        
-        print '/****************************************/'
-        print '/*********** STRUCTS/UNIONS *************/'
-        print '/****************************************/'
+            print(str(enum.StartPos) + enum.Content)
+
+        print('/****************************************/')
+        print('/*********** STRUCTS/UNIONS *************/')
+        print('/****************************************/')
         for su in FileProfile.StructUnionDefinitionList:
-            print str(su.StartPos) + su.Content
-            
-        print '/****************************************/'
-        print '/********* PREDICATE EXPRESSIONS ********/'
-        print '/****************************************/'
+            print(str(su.StartPos) + su.Content)
+
+        print('/****************************************/')
+        print('/********* PREDICATE EXPRESSIONS ********/')
+        print('/****************************************/')
         for predexp in FileProfile.PredicateExpressionList:
-            print str(predexp.StartPos) + predexp.Content
-        
-        print '/****************************************/'    
-        print '/************** TYPEDEFS ****************/'
-        print '/****************************************/'
+            print(str(predexp.StartPos) + predexp.Content)
+
+        print('/****************************************/')
+        print('/************** TYPEDEFS ****************/')
+        print('/****************************************/')
         for typedef in FileProfile.TypedefDefinitionList:
-            print str(typedef.StartPos) + typedef.ToType
-        
+            print(str(typedef.StartPos) + typedef.ToType)
+
 if __name__ == "__main__":
-    
+
     collector = CodeFragmentCollector(sys.argv[1])
     collector.PreprocessFile()
-    print "For Test."
+    print("For Test.")

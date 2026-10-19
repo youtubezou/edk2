@@ -2,29 +2,22 @@
   This file declares Temporary RAM Done PPI.
   The PPI that provides a service to disable the use of Temporary RAM.
 
-  Copyright (c) 2013, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This PPI is introduced in PI Version 1.2.1.
 
 **/
 
-#ifndef __TEMPORARY_RAM_DONE_H__
-#define __TEMPORARY_RAM_DONE_H__
+#pragma once
 
 #define EFI_PEI_TEMPORARY_RAM_DONE_PPI_GUID \
   { 0xceab683c, 0xec56, 0x4a2d, { 0xa9, 0x6, 0x40, 0x53, 0xfa, 0x4e, 0x9c, 0x16 } }
 
 /**
   TemporaryRamDone() disables the use of Temporary RAM. If present, this service is invoked
-  by the PEI Foundation after the EFI_PEI_PERMANANT_MEMORY_INSTALLED_PPI is installed.
+  by the PEI Foundation after the EFI_PEI_PERMANENT_MEMORY_INSTALLED_PPI is installed.
 
   @retval EFI_SUCCESS           Use of Temporary RAM was disabled.
   @retval EFI_INVALID_PARAMETER Temporary RAM could not be disabled.
@@ -32,7 +25,7 @@
 **/
 typedef
 EFI_STATUS
-(EFIAPI * EFI_PEI_TEMPORARY_RAM_DONE) (
+(EFIAPI *EFI_PEI_TEMPORARY_RAM_DONE)(
   VOID
   );
 
@@ -44,9 +37,7 @@ EFI_STATUS
 /// Permanent RAM to be enabled and accessed at the same time with no side effects.
 ///
 typedef struct _EFI_PEI_TEMPORARY_RAM_DONE_PPI {
-  EFI_PEI_TEMPORARY_RAM_DONE TemporaryRamDone;
+  EFI_PEI_TEMPORARY_RAM_DONE    TemporaryRamDone;
 } EFI_PEI_TEMPORARY_RAM_DONE_PPI;
 
-extern EFI_GUID gEfiTemporaryRamDonePpiGuid;
-
-#endif
+extern EFI_GUID  gEfiTemporaryRamDonePpiGuid;

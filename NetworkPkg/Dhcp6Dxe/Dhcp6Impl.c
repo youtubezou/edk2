@@ -1,15 +1,9 @@
 /** @file
   This EFI_DHCP6_PROTOCOL interface implementation.
 
-  Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -19,12 +13,12 @@
 // Well-known multi-cast address defined in section-24.1 of rfc-3315
 //
 //   ALL_DHCP_Relay_Agents_and_Servers address: FF02::1:2
-//   ALL_DHCP_Servers address:                  FF05::1:3
 //
-EFI_IPv6_ADDRESS   mAllDhcpRelayAndServersAddress = {{0xFF, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2}};
-EFI_IPv6_ADDRESS   mAllDhcpServersAddress         = {{0xFF, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 3}};
+EFI_IPv6_ADDRESS  mAllDhcpRelayAndServersAddress = {
+  { 0xFF, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2 }
+};
 
-EFI_DHCP6_PROTOCOL gDhcp6ProtocolTemplate = {
+EFI_DHCP6_PROTOCOL  gDhcp6ProtocolTemplate = {
   EfiDhcp6GetModeData,
   EfiDhcp6Configure,
   EfiDhcp6Start,
@@ -69,13 +63,14 @@ EFI_DHCP6_PROTOCOL gDhcp6ProtocolTemplate = {
 EFI_STATUS
 EFIAPI
 EfiDhcp6Start (
-  IN EFI_DHCP6_PROTOCOL        *This
+  IN EFI_DHCP6_PROTOCOL  *This
   )
 {
-  EFI_STATUS                   Status;
-  EFI_TPL                      OldTpl;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
+  EFI_STATUS      Status;
+  EFI_TPL         OldTpl;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
+  EFI_STATUS      MediaStatus;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -100,7 +95,18 @@ EfiDhcp6Start (
     return EFI_ALREADY_STARTED;
   }
 
-  OldTpl           = gBS->RaiseTPL (TPL_CALLBACK);
+  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+
+  //
+  // Check Media Status.
+  //
+  MediaStatus = EFI_SUCCESS;
+  NetLibDetectMediaWaitTimeout (Service->Controller, DHCP_CHECK_MEDIA_WAITING_TIME, &MediaStatus);
+  if (MediaStatus != EFI_SUCCESS) {
+    Status = EFI_NO_MEDIA;
+    goto ON_ERROR;
+  }
+
   Instance->UdpSts = EFI_ALREADY_STARTED;
 
   //
@@ -115,7 +121,7 @@ EfiDhcp6Start (
   //
   // Register receive callback for the stateful exchange process.
   //
-  Status = UdpIoRecvDatagram(
+  Status = UdpIoRecvDatagram (
              Service->UdpIo,
              Dhcp6ReceivePacket,
              Service,
@@ -132,10 +138,10 @@ EfiDhcp6Start (
   // Poll udp out of the net tpl if synchronous call.
   //
   if (Instance->Config->IaInfoEvent == NULL) {
-
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Service->UdpIo->Protocol.Udp6->Poll (Service->UdpIo->Protocol.Udp6);
     }
+
     return Instance->UdpSts;
   }
 
@@ -146,7 +152,6 @@ ON_ERROR:
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
-
 
 /**
   Stops the DHCPv6 standard S.A.R.R. process.
@@ -166,14 +171,14 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 EfiDhcp6Stop (
-  IN EFI_DHCP6_PROTOCOL        *This
+  IN EFI_DHCP6_PROTOCOL  *This
   )
 {
-  EFI_TPL                      OldTpl;
-  EFI_STATUS                   Status;
-  EFI_UDP6_PROTOCOL            *Udp6;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
+  EFI_TPL            OldTpl;
+  EFI_STATUS         Status;
+  EFI_UDP6_PROTOCOL  *Udp6;
+  DHCP6_INSTANCE     *Instance;
+  DHCP6_SERVICE      *Service;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -196,10 +201,11 @@ EfiDhcp6Stop (
   //
   // No valid REPLY message received yet, cleanup this instance directly.
   //
-  if (Instance->IaCb.Ia->State == Dhcp6Init ||
-      Instance->IaCb.Ia->State == Dhcp6Selecting ||
-      Instance->IaCb.Ia->State == Dhcp6Requesting
-      ) {
+  if ((Instance->IaCb.Ia->State == Dhcp6Init) ||
+      (Instance->IaCb.Ia->State == Dhcp6Selecting) ||
+      (Instance->IaCb.Ia->State == Dhcp6Requesting)
+      )
+  {
     goto ON_EXIT;
   }
 
@@ -209,23 +215,24 @@ EfiDhcp6Stop (
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
 
   Instance->UdpSts = EFI_ALREADY_STARTED;
-  Status = Dhcp6SendReleaseMsg (Instance, Instance->IaCb.Ia);
+  Status           = Dhcp6SendReleaseMsg (Instance, Instance->IaCb.Ia);
   gBS->RestoreTPL (OldTpl);
   if (EFI_ERROR (Status)) {
     goto ON_EXIT;
   }
 
   //
-  // Poll udp out of the net tpl if synchoronus call.
+  // Poll udp out of the net tpl if synchronous call.
   //
   if (Instance->Config->IaInfoEvent == NULL) {
     ASSERT (Udp6 != NULL);
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Udp6->Poll (Udp6);
     }
+
     Status = Instance->UdpSts;
   }
-  
+
 ON_EXIT:
   //
   // Clean up the session data for the released Ia.
@@ -236,7 +243,6 @@ ON_EXIT:
 
   return Status;
 }
-
 
 /**
   Returns the current operating mode data for the Dhcp6 instance.
@@ -256,26 +262,26 @@ ON_EXIT:
 EFI_STATUS
 EFIAPI
 EfiDhcp6GetModeData (
-  IN  EFI_DHCP6_PROTOCOL       *This,
-  OUT EFI_DHCP6_MODE_DATA      *Dhcp6ModeData      OPTIONAL,
-  OUT EFI_DHCP6_CONFIG_DATA    *Dhcp6ConfigData    OPTIONAL
+  IN  EFI_DHCP6_PROTOCOL     *This,
+  OUT EFI_DHCP6_MODE_DATA    *Dhcp6ModeData      OPTIONAL,
+  OUT EFI_DHCP6_CONFIG_DATA  *Dhcp6ConfigData    OPTIONAL
   )
 {
-  EFI_TPL                      OldTpl;
-  EFI_DHCP6_IA                 *Ia;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
-  UINT32                       IaSize;
-  UINT32                       IdSize;
+  EFI_TPL         OldTpl;
+  EFI_DHCP6_IA    *Ia;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
+  UINT32          IaSize;
+  UINT32          IdSize;
 
-  if (This == NULL || (Dhcp6ModeData == NULL && Dhcp6ConfigData == NULL)) {
+  if ((This == NULL) || ((Dhcp6ModeData == NULL) && (Dhcp6ConfigData == NULL))) {
     return EFI_INVALID_PARAMETER;
   }
 
   Instance = DHCP6_INSTANCE_FROM_THIS (This);
   Service  = Instance->Service;
 
-  if (Instance->Config == NULL && Dhcp6ConfigData != NULL) {
+  if ((Instance->Config == NULL) && (Dhcp6ConfigData != NULL)) {
     return EFI_ACCESS_DENIED;
   }
 
@@ -287,7 +293,7 @@ EfiDhcp6GetModeData (
   // User needs a copy of instance config data.
   //
   if (Dhcp6ConfigData != NULL) {
-    ZeroMem (Dhcp6ConfigData, sizeof(EFI_DHCP6_CONFIG_DATA));
+    ZeroMem (Dhcp6ConfigData, sizeof (EFI_DHCP6_CONFIG_DATA));
     //
     // Duplicate config data, including all reference buffers.
     //
@@ -343,6 +349,7 @@ EfiDhcp6GetModeData (
         if (Dhcp6ModeData->Ia->ReplyPacket == NULL) {
           goto ON_ERROR;
         }
+
         CopyMem (
           Dhcp6ModeData->Ia->ReplyPacket,
           Ia->ReplyPacket,
@@ -361,14 +368,15 @@ ON_ERROR:
   if (Dhcp6ConfigData != NULL) {
     Dhcp6CleanupConfigData (Dhcp6ConfigData);
   }
+
   if (Dhcp6ModeData != NULL) {
     Dhcp6CleanupModeData (Dhcp6ModeData);
   }
+
   gBS->RestoreTPL (OldTpl);
 
   return EFI_OUT_OF_RESOURCES;
 }
-
 
 /**
   Initializes, changes, or resets the operational settings for the Dhcp6 instance.
@@ -401,17 +409,17 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 EfiDhcp6Configure (
-  IN EFI_DHCP6_PROTOCOL        *This,
-  IN EFI_DHCP6_CONFIG_DATA     *Dhcp6CfgData    OPTIONAL
+  IN EFI_DHCP6_PROTOCOL     *This,
+  IN EFI_DHCP6_CONFIG_DATA  *Dhcp6CfgData    OPTIONAL
   )
 {
-  EFI_TPL                      OldTpl;
-  EFI_STATUS                   Status;
-  LIST_ENTRY                   *Entry;
-  DHCP6_INSTANCE               *Other;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
-  UINTN                        Index;
+  EFI_TPL         OldTpl;
+  EFI_STATUS      Status;
+  LIST_ENTRY      *Entry;
+  DHCP6_INSTANCE  *Other;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
+  UINTN           Index;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -424,36 +432,40 @@ EfiDhcp6Configure (
   // Check the parameter of configure data.
   //
   if (Dhcp6CfgData != NULL) {
-    if (Dhcp6CfgData->OptionCount > 0 && Dhcp6CfgData->OptionList == NULL) {
+    if ((Dhcp6CfgData->OptionCount > 0) && (Dhcp6CfgData->OptionList == NULL)) {
       return EFI_INVALID_PARAMETER;
     }
+
     if (Dhcp6CfgData->OptionList != NULL) {
       for (Index = 0; Index < Dhcp6CfgData->OptionCount; Index++) {
-        if (Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptClientId ||
-            Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptRapidCommit ||
-            Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptReconfigureAccept ||
-            Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptIana ||
-            Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptIata
-            ) {
+        if ((Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptClientId) ||
+            (Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptRapidCommit) ||
+            (Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptReconfigureAccept) ||
+            (Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptIana) ||
+            (Dhcp6CfgData->OptionList[Index]->OpCode == Dhcp6OptIata)
+            )
+        {
           return EFI_INVALID_PARAMETER;
         }
       }
     }
 
-    if (Dhcp6CfgData->IaDescriptor.Type != EFI_DHCP6_IA_TYPE_NA &&
-        Dhcp6CfgData->IaDescriptor.Type != EFI_DHCP6_IA_TYPE_TA
-        ) {
+    if ((Dhcp6CfgData->IaDescriptor.Type != EFI_DHCP6_IA_TYPE_NA) &&
+        (Dhcp6CfgData->IaDescriptor.Type != EFI_DHCP6_IA_TYPE_TA)
+        )
+    {
       return EFI_INVALID_PARAMETER;
     }
 
-    if (Dhcp6CfgData->IaInfoEvent == NULL && Dhcp6CfgData->SolicitRetransmission == NULL) {
+    if ((Dhcp6CfgData->IaInfoEvent == NULL) && (Dhcp6CfgData->SolicitRetransmission == NULL)) {
       return EFI_INVALID_PARAMETER;
     }
 
-    if (Dhcp6CfgData->SolicitRetransmission != NULL &&
-        Dhcp6CfgData->SolicitRetransmission->Mrc == 0 &&
-        Dhcp6CfgData->SolicitRetransmission->Mrd == 0
-        ) {
+    if ((Dhcp6CfgData->SolicitRetransmission != NULL) &&
+        (Dhcp6CfgData->SolicitRetransmission->Mrc == 0) &&
+        (Dhcp6CfgData->SolicitRetransmission->Mrd == 0)
+        )
+    {
       return EFI_INVALID_PARAMETER;
     }
 
@@ -462,10 +474,11 @@ EfiDhcp6Configure (
     //
     NET_LIST_FOR_EACH (Entry, &Service->Child) {
       Other = NET_LIST_USER_STRUCT (Entry, DHCP6_INSTANCE, Link);
-      if (Other->IaCb.Ia != NULL &&
-          Other->IaCb.Ia->Descriptor.Type == Dhcp6CfgData->IaDescriptor.Type &&
-          Other->IaCb.Ia->Descriptor.IaId == Dhcp6CfgData->IaDescriptor.IaId
-          ) {
+      if ((Other->IaCb.Ia != NULL) &&
+          (Other->IaCb.Ia->Descriptor.Type == Dhcp6CfgData->IaDescriptor.Type) &&
+          (Other->IaCb.Ia->Descriptor.IaId == Dhcp6CfgData->IaDescriptor.IaId)
+          )
+      {
         return EFI_INVALID_PARAMETER;
       }
     }
@@ -492,7 +505,7 @@ EfiDhcp6Configure (
     }
 
     Status = Dhcp6CopyConfigData (Instance->Config, Dhcp6CfgData);
-    if (EFI_ERROR(Status)) {
+    if (EFI_ERROR (Status)) {
       FreePool (Instance->Config);
       gBS->RestoreTPL (OldTpl);
       return EFI_OUT_OF_RESOURCES;
@@ -502,21 +515,20 @@ EfiDhcp6Configure (
     // Initialize the Ia descriptor from the config data, and leave the other
     // fields of the Ia as default value 0.
     //
-    Instance->IaCb.Ia = AllocateZeroPool (sizeof(EFI_DHCP6_IA));
+    Instance->IaCb.Ia = AllocateZeroPool (sizeof (EFI_DHCP6_IA));
     if (Instance->IaCb.Ia == NULL) {
       Dhcp6CleanupConfigData (Instance->Config);
       FreePool (Instance->Config);
       gBS->RestoreTPL (OldTpl);
       return EFI_OUT_OF_RESOURCES;
     }
+
     CopyMem (
       &Instance->IaCb.Ia->Descriptor,
       &Dhcp6CfgData->IaDescriptor,
-      sizeof(EFI_DHCP6_IA_DESCRIPTOR)
+      sizeof (EFI_DHCP6_IA_DESCRIPTOR)
       );
-
   } else {
-
     if (Instance->Config == NULL) {
       ASSERT (Instance->IaCb.Ia == NULL);
       gBS->RestoreTPL (OldTpl);
@@ -543,7 +555,6 @@ EfiDhcp6Configure (
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Request configuration information without the assignment of any
@@ -600,29 +611,29 @@ EfiDhcp6InfoRequest (
   IN VOID                      *CallbackContext OPTIONAL
   )
 {
-  EFI_STATUS                   Status;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
-  UINTN                        Index;
-  EFI_EVENT                    Timer;
-  EFI_STATUS                   TimerStatus;
-  UINTN                        GetMappingTimeOut;
+  EFI_STATUS      Status;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
+  UINTN           Index;
+  EFI_EVENT       Timer;
+  EFI_STATUS      TimerStatus;
+  UINTN           GetMappingTimeOut;
 
-  if (This == NULL || OptionRequest == NULL || Retransmission == NULL || ReplyCallback == NULL) {
+  if ((This == NULL) || (OptionRequest == NULL) || (Retransmission == NULL) || (ReplyCallback == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Retransmission != NULL && Retransmission->Mrc == 0 && Retransmission->Mrd == 0) {
+  if ((Retransmission != NULL) && (Retransmission->Mrc == 0) && (Retransmission->Mrd == 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (OptionCount > 0 && OptionList == NULL) {
+  if ((OptionCount > 0) && (OptionList == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   if (OptionList != NULL) {
     for (Index = 0; Index < OptionCount; Index++) {
-      if (OptionList[Index]->OpCode == Dhcp6OptClientId || OptionList[Index]->OpCode == Dhcp6OptRequestOption) {
+      if ((OptionList[Index]->OpCode == Dhcp6OptClientId) || (OptionList[Index]->OpCode == Dhcp6OptRequestOption)) {
         return EFI_INVALID_PARAMETER;
       }
     }
@@ -647,8 +658,8 @@ EfiDhcp6InfoRequest (
     // The link local address is not ready, wait for some time and restart
     // the DHCP6 information request process.
     //
-    Status = Dhcp6GetMappingTimeOut(Service->Ip6Cfg, &GetMappingTimeOut);
-    if (EFI_ERROR(Status)) {
+    Status = Dhcp6GetMappingTimeOut (Service->Ip6Cfg, &GetMappingTimeOut);
+    if (EFI_ERROR (Status)) {
       return Status;
     }
 
@@ -666,7 +677,7 @@ EfiDhcp6InfoRequest (
       return Status;
     }
 
-    do {  
+    do {
       TimerStatus = gBS->CheckEvent (Timer);
       if (!EFI_ERROR (TimerStatus)) {
         Status = Dhcp6StartInfoRequest (
@@ -682,27 +693,27 @@ EfiDhcp6InfoRequest (
                    );
       }
     } while (TimerStatus == EFI_NOT_READY);
-    
+
     gBS->CloseEvent (Timer);
   }
+
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   //
-  // Poll udp out of the net tpl if synchoronus call.
+  // Poll udp out of the net tpl if synchronous call.
   //
   if (TimeoutEvent == NULL) {
-
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Service->UdpIo->Protocol.Udp6->Poll (Service->UdpIo->Protocol.Udp6);
     }
+
     return Instance->UdpSts;
   }
 
   return EFI_SUCCESS;
 }
-
 
 /**
   Manually extend the valid and preferred lifetimes for the IPv6 addresses
@@ -752,14 +763,14 @@ EfiDhcp6InfoRequest (
 EFI_STATUS
 EFIAPI
 EfiDhcp6RenewRebind (
-  IN EFI_DHCP6_PROTOCOL        *This,
-  IN BOOLEAN                   RebindRequest
+  IN EFI_DHCP6_PROTOCOL  *This,
+  IN BOOLEAN             RebindRequest
   )
 {
-  EFI_STATUS                   Status;
-  EFI_TPL                      OldTpl;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
+  EFI_STATUS      Status;
+  EFI_TPL         OldTpl;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -780,9 +791,10 @@ EfiDhcp6RenewRebind (
   //
   // The instance has already entered renewing or rebinding state.
   //
-  if ((Instance->IaCb.Ia->State == Dhcp6Rebinding && RebindRequest) ||
-      (Instance->IaCb.Ia->State == Dhcp6Renewing && !RebindRequest)
-      ) {
+  if (((Instance->IaCb.Ia->State == Dhcp6Rebinding) && RebindRequest) ||
+      ((Instance->IaCb.Ia->State == Dhcp6Renewing) && !RebindRequest)
+      )
+  {
     return EFI_ALREADY_STARTED;
   }
 
@@ -805,7 +817,7 @@ EfiDhcp6RenewRebind (
   //
   // Register receive callback for the stateful exchange process.
   //
-  Status = UdpIoRecvDatagram(
+  Status = UdpIoRecvDatagram (
              Service->UdpIo,
              Dhcp6ReceivePacket,
              Service,
@@ -819,13 +831,13 @@ EfiDhcp6RenewRebind (
   gBS->RestoreTPL (OldTpl);
 
   //
-  // Poll udp out of the net tpl if synchoronus call.
+  // Poll udp out of the net tpl if synchronous call.
   //
   if (Instance->Config->IaInfoEvent == NULL) {
-
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Service->UdpIo->Protocol.Udp6->Poll (Service->UdpIo->Protocol.Udp6);
     }
+
     return Instance->UdpSts;
   }
 
@@ -836,7 +848,6 @@ ON_ERROR:
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
-
 
 /**
   Inform that one or more addresses assigned by a server are already
@@ -873,18 +884,18 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 EfiDhcp6Decline (
-  IN EFI_DHCP6_PROTOCOL        *This,
-  IN UINT32                    AddressCount,
-  IN EFI_IPv6_ADDRESS          *Addresses
+  IN EFI_DHCP6_PROTOCOL  *This,
+  IN UINT32              AddressCount,
+  IN EFI_IPv6_ADDRESS    *Addresses
   )
 {
-  EFI_STATUS                   Status;
-  EFI_TPL                      OldTpl;
-  EFI_DHCP6_IA                 *DecIa;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
+  EFI_STATUS      Status;
+  EFI_TPL         OldTpl;
+  EFI_DHCP6_IA    *DecIa;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
 
-  if (This == NULL || AddressCount == 0 || Addresses == NULL) {
+  if ((This == NULL) || (AddressCount == 0) || (Addresses == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -909,7 +920,7 @@ EfiDhcp6Decline (
   //
   Status = Dhcp6CheckAddress (Instance->IaCb.Ia, AddressCount, Addresses);
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -939,7 +950,7 @@ EfiDhcp6Decline (
   //
   // Register receive callback for the stateful exchange process.
   //
-  Status = UdpIoRecvDatagram(
+  Status = UdpIoRecvDatagram (
              Service->UdpIo,
              Dhcp6ReceivePacket,
              Service,
@@ -954,13 +965,13 @@ EfiDhcp6Decline (
   gBS->RestoreTPL (OldTpl);
 
   //
-  // Poll udp out of the net tpl if synchoronus call.
+  // Poll udp out of the net tpl if synchronous call.
   //
   if (Instance->Config->IaInfoEvent == NULL) {
-
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Service->UdpIo->Protocol.Udp6->Poll (Service->UdpIo->Protocol.Udp6);
     }
+
     return Instance->UdpSts;
   }
 
@@ -971,11 +982,11 @@ ON_ERROR:
   if (DecIa != NULL) {
     FreePool (DecIa);
   }
+
   gBS->RestoreTPL (OldTpl);
 
   return Status;
 }
-
 
 /**
   Release one or more addresses associated with the configured Ia
@@ -1014,18 +1025,18 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 EfiDhcp6Release (
-  IN EFI_DHCP6_PROTOCOL        *This,
-  IN UINT32                    AddressCount,
-  IN EFI_IPv6_ADDRESS          *Addresses
+  IN EFI_DHCP6_PROTOCOL  *This,
+  IN UINT32              AddressCount,
+  IN EFI_IPv6_ADDRESS    *Addresses
   )
 {
-  EFI_STATUS                   Status;
-  EFI_TPL                      OldTpl;
-  EFI_DHCP6_IA                 *RelIa;
-  DHCP6_INSTANCE               *Instance;
-  DHCP6_SERVICE                *Service;
+  EFI_STATUS      Status;
+  EFI_TPL         OldTpl;
+  EFI_DHCP6_IA    *RelIa;
+  DHCP6_INSTANCE  *Instance;
+  DHCP6_SERVICE   *Service;
 
-  if (This == NULL || (AddressCount != 0 && Addresses == NULL)) {
+  if ((This == NULL) || ((AddressCount != 0) && (Addresses == NULL))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1050,7 +1061,7 @@ EfiDhcp6Release (
   //
   Status = Dhcp6CheckAddress (Instance->IaCb.Ia, AddressCount, Addresses);
 
-  if (EFI_ERROR(Status)) {
+  if (EFI_ERROR (Status)) {
     return Status;
   }
 
@@ -1080,7 +1091,7 @@ EfiDhcp6Release (
   //
   // Register receive callback for the stateful exchange process.
   //
-  Status = UdpIoRecvDatagram(
+  Status = UdpIoRecvDatagram (
              Service->UdpIo,
              Dhcp6ReceivePacket,
              Service,
@@ -1095,12 +1106,13 @@ EfiDhcp6Release (
   gBS->RestoreTPL (OldTpl);
 
   //
-  // Poll udp out of the net tpl if synchoronus call.
+  // Poll udp out of the net tpl if synchronous call.
   //
   if (Instance->Config->IaInfoEvent == NULL) {
     while (Instance->UdpSts == EFI_ALREADY_STARTED) {
       Service->UdpIo->Protocol.Udp6->Poll (Service->UdpIo->Protocol.Udp6);
     }
+
     return Instance->UdpSts;
   }
 
@@ -1111,11 +1123,11 @@ ON_ERROR:
   if (RelIa != NULL) {
     FreePool (RelIa);
   }
+
   gBS->RestoreTPL (OldTpl);
 
   return Status;
 }
-
 
 /**
   Parse the option data in the Dhcp6 packet.
@@ -1142,21 +1154,21 @@ EfiDhcp6Parse (
   OUT EFI_DHCP6_PACKET_OPTION  *PacketOptionList[]  OPTIONAL
   )
 {
-  UINT32                       OptCnt;
-  UINT32                       OptLen;
-  UINT16                       DataLen;
-  UINT8                        *Start;
-  UINT8                        *End;
+  UINT32  OptCnt;
+  UINT32  OptLen;
+  UINT16  DataLen;
+  UINT8   *Start;
+  UINT8   *End;
 
-  if (This == NULL || Packet == NULL || OptionCount == NULL) {
+  if ((This == NULL) || (Packet == NULL) || (OptionCount == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (*OptionCount != 0 && PacketOptionList == NULL) {
+  if ((*OptionCount != 0) && (PacketOptionList == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if (Packet->Length > Packet->Size || Packet->Length < sizeof (EFI_DHCP6_HEADER)) {
+  if ((Packet->Length > Packet->Size) || (Packet->Length < sizeof (EFI_DHCP6_HEADER))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1181,7 +1193,7 @@ EfiDhcp6Parse (
   // Calculate the number of option in the packet.
   //
   while (Start < End) {
-    DataLen = ((EFI_DHCP6_PACKET_OPTION *) Start)->OpLen;
+    DataLen = ((EFI_DHCP6_PACKET_OPTION *)Start)->OpLen;
     Start  += (NTOHS (DataLen) + 4);
     OptCnt++;
   }
@@ -1204,13 +1216,11 @@ EfiDhcp6Parse (
   Start  = Packet->Dhcp6.Option;
 
   while (Start < End) {
-
-    PacketOptionList[OptCnt] = (EFI_DHCP6_PACKET_OPTION *) Start;
-    DataLen = ((EFI_DHCP6_PACKET_OPTION *) Start)->OpLen;
-    Start  += (NTOHS (DataLen) + 4);
+    PacketOptionList[OptCnt] = (EFI_DHCP6_PACKET_OPTION *)Start;
+    DataLen                  = ((EFI_DHCP6_PACKET_OPTION *)Start)->OpLen;
+    Start                   += (NTOHS (DataLen) + 4);
     OptCnt++;
   }
 
   return EFI_SUCCESS;
 }
-

@@ -2,13 +2,7 @@
   Implement TPM1.2 PCR related commands.
 
 Copyright (c) 2016, Intel Corporation. All rights reserved. <BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,14 +16,14 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #pragma pack(1)
 
 typedef struct {
-  TPM_RQU_COMMAND_HDR   Hdr;
-  TPM_PCRINDEX          PcrIndex;
-  TPM_DIGEST            TpmDigest;
+  TPM_RQU_COMMAND_HDR    Hdr;
+  TPM_PCRINDEX           PcrIndex;
+  TPM_DIGEST             TpmDigest;
 } TPM_CMD_EXTEND;
 
 typedef struct {
-  TPM_RSP_COMMAND_HDR   Hdr;
-  TPM_DIGEST            TpmDigest;
+  TPM_RSP_COMMAND_HDR    Hdr;
+  TPM_DIGEST             TpmDigest;
 } TPM_RSP_EXTEND;
 
 #pragma pack()
@@ -74,8 +68,8 @@ Tpm12Extend (
     return Status;
   }
 
-  if (SwapBytes32(Response.Hdr.returnCode) != TPM_SUCCESS) {
-    DEBUG ((EFI_D_ERROR, "Tpm12Extend: Response Code error! 0x%08x\r\n", SwapBytes32(Response.Hdr.returnCode)));
+  if (SwapBytes32 (Response.Hdr.returnCode) != TPM_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "Tpm12Extend: Response Code error! 0x%08x\r\n", SwapBytes32 (Response.Hdr.returnCode)));
     return EFI_DEVICE_ERROR;
   }
 

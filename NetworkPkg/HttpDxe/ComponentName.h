@@ -2,18 +2,11 @@
   Header file for implementation of UEFI Component Name(2) protocol.
 
 Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_HTTP_COMPONENT_NAME_H__
-#define __EFI_HTTP_COMPONENT_NAME_H__
+#pragma once
 
 /**
   Retrieves a Unicode string that is the user-readable name of the EFI Driver.
@@ -94,5 +87,3 @@ HttpDxeComponentNameGetControllerName (
   IN  CHAR8                         *Language,
   OUT CHAR16                        **ControllerName
   );
-
-#endif

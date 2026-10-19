@@ -1,13 +1,7 @@
 /**@file
 
 Copyright (c) 2006 - 2007, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -25,20 +19,20 @@ Abstract:
 EFI_STATUS
 EFIAPI
 EmuBlockIoDriverDiagnosticsRunDiagnostics (
-  IN  EFI_DRIVER_DIAGNOSTICS_PROTOCOL               *This,
-  IN  EFI_HANDLE                                    ControllerHandle,
-  IN  EFI_HANDLE                                    ChildHandle  OPTIONAL,
-  IN  EFI_DRIVER_DIAGNOSTIC_TYPE                    DiagnosticType,
-  IN  CHAR8                                         *Language,
-  OUT EFI_GUID                                      **ErrorType,
-  OUT UINTN                                         *BufferSize,
-  OUT CHAR16                                        **Buffer
+  IN  EFI_DRIVER_DIAGNOSTICS_PROTOCOL  *This,
+  IN  EFI_HANDLE                       ControllerHandle,
+  IN  EFI_HANDLE                       ChildHandle  OPTIONAL,
+  IN  EFI_DRIVER_DIAGNOSTIC_TYPE       DiagnosticType,
+  IN  CHAR8                            *Language,
+  OUT EFI_GUID                         **ErrorType,
+  OUT UINTN                            *BufferSize,
+  OUT CHAR16                           **Buffer
   );
 
 //
 // EFI Driver Diagnostics Protocol
 //
-EFI_DRIVER_DIAGNOSTICS_PROTOCOL gEmuBlockIoDriverDiagnostics = {
+EFI_DRIVER_DIAGNOSTICS_PROTOCOL  gEmuBlockIoDriverDiagnostics = {
   EmuBlockIoDriverDiagnosticsRunDiagnostics,
   "eng"
 };
@@ -46,23 +40,24 @@ EFI_DRIVER_DIAGNOSTICS_PROTOCOL gEmuBlockIoDriverDiagnostics = {
 //
 // EFI Driver Diagnostics 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_DRIVER_DIAGNOSTICS2_PROTOCOL gEmuBlockIoDriverDiagnostics2 = {
-  (EFI_DRIVER_DIAGNOSTICS2_RUN_DIAGNOSTICS) EmuBlockIoDriverDiagnosticsRunDiagnostics,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_DRIVER_DIAGNOSTICS2_PROTOCOL  gEmuBlockIoDriverDiagnostics2 = {
+  (EFI_DRIVER_DIAGNOSTICS2_RUN_DIAGNOSTICS)EmuBlockIoDriverDiagnosticsRunDiagnostics,
   "en"
 };
 
 EFI_STATUS
 EFIAPI
 EmuBlockIoDriverDiagnosticsRunDiagnostics (
-  IN  EFI_DRIVER_DIAGNOSTICS_PROTOCOL               *This,
-  IN  EFI_HANDLE                                    ControllerHandle,
-  IN  EFI_HANDLE                                    ChildHandle  OPTIONAL,
-  IN  EFI_DRIVER_DIAGNOSTIC_TYPE                    DiagnosticType,
-  IN  CHAR8                                         *Language,
-  OUT EFI_GUID                                      **ErrorType,
-  OUT UINTN                                         *BufferSize,
-  OUT CHAR16                                        **Buffer
+  IN  EFI_DRIVER_DIAGNOSTICS_PROTOCOL  *This,
+  IN  EFI_HANDLE                       ControllerHandle,
+  IN  EFI_HANDLE                       ChildHandle  OPTIONAL,
+  IN  EFI_DRIVER_DIAGNOSTIC_TYPE       DiagnosticType,
+  IN  CHAR8                            *Language,
+  OUT EFI_GUID                         **ErrorType,
+  OUT UINTN                            *BufferSize,
+  OUT CHAR16                           **Buffer
   )
+
 /*++
 
   Routine Description:
@@ -123,24 +118,24 @@ EmuBlockIoDriverDiagnosticsRunDiagnostics (
 
 --*/
 {
-  EFI_STATUS            Status;
-  EFI_BLOCK_IO_PROTOCOL *BlockIo;
-  CHAR8                 *SupportedLanguages;
-  BOOLEAN               Iso639Language;
-  BOOLEAN               Found;
-  UINTN                 Index;
+  EFI_STATUS             Status;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  CHAR8                  *SupportedLanguages;
+  BOOLEAN                Iso639Language;
+  BOOLEAN                Found;
+  UINTN                  Index;
 
-  if (Language         == NULL ||
-      ErrorType        == NULL ||
-      Buffer           == NULL ||
-      ControllerHandle == NULL ||
-      BufferSize       == NULL) {
-
+  if ((Language         == NULL) ||
+      (ErrorType        == NULL) ||
+      (Buffer           == NULL) ||
+      (ControllerHandle == NULL) ||
+      (BufferSize       == NULL))
+  {
     return EFI_INVALID_PARAMETER;
   }
 
   SupportedLanguages = This->SupportedLanguages;
-  Iso639Language = (BOOLEAN)(This == &gEmuBlockIoDriverDiagnostics);
+  Iso639Language     = (BOOLEAN)(This == &gEmuBlockIoDriverDiagnostics);
   //
   // Make sure Language is in the set of Supported Languages
   //
@@ -149,19 +144,25 @@ EmuBlockIoDriverDiagnosticsRunDiagnostics (
     if (Iso639Language) {
       if (CompareMem (Language, SupportedLanguages, 3) == 0) {
         Found = TRUE;
-      break;
-    }
+        break;
+      }
+
       SupportedLanguages += 3;
     } else {
-      for (Index = 0; SupportedLanguages[Index] != 0 && SupportedLanguages[Index] != ';'; Index++);
-      if ((AsciiStrnCmp(SupportedLanguages, Language, Index) == 0) && (Language[Index] == 0)) {
+      for (Index = 0; SupportedLanguages[Index] != 0 && SupportedLanguages[Index] != ';'; Index++) {
+      }
+
+      if ((AsciiStrnCmp (SupportedLanguages, Language, Index) == 0) && (Language[Index] == 0)) {
         Found = TRUE;
         break;
-  }
+      }
+
       SupportedLanguages += Index;
-      for (; *SupportedLanguages != 0 && *SupportedLanguages == ';'; SupportedLanguages++);
+      for ( ; *SupportedLanguages != 0 && *SupportedLanguages == ';'; SupportedLanguages++) {
+      }
     }
   }
+
   //
   // If Language is not a member of SupportedLanguages, then return EFI_UNSUPPORTED
   //
@@ -174,7 +175,7 @@ EmuBlockIoDriverDiagnosticsRunDiagnostics (
   if (DiagnosticType != EfiDriverDiagnosticTypeStandard) {
     *ErrorType  = &gEfiBlockIoProtocolGuid;
     *BufferSize = 0x60;
-    Buffer = AllocatePool ((UINTN) (*BufferSize));
+    Buffer      = AllocatePool ((UINTN)(*BufferSize));
     CopyMem (*Buffer, L"Windows Block I/O Driver Diagnostics Failed\n", *BufferSize);
     return EFI_DEVICE_ERROR;
   }
@@ -200,11 +201,11 @@ EmuBlockIoDriverDiagnosticsRunDiagnostics (
 
   if (!EFI_ERROR (Status)) {
     gBS->CloseProtocol (
-          ControllerHandle,
-          &gEmuIoThunkProtocolGuid,
-          gEmuBlockIoDriverBinding.DriverBindingHandle,
-          ControllerHandle
-          );
+           ControllerHandle,
+           &gEmuIoThunkProtocolGuid,
+           gEmuBlockIoDriverBinding.DriverBindingHandle,
+           ControllerHandle
+           );
 
     return EFI_UNSUPPORTED;
   }

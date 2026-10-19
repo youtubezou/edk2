@@ -2,13 +2,7 @@
   Implementation of various string and line routines.
 
   Copyright (c) 2005 - 2011, Intel Corporation. All rights reserved. <BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -25,10 +19,10 @@
 **/
 EFI_EDITOR_LINE *
 LineDup (
-  IN  EFI_EDITOR_LINE *Src
+  IN  EFI_EDITOR_LINE  *Src
   )
 {
-  EFI_EDITOR_LINE *Dest;
+  EFI_EDITOR_LINE  *Dest;
 
   //
   // allocate for the line structure
@@ -37,6 +31,7 @@ LineDup (
   if (Dest == NULL) {
     return NULL;
   }
+
   //
   // allocate and set the line buffer
   //
@@ -65,26 +60,16 @@ LineDup (
 **/
 VOID
 LineFree (
-  IN  EFI_EDITOR_LINE *Src
+  IN  EFI_EDITOR_LINE  *Src
   )
 {
   if (Src == NULL) {
-    return ;
+    return;
   }
+
   //
   // free the line buffer and then the line structure itself
   //
   SHELL_FREE_NON_NULL (Src->Buffer);
   SHELL_FREE_NON_NULL (Src);
-
 }
-
-
-
-
-
-
-
-
-
-

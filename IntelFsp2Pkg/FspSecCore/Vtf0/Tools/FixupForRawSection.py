@@ -3,26 +3,24 @@
 #
 #  Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 import sys
 
+if len(sys.argv) < 2:
+    print('Usage: %s <raw_file>' % sys.argv[0], file=sys.stderr)
+    sys.exit(1)
+
 filename = sys.argv[1]
 
-if filename.lower().find('ia32') >= 0:
-    d = open(sys.argv[1], 'rb').read()
+if 'ia32' in filename.lower():
+    d = open(filename, 'rb').read()
     c = ((len(d) + 4 + 7) & ~7) - 4
     if c > len(d):
         c -= len(d)
-        f = open(sys.argv[1], 'wb')
-        f.write('\x90' * c)
+        f = open(filename, 'wb')
+        f.write(b'\x90' * c)
         f.write(d)
         f.close()
 else:
@@ -42,14 +40,14 @@ else:
 
     def NopAlign4k(s):
         c = ((len(s) + 0xfff) & ~0xfff) - len(s)
-        return ('\x90' * c) + s
+        return (b'\x90' * c) + s
 
     def PageDirectoryEntries4GbOf2MbPages(baseAddress):
 
-        s = ''
+        s = b''
         for i in range(0x800):
             i = (
-                    baseAddress + long(i << 21) +
+                    baseAddress + (i << 21) +
                     PAGE_2M_MBO +
                     PAGE_CACHE_DISABLE +
                     PAGE_ACCESSED +
@@ -57,11 +55,11 @@ else:
                     PAGE_READ_WRITE +
                     PAGE_PRESENT
                 )
-            s += pack('Q', i)
+            s += pack('<Q', i)
         return s
 
     def PageDirectoryPointerTable4GbOf2MbPages(pdeBase):
-        s = ''
+        s = b''
         for i in range(0x200):
             i = (
                     pdeBase +
@@ -71,11 +69,11 @@ else:
                     PAGE_READ_WRITE +
                     PAGE_PRESENT
                 )
-            s += pack('Q', i)
+            s += pack('<Q', i)
         return s
 
     def PageMapLevel4Table4GbOf2MbPages(pdptBase):
-        s = ''
+        s = b''
         for i in range(0x200):
             i = (
                     pdptBase +
@@ -85,11 +83,11 @@ else:
                     PAGE_READ_WRITE +
                     PAGE_PRESENT
                 )
-            s += pack('Q', i)
+            s += pack('<Q', i)
         return s
 
     def First4GbPageEntries(topAddress):
-        PDE = PageDirectoryEntries4GbOf2MbPages(0L)
+        PDE = PageDirectoryEntries4GbOf2MbPages(0)
         pml4tBase = topAddress - 0x1000
         pdptBase = pml4tBase - 0x1000
         pdeBase = pdptBase - len(PDE)
@@ -98,11 +96,11 @@ else:
         return PDE + PDPT + PML4T
 
     def AlignAndAddPageTables():
-        d = open(sys.argv[1], 'rb').read()
+        d = open(filename, 'rb').read()
         code = NopAlign4k(d)
         topAddress = 0x100000000 - len(code)
-        d = ('\x90' * 4) + First4GbPageEntries(topAddress) + code
-        f = open(sys.argv[1], 'wb')
+        d = (b'\x90' * 4) + First4GbPageEntries(topAddress) + code
+        f = open(filename, 'wb')
         f.write(d)
         f.close()
 

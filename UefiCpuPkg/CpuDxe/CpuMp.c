@@ -1,22 +1,16 @@
 /** @file
   CPU DXE Module to produce CPU MP Protocol.
 
-  Copyright (c) 2008 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2008 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "CpuDxe.h"
 #include "CpuMp.h"
 
-EFI_HANDLE     mMpServiceHandle       = NULL;
-UINTN          mNumberOfProcessors    = 1;
+EFI_HANDLE  mMpServiceHandle    = NULL;
+UINTN       mNumberOfProcessors = 1;
 
 EFI_MP_SERVICES_PROTOCOL  mMpServicesTemplate = {
   GetNumberOfProcessors,
@@ -170,7 +164,7 @@ GetProcessorInfo (
        and releases the BSP to continue with other tasks.
     -# The caller can use the CheckEvent() and WaitForEvent() services to check
        the state of the WaitEvent created in step 1.
-    -# When the APs complete their task or TimeoutInMicroSecondss expires, the MP
+    -# When the APs complete their task or TimeoutInMicroSeconds expires, the MP
        Service signals WaitEvent by calling the EFI SignalEvent() function. If
        FailedCpuList is not NULL, its content is available when WaitEvent is
        signaled. If all APs returned from Procedure prior to the timeout, then
@@ -287,7 +281,7 @@ StartupAllAPs (
   This function is used to dispatch one enabled AP to the function specified by
   Procedure passing in the argument specified by ProcedureArgument.  If WaitEvent
   is NULL, execution is in blocking mode. The BSP waits until the AP finishes or
-  TimeoutInMicroSecondss expires. Otherwise, execution is in non-blocking mode.
+  TimeoutInMicroSeconds expires. Otherwise, execution is in non-blocking mode.
   BSP proceeds to the next task without waiting for the AP. If a non-blocking mode
   is requested after the UEFI Event EFI_EVENT_GROUP_READY_TO_BOOT is signaled,
   then EFI_UNSUPPORTED must be returned.
@@ -322,7 +316,7 @@ StartupAllAPs (
                                       EFI_EVENT is defined in CreateEvent() in
                                       the Unified Extensible Firmware Interface
                                       Specification.
-  @param[in]  TimeoutInMicrosecsond   Indicates the time limit in microseconds for
+  @param[in]  TimeoutInMicroseconds   Indicates the time limit in microseconds for
                                       this AP to finish this Procedure, either for
                                       blocking or non-blocking mode. Zero means
                                       infinity.  If the timeout expires before
@@ -412,7 +406,7 @@ StartupThisAP (
   @retval EFI_UNSUPPORTED         Switching the BSP cannot be completed prior to
                                   this service returning.
   @retval EFI_UNSUPPORTED         Switching the BSP is not supported.
-  @retval EFI_SUCCESS             The calling processor is an AP.
+  @retval EFI_DEVICE_ERROR        The calling processor is an AP.
   @retval EFI_NOT_FOUND           The processor with the handle specified by
                                   ProcessorNumber does not exist.
   @retval EFI_INVALID_PARAMETER   ProcessorNumber specifies the current BSP or
@@ -515,7 +509,7 @@ WhoAmI (
   OUT UINTN                    *ProcessorNumber
   )
 {
-  return MpInitLibWhoAmI (ProcessorNumber);;
+  return MpInitLibWhoAmI (ProcessorNumber);
 }
 
 /**
@@ -553,8 +547,8 @@ CollectBistDataFromHob (
     // Sec Platform Information2 PPI includes BSP/APs' BIST information
     //
     SecPlatformInformation2 = GET_GUID_HOB_DATA (GuidHob);
-    NumberOfData = SecPlatformInformation2->NumberOfCpus;
-    CpuInstance  = SecPlatformInformation2->CpuInstance;
+    NumberOfData            = SecPlatformInformation2->NumberOfCpus;
+    CpuInstance             = SecPlatformInformation2->CpuInstance;
   } else {
     //
     // Otherwise, get gEfiSecPlatformInformationPpiGuid Guided HOB
@@ -562,16 +556,16 @@ CollectBistDataFromHob (
     GuidHob = GetFirstGuidHob (&gEfiSecPlatformInformationPpiGuid);
     if (GuidHob != NULL) {
       SecPlatformInformation = GET_GUID_HOB_DATA (GuidHob);
-      NumberOfData = 1;
+      NumberOfData           = 1;
       //
       // SEC Platform Information only includes BSP's BIST information
       // does not have BSP's APIC ID
       //
-      BspCpuInstance.CpuLocation = GetApicId ();
-      BspCpuInstance.InfoRecord.IA32HealthFlags.Uint32  = SecPlatformInformation->IA32HealthFlags.Uint32;
-      CpuInstance = &BspCpuInstance;
+      BspCpuInstance.CpuLocation                       = GetApicId ();
+      BspCpuInstance.InfoRecord.IA32HealthFlags.Uint32 = SecPlatformInformation->IA32HealthFlags.Uint32;
+      CpuInstance                                      = &BspCpuInstance;
     } else {
-      DEBUG ((EFI_D_INFO, "Does not find any HOB stored CPU BIST information!\n"));
+      DEBUG ((DEBUG_INFO, "Does not find any HOB stored CPU BIST information!\n"));
       //
       // Does not find any HOB stored BIST information
       //
@@ -589,6 +583,7 @@ CollectBistDataFromHob (
         BistData = CpuInstance[CpuInstanceNumber].InfoRecord.IA32HealthFlags;
       }
     }
+
     if (BistData.Uint32 != 0) {
       //
       // Report Status Code that self test is failed
@@ -601,6 +596,176 @@ CollectBistDataFromHob (
   }
 }
 
+//
+// Structure for InitializeSeparateExceptionStacks
+//
+typedef struct {
+  VOID          *Buffer;
+  UINTN         BufferSize;
+  EFI_STATUS    Status;
+} EXCEPTION_STACK_SWITCH_CONTEXT;
+
+/**
+  Initializes CPU exceptions handlers for the sake of stack switch requirement.
+
+  This function is a wrapper of InitializeSeparateExceptionStacks. It's mainly
+  for the sake of AP's init because of EFI_AP_PROCEDURE API requirement.
+
+  @param[in,out] Buffer  The pointer to private data buffer.
+
+**/
+VOID
+EFIAPI
+InitializeExceptionStackSwitchHandlers (
+  IN OUT VOID  *Buffer
+  )
+{
+  EXCEPTION_STACK_SWITCH_CONTEXT  *SwitchStackData;
+  UINTN                           Index;
+  EFI_STATUS                      Status;
+
+  Status = MpInitLibWhoAmI (&Index);
+
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "[%a] - Failed to get processor number.  The exception stack was not initialized.\n", __func__));
+    return;
+  }
+
+  SwitchStackData = (EXCEPTION_STACK_SWITCH_CONTEXT *)Buffer;
+
+  //
+  // This may be called twice for each Cpu. Only run InitializeSeparateExceptionStacks
+  // if this is the first call or the first call failed because of size too small.
+  //
+  if ((SwitchStackData[Index].Status == EFI_NOT_STARTED) || (SwitchStackData[Index].Status == EFI_BUFFER_TOO_SMALL)) {
+    SwitchStackData[Index].Status = InitializeSeparateExceptionStacks (SwitchStackData[Index].Buffer, &SwitchStackData[Index].BufferSize);
+  }
+}
+
+/**
+  Initializes MP exceptions handlers for the sake of stack switch requirement.
+
+  This function will allocate required resources required to setup stack switch
+  and pass them through SwitchStackData to each logic processor.
+
+**/
+VOID
+InitializeMpExceptionStackSwitchHandlers (
+  VOID
+  )
+{
+  UINTN                           Index;
+  EXCEPTION_STACK_SWITCH_CONTEXT  *SwitchStackData;
+  UINTN                           BufferSize;
+  EFI_STATUS                      Status;
+  UINT8                           *Buffer;
+
+  SwitchStackData = AllocateZeroPool (mNumberOfProcessors * sizeof (EXCEPTION_STACK_SWITCH_CONTEXT));
+  if (SwitchStackData == NULL) {
+    DEBUG ((DEBUG_ERROR, "%a Failed to allocate buffer for SwitchStackData\n", __func__));
+    ASSERT (SwitchStackData != NULL);
+    return;
+  }
+
+  for (Index = 0; Index < mNumberOfProcessors; ++Index) {
+    //
+    // Because the procedure may runs multiple times, use the status EFI_NOT_STARTED
+    // to indicate the procedure haven't been run yet.
+    //
+    SwitchStackData[Index].Status = EFI_NOT_STARTED;
+  }
+
+  Status = MpInitLibStartupAllCPUs (
+             InitializeExceptionStackSwitchHandlers,
+             0,
+             SwitchStackData
+             );
+  ASSERT_EFI_ERROR (Status);
+
+  BufferSize = 0;
+  for (Index = 0; Index < mNumberOfProcessors; ++Index) {
+    if (SwitchStackData[Index].Status == EFI_BUFFER_TOO_SMALL) {
+      ASSERT (SwitchStackData[Index].BufferSize != 0);
+      BufferSize += SwitchStackData[Index].BufferSize;
+    } else {
+      ASSERT (SwitchStackData[Index].Status == EFI_SUCCESS);
+      ASSERT (SwitchStackData[Index].BufferSize == 0);
+    }
+  }
+
+  if (BufferSize != 0) {
+    // we are allocating the buffer that will hold the new GDT and IDT for the APs. These must be allocated below
+    // 4GB as they are used by protected mode code on the APs when they are started up after this point. If they are
+    // above 4GB, the APs will triple fault because the 32 bit code segment is invalid
+    Buffer = (UINT8 *)(UINTN)(BASE_4GB - 1);
+    Status = gBS->AllocatePages (
+                    AllocateMaxAddress,
+                    EfiRuntimeServicesData,
+                    EFI_SIZE_TO_PAGES (BufferSize),
+                    (EFI_PHYSICAL_ADDRESS *)&Buffer
+                    );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((DEBUG_ERROR, "Failed to allocate buffer for InitializeExceptionStackSwitchHandlers Status %r\n", Status));
+      ASSERT_EFI_ERROR (Status);
+      goto Exit;
+    }
+
+    ZeroMem (Buffer, BufferSize);
+
+    BufferSize = 0;
+    for (Index = 0; Index < mNumberOfProcessors; ++Index) {
+      if (SwitchStackData[Index].Status == EFI_BUFFER_TOO_SMALL) {
+        SwitchStackData[Index].Buffer = (VOID *)(&Buffer[BufferSize]);
+        BufferSize                   += SwitchStackData[Index].BufferSize;
+        DEBUG ((
+          DEBUG_INFO,
+          "Buffer[cpu%lu] for InitializeExceptionStackSwitchHandlers: 0x%lX with size 0x%lX\n",
+          (UINT64)(UINTN)Index,
+          (UINT64)(UINTN)SwitchStackData[Index].Buffer,
+          (UINT64)(UINTN)SwitchStackData[Index].BufferSize
+          ));
+      }
+    }
+
+    Status = MpInitLibStartupAllCPUs (
+               InitializeExceptionStackSwitchHandlers,
+               0,
+               SwitchStackData
+               );
+    ASSERT_EFI_ERROR (Status);
+    for (Index = 0; Index < mNumberOfProcessors; ++Index) {
+      ASSERT (SwitchStackData[Index].Status == EFI_SUCCESS);
+    }
+  }
+
+Exit:
+  FreePool (SwitchStackData);
+}
+
+/**
+  Initializes MP exceptions handlers for special features, such as Heap Guard
+  and Stack Guard.
+**/
+VOID
+InitializeMpExceptionHandlers (
+  VOID
+  )
+{
+  //
+  // Enable non-stop mode for #PF triggered by Heap Guard or NULL Pointer
+  // Detection.
+  //
+  if (HEAP_GUARD_NONSTOP_MODE || NULL_DETECTION_NONSTOP_MODE) {
+    RegisterCpuInterruptHandler (EXCEPT_IA32_DEBUG, DebugExceptionHandler);
+    RegisterCpuInterruptHandler (EXCEPT_IA32_PAGE_FAULT, PageFaultExceptionHandler);
+  }
+
+  //
+  // Setup stack switch for Stack Guard feature and separate AP GDTs.
+  //
+  InitializeMpExceptionStackSwitchHandlers ();
+}
+
 /**
   Initialize Multi-processor support.
 
@@ -610,9 +775,9 @@ InitializeMpSupport (
   VOID
   )
 {
-  EFI_STATUS     Status;
-  UINTN          NumberOfProcessors;
-  UINTN          NumberOfEnabledProcessors;
+  EFI_STATUS  Status;
+  UINTN       NumberOfProcessors;
+  UINTN       NumberOfEnabledProcessors;
 
   //
   // Wakeup APs to do initialization
@@ -620,20 +785,28 @@ InitializeMpSupport (
   Status = MpInitLibInitialize ();
   ASSERT_EFI_ERROR (Status);
 
-  MpInitLibGetNumberOfProcessors (&NumberOfProcessors, &NumberOfEnabledProcessors);
-  mNumberOfProcessors = NumberOfProcessors;
-  DEBUG ((EFI_D_ERROR, "Detect CPU count: %d\n", mNumberOfProcessors));
-
-  //
-  // Update CPU healthy information from Guided HOB
-  //
-  CollectBistDataFromHob ();
-
-  Status = gBS->InstallMultipleProtocolInterfaces (
-                  &mMpServiceHandle,
-                  &gEfiMpServiceProtocolGuid,  &mMpServicesTemplate,
-                  NULL
-                  );
+  Status = MpInitLibGetNumberOfProcessors (&NumberOfProcessors, &NumberOfEnabledProcessors);
   ASSERT_EFI_ERROR (Status);
-}
+  if (!EFI_ERROR (Status)) {
+    mNumberOfProcessors = NumberOfProcessors;
+    DEBUG ((DEBUG_INFO, "Detect CPU count: %d\n", mNumberOfProcessors));
 
+    //
+    // Initialize special exception handlers for each logic processor.
+    //
+    InitializeMpExceptionHandlers ();
+
+    //
+    // Update CPU healthy information from Guided HOB
+    //
+    CollectBistDataFromHob ();
+
+    Status = gBS->InstallMultipleProtocolInterfaces (
+                    &mMpServiceHandle,
+                    &gEfiMpServiceProtocolGuid,
+                    &mMpServicesTemplate,
+                    NULL
+                    );
+    ASSERT_EFI_ERROR (Status);
+  }
+}

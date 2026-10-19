@@ -2,15 +2,9 @@
   Implementation of protocols EFI_COMPONENT_NAME_PROTOCOL and
   EFI_COMPONENT_NAME2_PROTOCOL.
 
-  Copyright (c) 2009 - 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -144,7 +138,7 @@ TcpComponentNameGetControllerName (
 ///
 /// EFI Component Name Protocol
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL     gTcpComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gTcpComponentName = {
   TcpComponentNameGetDriverName,
   TcpComponentNameGetControllerName,
   "eng"
@@ -153,13 +147,13 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL     gTcpComponentName 
 ///
 /// EFI Component Name 2 Protocol
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL    gTcpComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) TcpComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) TcpComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gTcpComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)TcpComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)TcpComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE        mTcpDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mTcpDriverNameTable[] = {
   {
     "eng;en",
     L"TCP Network Service Driver"
@@ -170,7 +164,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE        mTcpDriverNameTabl
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE        *gTcpControllerNameTable = NULL;
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  *gTcpControllerNameTable = NULL;
 
 /**
   Retrieves a Unicode string that is the user-readable name of the driver.
@@ -222,7 +216,7 @@ TcpComponentNameGetDriverName (
            This->SupportedLanguages,
            mTcpDriverNameTable,
            DriverName,
-           (BOOLEAN) (This == &gTcpComponentName)
+           (BOOLEAN)(This == &gTcpComponentName)
            );
 }
 
@@ -231,19 +225,19 @@ TcpComponentNameGetDriverName (
 
   @param  Tcp4[in]                   A pointer to the EFI_TCP4_PROTOCOL.
 
-  
+
   @retval EFI_SUCCESS                Update the ControllerNameTable of this instance successfully.
   @retval EFI_INVALID_PARAMETER      The input parameter is invalid.
-  
+
 **/
 EFI_STATUS
 UpdateTcp4Name (
-  IN    EFI_TCP4_PROTOCOL             *Tcp4
+  IN    EFI_TCP4_PROTOCOL  *Tcp4
   )
 {
-  EFI_STATUS                       Status;
-  CHAR16                           HandleName[80];
-  EFI_TCP4_CONFIG_DATA             Tcp4ConfigData;
+  EFI_STATUS            Status;
+  CHAR16                HandleName[80];
+  EFI_TCP4_CONFIG_DATA  Tcp4ConfigData;
 
   if (Tcp4 == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -256,7 +250,9 @@ UpdateTcp4Name (
   ZeroMem (&Tcp4ConfigData, sizeof (Tcp4ConfigData));
   Status = Tcp4->GetModeData (Tcp4, NULL, &Tcp4ConfigData, NULL, NULL, NULL);
   if (!EFI_ERROR (Status)) {
-    UnicodeSPrint (HandleName, sizeof (HandleName),
+    UnicodeSPrint (
+      HandleName,
+      sizeof (HandleName),
       L"TCPv4 (SrcPort=%d, DestPort=%d, ActiveFlag=%s)",
       Tcp4ConfigData.AccessPoint.StationPort,
       Tcp4ConfigData.AccessPoint.RemotePort,
@@ -276,7 +272,7 @@ UpdateTcp4Name (
     FreeUnicodeStringTable (gTcpControllerNameTable);
     gTcpControllerNameTable = NULL;
   }
-  
+
   Status = AddUnicodeString2 (
              "eng",
              gTcpComponentName.SupportedLanguages,
@@ -287,7 +283,7 @@ UpdateTcp4Name (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   return AddUnicodeString2 (
            "en",
            gTcpComponentName2.SupportedLanguages,
@@ -302,19 +298,19 @@ UpdateTcp4Name (
 
   @param  Tcp6[in]                   A pointer to the EFI_TCP6_PROTOCOL.
 
-  
+
   @retval EFI_SUCCESS                Update the ControllerNameTable of this instance successfully.
   @retval EFI_INVALID_PARAMETER      The input parameter is invalid.
-  
+
 **/
 EFI_STATUS
 UpdateTcp6Name (
-  IN    EFI_TCP6_PROTOCOL             *Tcp6
+  IN    EFI_TCP6_PROTOCOL  *Tcp6
   )
 {
-  EFI_STATUS                       Status;
-  CHAR16                           HandleName[80];
-  EFI_TCP6_CONFIG_DATA             Tcp6ConfigData;
+  EFI_STATUS            Status;
+  CHAR16                HandleName[80];
+  EFI_TCP6_CONFIG_DATA  Tcp6ConfigData;
 
   if (Tcp6 == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -326,7 +322,9 @@ UpdateTcp6Name (
   ZeroMem (&Tcp6ConfigData, sizeof (Tcp6ConfigData));
   Status = Tcp6->GetModeData (Tcp6, NULL, &Tcp6ConfigData, NULL, NULL, NULL);
   if (!EFI_ERROR (Status)) {
-    UnicodeSPrint (HandleName, sizeof (HandleName),
+    UnicodeSPrint (
+      HandleName,
+      sizeof (HandleName),
       L"TCPv6(SrcPort=%d, DestPort=%d, ActiveFlag=%d)",
       Tcp6ConfigData.AccessPoint.StationPort,
       Tcp6ConfigData.AccessPoint.RemotePort,
@@ -338,12 +336,11 @@ UpdateTcp6Name (
     return Status;
   }
 
-
   if (gTcpControllerNameTable != NULL) {
     FreeUnicodeStringTable (gTcpControllerNameTable);
     gTcpControllerNameTable = NULL;
   }
-  
+
   Status = AddUnicodeString2 (
              "eng",
              gTcpComponentName.SupportedLanguages,
@@ -354,7 +351,7 @@ UpdateTcp6Name (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   return AddUnicodeString2 (
            "en",
            gTcpComponentName2.SupportedLanguages,
@@ -440,9 +437,9 @@ TcpComponentNameGetControllerName (
   OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS                    Status;
-  EFI_TCP4_PROTOCOL             *Tcp4;
-  EFI_TCP6_PROTOCOL             *Tcp6;
+  EFI_STATUS         Status;
+  EFI_TCP4_PROTOCOL  *Tcp4;
+  EFI_TCP6_PROTOCOL  *Tcp6;
 
   //
   // Only provide names for child handles.
@@ -466,7 +463,7 @@ TcpComponentNameGetControllerName (
     Status = gBS->OpenProtocol (
                     ChildHandle,
                     &gEfiTcp6ProtocolGuid,
-                   (VOID **)&Tcp6,
+                    (VOID **)&Tcp6,
                     NULL,
                     NULL,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -497,13 +494,13 @@ TcpComponentNameGetControllerName (
     // Retrieve an instance of a produced protocol from ChildHandle
     //
     Status = gBS->OpenProtocol (
-               ChildHandle,
-               &gEfiTcp4ProtocolGuid,
-              (VOID **)&Tcp4,
-               NULL,
-               NULL,
-               EFI_OPEN_PROTOCOL_GET_PROTOCOL
-               );
+                    ChildHandle,
+                    &gEfiTcp4ProtocolGuid,
+                    (VOID **)&Tcp4,
+                    NULL,
+                    NULL,
+                    EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                    );
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -525,4 +522,3 @@ TcpComponentNameGetControllerName (
            (BOOLEAN)(This == &gTcpComponentName)
            );
 }
-

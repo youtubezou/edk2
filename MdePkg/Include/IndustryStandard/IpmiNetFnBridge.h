@@ -7,22 +7,15 @@
   and Appendix H, Sub-function Assignments.
 
   Copyright (c) 1999 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#ifndef _IPMI_NET_FN_BRIDGE_H_
-#define _IPMI_NET_FN_BRIDGE_H_
+#pragma once
 
 //
 // Net function definition for Bridge command
 //
-#define IPMI_NETFN_BRIDGE 0x02
+#define IPMI_NETFN_BRIDGE  0x02
 
 //
 //  Definitions for Get Bridge State command
@@ -45,7 +38,7 @@
 //
 //  Definitions for Get ICMB Address command
 //
-#define IPMI_BRIDGE_GET_ICMB_ADDRESS 0x02
+#define IPMI_BRIDGE_GET_ICMB_ADDRESS  0x02
 
 //
 //  Constants and Structure definitions for "Get ICMB Address" command to follow here
@@ -54,7 +47,7 @@
 //
 //  Definitions for Set ICMB Address command
 //
-#define IPMI_BRIDGE_SET_ICMB_ADDRESS 0x03
+#define IPMI_BRIDGE_SET_ICMB_ADDRESS  0x03
 
 //
 //  Constants and Structure definitions for "Set ICMB Address" command to follow here
@@ -90,7 +83,7 @@
 //
 //  Definitions for Clear Bridge Statistics command
 //
-#define IPMI_BRIDGE_CLEAR_STATISTICS 0x08
+#define IPMI_BRIDGE_CLEAR_STATISTICS  0x08
 
 //
 //  Constants and Structure definitions for "Clear Bridge Statistics" command to follow here
@@ -117,7 +110,7 @@
 //
 //  Definitions for Get ICMB Connection ID command
 //
-#define IPMI_BRIDGE_GET_ICMB_CONNECTION_ID 0x0B
+#define IPMI_BRIDGE_GET_ICMB_CONNECTION_ID  0x0B
 
 //
 //  Constants and Structure definitions for "Get ICMB Connection ID" command to follow here
@@ -133,12 +126,12 @@
 //
 
 //
-//  Definitions for Prepare for Discoveery command
+//  Definitions for Prepare for Discovery command
 //
 #define IPMI_BRIDGE_PREPARE_FOR_DISCOVERY  0x10
 
 //
-//  Constants and Structure definitions for "Prepare for Discoveery" command to follow here
+//  Constants and Structure definitions for "Prepare for Discovery" command to follow here
 //
 
 //
@@ -153,7 +146,7 @@
 //
 //  Definitions for Set Discovered command
 //
-#define IPMI_BRIDGE_SET_DISCOVERED 0x12
+#define IPMI_BRIDGE_SET_DISCOVERED  0x12
 
 //
 //  Constants and Structure definitions for "Set Discovered" command to follow here
@@ -162,7 +155,7 @@
 //
 //  Definitions for Get Chassis Device ID command
 //
-#define IPMI_BRIDGE_GET_CHASSIS_DEVICEID 0x13
+#define IPMI_BRIDGE_GET_CHASSIS_DEVICEID  0x13
 
 //
 //  Constants and Structure definitions for "Get Chassis Device ID" command to follow here
@@ -171,7 +164,7 @@
 //
 //  Definitions for Set Chassis Device ID command
 //
-#define IPMI_BRIDGE_SET_CHASSIS_DEVICEID 0x14
+#define IPMI_BRIDGE_SET_CHASSIS_DEVICEID  0x14
 
 //
 //  Constants and Structure definitions for "Set Chassis Device ID" command to follow here
@@ -239,5 +232,3 @@
 //
 //  Constants and Structure definitions for "Send ICMB Event Message" command to follow here
 //
-
-#endif

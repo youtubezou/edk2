@@ -1,32 +1,30 @@
 /** @file
 IA-32 processor specific functions to enable SMM profile.
 
-Copyright (c) 2012 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2012 - 2024, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "PiSmmCpuDxeSmm.h"
+#include "PiSmmCpuCommon.h"
 #include "SmmProfileInternal.h"
 
 /**
   Create SMM page table for S3 path.
 
+  @param[out] Cr3    The base address of the page tables.
+
 **/
 VOID
 InitSmmS3Cr3 (
-  VOID
+  OUT UINTN  *Cr3
   )
 {
-  mSmmS3ResumeState->SmmS3Cr3 = Gen4GPageTable (0, TRUE);
+  ASSERT (Cr3 != NULL);
 
-  return ;
+  *Cr3 = GenSmmPageTable (PagingPae, mPhysicalAddressBits);
+
+  return;
 }
 
 /**
@@ -55,11 +53,11 @@ InitPagesForPFHandler (
 **/
 VOID
 RestorePageTableAbove4G (
-  UINT64        *PageTable,
-  UINT64        PFAddress,
-  UINTN         CpuIndex,
-  UINTN         ErrorCode,
-  BOOLEAN       *IsValidPFAddress
+  UINT64   *PageTable,
+  UINT64   PFAddress,
+  UINTN    CpuIndex,
+  UINTN    ErrorCode,
+  BOOLEAN  *IsValidPFAddress
   )
 {
 }
@@ -73,8 +71,20 @@ RestorePageTableAbove4G (
 **/
 VOID
 ClearTrapFlag (
-  IN OUT EFI_SYSTEM_CONTEXT   SystemContext
+  IN OUT EFI_SYSTEM_CONTEXT  SystemContext
   )
 {
   SystemContext.SystemContextIa32->Eflags &= (UINTN) ~BIT8;
+}
+
+/**
+  Create new entry in page table for page fault address in SmmProfilePFHandler.
+
+**/
+VOID
+SmmProfileMapPFAddress (
+  VOID
+  )
+{
+  CpuDeadLoop ();
 }

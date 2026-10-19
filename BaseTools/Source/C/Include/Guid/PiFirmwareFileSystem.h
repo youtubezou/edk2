@@ -1,24 +1,17 @@
 /** @file
   Guid used to define the Firmware File System. See PI spec volume 3 for more
   details.
-  
+
   @par Revision Reference:
   Guids defined in PI Spec Volume 3
 
-  Copyright (c) 2006 - 2014, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution.  The full text of the license may be found at
-    http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FIRMWARE_FILE_SYSTEM2_GUID_H__
-#define __FIRMWARE_FILE_SYSTEM2_GUID_H__
+#pragma once
 
 //
 // GUIDs defined by the PI specification.
@@ -41,5 +34,3 @@
 extern EFI_GUID gEfiFirmwareFileSystem2Guid;
 extern EFI_GUID gEfiFirmwareFileSystem3Guid;
 extern EFI_GUID gEfiFirmwareVolumeTopFileGuid;
-
-#endif

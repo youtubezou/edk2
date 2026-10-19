@@ -3,13 +3,7 @@
 
   Copyright (c) 2011-2013, ARM Limited. All rights reserved.
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -23,17 +17,17 @@
 
 #include "Mmc.h"
 
-EFI_BLOCK_IO_MEDIA mMmcMediaTemplate = {
-  SIGNATURE_32('m','m','c','o'),            // MediaId
-  TRUE,                                     // RemovableMedia
-  FALSE,                                    // MediaPresent
-  FALSE,                                    // LogicalPartition
-  FALSE,                                    // ReadOnly
-  FALSE,                                    // WriteCaching
-  512,                                      // BlockSize
-  4,                                        // IoAlign
-  0,                                        // Pad
-  0                                         // LastBlock
+EFI_BLOCK_IO_MEDIA  mMmcMediaTemplate = {
+  SIGNATURE_32 ('m', 'm', 'c', 'o'), // MediaId
+  TRUE,                              // RemovableMedia
+  FALSE,                             // MediaPresent
+  FALSE,                             // LogicalPartition
+  FALSE,                             // ReadOnly
+  FALSE,                             // WriteCaching
+  512,                               // BlockSize
+  4,                                 // IoAlign
+  0,                                 // Pad
+  0                                  // LastBlock
 };
 
 //
@@ -47,7 +41,7 @@ LIST_ENTRY  mMmcHostPool;
   or if new ones have been plugged in
 **/
 
-EFI_EVENT gCheckCardsEvent;
+EFI_EVENT  gCheckCardsEvent;
 
 /**
   Initialize the MMC Host Pool to support multiple MMC devices
@@ -65,7 +59,7 @@ InitializeMmcHostPool (
 **/
 VOID
 InsertMmcHost (
-  IN MMC_HOST_INSTANCE      *MmcHostInstance
+  IN MMC_HOST_INSTANCE  *MmcHostInstance
   )
 {
   InsertTailList (&mMmcHostPool, &(MmcHostInstance->Link));
@@ -76,20 +70,21 @@ InsertMmcHost (
 */
 VOID
 RemoveMmcHost (
-  IN MMC_HOST_INSTANCE      *MmcHostInstance
+  IN MMC_HOST_INSTANCE  *MmcHostInstance
   )
 {
   RemoveEntryList (&(MmcHostInstance->Link));
 }
 
-MMC_HOST_INSTANCE* CreateMmcHostInstance (
-  IN EFI_MMC_HOST_PROTOCOL* MmcHost
+MMC_HOST_INSTANCE *
+CreateMmcHostInstance (
+  IN EFI_MMC_HOST_PROTOCOL  *MmcHost
   )
 {
-  EFI_STATUS          Status;
-  MMC_HOST_INSTANCE*  MmcHostInstance;
-  EFI_DEVICE_PATH_PROTOCOL    *NewDevicePathNode;
-  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
+  EFI_STATUS                Status;
+  MMC_HOST_INSTANCE         *MmcHostInstance;
+  EFI_DEVICE_PATH_PROTOCOL  *NewDevicePathNode;
+  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
 
   MmcHostInstance = AllocateZeroPool (sizeof (MMC_HOST_INSTANCE));
   if (MmcHostInstance == NULL) {
@@ -100,14 +95,14 @@ MMC_HOST_INSTANCE* CreateMmcHostInstance (
 
   MmcHostInstance->State = MmcHwInitializationState;
 
-  MmcHostInstance->BlockIo.Media = AllocateCopyPool (sizeof(EFI_BLOCK_IO_MEDIA), &mMmcMediaTemplate);
+  MmcHostInstance->BlockIo.Media = AllocateCopyPool (sizeof (EFI_BLOCK_IO_MEDIA), &mMmcMediaTemplate);
   if (MmcHostInstance->BlockIo.Media == NULL) {
     goto FREE_INSTANCE;
   }
 
-  MmcHostInstance->BlockIo.Revision = EFI_BLOCK_IO_INTERFACE_REVISION;
-  MmcHostInstance->BlockIo.Reset = MmcReset;
-  MmcHostInstance->BlockIo.ReadBlocks = MmcReadBlocks;
+  MmcHostInstance->BlockIo.Revision    = EFI_BLOCK_IO_INTERFACE_REVISION;
+  MmcHostInstance->BlockIo.Reset       = MmcReset;
+  MmcHostInstance->BlockIo.ReadBlocks  = MmcReadBlocks;
   MmcHostInstance->BlockIo.WriteBlocks = MmcWriteBlocks;
   MmcHostInstance->BlockIo.FlushBlocks = MmcFlushBlocks;
 
@@ -119,7 +114,7 @@ MMC_HOST_INSTANCE* CreateMmcHostInstance (
     goto FREE_MEDIA;
   }
 
-  DevicePath = (EFI_DEVICE_PATH_PROTOCOL *) AllocatePool (END_DEVICE_PATH_LENGTH);
+  DevicePath = (EFI_DEVICE_PATH_PROTOCOL *)AllocatePool (END_DEVICE_PATH_LENGTH);
   if (DevicePath == NULL) {
     goto FREE_MEDIA;
   }
@@ -129,48 +124,58 @@ MMC_HOST_INSTANCE* CreateMmcHostInstance (
 
   // Publish BlockIO protocol interface
   Status = gBS->InstallMultipleProtocolInterfaces (
-                &MmcHostInstance->MmcHandle,
-                &gEfiBlockIoProtocolGuid,&MmcHostInstance->BlockIo,
-                &gEfiDevicePathProtocolGuid,MmcHostInstance->DevicePath,
-                NULL
-                );
-  if (EFI_ERROR(Status)) {
+                  &MmcHostInstance->MmcHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  &MmcHostInstance->BlockIo,
+                  &gEfiDevicePathProtocolGuid,
+                  MmcHostInstance->DevicePath,
+                  NULL
+                  );
+  if (EFI_ERROR (Status)) {
     goto FREE_DEVICE_PATH;
   }
 
   return MmcHostInstance;
 
 FREE_DEVICE_PATH:
-  FreePool(DevicePath);
+  FreePool (DevicePath);
 
 FREE_MEDIA:
-  FreePool(MmcHostInstance->BlockIo.Media);
+  FreePool (MmcHostInstance->BlockIo.Media);
 
 FREE_INSTANCE:
-  FreePool(MmcHostInstance);
+  FreePool (MmcHostInstance);
 
   return NULL;
 }
 
-EFI_STATUS DestroyMmcHostInstance (
-  IN MMC_HOST_INSTANCE* MmcHostInstance
+EFI_STATUS
+DestroyMmcHostInstance (
+  IN MMC_HOST_INSTANCE  *MmcHostInstance
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   // Uninstall Protocol Interfaces
   Status = gBS->UninstallMultipleProtocolInterfaces (
-        MmcHostInstance->MmcHandle,
-        &gEfiBlockIoProtocolGuid,&(MmcHostInstance->BlockIo),
-        &gEfiDevicePathProtocolGuid,MmcHostInstance->DevicePath,
-        NULL
-        );
+                  MmcHostInstance->MmcHandle,
+                  &gEfiBlockIoProtocolGuid,
+                  &(MmcHostInstance->BlockIo),
+                  &gEfiDevicePathProtocolGuid,
+                  MmcHostInstance->DevicePath,
+                  NULL
+                  );
   ASSERT_EFI_ERROR (Status);
 
   // Free Memory allocated for the instance
   if (MmcHostInstance->BlockIo.Media) {
-    FreePool(MmcHostInstance->BlockIo.Media);
+    FreePool (MmcHostInstance->BlockIo.Media);
   }
+
+  if (MmcHostInstance->CardInfo.ECSDData) {
+    FreePages (MmcHostInstance->CardInfo.ECSDData, EFI_SIZE_TO_PAGES (sizeof (ECSD)));
+  }
+
   FreePool (MmcHostInstance);
 
   return Status;
@@ -182,15 +187,15 @@ EFI_STATUS DestroyMmcHostInstance (
 EFI_STATUS
 EFIAPI
 MmcDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
-  IN EFI_HANDLE                     Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN EFI_HANDLE                   Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                      Status;
-  //EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
-  EFI_MMC_HOST_PROTOCOL           *MmcHost;
-  EFI_DEV_PATH_PTR                Node;
+  EFI_STATUS  Status;
+  // EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
+  EFI_MMC_HOST_PROTOCOL  *MmcHost;
+  EFI_DEV_PATH_PTR       Node;
 
   //
   // Check RemainingDevicePath validation
@@ -206,10 +211,11 @@ MmcDriverBindingSupported (
       // check its validation
       //
       Node.DevPath = RemainingDevicePath;
-      if (Node.DevPath->Type != HARDWARE_DEVICE_PATH ||
-        Node.DevPath->SubType != HW_VENDOR_DP      ||
-        DevicePathNodeLength(Node.DevPath) != sizeof(VENDOR_DEVICE_PATH)) {
-          return EFI_UNSUPPORTED;
+      if ((Node.DevPath->Type != HARDWARE_DEVICE_PATH) ||
+          (Node.DevPath->SubType != HW_VENDOR_DP) ||
+          (DevicePathNodeLength (Node.DevPath) != sizeof (VENDOR_DEVICE_PATH)))
+      {
+        return EFI_UNSUPPORTED;
       }
     }
   }
@@ -218,16 +224,17 @@ MmcDriverBindingSupported (
   // Check if Mmc Host protocol is installed by platform
   //
   Status = gBS->OpenProtocol (
-                Controller,
-                &gEfiMmcHostProtocolGuid,
-                (VOID **) &MmcHost,
-                This->DriverBindingHandle,
-                Controller,
-                EFI_OPEN_PROTOCOL_BY_DRIVER
-                );
+                  Controller,
+                  &gEmbeddedMmcHostProtocolGuid,
+                  (VOID **)&MmcHost,
+                  This->DriverBindingHandle,
+                  Controller,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
   if (Status == EFI_ALREADY_STARTED) {
     return EFI_SUCCESS;
   }
+
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -236,11 +243,11 @@ MmcDriverBindingSupported (
   // Close the Mmc Host used to perform the supported test
   //
   gBS->CloseProtocol (
-      Controller,
-      &gEfiMmcHostProtocolGuid,
-      This->DriverBindingHandle,
-      Controller
-      );
+         Controller,
+         &gEmbeddedMmcHostProtocolGuid,
+         This->DriverBindingHandle,
+         Controller
+         );
 
   return EFI_SUCCESS;
 }
@@ -256,9 +263,9 @@ MmcDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS              Status;
-  MMC_HOST_INSTANCE       *MmcHostInstance;
-  EFI_MMC_HOST_PROTOCOL   *MmcHost;
+  EFI_STATUS             Status;
+  MMC_HOST_INSTANCE      *MmcHostInstance;
+  EFI_MMC_HOST_PROTOCOL  *MmcHost;
 
   //
   // Check RemainingDevicePath validation
@@ -277,21 +284,22 @@ MmcDriverBindingStart (
   // Get the Mmc Host protocol
   //
   Status = gBS->OpenProtocol (
-                Controller,
-                &gEfiMmcHostProtocolGuid,
-                (VOID **) &MmcHost,
-                This->DriverBindingHandle,
-                Controller,
-                EFI_OPEN_PROTOCOL_BY_DRIVER
-                );
+                  Controller,
+                  &gEmbeddedMmcHostProtocolGuid,
+                  (VOID **)&MmcHost,
+                  This->DriverBindingHandle,
+                  Controller,
+                  EFI_OPEN_PROTOCOL_BY_DRIVER
+                  );
   if (EFI_ERROR (Status)) {
     if (Status == EFI_ALREADY_STARTED) {
       return EFI_SUCCESS;
     }
+
     return Status;
   }
 
-  MmcHostInstance = CreateMmcHostInstance(MmcHost);
+  MmcHostInstance = CreateMmcHostInstance (MmcHost);
   if (MmcHostInstance != NULL) {
     // Add the handle to the pool
     InsertMmcHost (MmcHostInstance);
@@ -311,30 +319,31 @@ MmcDriverBindingStart (
 EFI_STATUS
 EFIAPI
 MmcDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL   *This,
-  IN  EFI_HANDLE                    Controller,
-  IN  UINTN                         NumberOfChildren,
-  IN  EFI_HANDLE                    *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
+  IN  EFI_HANDLE                   Controller,
+  IN  UINTN                        NumberOfChildren,
+  IN  EFI_HANDLE                   *ChildHandleBuffer
   )
 {
-  EFI_STATUS          Status = EFI_SUCCESS;
-  LIST_ENTRY          *CurrentLink;
-  MMC_HOST_INSTANCE   *MmcHostInstance;
+  EFI_STATUS         Status = EFI_SUCCESS;
+  LIST_ENTRY         *CurrentLink;
+  MMC_HOST_INSTANCE  *MmcHostInstance;
 
-  MMC_TRACE("MmcDriverBindingStop()");
+  MMC_TRACE ("MmcDriverBindingStop()");
 
   // For each MMC instance
   CurrentLink = mMmcHostPool.ForwardLink;
   while (CurrentLink != NULL && CurrentLink != &mMmcHostPool && (Status == EFI_SUCCESS)) {
-    MmcHostInstance = MMC_HOST_INSTANCE_FROM_LINK(CurrentLink);
-    ASSERT(MmcHostInstance != NULL);
+    MmcHostInstance = MMC_HOST_INSTANCE_FROM_LINK (CurrentLink);
+    ASSERT (MmcHostInstance != NULL);
 
-    // Close gEfiMmcHostProtocolGuid
+    // Close gEmbeddedMmcHostProtocolGuid
     Status = gBS->CloseProtocol (
-                Controller,
-                &gEfiMmcHostProtocolGuid,(VOID **) &MmcHostInstance->MmcHost,
-                This->DriverBindingHandle
-                );
+                    Controller,
+                    &gEmbeddedMmcHostProtocolGuid,
+                    This->DriverBindingHandle,
+                    Controller
+                    );
 
     // Remove MMC Host Instance from the pool
     RemoveMmcHost (MmcHostInstance);
@@ -349,37 +358,37 @@ MmcDriverBindingStop (
 VOID
 EFIAPI
 CheckCardsCallback (
-  IN  EFI_EVENT   Event,
-  IN  VOID        *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   )
 {
-  LIST_ENTRY          *CurrentLink;
-  MMC_HOST_INSTANCE   *MmcHostInstance;
-  EFI_STATUS          Status;
+  LIST_ENTRY         *CurrentLink;
+  MMC_HOST_INSTANCE  *MmcHostInstance;
+  EFI_STATUS         Status;
 
   CurrentLink = mMmcHostPool.ForwardLink;
   while (CurrentLink != NULL && CurrentLink != &mMmcHostPool) {
-    MmcHostInstance = MMC_HOST_INSTANCE_FROM_LINK(CurrentLink);
-    ASSERT(MmcHostInstance != NULL);
+    MmcHostInstance = MMC_HOST_INSTANCE_FROM_LINK (CurrentLink);
+    ASSERT (MmcHostInstance != NULL);
 
     if (MmcHostInstance->MmcHost->IsCardPresent (MmcHostInstance->MmcHost) == !MmcHostInstance->Initialized) {
-      MmcHostInstance->State = MmcHwInitializationState;
+      MmcHostInstance->State                       = MmcHwInitializationState;
       MmcHostInstance->BlockIo.Media->MediaPresent = !MmcHostInstance->Initialized;
-      MmcHostInstance->Initialized = !MmcHostInstance->Initialized;
+      MmcHostInstance->Initialized                 = !MmcHostInstance->Initialized;
 
       if (MmcHostInstance->BlockIo.Media->MediaPresent) {
         InitializeMmcDevice (MmcHostInstance);
       }
 
       Status = gBS->ReinstallProtocolInterface (
-                    (MmcHostInstance->MmcHandle),
-                    &gEfiBlockIoProtocolGuid,
-                    &(MmcHostInstance->BlockIo),
-                    &(MmcHostInstance->BlockIo)
-                    );
+                      (MmcHostInstance->MmcHandle),
+                      &gEfiBlockIoProtocolGuid,
+                      &(MmcHostInstance->BlockIo),
+                      &(MmcHostInstance->BlockIo)
+                      );
 
-      if (EFI_ERROR(Status)) {
-        Print(L"MMC Card: Error reinstalling BlockIo interface\n");
+      if (EFI_ERROR (Status)) {
+        Print (L"MMC Card: Error reinstalling BlockIo interface\n");
       }
     }
 
@@ -387,8 +396,7 @@ CheckCardsCallback (
   }
 }
 
-
-EFI_DRIVER_BINDING_PROTOCOL gMmcDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL  gMmcDriverBinding = {
   MmcDriverBindingSupported,
   MmcDriverBindingStart,
   MmcDriverBindingStop,
@@ -403,8 +411,8 @@ EFI_DRIVER_BINDING_PROTOCOL gMmcDriverBinding = {
 EFI_STATUS
 EFIAPI
 MmcDxeInitialize (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS  Status;
@@ -418,36 +426,39 @@ MmcDxeInitialize (
   // Install driver model protocol(s).
   //
   Status = EfiLibInstallDriverBindingComponentName2 (
-           ImageHandle,
-           SystemTable,
-           &gMmcDriverBinding,
-           ImageHandle,
-           &gMmcComponentName,
-           &gMmcComponentName2
-           );
+             ImageHandle,
+             SystemTable,
+             &gMmcDriverBinding,
+             ImageHandle,
+             &gMmcComponentName,
+             &gMmcComponentName2
+             );
   ASSERT_EFI_ERROR (Status);
 
   // Install driver diagnostics
   Status = gBS->InstallMultipleProtocolInterfaces (
-                &ImageHandle,
-                &gEfiDriverDiagnostics2ProtocolGuid,&gMmcDriverDiagnostics2,
-                NULL
-                );
+                  &ImageHandle,
+                  &gEfiDriverDiagnostics2ProtocolGuid,
+                  &gMmcDriverDiagnostics2,
+                  NULL
+                  );
   ASSERT_EFI_ERROR (Status);
 
   // Use a timer to detect if a card has been plugged in or removed
   Status = gBS->CreateEvent (
-                EVT_NOTIFY_SIGNAL | EVT_TIMER,
-                TPL_CALLBACK,
-                CheckCardsCallback,
-                NULL,
-                &gCheckCardsEvent);
+                  EVT_NOTIFY_SIGNAL | EVT_TIMER,
+                  TPL_CALLBACK,
+                  CheckCardsCallback,
+                  NULL,
+                  &gCheckCardsEvent
+                  );
   ASSERT_EFI_ERROR (Status);
 
-  Status = gBS->SetTimer(
-                gCheckCardsEvent,
-                TimerPeriodic,
-                (UINT64)(10*1000*200)); // 200 ms
+  Status = gBS->SetTimer (
+                  gCheckCardsEvent,
+                  TimerPeriodic,
+                  (UINT64)(10*1000*200)
+                  );                    // 200 ms
   ASSERT_EFI_ERROR (Status);
 
   return Status;

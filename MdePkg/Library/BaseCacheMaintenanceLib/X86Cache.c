@@ -1,14 +1,8 @@
 /** @file
   Cache Maintenance Functions.
 
-  Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
@@ -58,8 +52,8 @@ InvalidateInstructionCache (
 VOID *
 EFIAPI
 InvalidateInstructionCacheRange (
-  IN      VOID                      *Address,
-  IN      UINTN                     Length
+  IN      VOID   *Address,
+  IN      UINTN  Length
   )
 {
   if (Length == 0) {
@@ -118,15 +112,15 @@ WriteBackInvalidateDataCache (
 VOID *
 EFIAPI
 WriteBackInvalidateDataCacheRange (
-  IN      VOID                      *Address,
-  IN      UINTN                     Length
+  IN      VOID   *Address,
+  IN      UINTN  Length
   )
 {
-  UINT32                            RegEbx;
-  UINT32                            RegEdx;
-  UINTN                             CacheLineSize;
-  UINTN                             Start;
-  UINTN                             End;
+  UINT32  RegEbx;
+  UINT32  RegEdx;
+  UINTN   CacheLineSize;
+  UINTN   Start;
+  UINTN   End;
 
   if (Length == 0) {
     return Address;
@@ -135,7 +129,7 @@ WriteBackInvalidateDataCacheRange (
   ASSERT ((Length - 1) <= (MAX_ADDRESS - (UINTN)Address));
 
   //
-  // If the CPU does not support CLFLUSH instruction, 
+  // If the CPU does not support CLFLUSH instruction,
   // then promote flush range to flush entire cache.
   //
   AsmCpuid (0x01, NULL, &RegEbx, NULL, &RegEdx);
@@ -153,12 +147,13 @@ WriteBackInvalidateDataCacheRange (
   //
   // Calculate the cache line alignment
   //
-  End = (Start + Length + (CacheLineSize - 1)) & ~(CacheLineSize - 1);
+  End    = (Start + Length + (CacheLineSize - 1)) & ~(CacheLineSize - 1);
   Start &= ~((UINTN)CacheLineSize - 1);
 
   do {
-    Start = (UINTN)AsmFlushCacheLine ((VOID*)Start) + CacheLineSize;
+    Start = (UINTN)AsmFlushCacheLine ((VOID *)Start) + CacheLineSize;
   } while (Start != End);
+
   return Address;
 }
 
@@ -209,8 +204,8 @@ WriteBackDataCache (
 VOID *
 EFIAPI
 WriteBackDataCacheRange (
-  IN      VOID                      *Address,
-  IN      UINTN                     Length
+  IN      VOID   *Address,
+  IN      UINTN  Length
   )
 {
   return WriteBackInvalidateDataCacheRange (Address, Length);
@@ -266,8 +261,8 @@ InvalidateDataCache (
 VOID *
 EFIAPI
 InvalidateDataCacheRange (
-  IN      VOID                      *Address,
-  IN      UINTN                     Length
+  IN      VOID   *Address,
+  IN      UINTN  Length
   )
 {
   //

@@ -5,18 +5,13 @@
 # Portions copyright (c) 2011, Apple Inc. All rights reserved.<BR>
 # Copyright (c) 2012, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution. The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 #
 ##
 
 [Defines]
-  INF_VERSION                    = 0x00010005
+  INF_VERSION                    = 1.30
   BASE_NAME                      = EmuSec
   FILE_GUID                      = BCAF98C9-22B0-3B4F-9CBD-C8A6B4DBCEE9
   MODULE_TYPE                    = SEC
@@ -27,13 +22,11 @@
   Sec.c
 
 [Sources.X64]
-  X64/SwitchRam.asm
-  X64/SwitchRam.S
+  X64/SwitchRam.nasm
 
 [Sources.IA32]
   Ia32/TempRam.c
-  Ia32/SwitchRam.asm
-  Ia32/SwitchRam.S
+  Ia32/SwitchRam.nasm
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -45,6 +38,7 @@
   PeiServicesLib
   PpiListLib
   BaseMemoryLib
+  StackCheckLib
 
 [Ppis]
   gEfiTemporaryRamSupportPpiGuid

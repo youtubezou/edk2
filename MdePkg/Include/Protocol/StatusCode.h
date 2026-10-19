@@ -1,19 +1,12 @@
 /** @file
   Status code Runtime Protocol as defined in PI Specification 1.4a VOLUME 2 DXE
 
-  Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __STATUS_CODE_RUNTIME_PROTOCOL_H__
-#define __STATUS_CODE_RUNTIME_PROTOCOL_H__
+#pragma once
 
 #define EFI_STATUS_CODE_RUNTIME_PROTOCOL_GUID  \
 { 0xd2b2b828, 0x826, 0x48a7,  { 0xb3, 0xdf, 0x98, 0x3c, 0x0, 0x60, 0x24, 0xf0 } }
@@ -51,9 +44,7 @@ EFI_STATUS
 /// This protocol must be produced by a runtime DXE driver.
 ///
 typedef struct _EFI_STATUS_CODE_PROTOCOL {
-  EFI_REPORT_STATUS_CODE         ReportStatusCode;
+  EFI_REPORT_STATUS_CODE    ReportStatusCode;
 } EFI_STATUS_CODE_PROTOCOL;
 
-extern EFI_GUID gEfiStatusCodeRuntimeProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiStatusCodeRuntimeProtocolGuid;

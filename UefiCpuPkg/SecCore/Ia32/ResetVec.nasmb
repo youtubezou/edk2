@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
 ; Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -16,7 +10,7 @@
 ; Abstract:
 ;
 ;  Reset Vector Data structure
-;  This structure is located at 0xFFFFFFC0
+;  This structure is located at 0xFFFFF000
 ;
 ;------------------------------------------------------------------------------
 
@@ -29,19 +23,17 @@ USE16
 ;
 
     ORG     0h
+
+;
+; This should be at 0xFFFFFFC0
+;
+
 ;
 ; Reserved
 ;
 ReservedData:            DD 0eeeeeeeeh, 0eeeeeeeeh
 
-    TIMES 0x10-($-$$) DB 0
-;
-; This is located at 0xFFFFFFD0h
-;
-    mov     di, "PA"
-    jmp     ApStartup
-
-    TIMES 0x20-($-$$) DB 0
+    TIMES 0x20-($-$$) nop
 ;
 ; Pointer to the entry point of the PEI core
 ; It is located at 0xFFFFFFE0, and is fixed up by some build tool
@@ -59,7 +51,7 @@ ASM_PFX(InterruptHandler):
     jmp     $
     iret
 
-    TIMES 0x30-($-$$) DB 0
+    TIMES 0x30-($-$$) nop
 ;
 ; For IA32, the reset vector must be at 0xFFFFFFF0, i.e., 4G-16 byte
 ; Execution starts here upon power-on/platform-reset.
@@ -67,7 +59,6 @@ ASM_PFX(InterruptHandler):
 ResetHandler:
     nop
     nop
-ApStartup:
     ;
     ; Jmp Rel16 instruction
     ; Use machine code directly in case of the assembler optimization
@@ -79,17 +70,7 @@ ApStartup:
     DB      0e9h
     DW      -3
 
-
-    TIMES 0x38-($-$$) DB 0
-;
-; Ap reset vector segment address is at 0xFFFFFFF8
-; This will be fixed up by some build tool,
-; so if the value 1..8 appears in the final FD image,
-; tool failure occurs
-;
-ApSegAddress:    dd      12345678h
-
-    TIMES 0x3c-($-$$) DB 0
+    TIMES 0x3C-($-$$) nop
 ;
 ; BFV Base is at 0xFFFFFFFC
 ; This will be fixed up by some build tool,

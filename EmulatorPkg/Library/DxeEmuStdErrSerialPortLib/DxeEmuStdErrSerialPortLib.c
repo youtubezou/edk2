@@ -4,23 +4,13 @@
 
   Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
   Portions copyright (c) 2011, Apple Inc. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 
 #include <PiDxe.h>
 #include <Library/SerialPortLib.h>
 #include <Library/EmuThunkLib.h>
-
-
-
 
 /**
   Initialize the serial device hardware.
@@ -62,17 +52,16 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8     *Buffer,
-  IN UINTN     NumberOfBytes
+  IN UINT8  *Buffer,
+  IN UINTN  NumberOfBytes
   )
 {
   if (gEmuThunk == NULL) {
     return NumberOfBytes;
   }
-  
+
   return gEmuThunk->WriteStdErr (Buffer, NumberOfBytes);
 }
-
 
 /**
   Read data from serial device and save the datas in buffer.
@@ -93,8 +82,8 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8     *Buffer,
-  IN  UINTN     NumberOfBytes
+  OUT UINT8  *Buffer,
+  IN  UINTN  NumberOfBytes
   )
 {
   return 0;
@@ -119,5 +108,3 @@ SerialPortPoll (
 {
   return FALSE;
 }
-
-

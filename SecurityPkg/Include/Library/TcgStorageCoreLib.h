@@ -1,43 +1,41 @@
 /** @file
   Public API for the Tcg Core library to perform the lowest level TCG Data encoding.
 
-Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+  (TCG Storage Architecture Core Specification, Version 2.01, Revision 1.00,
+  https://trustedcomputinggroup.org/tcg-storage-architecture-core-specification/)
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Check http://trustedcomputinggroup.org for latest specification updates.
+
+Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _TCG_CORE_H_
-#define _TCG_CORE_H_
+#pragma once
 
 #include <IndustryStandard/TcgStorageCore.h>
 
-#define ERROR_CHECK(arg)                                                         \
-  {                                                                              \
-    TCG_RESULT ret = (arg);                                                      \
-    if (ret != TcgResultSuccess) {                                               \
-      DEBUG ((DEBUG_INFO, "ERROR_CHECK failed at %s:%u\n", __FILE__, __LINE__)); \
-      return ret;                                                                \
-    }                                                                            \
+#define ERROR_CHECK(arg)                                                                  \
+  {                                                                                       \
+    TCG_RESULT ret = (arg);                                                               \
+    if (ret != TcgResultSuccess) {                                                        \
+      DEBUG ((DEBUG_INFO, "ERROR_CHECK failed at %a:%u\n", __FILE__, DEBUG_LINE_NUMBER)); \
+      return ret;                                                                         \
+    }                                                                                     \
   }
 
 #define METHOD_STATUS_ERROR_CHECK(arg, failRet)                                                  \
   if ((arg) != TCG_METHOD_STATUS_CODE_SUCCESS) {                                                 \
-    DEBUG ((DEBUG_INFO, "Method Status error: 0x%02X (%s)\n", arg, TcgMethodStatusString(arg))); \
+    DEBUG ((DEBUG_INFO, "Method Status error: 0x%02X (%a)\n", arg, TcgMethodStatusString(arg))); \
     return (failRet);                                                                            \
   }
 
-#define NULL_CHECK(arg)                                                                   \
-  do {                                                                                    \
-    if ((arg) == NULL) {                                                                  \
-      DEBUG ((DEBUG_INFO, "NULL_CHECK(%s) failed at %s:%u\n", #arg, __FILE__, __LINE__)); \
-      return TcgResultFailureNullPointer;                                                 \
-    }                                                                                     \
+#define NULL_CHECK(arg)                                                                            \
+  do {                                                                                             \
+    if ((arg) == NULL) {                                                                           \
+      DEBUG ((DEBUG_INFO, "NULL_CHECK(%a) failed at %a:%u\n", #arg, __FILE__, DEBUG_LINE_NUMBER)); \
+      return TcgResultFailureNullPointer;                                                          \
+    }                                                                                              \
   } while (0)
 
 #pragma pack(1)
@@ -116,7 +114,7 @@ typedef struct {
   UINT32            BufferSize;
 
   //
-  //Pointer to the start of the Tcg ComPacket.  It should point to a location within Buffer.
+  // Pointer to the start of the Tcg ComPacket.  It should point to a location within Buffer.
   //
   TCG_COM_PACKET    *ComPacket;
 
@@ -137,7 +135,7 @@ typedef struct {
   // Then the client can allocate the required Buffer Size and re-run the tcg calls.
   // THIS MAY NOT BE IMPLEMENTED... REQUIRES MORE THOUGHT BECAUSE YOU CANNOT SOLVE ISSUE FOR RECEIVE
   //
-  BOOLEAN          DryRun;
+  BOOLEAN    DryRun;
 } TCG_CREATE_STRUCT;
 
 //
@@ -156,34 +154,33 @@ typedef struct  {
   // Buffer allocated and freed by the client of the Tcg library.
   // This is the Buffer that contains the Tcg response to decode/parse.
   //
-  const VOID*         Buffer;
+  const VOID        *Buffer;
 
   //
-  //Size of the Buffer provided.
+  // Size of the Buffer provided.
   //
-  UINT32              BufferSize;
+  UINT32            BufferSize;
 
   //
   // Pointer to the start of the Tcg ComPacket.  It should point to a location within Buffer.
   //
-  TCG_COM_PACKET      *ComPacket;
+  TCG_COM_PACKET    *ComPacket;
 
   //
   // Current Tcg Packet that is being created.  It should point to a location within Buffer.
   //
-  TCG_PACKET          *CurPacket;
+  TCG_PACKET        *CurPacket;
 
   //
   // Current Tcg SubPacket that is being created.  It should point to a location within Buffer.
   //
-  TCG_SUB_PACKET      *CurSubPacket;
+  TCG_SUB_PACKET    *CurSubPacket;
 
   //
   // Current pointer within the current subpacket payload.
   //
-  UINT8               *CurPtr;
-} TCG_PARSE_STRUCT ;
-
+  UINT8             *CurPtr;
+} TCG_PARSE_STRUCT;
 
 //
 // Structure that is used to represent a Tcg Token that is retrieved by Tcg parse functions.
@@ -198,7 +195,7 @@ typedef struct {
   // Pointer to the beginning of the Header of the Tcg token
   //
   UINT8             *HdrStart;
-} TCG_TOKEN ;
+} TCG_TOKEN;
 
 /**
 
@@ -212,12 +209,11 @@ typedef struct {
 **/
 TCG_RESULT
 EFIAPI
-TcgInitTcgCreateStruct(
-  TCG_CREATE_STRUCT      *CreateStruct,
-  VOID                   *Buffer,
-  UINT32                 BufferSize
+TcgInitTcgCreateStruct (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  VOID               *Buffer,
+  UINT32             BufferSize
   );
-
 
 /**
 
@@ -230,12 +226,11 @@ TcgInitTcgCreateStruct(
 **/
 TCG_RESULT
 EFIAPI
-TcgStartComPacket(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT16              ComId,
-  UINT16              ComIdExtension
+TcgStartComPacket (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT16             ComId,
+  UINT16             ComIdExtension
   );
-
 
 /**
 
@@ -251,13 +246,13 @@ TcgStartComPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgStartPacket(
-  TCG_CREATE_STRUCT       *CreateStruct,
-  UINT32                  Tsn,
-  UINT32                  Hsn,
-  UINT32                  SeqNumber,
-  UINT16                  AckType,
-  UINT32                  Ack
+TcgStartPacket (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             Tsn,
+  UINT32             Hsn,
+  UINT32             SeqNumber,
+  UINT16             AckType,
+  UINT32             Ack
   );
 
 /**
@@ -270,11 +265,10 @@ TcgStartPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgStartSubPacket(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT16              Kind
+TcgStartSubPacket (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT16             Kind
   );
-
 
 /**
 
@@ -286,10 +280,9 @@ TcgStartSubPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgEndSubPacket(
-  TCG_CREATE_STRUCT   *CreateStruct
+TcgEndSubPacket (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -300,10 +293,9 @@ TcgEndSubPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgEndPacket(
-  TCG_CREATE_STRUCT     *CreateStruct
+TcgEndPacket (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -315,9 +307,9 @@ TcgEndPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgEndComPacket(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT32              *Size
+TcgEndComPacket (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size
   );
 
 /**
@@ -329,11 +321,10 @@ TcgEndComPacket(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddRawByte(
+TcgAddRawByte (
   TCG_CREATE_STRUCT  *CreateStruct,
   UINT8              Byte
   );
-
 
 /**
 
@@ -348,13 +339,12 @@ TcgAddRawByte(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddByteSequence(
-  TCG_CREATE_STRUCT     *CreateStruct,
-  const VOID            *Data,
-  UINT32                DataSize,
-  BOOLEAN               Continued
+TcgAddByteSequence (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  const VOID         *Data,
+  UINT32             DataSize,
+  BOOLEAN            Continued
   );
-
 
 /**
 
@@ -370,13 +360,12 @@ TcgAddByteSequence(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddInteger(
+TcgAddInteger (
   TCG_CREATE_STRUCT  *CreateStruct,
   const VOID         *Data,
   UINT32             DataSize,
   BOOLEAN            SignedInteger
   );
-
 
 /**
   Adds an 8-bit unsigned integer to the Data structure.
@@ -387,9 +376,9 @@ TcgAddInteger(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddUINT8(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT8               Value
+TcgAddUINT8 (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT8              Value
   );
 
 /**
@@ -403,8 +392,8 @@ TcgAddUINT8(
 TCG_RESULT
 EFIAPI
 TcgAddUINT16 (
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT16              Value
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT16             Value
   );
 
 /**
@@ -417,11 +406,10 @@ TcgAddUINT16 (
 **/
 TCG_RESULT
 EFIAPI
-TcgAddUINT32(
-  TCG_CREATE_STRUCT    *CreateStruct,
-  UINT32               Value
+TcgAddUINT32 (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             Value
   );
-
 
 /**
 
@@ -433,9 +421,9 @@ TcgAddUINT32(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddUINT64(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT64              Value
+TcgAddUINT64 (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT64             Value
   );
 
 /**
@@ -447,9 +435,9 @@ TcgAddUINT64(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddBOOLEAN(
-  TCG_CREATE_STRUCT    *CreateStruct,
-  BOOLEAN              Value
+TcgAddBOOLEAN (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  BOOLEAN            Value
   );
 
 /**
@@ -463,9 +451,9 @@ TcgAddBOOLEAN(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddTcgUid(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  TCG_UID             Uid
+TcgAddTcgUid (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  TCG_UID            Uid
   );
 
 /**
@@ -476,10 +464,9 @@ TcgAddTcgUid(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddStartList(
-  TCG_CREATE_STRUCT    *CreateStruct
+TcgAddStartList (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -490,10 +477,9 @@ TcgAddStartList(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddEndList(
-  TCG_CREATE_STRUCT     *CreateStruct
+TcgAddEndList (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
  Adds a Start Name token to the Data structure.
@@ -503,10 +489,9 @@ TcgAddEndList(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddStartName(
-  TCG_CREATE_STRUCT      *CreateStruct
+TcgAddStartName (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -517,10 +502,9 @@ TcgAddStartName(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddEndName(
-  TCG_CREATE_STRUCT            *CreateStruct
+TcgAddEndName (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
  Adds a Call token to the Data structure.
@@ -530,10 +514,9 @@ TcgAddEndName(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddCall(
-  TCG_CREATE_STRUCT            *CreateStruct
+TcgAddCall (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -544,10 +527,9 @@ Adds an End of Data token to the Data structure.
 **/
 TCG_RESULT
 EFIAPI
-TcgAddEndOfData(
-  TCG_CREATE_STRUCT            *CreateStruct
+TcgAddEndOfData (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
 
@@ -558,10 +540,9 @@ Adds an End of Session token to the Data structure.
 **/
 TCG_RESULT
 EFIAPI
-TcgAddEndOfSession(
-  TCG_CREATE_STRUCT             *CreateStruct
+TcgAddEndOfSession (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
  Adds a Start Transaction token to the Data structure.
@@ -571,10 +552,9 @@ TcgAddEndOfSession(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddStartTransaction(
-  TCG_CREATE_STRUCT              *CreateStruct
+TcgAddStartTransaction (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
-
 
 /**
  Adds an End Transaction token to the Data structure.
@@ -584,12 +564,12 @@ TcgAddStartTransaction(
 **/
 TCG_RESULT
 EFIAPI
-TcgAddEndTransaction(
-  TCG_CREATE_STRUCT             *CreateStruct
+TcgAddEndTransaction (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
 
 /**
-  Initial the tcg parse stucture.
+  Initial the tcg parse structure.
 
   @param    ParseStruct    Input parse structure.
   @param    Buffer         Input buffer data.
@@ -600,10 +580,10 @@ TcgAddEndTransaction(
 **/
 TCG_RESULT
 EFIAPI
-TcgInitTcgParseStruct(
-  TCG_PARSE_STRUCT          *ParseStruct,
-  const VOID                *Buffer,
-  UINT32                    BufferSize
+TcgInitTcgParseStruct (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  const VOID        *Buffer,
+  UINT32            BufferSize
   );
 
 /**
@@ -617,9 +597,9 @@ TcgInitTcgParseStruct(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextToken(
-  TCG_PARSE_STRUCT      *ParseStruct,
-  TCG_TOKEN             *TcgToken
+TcgGetNextToken (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  TCG_TOKEN         *TcgToken
   );
 
 /**
@@ -633,9 +613,9 @@ TcgGetNextToken(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextTokenType(
-  TCG_PARSE_STRUCT        *ParseStruct,
-  TCG_TOKEN_TYPE          Type
+TcgGetNextTokenType (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  TCG_TOKEN_TYPE    Type
   );
 
 /**
@@ -652,12 +632,12 @@ TcgGetNextTokenType(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetAtomInfo(
-  const TCG_TOKEN      *TcgToken,
-  UINT32               *HeaderLength,
-  UINT32               *DataLength,
-  UINT8                *ByteOrInt,
-  UINT8                *SignOrCont
+TcgGetAtomInfo (
+  const TCG_TOKEN  *TcgToken,
+  UINT32           *HeaderLength,
+  UINT32           *DataLength,
+  UINT8            *ByteOrInt,
+  UINT8            *SignOrCont
   );
 
 /**
@@ -669,11 +649,11 @@ TcgGetAtomInfo(
   @retval   Return the value data.
 
 **/
-UINT8*
+UINT8 *
 EFIAPI
-TcgGetTokenByteSequence(
-  const TCG_TOKEN     *TcgToken,
-  UINT32              *Length
+TcgGetTokenByteSequence (
+  const TCG_TOKEN  *TcgToken,
+  UINT32           *Length
   );
 
 /**
@@ -687,91 +667,89 @@ TcgGetTokenByteSequence(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetTokenUINT64(
-  const TCG_TOKEN      *TcgToken,
-  UINT64               *Value
-  );
-
-
-/**
-  Get next specify value.
-
-  @param    ParseStruct   Input parse structure.
-  @param    Value         Return vlaue.
-
-  @retval   return the action result.
-
-**/
-TCG_RESULT
-EFIAPI
-TcgGetNextUINT8(
-  TCG_PARSE_STRUCT      *ParseStruct,
-  UINT8                 *Value
-  );
-
-
-/**
-  Get next specify value.
-
-  @param    ParseStruct   Input parse structure.
-  @param    Value         Return vlaue.
-
-  @retval   return the action result.
-
-**/
-TCG_RESULT
-EFIAPI
-TcgGetNextUINT16(
-  TCG_PARSE_STRUCT     *ParseStruct,
-  UINT16               *Value
+TcgGetTokenUINT64 (
+  const TCG_TOKEN  *TcgToken,
+  UINT64           *Value
   );
 
 /**
   Get next specify value.
 
   @param    ParseStruct   Input parse structure.
-  @param    Value         Return vlaue.
+  @param    Value         Return value.
 
   @retval   return the action result.
 
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextUINT32(
-  TCG_PARSE_STRUCT          *ParseStruct,
-  UINT32                    *Value
+TcgGetNextUINT8 (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  UINT8             *Value
   );
 
 /**
   Get next specify value.
 
   @param    ParseStruct   Input parse structure.
-  @param    Value         Return vlaue.
+  @param    Value         Return value.
 
   @retval   return the action result.
 
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextUINT64(
-  TCG_PARSE_STRUCT           *ParseStruct,
-  UINT64                     *Value
+TcgGetNextUINT16 (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  UINT16            *Value
   );
 
 /**
   Get next specify value.
 
   @param    ParseStruct   Input parse structure.
-  @param    Value         Return vlaue.
+  @param    Value         Return value.
 
   @retval   return the action result.
 
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextBOOLEAN(
-  TCG_PARSE_STRUCT        *ParseStruct,
-  BOOLEAN                 *Value
+TcgGetNextUINT32 (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  UINT32            *Value
+  );
+
+/**
+  Get next specify value.
+
+  @param    ParseStruct   Input parse structure.
+  @param    Value         Return value.
+
+  @retval   return the action result.
+
+**/
+TCG_RESULT
+EFIAPI
+TcgGetNextUINT64 (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  UINT64            *Value
+  );
+
+/**
+  Get next specify value.
+
+  @param    ParseStruct   Input parse structure.
+  @param    Value         Return value.
+
+  @retval   return the action result.
+
+**/
+TCG_RESULT
+EFIAPI
+TcgGetNextBOOLEAN (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  BOOLEAN           *Value
   );
 
 /**
@@ -785,9 +763,9 @@ TcgGetNextBOOLEAN(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextTcgUid(
-  TCG_PARSE_STRUCT         *ParseStruct,
-  TCG_UID                  *Uid
+TcgGetNextTcgUid (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  TCG_UID           *Uid
   );
 
 /**
@@ -802,10 +780,10 @@ TcgGetNextTcgUid(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextByteSequence(
-  TCG_PARSE_STRUCT      *ParseStruct,
-  const VOID            **Data,
-  UINT32                *Length
+TcgGetNextByteSequence (
+  TCG_PARSE_STRUCT  *ParseStruct,
+  const VOID        **Data,
+  UINT32            *Length
   );
 
 /**
@@ -818,8 +796,8 @@ TcgGetNextByteSequence(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextStartList(
-  TCG_PARSE_STRUCT          *ParseStruct
+TcgGetNextStartList (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -832,8 +810,8 @@ TcgGetNextStartList(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextEndList(
-  TCG_PARSE_STRUCT             *ParseStruct
+TcgGetNextEndList (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -846,8 +824,8 @@ TcgGetNextEndList(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextStartName(
-  TCG_PARSE_STRUCT              *ParseStruct
+TcgGetNextStartName (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -860,8 +838,8 @@ TcgGetNextStartName(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextEndName(
-  TCG_PARSE_STRUCT               *ParseStruct
+TcgGetNextEndName (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -874,8 +852,8 @@ TcgGetNextEndName(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextCall(
-  TCG_PARSE_STRUCT                   *ParseStruct
+TcgGetNextCall (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -888,8 +866,8 @@ TcgGetNextCall(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextEndOfData(
-  TCG_PARSE_STRUCT                    *ParseStruct
+TcgGetNextEndOfData (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -902,8 +880,8 @@ TcgGetNextEndOfData(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextEndOfSession(
-  TCG_PARSE_STRUCT                      *ParseStruct
+TcgGetNextEndOfSession (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -916,8 +894,8 @@ TcgGetNextEndOfSession(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextStartTransaction(
-  TCG_PARSE_STRUCT                        *ParseStruct
+TcgGetNextStartTransaction (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 /**
@@ -930,21 +908,20 @@ TcgGetNextStartTransaction(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetNextEndTransaction(
-  TCG_PARSE_STRUCT                  *ParseStruct
+TcgGetNextEndTransaction (
+  TCG_PARSE_STRUCT  *ParseStruct
   );
 
 // end of parse functions
 
-
 typedef
 BOOLEAN
-(EFIAPI* TCG_LEVEL0_ENUM_CALLBACK) (
+(EFIAPI *TCG_LEVEL0_ENUM_CALLBACK)(
   const TCG_LEVEL0_DISCOVERY_HEADER      *DiscoveryHeader,
   TCG_LEVEL0_FEATURE_DESCRIPTOR_HEADER   *Feature,
   UINTN                                  FeatureSize, // includes header
   VOID                                   *Context
-);
+  );
 
 /**
   Adds call token and method Header (invoking id, and method id).
@@ -956,10 +933,10 @@ BOOLEAN
 **/
 TCG_RESULT
 EFIAPI
-TcgStartMethodCall(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  TCG_UID             InvokingId,
-  TCG_UID             MethodId
+TcgStartMethodCall (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  TCG_UID            InvokingId,
+  TCG_UID            MethodId
   );
 
 /**
@@ -970,8 +947,8 @@ TcgStartMethodCall(
 **/
 TCG_RESULT
 EFIAPI
-TcgStartParameters(
-  TCG_CREATE_STRUCT           *CreateStruct
+TcgStartParameters (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
 
 /**
@@ -982,8 +959,8 @@ TcgStartParameters(
 **/
 TCG_RESULT
 EFIAPI
-TcgEndParameters(
-  TCG_CREATE_STRUCT   *CreateStruct
+TcgEndParameters (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
 
 /**
@@ -994,8 +971,8 @@ TcgEndParameters(
 **/
 TCG_RESULT
 EFIAPI
-TcgEndMethodCall(
-  TCG_CREATE_STRUCT      *CreateStruct
+TcgEndMethodCall (
+  TCG_CREATE_STRUCT  *CreateStruct
   );
 
 /**
@@ -1017,17 +994,17 @@ TcgEndMethodCall(
 **/
 TCG_RESULT
 EFIAPI
-TcgCreateStartSession(
-  TCG_CREATE_STRUCT     *CreateStruct,
-  UINT32                *Size,
-  UINT16                ComId,
-  UINT16                ComIdExtension,
-  UINT32                HostSessionId,
-  TCG_UID               SpId,
-  BOOLEAN               Write,
-  UINT32                HostChallengeLength,
-  const VOID            *HostChallenge,
-  TCG_UID               HostSigningAuthority
+TcgCreateStartSession (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size,
+  UINT16             ComId,
+  UINT16             ComIdExtension,
+  UINT32             HostSessionId,
+  TCG_UID            SpId,
+  BOOLEAN            Write,
+  UINT32             HostChallengeLength,
+  const VOID         *HostChallenge,
+  TCG_UID            HostSigningAuthority
   );
 
 /**
@@ -1047,16 +1024,16 @@ TcgCreateStartSession(
 **/
 TCG_RESULT
 EFIAPI
-TcgCreateSetCPin(
-  TCG_CREATE_STRUCT       *CreateStruct,
-  UINT32                  *Size,
-  UINT16                  ComId,
-  UINT16                  ComIdExtension,
-  UINT32                  TperSession,
-  UINT32                  HostSession,
-  TCG_UID                 SidRow,
-  const VOID              *Password,
-  UINT32                  PasswordSize
+TcgCreateSetCPin (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size,
+  UINT16             ComId,
+  UINT16             ComIdExtension,
+  UINT32             TperSession,
+  UINT32             HostSession,
+  TCG_UID            SidRow,
+  const VOID         *Password,
+  UINT32             PasswordSize
   );
 
 /**
@@ -1075,15 +1052,15 @@ TcgCreateSetCPin(
 **/
 TCG_RESULT
 EFIAPI
-TcgSetAuthorityEnabled(
-  TCG_CREATE_STRUCT           *CreateStruct,
-  UINT32                      *Size,
-  UINT16                      ComId,
-  UINT16                      ComIdExtension,
-  UINT32                      TperSession,
-  UINT32                      HostSession,
-  TCG_UID                     AuthorityUid,
-  BOOLEAN                     Enabled
+TcgSetAuthorityEnabled (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size,
+  UINT16             ComId,
+  UINT16             ComIdExtension,
+  UINT32             TperSession,
+  UINT32             HostSession,
+  TCG_UID            AuthorityUid,
+  BOOLEAN            Enabled
   );
 
 /**
@@ -1101,15 +1078,14 @@ TcgSetAuthorityEnabled(
 **/
 TCG_RESULT
 EFIAPI
-TcgCreateEndSession(
-  TCG_CREATE_STRUCT   *CreateStruct,
-  UINT32              *Size,
-  UINT16              ComId,
-  UINT16              ComIdExtension,
-  UINT32              HostSessionId,
-  UINT32              TpSessionId
+TcgCreateEndSession (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size,
+  UINT16             ComId,
+  UINT16             ComIdExtension,
+  UINT32             HostSessionId,
+  UINT32             TpSessionId
   );
-
 
 /**
 
@@ -1118,9 +1094,9 @@ TcgCreateEndSession(
  @param[in]   Type  Token type to retrieve
 
 **/
-CHAR8*
+CHAR8 *
 EFIAPI
-TcgTokenTypeString(
+TcgTokenTypeString (
   TCG_TOKEN_TYPE  Type
   );
 
@@ -1134,9 +1110,9 @@ TcgTokenTypeString(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetMethodStatus(
-  const TCG_PARSE_STRUCT            *ParseStruct,
-  UINT8                             *MethodStatus
+TcgGetMethodStatus (
+  const TCG_PARSE_STRUCT  *ParseStruct,
+  UINT8                   *MethodStatus
   );
 
 /**
@@ -1147,12 +1123,11 @@ TcgGetMethodStatus(
 
   @retval   return the string info.
 **/
-CHAR8*
+CHAR8 *
 EFIAPI
-TcgMethodStatusString(
-  UINT8 MethodStatus
+TcgMethodStatusString (
+  UINT8  MethodStatus
   );
-
 
 /**
   Retrieves the comID and Extended comID of the ComPacket in the Tcg response.
@@ -1165,10 +1140,10 @@ TcgMethodStatusString(
 **/
 TCG_RESULT
 EFIAPI
-TcgGetComIds(
-  const TCG_PARSE_STRUCT     *ParseStruct,
-  UINT16                     *ComId,
-  UINT16                     *ComIdExtension
+TcgGetComIds (
+  const TCG_PARSE_STRUCT  *ParseStruct,
+  UINT16                  *ComId,
+  UINT16                  *ComIdExtension
   );
 
 /**
@@ -1181,10 +1156,10 @@ TcgGetComIds(
 **/
 TCG_RESULT
 EFIAPI
-TcgCheckComIds(
-  const TCG_PARSE_STRUCT     *ParseStruct,
-  UINT16                     ExpectedComId,
-  UINT16                     ExpectedComIdExtension
+TcgCheckComIds (
+  const TCG_PARSE_STRUCT  *ParseStruct,
+  UINT16                  ExpectedComId,
+  UINT16                  ExpectedComIdExtension
   );
 
 /**
@@ -1200,7 +1175,7 @@ TcgCheckComIds(
 **/
 TCG_RESULT
 EFIAPI
-TcgParseSyncSession(
+TcgParseSyncSession (
   const TCG_PARSE_STRUCT  *ParseStruct,
   UINT16                  ComId,
   UINT16                  ComIdExtension,
@@ -1219,7 +1194,7 @@ TcgParseSyncSession(
   @param     HostSession       Host session data.
   @param     AceRow            Ace row info.
   @param     Authority1        Authority 1 info.
-  @param     LogicalOperator   Logiccal operator info.
+  @param     LogicalOperator   Logical operator info.
   @param     Authority2        Authority 2 info.
 
   @retval    Return the action result.
@@ -1227,17 +1202,17 @@ TcgParseSyncSession(
 **/
 TCG_RESULT
 EFIAPI
-TcgCreateSetAce(
-  TCG_CREATE_STRUCT        *CreateStruct,
-  UINT32                   *Size,
-  UINT16                   ComId,
-  UINT16                   ComIdExtension,
-  UINT32                   TperSession,
-  UINT32                   HostSession,
-  TCG_UID                  AceRow,
-  TCG_UID                  Authority1,
-  BOOLEAN                  LogicalOperator,
-  TCG_UID                  Authority2
+TcgCreateSetAce (
+  TCG_CREATE_STRUCT  *CreateStruct,
+  UINT32             *Size,
+  UINT16             ComId,
+  UINT16             ComIdExtension,
+  UINT32             TperSession,
+  UINT32             HostSession,
+  TCG_UID            AceRow,
+  TCG_UID            Authority1,
+  BOOLEAN            LogicalOperator,
+  TCG_UID            Authority2
   );
 
 /**
@@ -1252,7 +1227,7 @@ TcgCreateSetAce(
 **/
 BOOLEAN
 EFIAPI
-TcgEnumLevel0Discovery(
+TcgEnumLevel0Discovery (
   const TCG_LEVEL0_DISCOVERY_HEADER  *DiscoveryHeader,
   TCG_LEVEL0_ENUM_CALLBACK           Callback,
   VOID                               *Context
@@ -1262,14 +1237,14 @@ TcgEnumLevel0Discovery(
   Get Feature code from the header.
 
   @param     DiscoveryHeader    The discovery header.
-  @param     FeatureCode        reutrn the Feature code.
+  @param     FeatureCode        return the Feature code.
   @param     FeatureSize        return the Feature size.
 
   @retval    return the Feature code data.
 **/
-TCG_LEVEL0_FEATURE_DESCRIPTOR_HEADER*
+TCG_LEVEL0_FEATURE_DESCRIPTOR_HEADER *
 EFIAPI
-TcgGetFeature(
+TcgGetFeature (
   const TCG_LEVEL0_DISCOVERY_HEADER  *DiscoveryHeader,
   UINT16                             FeatureCode,
   UINTN                              *FeatureSize
@@ -1285,9 +1260,9 @@ TcgGetFeature(
 **/
 BOOLEAN
 EFIAPI
-TcgIsProtocolSupported(
-  const TCG_SUPPORTED_SECURITY_PROTOCOLS   *ProtocolList,
-  UINT16                                   Protocol
+TcgIsProtocolSupported (
+  const TCG_SUPPORTED_SECURITY_PROTOCOLS  *ProtocolList,
+  UINT16                                  Protocol
   );
 
 /**
@@ -1300,11 +1275,8 @@ TcgIsProtocolSupported(
 **/
 BOOLEAN
 EFIAPI
-TcgIsLocked(
-  const TCG_LEVEL0_DISCOVERY_HEADER      *Discovery
+TcgIsLocked (
+  const TCG_LEVEL0_DISCOVERY_HEADER  *Discovery
   );
 
 #pragma pack()
-
-
-#endif // _TCG_CORE_H_

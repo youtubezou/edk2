@@ -1,19 +1,12 @@
 /** @file
   EFI PCI IO protocol functions declaration for PCI Bus module.
 
-Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_PCI_IO_PROTOCOL_H_
-#define _EFI_PCI_IO_PROTOCOL_H_
+#pragma once
 
 /**
   Initializes a PCI I/O Instance.
@@ -23,7 +16,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 VOID
 InitializePciIoInstance (
-  IN PCI_IO_DEVICE               *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   );
 
 /**
@@ -43,12 +36,12 @@ InitializePciIoInstance (
 **/
 EFI_STATUS
 PciIoVerifyBarAccess (
-  IN PCI_IO_DEVICE                   *PciIoDevice,
-  IN UINT8                           BarIndex,
-  IN PCI_BAR_TYPE                    Type,
-  IN IN EFI_PCI_IO_PROTOCOL_WIDTH    Width,
-  IN IN UINTN                        Count,
-  IN UINT64                          *Offset
+  IN PCI_IO_DEVICE                 *PciIoDevice,
+  IN UINT8                         BarIndex,
+  IN PCI_BAR_TYPE                  Type,
+  IN IN EFI_PCI_IO_PROTOCOL_WIDTH  Width,
+  IN IN UINTN                      Count,
+  IN UINT64                        *Offset
   );
 
 /**
@@ -353,13 +346,13 @@ PciIoConfigWrite (
 EFI_STATUS
 EFIAPI
 PciIoCopyMem (
-  IN EFI_PCI_IO_PROTOCOL              *This,
-  IN     EFI_PCI_IO_PROTOCOL_WIDTH    Width,
-  IN     UINT8                        DestBarIndex,
-  IN     UINT64                       DestOffset,
-  IN     UINT8                        SrcBarIndex,
-  IN     UINT64                       SrcOffset,
-  IN     UINTN                        Count
+  IN EFI_PCI_IO_PROTOCOL            *This,
+  IN     EFI_PCI_IO_PROTOCOL_WIDTH  Width,
+  IN     UINT8                      DestBarIndex,
+  IN     UINT64                     DestOffset,
+  IN     UINT8                      SrcBarIndex,
+  IN     UINT64                     SrcOffset,
+  IN     UINTN                      Count
   );
 
 /**
@@ -411,7 +404,7 @@ PciIoUnmap (
 
 /**
   Allocates pages that are suitable for an EfiPciIoOperationBusMasterCommonBuffer
-  mapping.
+  or EfiPciOperationBusMasterCommonBuffer64 mapping.
 
   @param  This                  A pointer to the EFI_PCI_IO_PROTOCOL instance.
   @param  Type                  This parameter is not used and must be ignored.
@@ -424,7 +417,7 @@ PciIoUnmap (
 
   @retval EFI_SUCCESS           The requested memory pages were allocated.
   @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
-                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
+                                MEMORY_WRITE_COMBINE, MEMORY_CACHED and DUAL_ADDRESS_CYCLE.
   @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
   @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
 
@@ -432,12 +425,12 @@ PciIoUnmap (
 EFI_STATUS
 EFIAPI
 PciIoAllocateBuffer (
-  IN  EFI_PCI_IO_PROTOCOL   *This,
-  IN  EFI_ALLOCATE_TYPE     Type,
-  IN  EFI_MEMORY_TYPE       MemoryType,
-  IN  UINTN                 Pages,
-  OUT VOID                  **HostAddress,
-  IN  UINT64                Attributes
+  IN  EFI_PCI_IO_PROTOCOL  *This,
+  IN  EFI_ALLOCATE_TYPE    Type,
+  IN  EFI_MEMORY_TYPE      MemoryType,
+  IN  UINTN                Pages,
+  OUT VOID                 **HostAddress,
+  IN  UINT64               Attributes
   );
 
 /**
@@ -455,9 +448,9 @@ PciIoAllocateBuffer (
 EFI_STATUS
 EFIAPI
 PciIoFreeBuffer (
-  IN  EFI_PCI_IO_PROTOCOL   *This,
-  IN  UINTN                 Pages,
-  IN  VOID                  *HostAddress
+  IN  EFI_PCI_IO_PROTOCOL  *This,
+  IN  UINTN                Pages,
+  IN  VOID                 *HostAddress
   );
 
 /**
@@ -514,9 +507,9 @@ PciIoGetLocation (
 **/
 BOOLEAN
 CheckBarType (
-  IN PCI_IO_DEVICE          *PciIoDevice,
-  IN UINT8                  BarIndex,
-  IN PCI_BAR_TYPE           BarType
+  IN PCI_IO_DEVICE  *PciIoDevice,
+  IN UINT8          BarIndex,
+  IN PCI_BAR_TYPE   BarType
   );
 
 /**
@@ -527,7 +520,7 @@ CheckBarType (
   @param  Operation    Set or Disable.
 
   @retval  EFI_UNSUPPORTED  If root bridge does not support change attribute.
-  @retval  EFI_SUCCESS      Successfully set new attributs.
+  @retval  EFI_SUCCESS      Successfully set new attributes.
 
 **/
 EFI_STATUS
@@ -575,7 +568,7 @@ SupportPaletteSnoopAttributes (
 EFI_STATUS
 EFIAPI
 PciIoAttributes (
-  IN EFI_PCI_IO_PROTOCOL                       * This,
+  IN EFI_PCI_IO_PROTOCOL                       *This,
   IN  EFI_PCI_IO_PROTOCOL_ATTRIBUTE_OPERATION  Operation,
   IN  UINT64                                   Attributes,
   OUT UINT64                                   *Result OPTIONAL
@@ -590,12 +583,12 @@ PciIoAttributes (
                                 base address for resource range. The legal range for this field is 0..5.
   @param  Supports              A pointer to the mask of attributes that this PCI controller supports
                                 setting for this BAR with SetBarAttributes().
-  @param  Resources             A pointer to the ACPI 2.0 resource descriptors that describe the current
+  @param  Resources             A pointer to the resource descriptors that describe the current
                                 configuration of this BAR of the PCI controller.
 
   @retval EFI_SUCCESS           If Supports is not NULL, then the attributes that the PCI
                                 controller supports are returned in Supports. If Resources
-                                is not NULL, then the ACPI 2.0 resource descriptors that the PCI
+                                is not NULL, then the resource descriptors that the PCI
                                 controller is currently using are returned in Resources.
   @retval EFI_INVALID_PARAMETER Both Supports and Attributes are NULL.
   @retval EFI_UNSUPPORTED       BarIndex not valid for this PCI controller.
@@ -606,10 +599,10 @@ PciIoAttributes (
 EFI_STATUS
 EFIAPI
 PciIoGetBarAttributes (
-  IN EFI_PCI_IO_PROTOCOL             * This,
-  IN  UINT8                          BarIndex,
-  OUT UINT64                         *Supports, OPTIONAL
-  OUT VOID                           **Resources OPTIONAL
+  IN EFI_PCI_IO_PROTOCOL  *This,
+  IN  UINT8               BarIndex,
+  OUT UINT64              *Supports  OPTIONAL,
+  OUT VOID                **Resources OPTIONAL
   );
 
 /**
@@ -639,33 +632,11 @@ PciIoGetBarAttributes (
 EFI_STATUS
 EFIAPI
 PciIoSetBarAttributes (
-  IN EFI_PCI_IO_PROTOCOL              *This,
-  IN     UINT64                       Attributes,
-  IN     UINT8                        BarIndex,
-  IN OUT UINT64                       *Offset,
-  IN OUT UINT64                       *Length
-  );
-
-/**
-  Program parent bridge's attribute recurrently.
-
-  @param PciIoDevice  Child Pci device instance
-  @param Operation    The operation to perform on the attributes for this PCI controller.
-  @param Attributes   The mask of attributes that are used for Set, Enable, and Disable
-                      operations.
-
-  @retval EFI_SUCCESS           The operation on the PCI controller's attributes was completed.
-  @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
-  @retval EFI_UNSUPPORTED       one or more of the bits set in
-                                Attributes are not supported by this PCI controller or one of
-                                its parent bridges when Operation is Set, Enable or Disable.
-
-**/
-EFI_STATUS
-UpStreamBridgesAttributes (
-  IN PCI_IO_DEVICE                            *PciIoDevice,
-  IN EFI_PCI_IO_PROTOCOL_ATTRIBUTE_OPERATION  Operation,
-  IN UINT64                                   Attributes
+  IN EFI_PCI_IO_PROTOCOL  *This,
+  IN     UINT64           Attributes,
+  IN     UINT8            BarIndex,
+  IN OUT UINT64           *Offset,
+  IN OUT UINT64           *Length
   );
 
 /**
@@ -680,8 +651,6 @@ UpStreamBridgesAttributes (
 **/
 BOOLEAN
 PciDevicesOnTheSamePath (
-  IN PCI_IO_DEVICE        *PciDevice1,
-  IN PCI_IO_DEVICE        *PciDevice2
+  IN PCI_IO_DEVICE  *PciDevice1,
+  IN PCI_IO_DEVICE  *PciDevice2
   );
-
-#endif

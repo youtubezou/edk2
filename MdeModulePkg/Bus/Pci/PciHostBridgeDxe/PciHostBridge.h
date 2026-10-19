@@ -2,20 +2,12 @@
 
   The Header file of the Pci Host Bridge Driver.
 
-Copyright (c) 1999 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 1999 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _PCI_HOST_BRIDGE_H_
-#define _PCI_HOST_BRIDGE_H_
-
+#pragma once
 
 #include <PiDxe.h>
 #include <IndustryStandard/Acpi.h>
@@ -23,23 +15,32 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PciHostBridgeLib.h>
 #include <Protocol/PciHostBridgeResourceAllocation.h>
+#include <Protocol/IoMmu.h>
 
 #include "PciRootBridge.h"
 
-#define PCI_HOST_BRIDGE_SIGNATURE SIGNATURE_32 ('p', 'h', 'b', 'g')
+#define PCI_HOST_BRIDGE_SIGNATURE  SIGNATURE_32 ('p', 'h', 'b', 'g')
 typedef struct {
-  UINTN                                             Signature;
-  EFI_HANDLE                                        Handle;
-  LIST_ENTRY                                        RootBridges;
-  BOOLEAN                                           CanRestarted;
-  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  ResAlloc;
+  UINTN                                               Signature;
+  EFI_HANDLE                                          Handle;
+  LIST_ENTRY                                          RootBridges;
+  BOOLEAN                                             CanRestarted;
+  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL    ResAlloc;
 } PCI_HOST_BRIDGE_INSTANCE;
 
-#define PCI_HOST_BRIDGE_FROM_THIS(a) CR (a, PCI_HOST_BRIDGE_INSTANCE, ResAlloc, PCI_HOST_BRIDGE_SIGNATURE)
+#define PCI_HOST_BRIDGE_FROM_THIS(a)  CR (a, PCI_HOST_BRIDGE_INSTANCE, ResAlloc, PCI_HOST_BRIDGE_SIGNATURE)
+
+//
+// Macros to translate device address to host address and vice versa. According
+// to UEFI 2.7, device address = host address + translation offset.
+//
+#define TO_HOST_ADDRESS(DeviceAddress, TranslationOffset)  ((DeviceAddress) - (TranslationOffset))
+#define TO_DEVICE_ADDRESS(HostAddress, TranslationOffset)  ((HostAddress) + (TranslationOffset))
 
 //
 // Driver Entry Point
 //
+
 /**
 
   Entry point of this driver.
@@ -54,13 +55,14 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 InitializePciHostBridge (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   );
 
 //
 //  HostBridge Resource Allocation interface
 //
+
 /**
 
   Enter a certain phase of the PCI enumeration process.
@@ -76,8 +78,8 @@ InitializePciHostBridge (
 EFI_STATUS
 EFIAPI
 NotifyPhase (
-  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL   *This,
-  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE      Phase
+  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PHASE     Phase
   );
 
 /**
@@ -99,8 +101,8 @@ NotifyPhase (
 EFI_STATUS
 EFIAPI
 GetNextRootBridge (
-  IN     EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN OUT EFI_HANDLE                                       *RootBridgeHandle
+  IN     EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN OUT EFI_HANDLE                                        *RootBridgeHandle
   );
 
 /**
@@ -122,9 +124,9 @@ GetNextRootBridge (
 EFI_STATUS
 EFIAPI
 GetAttributes (
-  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN  EFI_HANDLE                                       RootBridgeHandle,
-  OUT UINT64                                           *Attributes
+  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN  EFI_HANDLE                                        RootBridgeHandle,
+  OUT UINT64                                            *Attributes
   );
 
 /**
@@ -144,9 +146,9 @@ GetAttributes (
 EFI_STATUS
 EFIAPI
 StartBusEnumeration (
-  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN  EFI_HANDLE                                       RootBridgeHandle,
-  OUT VOID                                             **Configuration
+  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN  EFI_HANDLE                                        RootBridgeHandle,
+  OUT VOID                                              **Configuration
   );
 
 /**
@@ -165,9 +167,9 @@ StartBusEnumeration (
 EFI_STATUS
 EFIAPI
 SetBusNumbers (
-  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN EFI_HANDLE                                       RootBridgeHandle,
-  IN VOID                                             *Configuration
+  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN EFI_HANDLE                                        RootBridgeHandle,
+  IN VOID                                              *Configuration
   );
 
 /**
@@ -186,9 +188,9 @@ SetBusNumbers (
 EFI_STATUS
 EFIAPI
 SubmitResources (
-  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN EFI_HANDLE                                       RootBridgeHandle,
-  IN VOID                                             *Configuration
+  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN EFI_HANDLE                                        RootBridgeHandle,
+  IN VOID                                              *Configuration
   );
 
 /**
@@ -209,9 +211,9 @@ SubmitResources (
 EFI_STATUS
 EFIAPI
 GetProposedResources (
-  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL *This,
-  IN  EFI_HANDLE                                       RootBridgeHandle,
-  OUT VOID                                             **Configuration
+  IN  EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN  EFI_HANDLE                                        RootBridgeHandle,
+  OUT VOID                                              **Configuration
   );
 
 /**
@@ -231,10 +233,10 @@ GetProposedResources (
 EFI_STATUS
 EFIAPI
 PreprocessController (
-  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL          *This,
-  IN EFI_HANDLE                                                RootBridgeHandle,
-  IN EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS               PciAddress,
-  IN EFI_PCI_CONTROLLER_RESOURCE_ALLOCATION_PHASE              Phase
+  IN EFI_PCI_HOST_BRIDGE_RESOURCE_ALLOCATION_PROTOCOL  *This,
+  IN EFI_HANDLE                                        RootBridgeHandle,
+  IN EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS       PciAddress,
+  IN EFI_PCI_CONTROLLER_RESOURCE_ALLOCATION_PHASE      Phase
   );
 
 /**
@@ -244,9 +246,22 @@ PreprocessController (
 **/
 VOID
 ResourceConflict (
-  IN  PCI_HOST_BRIDGE_INSTANCE *HostBridge
+  IN  PCI_HOST_BRIDGE_INSTANCE  *HostBridge
   );
 
-extern EFI_METRONOME_ARCH_PROTOCOL *mMetronome;
-extern EFI_CPU_IO2_PROTOCOL        *mCpuIo;
-#endif
+/**
+  This routine gets translation offset from a root bridge instance by resource type.
+
+  @param RootBridge The Root Bridge Instance for the resources.
+  @param ResourceType The Resource Type of the translation offset.
+
+  @retval The Translation Offset of the specified resource.
+**/
+UINT64
+GetTranslationByResourceType (
+  IN  PCI_ROOT_BRIDGE_INSTANCE  *RootBridge,
+  IN  PCI_RESOURCE_TYPE         ResourceType
+  );
+
+extern EFI_CPU_IO2_PROTOCOL  *mCpuIo;
+extern EDKII_IOMMU_PROTOCOL  *mIoMmu;

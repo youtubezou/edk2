@@ -3,19 +3,11 @@
   main interpreter routines.
 
 Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EBC_INT_H_
-#define _EBC_INT_H_
-
+#pragma once
 
 #include <Uefi.h>
 
@@ -23,23 +15,19 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/Ebc.h>
 #include <Protocol/EbcVmTest.h>
 #include <Protocol/EbcSimpleDebugger.h>
+#include <Protocol/PeCoffImageEmulator.h>
 
 #include <Library/BaseLib.h>
+#include <Library/CacheMaintenanceLib.h>
 #include <Library/DebugLib.h>
+#include <Library/PeCoffLib.h>
 #include <Library/UefiDriverEntryPoint.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/MemoryAllocationLib.h>
 
-extern VM_CONTEXT                    *mVmPtr;
+extern VM_CONTEXT  *mVmPtr;
 
-//
-// Bits of exception flags field of VM context
-//
-#define EXCEPTION_FLAG_FATAL    0x80000000  // can't continue
-#define EXCEPTION_FLAG_ERROR    0x40000000  // bad, but try to continue
-#define EXCEPTION_FLAG_WARNING  0x20000000  // harmless problem
-#define EXCEPTION_FLAG_NONE     0x00000000  // for normal return
 //
 // Flags passed to the internal create-thunks function.
 //
@@ -70,10 +58,10 @@ extern VM_CONTEXT                    *mVmPtr;
 **/
 EFI_STATUS
 EbcCreateThunks (
-  IN EFI_HANDLE           ImageHandle,
-  IN VOID                 *EbcEntryPoint,
-  OUT VOID                **Thunk,
-  IN  UINT32              Flags
+  IN EFI_HANDLE  ImageHandle,
+  IN VOID        *EbcEntryPoint,
+  OUT VOID       **Thunk,
+  IN  UINT32     Flags
   );
 
 /**
@@ -91,45 +79,24 @@ EbcCreateThunks (
 **/
 EFI_STATUS
 EbcAddImageThunk (
-  IN EFI_HANDLE      ImageHandle,
-  IN VOID            *ThunkBuffer,
-  IN UINT32          ThunkSize
-  );
-
-//
-// The interpreter calls these when an exception is detected,
-// or as a periodic callback.
-//
-/**
-  The VM interpreter calls this function when an exception is detected.
-
-  @param  ExceptionType          Specifies the processor exception detected.
-  @param  ExceptionFlags         Specifies the exception context.
-  @param  VmPtr                  Pointer to a VM context for passing info to the
-                                 EFI debugger.
-
-  @retval EFI_SUCCESS            This function completed successfully.
-
-**/
-EFI_STATUS
-EbcDebugSignalException (
-  IN EFI_EXCEPTION_TYPE                   ExceptionType,
-  IN EXCEPTION_FLAGS                      ExceptionFlags,
-  IN VM_CONTEXT                           *VmPtr
+  IN EFI_HANDLE  ImageHandle,
+  IN VOID        *ThunkBuffer,
+  IN UINT32      ThunkSize
   );
 
 //
 // Define a constant of how often to call the debugger periodic callback
 // function.
 //
-#define EFI_TIMER_UNIT_1MS            (1000 * 10)
-#define EBC_VM_PERIODIC_CALLBACK_RATE (1000 * EFI_TIMER_UNIT_1MS)
-#define STACK_POOL_SIZE               (1024 * 1020)
-#define MAX_STACK_NUM                 4
+#define EFI_TIMER_UNIT_1MS             (1000 * 10)
+#define EBC_VM_PERIODIC_CALLBACK_RATE  (1000 * EFI_TIMER_UNIT_1MS)
+#define STACK_POOL_SIZE                (1024 * 1020)
+#define MAX_STACK_NUM                  4
 
 //
 // External low level functions that are native-processor dependent
 //
+
 /**
   The VM thunk code stuffs an EBC entry point into a processor
   register. Since we can't use inline assembly to get it from
@@ -163,9 +130,9 @@ EbcLLGetEbcEntryPoint (
 INT64
 EFIAPI
 EbcLLCALLEXNative (
-  IN UINTN        CallAddr,
-  IN UINTN        EbcSp,
-  IN VOID         *FramePtr
+  IN UINTN  CallAddr,
+  IN UINTN  EbcSp,
+  IN VOID   *FramePtr
   );
 
 /**
@@ -185,11 +152,11 @@ EbcLLCALLEXNative (
 **/
 VOID
 EbcLLCALLEX (
-  IN VM_CONTEXT   *VmPtr,
-  IN UINTN        FuncAddr,
-  IN UINTN        NewStackPointer,
-  IN VOID         *FramePtr,
-  IN UINT8        Size
+  IN VM_CONTEXT  *VmPtr,
+  IN UINTN       FuncAddr,
+  IN UINTN       NewStackPointer,
+  IN VOID        *FramePtr,
+  IN UINT8       Size
   );
 
 /**
@@ -206,10 +173,10 @@ EbcLLCALLEX (
 
 **/
 EFI_STATUS
-GetEBCStack(
-  IN  EFI_HANDLE Handle,
-  OUT VOID       **StackBuffer,
-  OUT UINTN      *BufferIndex
+GetEBCStack (
+  IN  EFI_HANDLE  Handle,
+  OUT VOID        **StackBuffer,
+  OUT UINTN       *BufferIndex
   );
 
 /**
@@ -221,8 +188,8 @@ GetEBCStack(
 
 **/
 EFI_STATUS
-ReturnEBCStack(
-  IN UINTN Index
+ReturnEBCStack (
+  IN UINTN  Index
   );
 
 /**
@@ -244,7 +211,7 @@ InitEBCStack (
 
 **/
 EFI_STATUS
-FreeEBCStack(
+FreeEBCStack (
   VOID
   );
 
@@ -257,22 +224,32 @@ FreeEBCStack(
 
 **/
 EFI_STATUS
-ReturnEBCStackByHandle(
-  IN EFI_HANDLE Handle
+ReturnEBCStackByHandle (
+  IN EFI_HANDLE  Handle
   );
 
 typedef struct {
-  EFI_EBC_PROTOCOL  *This;
-  VOID              *EntryPoint;
-  EFI_HANDLE        ImageHandle;
-  VM_CONTEXT        VmContext;
+  EFI_EBC_PROTOCOL    *This;
+  VOID                *EntryPoint;
+  EFI_HANDLE          ImageHandle;
+  VM_CONTEXT          VmContext;
 } EFI_EBC_THUNK_DATA;
 
-#define EBC_PROTOCOL_PRIVATE_DATA_SIGNATURE SIGNATURE_32 ('e', 'b', 'c', 'p')
-
+#define EBC_PROTOCOL_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('e', 'b', 'c', 'p')
 
 #define EBC_PROTOCOL_PRIVATE_DATA_FROM_THIS(a) \
       CR(a, EBC_PROTOCOL_PRIVATE_DATA, EbcProtocol, EBC_PROTOCOL_PRIVATE_DATA_SIGNATURE)
 
+/**
+  Allocates a buffer of type EfiBootServicesCode.
 
-#endif // #ifndef _EBC_INT_H_
+  @param  AllocationSize        The number of bytes to allocate.
+
+  @return A pointer to the allocated buffer or NULL if allocation fails.
+
+**/
+VOID *
+EFIAPI
+EbcAllocatePoolForThunk (
+  IN UINTN  AllocationSize
+  );

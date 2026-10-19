@@ -2,21 +2,13 @@
   This library is only intended to be used by DXE modules that need save
   confidential information to LockBox and get it by PEI modules in S3 phase.
 
-Copyright (c) 2010 - 2011, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _LOCK_BOX_LIB_H_
-#define _LOCK_BOX_LIB_H_
+#pragma once
 
 /**
   This function will save confidential information to lockbox.
@@ -36,9 +28,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 RETURN_STATUS
 EFIAPI
 SaveLockBox (
-  IN  GUID                        *Guid,
-  IN  VOID                        *Buffer,
-  IN  UINTN                       Length
+  IN  GUID   *Guid,
+  IN  VOID   *Buffer,
+  IN  UINTN  Length
   );
 
 /**
@@ -57,14 +49,22 @@ SaveLockBox (
 RETURN_STATUS
 EFIAPI
 SetLockBoxAttributes (
-  IN  GUID                        *Guid,
-  IN  UINT64                      Attributes
+  IN  GUID    *Guid,
+  IN  UINT64  Attributes
   );
 
 //
-// With this flag, this LockBox can be restored to this Buffer with RestoreAllLockBoxInPlace()
+// With this flag, this LockBox can be restored to this Buffer
+// with RestoreAllLockBoxInPlace()
 //
 #define LOCK_BOX_ATTRIBUTE_RESTORE_IN_PLACE  BIT0
+//
+// With this flag, this LockBox can be restored in S3 resume only.
+// This LockBox can not be restored after SmmReadyToLock in normal boot
+// and after EndOfS3Resume in S3 resume.
+// It can not be set together with LOCK_BOX_ATTRIBUTE_RESTORE_IN_PLACE.
+//
+#define LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY  BIT1
 
 /**
   This function will update confidential information to lockbox.
@@ -77,7 +77,10 @@ SetLockBoxAttributes (
   @retval RETURN_SUCCESS            the information is saved successfully.
   @retval RETURN_INVALID_PARAMETER  the Guid is NULL, or Buffer is NULL, or Length is 0.
   @retval RETURN_NOT_FOUND          the requested GUID not found.
-  @retval RETURN_BUFFER_TOO_SMALL   the original buffer to too small to hold new information.
+  @retval RETURN_BUFFER_TOO_SMALL   for lockbox without attribute LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY,
+                                    the original buffer to too small to hold new information.
+  @retval RETURN_OUT_OF_RESOURCES   for lockbox with attribute LOCK_BOX_ATTRIBUTE_RESTORE_IN_S3_ONLY,
+                                    no enough resource to save the information.
   @retval RETURN_ACCESS_DENIED      it is too late to invoke this interface
   @retval RETURN_NOT_STARTED        it is too early to invoke this interface
   @retval RETURN_UNSUPPORTED        the service is not supported by implementaion.
@@ -85,10 +88,10 @@ SetLockBoxAttributes (
 RETURN_STATUS
 EFIAPI
 UpdateLockBox (
-  IN  GUID                        *Guid,
-  IN  UINTN                       Offset,
-  IN  VOID                        *Buffer,
-  IN  UINTN                       Length
+  IN  GUID   *Guid,
+  IN  UINTN  Offset,
+  IN  VOID   *Buffer,
+  IN  UINTN  Length
   );
 
 /**
@@ -101,7 +104,7 @@ UpdateLockBox (
 
   @retval RETURN_SUCCESS            the information is restored successfully.
   @retval RETURN_INVALID_PARAMETER  the Guid is NULL, or one of Buffer and Length is NULL.
-  @retval RETURN_WRITE_PROTECTED    Buffer and Length are NULL, but the LockBox has no 
+  @retval RETURN_WRITE_PROTECTED    Buffer and Length are NULL, but the LockBox has no
                                     LOCK_BOX_ATTRIBUTE_RESTORE_IN_PLACE attribute.
   @retval RETURN_BUFFER_TOO_SMALL   the Length is too small to hold the confidential information.
   @retval RETURN_NOT_FOUND          the requested GUID not found.
@@ -112,9 +115,9 @@ UpdateLockBox (
 RETURN_STATUS
 EFIAPI
 RestoreLockBox (
-  IN  GUID                        *Guid,
-  IN  VOID                        *Buffer, OPTIONAL
-  IN  OUT UINTN                   *Length  OPTIONAL
+  IN  GUID       *Guid,
+  IN  VOID       *Buffer  OPTIONAL,
+  IN  OUT UINTN  *Length  OPTIONAL
   );
 
 /**
@@ -129,5 +132,3 @@ EFIAPI
 RestoreAllLockBoxInPlace (
   VOID
   );
-
-#endif

@@ -2,24 +2,16 @@
   The header file of iSCSI DHCP6 related configuration routines.
 
 Copyright (c) 2004 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _ISCSI_DHCP6_H_
-#define _ISCSI_DHCP6_H_
+#pragma once
 
-#define ISCSI_ROOT_PATH_ID                   "iscsi:"
-#define ISCSI_ROOT_PATH_FIELD_DELIMITER      ':'
-#define ISCSI_ROOT_PATH_ADDR_START_DELIMITER '['
-#define ISCSI_ROOT_PATH_ADDR_END_DELIMITER   ']'
-
+#define ISCSI_ROOT_PATH_ID                    "iscsi:"
+#define ISCSI_ROOT_PATH_FIELD_DELIMITER       ':'
+#define ISCSI_ROOT_PATH_ADDR_START_DELIMITER  '['
+#define ISCSI_ROOT_PATH_ADDR_END_DELIMITER    ']'
 
 /**
   Extract the Root Path option and get the required target information from
@@ -41,7 +33,7 @@ EFI_STATUS
 IScsiDhcp6ExtractRootPath (
   IN     CHAR8                        *RootPath,
   IN     UINT16                       Length,
-  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA *ConfigData
+  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA  *ConfigData
   );
 
 /**
@@ -63,9 +55,7 @@ IScsiDhcp6ExtractRootPath (
 **/
 EFI_STATUS
 IScsiDoDhcp6 (
-  IN     EFI_HANDLE                  Image,
-  IN     EFI_HANDLE                  Controller,
-  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA *ConfigData
+  IN     EFI_HANDLE                   Image,
+  IN     EFI_HANDLE                   Controller,
+  IN OUT ISCSI_ATTEMPT_CONFIG_NVDATA  *ConfigData
   );
-
-#endif

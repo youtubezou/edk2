@@ -2,18 +2,11 @@
   Boot Logo protocol is used to convey information of Logo dispayed during boot.
 
 Copyright (c) 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under
-the terms and conditions of the BSD License that accompanies this distribution.
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _BOOT_LOGO_H_
-#define _BOOT_LOGO_H_
+#pragma once
 
 #include <Protocol/GraphicsOutput.h>
 
@@ -25,7 +18,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Forward reference for pure ANSI compatability
 //
-typedef struct _EFI_BOOT_LOGO_PROTOCOL  EFI_BOOT_LOGO_PROTOCOL;
+typedef struct _EFI_BOOT_LOGO_PROTOCOL EFI_BOOT_LOGO_PROTOCOL;
 
 /**
   Update information of logo image drawn on screen.
@@ -57,9 +50,7 @@ EFI_STATUS
   );
 
 struct _EFI_BOOT_LOGO_PROTOCOL {
-  EFI_SET_BOOT_LOGO        SetBootLogo;
+  EFI_SET_BOOT_LOGO    SetBootLogo;
 };
 
-extern EFI_GUID gEfiBootLogoProtocolGuid;
-
-#endif
+extern EFI_GUID  gEfiBootLogoProtocolGuid;

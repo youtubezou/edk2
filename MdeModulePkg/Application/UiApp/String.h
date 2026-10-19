@@ -2,20 +2,13 @@
   String support
 
 Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _STRING_H_
-#define _STRING_H_
+#pragma once
 
-extern EFI_HII_HANDLE gStringPackHandle;
+extern EFI_HII_HANDLE  gStringPackHandle;
 
 //
 // This is the VFR compiler generated header file which defines the
@@ -44,7 +37,7 @@ extern UINT8  BdsDxeStrings[];
 **/
 CHAR16 *
 GetStringById (
-  IN  EFI_STRING_ID   Id
+  IN  EFI_STRING_ID  Id
   );
 
 /**
@@ -73,5 +66,3 @@ EFI_HII_HANDLE
 ExportFonts (
   VOID
   );
-
-#endif // _STRING_H_

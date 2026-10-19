@@ -1,14 +1,8 @@
 /** @file
-  Power management support fucntions implementation for PCI Bus module.
+  Power management support functions implementation for PCI Bus module.
 
-Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -27,7 +21,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 EFI_STATUS
 ResetPowerManagementFeature (
-  IN PCI_IO_DEVICE *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   )
 {
   EFI_STATUS  Status;
@@ -37,11 +31,11 @@ ResetPowerManagementFeature (
   PowerManagementRegBlock = 0;
 
   Status = LocateCapabilityRegBlock (
-            PciIoDevice,
-            EFI_PCI_CAPABILITY_ID_PMI,
-            &PowerManagementRegBlock,
-            NULL
-            );
+             PciIoDevice,
+             EFI_PCI_CAPABILITY_ID_PMI,
+             &PowerManagementRegBlock,
+             NULL
+             );
 
   if (EFI_ERROR (Status)) {
     return EFI_UNSUPPORTED;
@@ -83,6 +77,6 @@ ResetPowerManagementFeature (
                                       &PowerManagementCSR
                                       );
   }
+
   return Status;
 }
-

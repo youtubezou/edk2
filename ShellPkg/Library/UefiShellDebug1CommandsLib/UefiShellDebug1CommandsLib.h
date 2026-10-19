@@ -1,19 +1,12 @@
 /** @file
   Main file for NULL named library for Profile1 shell command functions.
 
-  Copyright (c) 2010 - 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _UEFI_SHELL_DEBUG1_COMMANDS_LIB_H_
-#define _UEFI_SHELL_DEBUG1_COMMANDS_LIB_H_
+#pragma once
 
 #include <Uefi.h>
 
@@ -56,9 +49,9 @@
 #include <Library/DevicePathLib.h>
 #include <Library/PrintLib.h>
 #include <Library/HandleParsingLib.h>
+#include <Library/SafeIntLib.h>
 
-
-extern        EFI_HANDLE                        gShellDebug1HiiHandle;
+extern        EFI_HII_HANDLE  gShellDebug1HiiHandle;
 
 /**
   Function returns a system configuration table that is stored in the
@@ -72,38 +65,8 @@ extern        EFI_HANDLE                        gShellDebug1HiiHandle;
 **/
 EFI_STATUS
 GetSystemConfigurationTable (
-  IN EFI_GUID *TableGuid,
-  IN OUT VOID **Table
-  );
-
-/**
-  Convert a string representation of a GUID to the GUID value.
-
-  @param[in]  StringGuid   The pointer to the string containing a GUID printed.
-  @param[in, out] Guid     The pointer to the buffer to get the GUID value.
-**/
-EFI_STATUS
-ConvertStringToGuid (
-  IN CONST CHAR16 *StringGuid,
-  IN OUT EFI_GUID *Guid
-  );
-
-/**
-  Convert a Unicode character to numerical value.
-
-  This internal function only deal with Unicode character
-  which maps to a valid hexadecimal ASII character, i.e.
-  L'0' to L'9', L'a' to L'f' or L'A' to L'F'. For other
-  Unicode character, the value returned does not make sense.
-
-  @param  Char  The character to convert.
-
-  @return The numerical value converted.
-
-**/
-UINTN
-HexCharToUintn (
-  IN      CHAR16                    Char
+  IN EFI_GUID  *TableGuid,
+  IN OUT VOID  **Table
   );
 
 /**
@@ -276,6 +239,19 @@ ShellCommandRunPci (
   );
 
 /**
+  Function for 'cxl' command.
+
+  @param[in] ImageHandle  Handle to the Image (NULL if Internal).
+  @param[in] SystemTable  Pointer to the System Table (NULL if Internal).
+**/
+SHELL_STATUS
+EFIAPI
+ShellCommandRunCxl (
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
+  );
+
+/**
   Function for 'smbiosview' command.
 
   @param[in] ImageHandle  Handle to the Image (NULL if Internal).
@@ -342,21 +318,21 @@ ShellCommandRunHexEdit (
 
 /**
   Clear the line at the specified Row.
-  
+
   @param[in] Row                The row number to be cleared ( start from 1 )
   @param[in] LastCol            The last printable column.
   @param[in] LastRow            The last printable row.
 **/
 VOID
 EditorClearLine (
-  IN UINTN Row,
-  IN UINTN LastCol,
-  IN UINTN LastRow
+  IN UINTN  Row,
+  IN UINTN  LastCol,
+  IN UINTN  LastRow
   );
 
 /**
   Check if file name has illegal characters.
-  
+
   @param Name       The filename to check.
 
   @retval TRUE      The filename is ok.
@@ -364,7 +340,7 @@ EditorClearLine (
 **/
 BOOLEAN
 IsValidFileName (
-  IN CONST CHAR16 *Name
+  IN CONST CHAR16  *Name
   );
 
 /**
@@ -377,22 +353,22 @@ IsValidFileName (
 **/
 CHAR16 *
 EditGetDefaultFileName (
-  IN CONST CHAR16 *Extension
+  IN CONST CHAR16  *Extension
   );
 
 /**
-  Read a file into an allocated buffer.  The buffer is the responsibility 
+  Read a file into an allocated buffer.  The buffer is the responsibility
   of the caller to free.
 
   @param[in]  FileName          The filename of the file to open.
-  @param[out] Buffer            Upon successful return, the pointer to the 
-                                address of the allocated buffer.                                  
+  @param[out] Buffer            Upon successful return, the pointer to the
+                                address of the allocated buffer.
   @param[out] BufferSize        If not NULL, then the pointer to the size
                                 of the allocated buffer.
   @param[out] ReadOnly          Upon successful return TRUE if the file is
                                 read only.  FALSE otherwise.
 
-  @retval EFI_NOT_FOUND         The filename did not represent a file in the 
+  @retval EFI_NOT_FOUND         The filename did not represent a file in the
                                 file system.  Directories cannot be read with
                                 this method.
   @retval EFI_SUCCESS           The file was read into the buffer.
@@ -404,10 +380,8 @@ EditGetDefaultFileName (
 **/
 EFI_STATUS
 ReadFileIntoBuffer (
-  IN CONST CHAR16 *FileName,
-  OUT VOID        **Buffer,
-  OUT UINTN       *BufferSize OPTIONAL,
-  OUT BOOLEAN     *ReadOnly
+  IN CONST CHAR16  *FileName,
+  OUT VOID         **Buffer,
+  OUT UINTN        *BufferSize OPTIONAL,
+  OUT BOOLEAN      *ReadOnly
   );
-
-#endif

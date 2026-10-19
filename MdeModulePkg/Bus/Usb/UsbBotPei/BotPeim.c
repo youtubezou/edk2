@@ -1,16 +1,9 @@
 /** @file
 BOT Transportation implementation.
 
-Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-  
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -30,8 +23,8 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 **/
 EFI_STATUS
 BotRecoveryReset (
-  IN  EFI_PEI_SERVICES          **PeiServices,
-  IN  PEI_BOT_DEVICE            *PeiBotDev
+  IN  EFI_PEI_SERVICES  **PeiServices,
+  IN  PEI_BOT_DEVICE    *PeiBotDev
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -48,23 +41,23 @@ BotRecoveryReset (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType  = 0x21;
-  DevReq.Request      = 0xFF;
-  DevReq.Value        = 0;
-  DevReq.Index        = 0;
-  DevReq.Length       = 0;
+  DevReq.RequestType = 0x21;
+  DevReq.Request     = 0xFF;
+  DevReq.Value       = 0;
+  DevReq.Index       = 0;
+  DevReq.Length      = 0;
 
-  Timeout             = 3000;
+  Timeout = 3000;
 
   Status = UsbIoPpi->UsbControlTransfer (
-                      PeiServices,
-                      UsbIoPpi,
-                      &DevReq,
-                      EfiUsbNoData,
-                      Timeout,
-                      NULL,
-                      0
-                      );
+                       PeiServices,
+                       UsbIoPpi,
+                       &DevReq,
+                       EfiUsbNoData,
+                       Timeout,
+                       NULL,
+                       0
+                       );
 
   //
   // clear bulk in endpoint stall feature
@@ -103,13 +96,13 @@ BotRecoveryReset (
 **/
 EFI_STATUS
 BotCommandPhase (
-  IN  EFI_PEI_SERVICES          **PeiServices,
-  IN  PEI_BOT_DEVICE            *PeiBotDev,
-  IN  VOID                      *Command,
-  IN  UINT8                     CommandSize,
-  IN  UINT32                    DataTransferLength,
-  IN  EFI_USB_DATA_DIRECTION    Direction,
-  IN  UINT16                    Timeout
+  IN  EFI_PEI_SERVICES        **PeiServices,
+  IN  PEI_BOT_DEVICE          *PeiBotDev,
+  IN  VOID                    *Command,
+  IN  UINT8                   CommandSize,
+  IN  UINT32                  DataTransferLength,
+  IN  EFI_USB_DATA_DIRECTION  Direction,
+  IN  UINT16                  Timeout
   )
 {
   CBW             Cbw;
@@ -124,25 +117,25 @@ BotCommandPhase (
   //
   // Fill the command block, detailed see BOT spec
   //
-  Cbw.Signature           = CBWSIG;
-  Cbw.Tag                 = 0x01;
-  Cbw.DataTransferLength  = DataTransferLength;
-  Cbw.Flags               = (UINT8) ((Direction == EfiUsbDataIn) ? 0x80 : 0);
-  Cbw.Lun                 = 0;
-  Cbw.CmdLen              = CommandSize;
+  Cbw.Signature          = CBWSIG;
+  Cbw.Tag                = 0x01;
+  Cbw.DataTransferLength = DataTransferLength;
+  Cbw.Flags              = (UINT8)((Direction == EfiUsbDataIn) ? 0x80 : 0);
+  Cbw.Lun                = 0;
+  Cbw.CmdLen             = CommandSize;
 
   CopyMem (Cbw.CmdBlock, Command, CommandSize);
 
   DataSize = sizeof (CBW);
 
   Status = UsbIoPpi->UsbBulkTransfer (
-                      PeiServices,
-                      UsbIoPpi,
-                      (PeiBotDev->BulkOutEndpoint)->EndpointAddress,
-                      (UINT8 *) &Cbw,
-                      &DataSize,
-                      Timeout
-                      );
+                       PeiServices,
+                       UsbIoPpi,
+                       (PeiBotDev->BulkOutEndpoint)->EndpointAddress,
+                       (UINT8 *)&Cbw,
+                       &DataSize,
+                       Timeout
+                       );
   if (EFI_ERROR (Status)) {
     //
     // Command phase fail, we need to recovery reset this device
@@ -175,12 +168,12 @@ BotCommandPhase (
 **/
 EFI_STATUS
 BotDataPhase (
-  IN  EFI_PEI_SERVICES          **PeiServices,
-  IN  PEI_BOT_DEVICE            *PeiBotDev,
-  IN  UINT32                    *DataSize,
-  IN  OUT VOID                  *DataBuffer,
-  IN  EFI_USB_DATA_DIRECTION    Direction,
-  IN  UINT16                    Timeout
+  IN  EFI_PEI_SERVICES        **PeiServices,
+  IN  PEI_BOT_DEVICE          *PeiBotDev,
+  IN  UINT32                  *DataSize,
+  IN  OUT VOID                *DataBuffer,
+  IN  EFI_USB_DATA_DIRECTION  Direction,
+  IN  UINT16                  Timeout
   )
 {
   EFI_STATUS      Status;
@@ -192,21 +185,21 @@ BotDataPhase (
   UINT8           *BufferPtr;
   UINTN           TransferredSize;
 
-  UsbIoPpi        = PeiBotDev->UsbIoPpi;
+  UsbIoPpi = PeiBotDev->UsbIoPpi;
 
   Remain          = *DataSize;
-  BufferPtr       = (UINT8 *) DataBuffer;
+  BufferPtr       = (UINT8 *)DataBuffer;
   TransferredSize = 0;
 
   //
-  // retrieve the the max packet length of the given endpoint
+  // retrieve the max packet length of the given endpoint
   //
   if (Direction == EfiUsbDataIn) {
-    MaxPacketLen  = (PeiBotDev->BulkInEndpoint)->MaxPacketSize;
-    EndpointAddr  = (PeiBotDev->BulkInEndpoint)->EndpointAddress;
+    MaxPacketLen = (PeiBotDev->BulkInEndpoint)->MaxPacketSize;
+    EndpointAddr = (PeiBotDev->BulkInEndpoint)->EndpointAddress;
   } else {
-    MaxPacketLen  = (PeiBotDev->BulkOutEndpoint)->MaxPacketSize;
-    EndpointAddr  = (PeiBotDev->BulkOutEndpoint)->EndpointAddress;
+    MaxPacketLen = (PeiBotDev->BulkOutEndpoint)->MaxPacketSize;
+    EndpointAddr = (PeiBotDev->BulkOutEndpoint)->EndpointAddress;
   }
 
   while (Remain > 0) {
@@ -220,13 +213,13 @@ BotDataPhase (
     }
 
     Status = UsbIoPpi->UsbBulkTransfer (
-                        PeiServices,
-                        UsbIoPpi,
-                        EndpointAddr,
-                        BufferPtr,
-                        &Increment,
-                        Timeout
-                        );
+                         PeiServices,
+                         UsbIoPpi,
+                         EndpointAddr,
+                         BufferPtr,
+                         &Increment,
+                         Timeout
+                         );
 
     TransferredSize += Increment;
 
@@ -236,10 +229,10 @@ BotDataPhase (
     }
 
     BufferPtr += Increment;
-    Remain -= Increment;
+    Remain    -= Increment;
   }
 
-  *DataSize = (UINT32) TransferredSize;
+  *DataSize = (UINT32)TransferredSize;
 
   return EFI_SUCCESS;
 }
@@ -263,10 +256,10 @@ BotDataPhase (
 **/
 EFI_STATUS
 BotStatusPhase (
-  IN  EFI_PEI_SERVICES          **PeiServices,
-  IN  PEI_BOT_DEVICE            *PeiBotDev,
-  OUT UINT8                     *TransferStatus,
-  IN  UINT16                    Timeout
+  IN  EFI_PEI_SERVICES  **PeiServices,
+  IN  PEI_BOT_DEVICE    *PeiBotDev,
+  OUT UINT8             *TransferStatus,
+  IN  UINT16            Timeout
   )
 {
   CSW             Csw;
@@ -279,21 +272,21 @@ BotStatusPhase (
 
   ZeroMem (&Csw, sizeof (CSW));
 
-  EndpointAddr  = (PeiBotDev->BulkInEndpoint)->EndpointAddress;
+  EndpointAddr = (PeiBotDev->BulkInEndpoint)->EndpointAddress;
 
-  DataSize      = sizeof (CSW);
+  DataSize = sizeof (CSW);
 
   //
   // Get the status field from bulk transfer
   //
   Status = UsbIoPpi->UsbBulkTransfer (
-                      PeiServices,
-                      UsbIoPpi,
-                      EndpointAddr,
-                      &Csw,
-                      &DataSize,
-                      Timeout
-                      );
+                       PeiServices,
+                       UsbIoPpi,
+                       EndpointAddr,
+                       &Csw,
+                       &DataSize,
+                       Timeout
+                       );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -326,14 +319,14 @@ BotStatusPhase (
 **/
 EFI_STATUS
 PeiAtapiCommand (
-  IN  EFI_PEI_SERVICES            **PeiServices,
-  IN  PEI_BOT_DEVICE              *PeiBotDev,
-  IN  VOID                        *Command,
-  IN  UINT8                       CommandSize,
-  IN  VOID                        *DataBuffer,
-  IN  UINT32                      BufferLength,
-  IN  EFI_USB_DATA_DIRECTION      Direction,
-  IN  UINT16                      TimeOutInMilliSeconds
+  IN  EFI_PEI_SERVICES        **PeiServices,
+  IN  PEI_BOT_DEVICE          *PeiBotDev,
+  IN  VOID                    *Command,
+  IN  UINT8                   CommandSize,
+  IN  VOID                    *DataBuffer,
+  IN  UINT32                  BufferLength,
+  IN  EFI_USB_DATA_DIRECTION  Direction,
+  IN  UINT16                  TimeOutInMilliSeconds
   )
 {
   EFI_STATUS  Status;
@@ -346,48 +339,50 @@ PeiAtapiCommand (
   // First send ATAPI command through Bot
   //
   Status = BotCommandPhase (
-            PeiServices,
-            PeiBotDev,
-            Command,
-            CommandSize,
-            BufferLength,
-            Direction,
-            TimeOutInMilliSeconds
-            );
+             PeiServices,
+             PeiBotDev,
+             Command,
+             CommandSize,
+             BufferLength,
+             Direction,
+             TimeOutInMilliSeconds
+             );
 
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
+
   //
   // Send/Get Data if there is a Data Stage
   //
   switch (Direction) {
-  case EfiUsbDataIn:
-  case EfiUsbDataOut:
-    BufferSize = BufferLength;
+    case EfiUsbDataIn:
+    case EfiUsbDataOut:
+      BufferSize = BufferLength;
 
-    BotDataStatus = BotDataPhase (
-                      PeiServices,
-                      PeiBotDev,
-                      &BufferSize,
-                      DataBuffer,
-                      Direction,
-                      TimeOutInMilliSeconds
-                      );
-    break;
+      BotDataStatus = BotDataPhase (
+                        PeiServices,
+                        PeiBotDev,
+                        &BufferSize,
+                        DataBuffer,
+                        Direction,
+                        TimeOutInMilliSeconds
+                        );
+      break;
 
-  case EfiUsbNoData:
-    break;
+    case EfiUsbNoData:
+      break;
   }
+
   //
   // Status Phase
   //
   Status = BotStatusPhase (
-            PeiServices,
-            PeiBotDev,
-            &TransferStatus,
-            TimeOutInMilliSeconds
-            );
+             PeiServices,
+             PeiBotDev,
+             &TransferStatus,
+             TimeOutInMilliSeconds
+             );
   if (EFI_ERROR (Status)) {
     BotRecoveryReset (PeiServices, PeiBotDev);
     return EFI_DEVICE_ERROR;

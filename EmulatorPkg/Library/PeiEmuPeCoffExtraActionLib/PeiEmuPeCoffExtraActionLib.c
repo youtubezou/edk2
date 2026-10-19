@@ -5,13 +5,7 @@
 
 Copyright (c) 2006 - 2009, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2008 - 2011, Apple Inc. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 #include <PiPei.h>
@@ -28,7 +22,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 //
 // Cache of UnixThunk protocol
 //
-EMU_THUNK_PROTOCOL   *mThunk = NULL;
+EMU_THUNK_PROTOCOL  *mThunk = NULL;
 
 /**
   The function caches the pointer of the Unix thunk functions
@@ -42,22 +36,21 @@ EFIAPI
 EmuPeCoffGetThunkStucture (
   )
 {
-  EMU_THUNK_PPI     *ThunkPpi;
-  EFI_STATUS        Status;
-
+  EMU_THUNK_PPI  *ThunkPpi;
+  EFI_STATUS     Status;
 
   //
   // Locate Unix ThunkPpi for retrieving standard output handle
   //
   Status = PeiServicesLocatePpi (
-              &gEmuThunkPpiGuid,
-              0,
-              NULL,
-              (VOID **) &ThunkPpi
-              );
+             &gEmuThunkPpiGuid,
+             0,
+             NULL,
+             (VOID **)&ThunkPpi
+             );
   ASSERT_EFI_ERROR (Status);
 
-  EMU_MAGIC_PAGE()->Thunk = (EMU_THUNK_PROTOCOL *) ThunkPpi->Thunk ();
+  EMU_MAGIC_PAGE ()->Thunk = (EMU_THUNK_PROTOCOL *)ThunkPpi->Thunk ();
 
   return EFI_SUCCESS;
 }
@@ -77,12 +70,12 @@ PeCoffLoaderRelocateImageExtraAction (
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   )
 {
-  if (EMU_MAGIC_PAGE()->Thunk == NULL) {
+  if (EMU_MAGIC_PAGE ()->Thunk == NULL) {
     EmuPeCoffGetThunkStucture ();
   }
-    EMU_MAGIC_PAGE()->Thunk->PeCoffRelocateImageExtraAction (ImageContext);
-  }
 
+  EMU_MAGIC_PAGE ()->Thunk->PeCoffRelocateImageExtraAction (ImageContext);
+}
 
 /**
   Performs additional actions just before a PE/COFF image is unloaded.  Any resources
@@ -100,8 +93,9 @@ PeCoffLoaderUnloadImageExtraAction (
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   )
 {
-  if (EMU_MAGIC_PAGE()->Thunk == NULL) {
+  if (EMU_MAGIC_PAGE ()->Thunk == NULL) {
     EmuPeCoffGetThunkStucture ();
   }
-  EMU_MAGIC_PAGE()->Thunk->PeCoffUnloadImageExtraAction (ImageContext);
+
+  EMU_MAGIC_PAGE ()->Thunk->PeCoffUnloadImageExtraAction (ImageContext);
 }

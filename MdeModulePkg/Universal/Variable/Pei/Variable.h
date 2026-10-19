@@ -2,19 +2,12 @@
   The internal header file includes the common header files, defines
   internal structure and functions used by PeiVariable module.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2017, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _PEI_VARIABLE_H_
-#define _PEI_VARIABLE_H_
+#pragma once
 
 #include <PiPei.h>
 #include <Ppi/ReadOnlyVariable2.h>
@@ -26,11 +19,16 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/BaseMemoryLib.h>
 #include <Library/PeiServicesTablePointerLib.h>
 #include <Library/PeiServicesLib.h>
+#include <Library/SafeIntLib.h>
+#include <Library/VariableFlashInfoLib.h>
+#include <Library/MmUnblockMemoryLib.h>
+#include <Library/MemoryAllocationLib.h>
 
 #include <Guid/VariableFormat.h>
 #include <Guid/VariableIndexTable.h>
 #include <Guid/SystemNvDataGuid.h>
 #include <Guid/FaultTolerantWrite.h>
+#include <Guid/VariableRuntimeCacheInfo.h>
 
 typedef enum {
   VariableStoreTypeHob,
@@ -53,6 +51,7 @@ typedef struct {
 //
 // Functions
 //
+
 /**
   Provide the functionality of the variable services.
 
@@ -67,8 +66,8 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 PeimInitializeVariableServices (
-  IN       EFI_PEI_FILE_HANDLE       FileHandle,
-  IN CONST EFI_PEI_SERVICES          **PeiServices
+  IN       EFI_PEI_FILE_HANDLE  FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   );
 
 /**
@@ -87,9 +86,10 @@ PeimInitializeVariableServices (
   @param  DataSize              On entry, points to the size in bytes of the Data buffer.
                                 On return, points to the size of the data returned in Data.
   @param  Data                  Points to the buffer which will hold the returned variable value.
+                                May be NULL with a zero DataSize in order to determine the size of the buffer needed.
 
   @retval EFI_SUCCESS           The variable was read successfully.
-  @retval EFI_NOT_FOUND         The variable could not be found.
+  @retval EFI_NOT_FOUND         The variable was not found.
   @retval EFI_BUFFER_TOO_SMALL  The DataSize is too small for the resulting data.
                                 DataSize is updated with the size required for
                                 the specified variable.
@@ -100,12 +100,12 @@ PeimInitializeVariableServices (
 EFI_STATUS
 EFIAPI
 PeiGetVariable (
-  IN CONST  EFI_PEI_READ_ONLY_VARIABLE2_PPI *This,
-  IN CONST  CHAR16                          *VariableName,
-  IN CONST  EFI_GUID                        *VariableGuid,
-  OUT       UINT32                          *Attributes,
-  IN OUT    UINTN                           *DataSize,
-  OUT       VOID                            *Data
+  IN CONST  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *This,
+  IN CONST  CHAR16                           *VariableName,
+  IN CONST  EFI_GUID                         *VariableGuid,
+  OUT       UINT32                           *Attributes,
+  IN OUT    UINTN                            *DataSize,
+  OUT       VOID                             *Data OPTIONAL
   );
 
 /**
@@ -140,10 +140,8 @@ PeiGetVariable (
 EFI_STATUS
 EFIAPI
 PeiGetNextVariableName (
-  IN CONST  EFI_PEI_READ_ONLY_VARIABLE2_PPI *This,
-  IN OUT UINTN                              *VariableNameSize,
-  IN OUT CHAR16                             *VariableName,
-  IN OUT EFI_GUID                           *VariableGuid
+  IN CONST  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *This,
+  IN OUT UINTN                               *VariableNameSize,
+  IN OUT CHAR16                              *VariableName,
+  IN OUT EFI_GUID                            *VariableGuid
   );
-
-#endif

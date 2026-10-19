@@ -1,41 +1,34 @@
 /** @file
   PCI Hot Plug support functions declaration for PCI Bus module.
 
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_PCI_HOT_PLUG_SUPPORT_H_
-#define _EFI_PCI_HOT_PLUG_SUPPORT_H_
+#pragma once
 
 //
 // stall 1 second, its unit is 100ns
 //
-#define STALL_1_SECOND        1000000
+#define STALL_1_SECOND  1000000
 
 //
 // PCI Hot Plug controller private data
 //
 typedef struct {
-  EFI_EVENT Event;
-  BOOLEAN   Found;
-  BOOLEAN   Initialized;
-  VOID      *Padding;
+  EFI_EVENT    Event;
+  BOOLEAN      Found;
+  BOOLEAN      Initialized;
+  VOID         *Padding;
 } ROOT_HPC_DATA;
 
 //
-// Reference of some global variabes
+// Reference of some global variables
 //
-extern EFI_PCI_HOT_PLUG_INIT_PROTOCOL *gPciHotPlugInit;
-extern EFI_HPC_LOCATION               *gPciRootHpcPool;
-extern ROOT_HPC_DATA                  *gPciRootHpcData;
+extern EFI_PCI_HOT_PLUG_INIT_PROTOCOL  *gPciHotPlugInit;
+extern EFI_HPC_LOCATION                *gPciRootHpcPool;
+extern ROOT_HPC_DATA                   *gPciRootHpcData;
 
 /**
   Event notification function to set Hot Plug controller status.
@@ -47,12 +40,12 @@ extern ROOT_HPC_DATA                  *gPciRootHpcData;
 VOID
 EFIAPI
 PciHPCInitialized (
-  IN EFI_EVENT    Event,
-  IN VOID         *Context
+  IN EFI_EVENT  Event,
+  IN VOID       *Context
   );
 
 /**
-  Compare two device pathes to check if they are exactly same.
+  Compare two device paths to check if they are exactly same.
 
   @param DevicePath1    A pointer to the first device path data structure.
   @param DevicePath2    A pointer to the second device path data structure.
@@ -63,8 +56,8 @@ PciHPCInitialized (
 **/
 BOOLEAN
 EfiCompareDevicePath (
-  IN EFI_DEVICE_PATH_PROTOCOL *DevicePath1,
-  IN EFI_DEVICE_PATH_PROTOCOL *DevicePath2
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath1,
+  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath2
   );
 
 /**
@@ -75,7 +68,7 @@ EfiCompareDevicePath (
   private data structure.
 
   @retval EFI_SUCCESS           They are same.
-  @retval EFI_UNSUPPORTED       No PCI Hot Plug controler on the platform.
+  @retval EFI_UNSUPPORTED       No PCI Hot Plug controller on the platform.
   @retval EFI_OUT_OF_RESOURCES  No memory to constructor root hot plug private
                                 data structure.
 
@@ -96,7 +89,7 @@ InitializeHotPlugSupport (
 **/
 BOOLEAN
 IsPciHotPlugBus (
-  PCI_IO_DEVICE                       *PciIoDevice
+  PCI_IO_DEVICE  *PciIoDevice
   );
 
 /**
@@ -104,7 +97,7 @@ IsPciHotPlugBus (
 
   @param HpbDevicePath  A pointer to device path data structure to be tested.
   @param HpIndex        If HpIndex is not NULL, return the index of root hot
-                        plug in global array when TRUE is retuned.
+                        plug in global array when TRUE is returned.
 
   @retval TRUE          The device path is for root pci hot plug bus.
   @retval FALSE         The device path is not for root pci hot plug bus.
@@ -112,8 +105,8 @@ IsPciHotPlugBus (
 **/
 BOOLEAN
 IsRootPciHotPlugBus (
-  IN  EFI_DEVICE_PATH_PROTOCOL        *HpbDevicePath,
-  OUT UINTN                           *HpIndex    OPTIONAL
+  IN  EFI_DEVICE_PATH_PROTOCOL  *HpbDevicePath,
+  OUT UINTN                     *HpIndex    OPTIONAL
   );
 
 /**
@@ -121,7 +114,7 @@ IsRootPciHotPlugBus (
 
   @param HpcDevicePath  A pointer to device path data structure to be tested.
   @param HpIndex        If HpIndex is not NULL, return the index of root hot
-                        plug in global array when TRUE is retuned.
+                        plug in global array when TRUE is returned.
 
   @retval TRUE          The device path is for root pci hot plug controller.
   @retval FALSE         The device path is not for root pci hot plug controller.
@@ -129,17 +122,17 @@ IsRootPciHotPlugBus (
 **/
 BOOLEAN
 IsRootPciHotPlugController (
-  IN EFI_DEVICE_PATH_PROTOCOL         *HpcDevicePath,
-  OUT UINTN                           *HpIndex
+  IN EFI_DEVICE_PATH_PROTOCOL  *HpcDevicePath,
+  OUT UINTN                    *HpIndex
   );
 
 /**
   Creating event object for PCI Hot Plug controller.
 
   @param  HpIndex   Index of hot plug device in global array.
-  @param  Event     The retuned event that invoke this function.
+  @param  Event     The returned event that invoke this function.
 
-  @return Status of create event invoken.
+  @return Status of create event.
 
 **/
 EFI_STATUS
@@ -159,7 +152,7 @@ CreateEventForHpc (
 **/
 EFI_STATUS
 AllRootHPCInitialized (
-  IN  UINTN           TimeoutInMicroSeconds
+  IN  UINTN  TimeoutInMicroSeconds
   );
 
 /**
@@ -173,7 +166,7 @@ AllRootHPCInitialized (
 **/
 BOOLEAN
 IsSHPC (
-  IN PCI_IO_DEVICE                      *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   );
 
 /**
@@ -188,13 +181,13 @@ IsSHPC (
 
   @param[in] PciIoDevice  The device being checked.
 
-  @retval TRUE   PciIoDevice is a PCIe port that accepts a hotplugged device.
+  @retval TRUE   PciIoDevice is a PCIe port that accepts a hot-plugged device.
   @retval FALSE  Otherwise.
 
 **/
 BOOLEAN
 SupportsPcieHotplug (
-  IN PCI_IO_DEVICE                      *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   );
 
 /**
@@ -205,7 +198,5 @@ SupportsPcieHotplug (
 **/
 VOID
 GetResourcePaddingForHpb (
-  IN PCI_IO_DEVICE      *PciIoDevice
+  IN PCI_IO_DEVICE  *PciIoDevice
   );
-
-#endif

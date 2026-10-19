@@ -1,19 +1,12 @@
 /** @file
-  GUIDs used as HII FormSet and HII Package list GUID in Driver Sample driver. 
-  
-Copyright (c) 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
+  GUIDs used as HII FormSet and HII Package list GUID in Driver Sample driver.
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __DRIVER_SAMPLE_HII_GUID_H__
-#define __DRIVER_SAMPLE_HII_GUID_H__
+#pragma once
 
 #define DRIVER_SAMPLE_FORMSET_GUID \
   { \
@@ -30,8 +23,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
     0xF5E655D9, 0x02A6, 0x46f2, {0x9E, 0x76, 0xB8, 0xBE, 0x8E, 0x60, 0xAB, 0x22} \
   }
 
-extern EFI_GUID gDriverSampleFormSetGuid;
-extern EFI_GUID gDriverSampleInventoryGuid;
-extern EFI_GUID gEfiIfrRefreshIdOpGuid;
-
-#endif
+extern EFI_GUID  gDriverSampleFormSetGuid;
+extern EFI_GUID  gDriverSampleInventoryGuid;
+extern EFI_GUID  gEfiIfrRefreshIdOpGuid;

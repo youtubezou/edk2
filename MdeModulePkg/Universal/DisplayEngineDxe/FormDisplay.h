@@ -1,20 +1,12 @@
 /** @file
   FormDiplay protocol to show Form
 
-Copyright (c) 2013 - 2014, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                            
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2013 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FORM_DISPLAY_H__
-#define __FORM_DISPLAY_H__
-
+#pragma once
 
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/DebugLib.h>
@@ -28,78 +20,91 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/FormBrowserEx2.h>
 #include <Protocol/SimpleTextIn.h>
 #include <Protocol/DisplayProtocol.h>
+#include <Protocol/HiiPopup.h>
 
 #include <Guid/MdeModuleHii.h>
 
 //
 // This is the generated header file which includes whatever needs to be exported (strings + IFR)
 //
-extern UINT8  DisplayEngineStrings[];
-extern EFI_SCREEN_DESCRIPTOR         gStatementDimensions;
-extern USER_INPUT                    *gUserInput;
-extern FORM_DISPLAY_ENGINE_FORM      *gFormData;
-extern EFI_HII_HANDLE                gHiiHandle;
-extern UINT16                        gDirection;
-extern LIST_ENTRY                    gMenuOption;
+extern UINT8                     DisplayEngineStrings[];
+extern EFI_SCREEN_DESCRIPTOR     gStatementDimensions;
+extern USER_INPUT                *gUserInput;
+extern FORM_DISPLAY_ENGINE_FORM  *gFormData;
+extern EFI_HII_HANDLE            gHiiHandle;
+extern UINT16                    gDirection;
+extern LIST_ENTRY                gMenuOption;
+extern CHAR16                    *gConfirmOptYes;
+extern CHAR16                    *gConfirmOptNo;
+extern CHAR16                    *gConfirmOptOk;
+extern CHAR16                    *gConfirmOptCancel;
+extern CHAR16                    *gYesOption;
+extern CHAR16                    *gNoOption;
+extern CHAR16                    *gOkOption;
+extern CHAR16                    *gCancelOption;
+extern CHAR16                    *gErrorPopup;
+extern CHAR16                    *gWarningPopup;
+extern CHAR16                    *gInfoPopup;
 
 //
 // Browser Global Strings
 //
-extern CHAR16            *gSaveFailed;
-extern CHAR16            *gPromptForData;
-extern CHAR16            *gPromptForPassword;
-extern CHAR16            *gPromptForNewPassword;
-extern CHAR16            *gConfirmPassword;
-extern CHAR16            *gConfirmError;
-extern CHAR16            *gPassowordInvalid;
-extern CHAR16            *gPressEnter;
-extern CHAR16            *gEmptyString;
-extern CHAR16            *gMiniString;
-extern CHAR16            *gOptionMismatch;
-extern CHAR16            *gFormSuppress;
-extern CHAR16            *gProtocolNotFound;
+extern CHAR16  *gSaveFailed;
+extern CHAR16  *gPromptForData;
+extern CHAR16  *gPromptForPassword;
+extern CHAR16  *gPromptForNewPassword;
+extern CHAR16  *gConfirmPassword;
+extern CHAR16  *gConfirmError;
+extern CHAR16  *gPassowordInvalid;
+extern CHAR16  *gPressEnter;
+extern CHAR16  *gEmptyString;
+extern CHAR16  *gMiniString;
+extern CHAR16  *gOptionMismatch;
+extern CHAR16  *gFormSuppress;
+extern CHAR16  *gProtocolNotFound;
+extern CHAR16  *gPasswordUnsupported;
 
-extern CHAR16            gPromptBlockWidth;
-extern CHAR16            gOptionBlockWidth;
-extern CHAR16            gHelpBlockWidth;
-extern CHAR16            *mUnknownString;
-extern BOOLEAN           gMisMatch;
+extern CHAR16   gPromptBlockWidth;
+extern CHAR16   gOptionBlockWidth;
+extern CHAR16   gHelpBlockWidth;
+extern CHAR16   *mUnknownString;
+extern BOOLEAN  gMisMatch;
 
 //
 // Screen definitions
 //
 
-#define LEFT_SKIPPED_COLUMNS          3
-#define SCROLL_ARROW_HEIGHT           1
-#define POPUP_PAD_SPACE_COUNT         5
-#define POPUP_FRAME_WIDTH             2
+#define LEFT_SKIPPED_COLUMNS   3
+#define SCROLL_ARROW_HEIGHT    1
+#define POPUP_PAD_SPACE_COUNT  5
+#define POPUP_FRAME_WIDTH      2
 
-#define UPPER_LOWER_CASE_OFFSET       0x20
+#define UPPER_LOWER_CASE_OFFSET  0x20
 
 //
 // Display definitions
 //
-#define LEFT_ONEOF_DELIMITER      L'<'
-#define RIGHT_ONEOF_DELIMITER     L'>'
+#define LEFT_ONEOF_DELIMITER   L'<'
+#define RIGHT_ONEOF_DELIMITER  L'>'
 
-#define LEFT_NUMERIC_DELIMITER    L'['
-#define RIGHT_NUMERIC_DELIMITER   L']'
+#define LEFT_NUMERIC_DELIMITER   L'['
+#define RIGHT_NUMERIC_DELIMITER  L']'
 
 #define LEFT_CHECKBOX_DELIMITER   L'['
 #define RIGHT_CHECKBOX_DELIMITER  L']'
 
-#define CHECK_ON                  L'X'
-#define CHECK_OFF                 L' '
+#define CHECK_ON   L'X'
+#define CHECK_OFF  L' '
 
-#define TIME_SEPARATOR            L':'
-#define DATE_SEPARATOR            L'/'
+#define TIME_SEPARATOR  L':'
+#define DATE_SEPARATOR  L'/'
 
 #define SUBTITLE_INDENT  2
 
 //
 // This is the Input Error Message
 //
-#define INPUT_ERROR 1
+#define INPUT_ERROR  1
 
 //
 // This is the NV RAM update required Message
@@ -115,31 +120,31 @@ extern BOOLEAN           gMisMatch;
 // pow(2, 64) = [18446744073709551616]
 // with extra '-' flat, set the width to 24.
 //
-#define MAX_NUMERIC_INPUT_WIDTH 24
+#define MAX_NUMERIC_INPUT_WIDTH  24
 
-#define EFI_HII_EXPRESSION_INCONSISTENT_IF   0
-#define EFI_HII_EXPRESSION_NO_SUBMIT_IF      1
-#define EFI_HII_EXPRESSION_GRAY_OUT_IF       2
-#define EFI_HII_EXPRESSION_SUPPRESS_IF       3
-#define EFI_HII_EXPRESSION_DISABLE_IF        4
+#define EFI_HII_EXPRESSION_INCONSISTENT_IF  0
+#define EFI_HII_EXPRESSION_NO_SUBMIT_IF     1
+#define EFI_HII_EXPRESSION_GRAY_OUT_IF      2
+#define EFI_HII_EXPRESSION_SUPPRESS_IF      3
+#define EFI_HII_EXPRESSION_DISABLE_IF       4
 
 //
 // Character definitions
 //
-#define CHAR_SPACE              0x0020
+#define CHAR_SPACE  0x0020
 
-#define FORM_DISPLAY_DRIVER_SIGNATURE SIGNATURE_32 ('F', 'D', 'D', 'V')
+#define FORM_DISPLAY_DRIVER_SIGNATURE  SIGNATURE_32 ('F', 'D', 'D', 'V')
 typedef struct {
-  UINT32                             Signature;
+  UINT32                                Signature;
 
-  EFI_HANDLE                         Handle;
+  EFI_HANDLE                            Handle;
 
   //
   // Produced protocol
   //
-  EDKII_FORM_DISPLAY_ENGINE_PROTOCOL FromDisplayProt;
+  EDKII_FORM_DISPLAY_ENGINE_PROTOCOL    FromDisplayProt;
+  EFI_HII_POPUP_PROTOCOL                HiiPopup;
 } FORM_DISPLAY_DRIVER_PRIVATE_DATA;
-
 
 typedef enum {
   UiNoOperation,
@@ -187,66 +192,66 @@ typedef enum {
 } UI_EVENT_TYPE;
 
 typedef struct {
-  UINT16              ScanCode;
-  UI_SCREEN_OPERATION ScreenOperation;
+  UINT16                 ScanCode;
+  UI_SCREEN_OPERATION    ScreenOperation;
 } SCAN_CODE_TO_SCREEN_OPERATION;
 
 typedef struct {
-  UI_SCREEN_OPERATION ScreenOperation;
-  UI_CONTROL_FLAG     ControlFlag;
+  UI_SCREEN_OPERATION    ScreenOperation;
+  UI_CONTROL_FLAG        ControlFlag;
 } SCREEN_OPERATION_T0_CONTROL_FLAG;
 
 typedef struct {
-  EFI_HII_HANDLE     HiiHandle;
-  UINT16             FormId;
-  
+  EFI_HII_HANDLE    HiiHandle;
+  UINT16            FormId;
+
   //
   // Info for the highlight question.
   // HLT means highlight
   //
   // If one statement has questionid, save questionid info to find the question.
-  // If one statement not has questionid info, save the opcode info to find the 
+  // If one statement not has questionid info, save the opcode info to find the
   // statement. If more than one statement has same opcode in one form(just like
-  // empty subtitle info may has more than one info one form), also use Index 
+  // empty subtitle info may has more than one info one form), also use Index
   // info to find the statement.
   //
-  EFI_QUESTION_ID    HLTQuestionId;
-  EFI_IFR_OP_HEADER  *HLTOpCode;
-  UINTN              HLTIndex;
-  UINTN              HLTSequence;
-  
+  EFI_QUESTION_ID      HLTQuestionId;
+  EFI_IFR_OP_HEADER    *HLTOpCode;
+  UINTN                HLTIndex;
+  UINTN                HLTSequence;
+
   //
   // Info for the top of screen question.
   // TOS means Top Of Screen
   //
-  EFI_QUESTION_ID    TOSQuestionId;
-  EFI_IFR_OP_HEADER  *TOSOpCode;
-  UINTN              TOSIndex;
+  EFI_QUESTION_ID      TOSQuestionId;
+  EFI_IFR_OP_HEADER    *TOSOpCode;
+  UINTN                TOSIndex;
 
-  UINT16             SkipValue;
+  UINT16               SkipValue;
 } DISPLAY_HIGHLIGHT_MENU_INFO;
 
 typedef struct {
-  EFI_EVENT   SyncEvent;
-  UINT8       *TimeOut;
-  CHAR16      *ErrorInfo;
+  EFI_EVENT    SyncEvent;
+  UINT8        *TimeOut;
+  CHAR16       *ErrorInfo;
 } WARNING_IF_CONTEXT;
 
 #define UI_MENU_OPTION_SIGNATURE  SIGNATURE_32 ('u', 'i', 'm', 'm')
 
 typedef struct {
-  UINTN                   Signature;
-  LIST_ENTRY              Link;
+  UINTN                            Signature;
+  LIST_ENTRY                       Link;
 
-  EFI_HII_HANDLE          Handle;
-  FORM_DISPLAY_ENGINE_STATEMENT  *ThisTag;
-  UINT16                  EntryNumber;
+  EFI_HII_HANDLE                   Handle;
+  FORM_DISPLAY_ENGINE_STATEMENT    *ThisTag;
+  UINT16                           EntryNumber;
 
-  UINTN                   Row;
-  UINTN                   Col;
-  UINTN                   OptCol;
-  CHAR16                  *Description;
-  UINTN                   Skip;           // Number of lines
+  UINTN                            Row;
+  UINTN                            Col;
+  UINTN                            OptCol;
+  CHAR16                           *Description;
+  UINTN                            Skip;  // Number of lines
 
   //
   // Display item sequence for date/time
@@ -257,19 +262,73 @@ typedef struct {
   //  Sequence:  0      1        2
   //
   //
-  UINTN                   Sequence;
+  UINTN      Sequence;
 
-  BOOLEAN                 GrayOut;
-  BOOLEAN                 ReadOnly;
+  BOOLEAN    GrayOut;
+  BOOLEAN    ReadOnly;
 
   //
   // Whether user could change value of this item
   //
-  BOOLEAN                 IsQuestion;
-  BOOLEAN                 NestInStatement;
+  BOOLEAN    IsQuestion;
+  BOOLEAN    NestInStatement;
 } UI_MENU_OPTION;
 
 #define MENU_OPTION_FROM_LINK(a)  CR (a, UI_MENU_OPTION, Link, UI_MENU_OPTION_SIGNATURE)
+
+#define USER_SELECTABLE_OPTION_OK_WIDTH          StrLen (gOkOption)
+#define USER_SELECTABLE_OPTION_OK_CAL_WIDTH      (StrLen (gOkOption) + StrLen (gCancelOption))
+#define USER_SELECTABLE_OPTION_YES_NO_WIDTH      (StrLen (gYesOption) + StrLen (gNoOption))
+#define USER_SELECTABLE_OPTION_YES_NO_CAL_WIDTH  (StrLen (gYesOption) + StrLen (gNoOption) + StrLen (gCancelOption))
+
+#define USER_SELECTABLE_OPTION_SKIP_WIDTH  2
+
+//
+// +-------------------------------------------+ // POPUP_BORDER                        }
+// |            ERROR/WARNING/INFO             | // POPUP_STYLE_STRING_HEIGHT           } POPUP_HEADER_HEIGHT
+// |-------------------------------------------| // POPUP_EMPTY_LINE_HEIGHT             }
+// |             popup messages                |
+// |                                           | // POPUP_EMPTY_LINE_HEIGHT             }
+// |         user selectable options           | // POPUP_USER_SELECTABLE_OPTION_HEIGHT } POPUP_FOOTER_HEIGHT
+// +-------------------------------------------+ // POPUP_BORDER                        }
+//
+#define POPUP_BORDER                         1
+#define POPUP_EMPTY_LINE_HEIGHT              1
+#define POPUP_STYLE_STRING_HEIGHT            1
+#define POPUP_USER_SELECTABLE_OPTION_HEIGHT  1
+
+#define POPUP_HEADER_HEIGHT  (POPUP_BORDER + POPUP_STYLE_STRING_HEIGHT + POPUP_EMPTY_LINE_HEIGHT)
+#define POPUP_FOOTER_HEIGHT  (POPUP_EMPTY_LINE_HEIGHT + POPUP_USER_SELECTABLE_OPTION_HEIGHT + POPUP_BORDER)
+
+#define USER_SELECTABLE_OPTION_SIGNATURE  SIGNATURE_32 ('u', 's', 's', 'o')
+
+typedef struct {
+  UINTN                      Signature;
+  LIST_ENTRY                 Link;
+  EFI_HII_POPUP_SELECTION    OptionType;
+  CHAR16                     *OptionString;
+  //
+  // Display item sequence for user select options
+  //  Ok:        Ok
+  //  Sequence:  0
+  //
+  //  Ok/Cancel:   Ok : Cancel
+  //  Sequence:    0      1
+  //
+  //  Yes/No:      Yes : No
+  //  Sequence:     0    1
+  //
+  //  Yes/No/Cancel: Yes : No: Cancel
+  //  Sequence:       0    1    2
+  //
+  UINTN    Sequence;
+  UINTN    OptionRow;
+  UINTN    OptionCol;
+  UINTN    MaxSequence;
+  UINTN    MinSequence;
+} USER_SELECTABLE_OPTION;
+
+#define SELECTABLE_OPTION_FROM_LINK(a)  CR (a, USER_SELECTABLE_OPTION, Link, USER_SELECTABLE_OPTION_SIGNATURE)
 
 /**
   Print Question Value according to it's storage width and display attributes.
@@ -284,9 +343,9 @@ typedef struct {
 **/
 EFI_STATUS
 PrintFormattedNumber (
-  IN FORM_DISPLAY_ENGINE_STATEMENT   *Question,
-  IN OUT CHAR16               *FormattedNumber,
-  IN UINTN                    BufferSize
+  IN FORM_DISPLAY_ENGINE_STATEMENT  *Question,
+  IN OUT CHAR16                     *FormattedNumber,
+  IN UINTN                          BufferSize
   );
 
 /**
@@ -300,10 +359,10 @@ PrintFormattedNumber (
 **/
 VOID
 SetArrayData (
-  IN VOID                     *Array,
-  IN UINT8                    Type,
-  IN UINTN                    Index,
-  IN UINT64                   Value
+  IN VOID    *Array,
+  IN UINT8   Type,
+  IN UINTN   Index,
+  IN UINT64  Value
   );
 
 /**
@@ -318,11 +377,11 @@ SetArrayData (
 **/
 UINT64
 GetArrayData (
-  IN VOID                     *Array,
-  IN UINT8                    Type,
-  IN UINTN                    Index
+  IN VOID   *Array,
+  IN UINT8  Type,
+  IN UINTN  Index
   );
-  
+
 /**
   Search an Option of a Question by its value.
 
@@ -335,8 +394,8 @@ GetArrayData (
 **/
 DISPLAY_QUESTION_OPTION *
 ValueToOption (
-  IN FORM_DISPLAY_ENGINE_STATEMENT   *Question,
-  IN EFI_HII_VALUE                   *OptionValue
+  IN FORM_DISPLAY_ENGINE_STATEMENT  *Question,
+  IN EFI_HII_VALUE                  *OptionValue
   );
 
 /**
@@ -374,8 +433,8 @@ CompareHiiValue (
 VOID
 EFIAPI
 CreateMultiStringPopUp (
-  IN  UINTN                       RequestedWidth,
-  IN  UINTN                       NumberOfLines,
+  IN  UINTN  RequestedWidth,
+  IN  UINTN  NumberOfLines,
   ...
   );
 
@@ -394,19 +453,18 @@ CreateMultiStringPopUp (
   @param  Index                  Where in InputString to start the copy process
   @param  OutputString           Buffer to copy the string into
 
-  @return Returns the number of CHAR16 characters that were copied into the OutputString 
+  @return Returns the number of CHAR16 characters that were copied into the OutputString
   buffer, include extra glyph info and '\0' info.
 
 **/
 UINT16
 GetLineByWidth (
-  IN      CHAR16                      *InputString,
-  IN      UINT16                      LineWidth,
-  IN OUT  UINT16                      *GlyphWidth,
-  IN OUT  UINTN                       *Index,
-  OUT     CHAR16                      **OutputString
+  IN      CHAR16  *InputString,
+  IN      UINT16  LineWidth,
+  IN OUT  UINT16  *GlyphWidth,
+  IN OUT  UINTN   *Index,
+  OUT     CHAR16  **OutputString
   );
-
 
 /**
   Get the string based on the StringId and HII Package List Handle.
@@ -419,10 +477,10 @@ GetLineByWidth (
 **/
 CHAR16 *
 GetToken (
-  IN  EFI_STRING_ID                Token,
-  IN  EFI_HII_HANDLE               HiiHandle
+  IN  EFI_STRING_ID   Token,
+  IN  EFI_HII_HANDLE  HiiHandle
   );
-  
+
 /**
   Count the storage space of a Unicode string.
 
@@ -441,7 +499,7 @@ GetToken (
 **/
 UINTN
 GetStringWidth (
-  IN CHAR16               *String
+  IN CHAR16  *String
   );
 
 /**
@@ -455,7 +513,7 @@ GetStringWidth (
 **/
 EFI_STATUS
 GetNumericInput (
-  IN  UI_MENU_OPTION              *MenuOption
+  IN  UI_MENU_OPTION  *MenuOption
   );
 
 /**
@@ -471,9 +529,9 @@ GetNumericInput (
 **/
 EFI_STATUS
 ReadString (
-  IN     UI_MENU_OPTION              *MenuOption,
-  IN     CHAR16                      *Prompt,
-  IN OUT CHAR16                      *StringPtr
+  IN     UI_MENU_OPTION  *MenuOption,
+  IN     CHAR16          *Prompt,
+  IN OUT CHAR16          *StringPtr
   );
 
 /**
@@ -487,11 +545,11 @@ ReadString (
 **/
 VOID
 CreateSharedPopUp (
-  IN  UINTN                       RequestedWidth,
-  IN  UINTN                       NumberOfLines,
-  IN  VA_LIST                     Marker
+  IN  UINTN    RequestedWidth,
+  IN  UINTN    NumberOfLines,
+  IN  VA_LIST  Marker
   );
-  
+
 /**
   Wait for a key to be pressed by user.
 
@@ -502,7 +560,7 @@ CreateSharedPopUp (
 **/
 EFI_STATUS
 WaitForKeyStroke (
-  OUT  EFI_INPUT_KEY           *Key
+  OUT  EFI_INPUT_KEY  *Key
   );
 
 /**
@@ -516,7 +574,7 @@ WaitForKeyStroke (
 **/
 EFI_STATUS
 GetSelectionInputPopUp (
-  IN  UI_MENU_OPTION              *MenuOption
+  IN  UI_MENU_OPTION  *MenuOption
   );
 
 /**
@@ -551,10 +609,10 @@ ProcessHelpString (
 **/
 EFI_STATUS
 ProcessOptions (
-  IN  UI_MENU_OPTION              *MenuOption,
-  IN  BOOLEAN                     Selected,
-  OUT CHAR16                      **OptionString,
-  IN  BOOLEAN                     SkipErrorValue
+  IN  UI_MENU_OPTION  *MenuOption,
+  IN  BOOLEAN         Selected,
+  OUT CHAR16          **OptionString,
+  IN  BOOLEAN         SkipErrorValue
   );
 
 /**
@@ -567,21 +625,21 @@ ProcessOptions (
 **/
 VOID
 SetUnicodeMem (
-  IN VOID   *Buffer,
-  IN UINTN  Size,
-  IN CHAR16 Value
+  IN VOID    *Buffer,
+  IN UINTN   Size,
+  IN CHAR16  Value
   );
 
 /**
   Display one form, and return user input.
-  
+
   @param FormData                Form Data to be shown.
   @param UserInputData           User input data.
-  
+
   @retval EFI_SUCCESS            Form Data is shown, and user input is got.
 **/
 EFI_STATUS
-EFIAPI 
+EFIAPI
 FormDisplay (
   IN  FORM_DISPLAY_ENGINE_FORM  *FormData,
   OUT USER_INPUT                *UserInputData
@@ -591,7 +649,7 @@ FormDisplay (
   Clear Screen to the initial state.
 **/
 VOID
-EFIAPI 
+EFIAPI
 DriverClearDisplayPage (
   VOID
   );
@@ -601,7 +659,7 @@ DriverClearDisplayPage (
 
 **/
 VOID
-EFIAPI 
+EFIAPI
 ExitDisplay (
   VOID
   );
@@ -616,8 +674,8 @@ ExitDisplay (
 VOID
 EFIAPI
 EmptyEventProcess (
-  IN  EFI_EVENT    Event,
-  IN  VOID         *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   );
 
 /**
@@ -630,23 +688,48 @@ EmptyEventProcess (
 VOID
 EFIAPI
 RefreshTimeOutProcess (
-  IN  EFI_EVENT    Event,
-  IN  VOID         *Context
+  IN  EFI_EVENT  Event,
+  IN  VOID       *Context
   );
 
 /**
   Record the highlight menu and top of screen menu info.
 
-  @param  Highlight               The menu opton which is highlight.
-  @param  TopOfScreen             The menu opton which is at the top of the form.
+  @param  Highlight               The menu option which is highlight.
+  @param  TopOfScreen             The menu option which is at the top of the form.
   @param  SkipValue               The skip line info for the top of screen menu.
 
 **/
 VOID
 UpdateHighlightMenuInfo (
-  IN  LIST_ENTRY                      *Highlight,
-  IN  LIST_ENTRY                      *TopOfScreen,
-  IN  UINTN                           SkipValue
+  IN  LIST_ENTRY  *Highlight,
+  IN  LIST_ENTRY  *TopOfScreen,
+  IN  UINTN       SkipValue
   );
 
-#endif
+/**
+  Displays a popup window.
+
+  @param  This           A pointer to the EFI_HII_POPUP_PROTOCOL instance.
+  @param  PopupStyle     Popup style to use.
+  @param  PopupType      Type of the popup to display.
+  @param  HiiHandle      HII handle of the string pack containing Message
+  @param  Message        A message to display in the popup box.
+  @param  UserSelection  User selection.
+
+  @retval EFI_SUCCESS            The popup box was successfully displayed.
+  @retval EFI_INVALID_PARAMETER  HiiHandle and Message do not define a valid HII string.
+  @retval EFI_INVALID_PARAMETER  PopupType is not one of the values defined by this specification.
+  @retval EFI_OUT_OF_RESOURCES   There are not enough resources available to display the popup box.
+
+**/
+EFI_STATUS
+EFIAPI
+CreatePopup (
+  IN  EFI_HII_POPUP_PROTOCOL   *This,
+  IN  EFI_HII_POPUP_STYLE      PopupStyle,
+  IN  EFI_HII_POPUP_TYPE       PopupType,
+  IN  EFI_HII_HANDLE           HiiHandle,
+  IN  EFI_STRING_ID            Message,
+  OUT EFI_HII_POPUP_SELECTION  *UserSelection OPTIONAL
+  );

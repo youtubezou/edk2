@@ -3,19 +3,13 @@
 
   Copyright (C) 2014, Gabriel L. Somlo <somlo@cmu.edu>
 
-  This program and the accompanying materials are licensed and made
-  available under the terms and conditions of the BSD License which
-  accompanies this distribution.   The full text of the license may
-  be found at http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "SmbiosPlatformDxe.h"
-#include <Library/QemuFwCfgLib.h>
-#include <Library/MemoryAllocationLib.h>
-#include <Library/PcdLib.h>
+#include <Library/DebugLib.h>            // ASSERT_EFI_ERROR()
+#include <Library/MemoryAllocationLib.h> // AllocatePool()
+#include <Library/PcdLib.h>              // PcdGetBool()
+#include <Library/QemuFwCfgLib.h>        // QemuFwCfgFindFile()
 
 /**
   Locates and extracts the QEMU SMBIOS data if present in fw_cfg
@@ -28,17 +22,20 @@ GetQemuSmbiosTables (
   VOID
   )
 {
-  EFI_STATUS               Status;
-  FIRMWARE_CONFIG_ITEM     Tables;
-  UINTN                    TablesSize;
-  UINT8                    *QemuTables;
+  EFI_STATUS            Status;
+  FIRMWARE_CONFIG_ITEM  Tables;
+  UINTN                 TablesSize;
+  UINT8                 *QemuTables;
 
   if (!PcdGetBool (PcdQemuSmbiosValidated)) {
     return NULL;
   }
 
-  Status = QemuFwCfgFindFile ("etc/smbios/smbios-tables", &Tables,
-             &TablesSize);
+  Status = QemuFwCfgFindFile (
+             "etc/smbios/smbios-tables",
+             &Tables,
+             &TablesSize
+             );
   ASSERT_EFI_ERROR (Status);
   ASSERT (TablesSize > 0);
 

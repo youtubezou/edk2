@@ -2,18 +2,11 @@
 *
 *  Copyright (c) 2011, ARM Limited. All rights reserved.
 *
-*  This program and the accompanying materials
-*  are licensed and made available under the terms and conditions of the BSD License
-*  which accompanies this distribution.  The full text of the license may be found at
-*  http://opensource.org/licenses/bsd-license.php
-*
-*  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
 *
 **/
 
-#ifndef __ARM_MP_CORE_INFO_PPI_H__
-#define __ARM_MP_CORE_INFO_PPI_H__
+#pragma once
 
 #include <Guid/ArmMpCoreInfo.h>
 
@@ -38,10 +31,10 @@
 **/
 typedef
 EFI_STATUS
-(EFIAPI * ARM_MP_CORE_INFO_GET) (
+(EFIAPI *ARM_MP_CORE_INFO_GET)(
   OUT UINTN                   *ArmCoreCount,
   OUT ARM_CORE_INFO           **ArmCoreTable
-);
+  );
 
 ///
 /// This service abstracts the ability to migrate contents of the platform early memory store.
@@ -49,10 +42,8 @@ EFI_STATUS
 ///       This PPI was optional.
 ///
 typedef struct {
-  ARM_MP_CORE_INFO_GET   GetMpCoreInfo;
+  ARM_MP_CORE_INFO_GET    GetMpCoreInfo;
 } ARM_MP_CORE_INFO_PPI;
 
-extern EFI_GUID gArmMpCoreInfoPpiGuid;
-extern EFI_GUID gArmMpCoreInfoGuid;
-
-#endif
+extern EFI_GUID  gArmMpCoreInfoPpiGuid;
+extern EFI_GUID  gArmMpCoreInfoGuid;

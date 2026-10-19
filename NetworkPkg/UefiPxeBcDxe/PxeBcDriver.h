@@ -3,21 +3,14 @@
 
   Copyright (c) 2007 - 2013, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_PXEBC_DRIVER_H__
-#define __EFI_PXEBC_DRIVER_H__
+#pragma once
 
-extern EFI_COMPONENT_NAME_PROTOCOL  gPxeBcComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL gPxeBcComponentName2;
+extern EFI_COMPONENT_NAME_PROTOCOL   gPxeBcComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL  gPxeBcComponentName2;
 
 /**
   Test to see if this driver supports ControllerHandle. This service
@@ -69,7 +62,6 @@ PxeBcIp4DriverBindingStart (
   IN EFI_HANDLE                   ControllerHandle,
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   );
-
 
 /**
   Stop this driver on ControllerHandle. This service is called by the
@@ -177,5 +169,3 @@ PxeBcIp6DriverBindingStop (
   IN UINTN                        NumberOfChildren,
   IN EFI_HANDLE                   *ChildHandleBuffer
   );
-#endif
-

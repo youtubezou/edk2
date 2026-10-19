@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
-; Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2006 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -40,12 +34,12 @@ ASM_PFX(InternalMemZeroMem):
     and     edx, 7
     shr     rcx, 3
     jz      @ZeroBytes
-    DB      0xf, 0xef, 0xc0             ; pxor mm0, mm0
+    pxor    mm0, mm0
 .0:
-    DB      0xf, 0xe7, 7                ; movntq [rdi], mm0
+    movntq  [rdi], mm0
     add     rdi, 8
     loop    .0
-    DB      0xf, 0xae, 0xf0             ; mfence
+    mfence
 @ZeroBytes:
     xor     eax, eax
     mov     ecx, edx

@@ -2,26 +2,23 @@
 
   Provides some data structure definitions used by the SD/MMC host controller driver.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
+  Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
+  Copyright (C) 2023, Apple Inc. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-
+  @par Specification Reference:
+    - SD Host Controller Simplified Specification, Version 4.20, July 25, 2018
 **/
 
-#ifndef _SD_MMC_PCI_HCI_H_
-#define _SD_MMC_PCI_HCI_H_
+#pragma once
 
 //
 // SD Host Controller SlotInfo Register Offset
 //
-#define SD_MMC_HC_SLOT_OFFSET         0x40
+#define SD_MMC_HC_SLOT_OFFSET  0x40
 
-#define SD_MMC_HC_MAX_SLOT            6
+#define SD_MMC_HC_MAX_SLOT  6
 
 //
 // SD Host Controller MMIO Register Offset
@@ -63,77 +60,155 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #define SD_MMC_HC_CTRL_VER            0xFE
 
 //
+// SD Host Controller bits to HOST_CTRL2 register
+//
+#define SD_MMC_HC_CTRL_UHS_MASK    0x0007
+#define SD_MMC_HC_CTRL_UHS_SDR12   0x0000
+#define SD_MMC_HC_CTRL_UHS_SDR25   0x0001
+#define SD_MMC_HC_CTRL_UHS_SDR50   0x0002
+#define SD_MMC_HC_CTRL_UHS_SDR104  0x0003
+#define SD_MMC_HC_CTRL_UHS_DDR50   0x0004
+#define SD_MMC_HC_CTRL_MMC_LEGACY  0x0000
+#define SD_MMC_HC_CTRL_MMC_HS_SDR  0x0001
+#define SD_MMC_HC_CTRL_MMC_HS_DDR  0x0004
+#define SD_MMC_HC_CTRL_MMC_HS200   0x0003
+#define SD_MMC_HC_CTRL_MMC_HS400   0x0005
+
+#define SD_MMC_HC_CTRL_DRIVER_STRENGTH_MASK  0x0030
+
+//
 // The transfer modes supported by SD Host Controller
-// Simplified Spec 3.0 Table 1-2
 //
 typedef enum {
   SdMmcNoData,
   SdMmcPioMode,
   SdMmcSdmaMode,
-  SdMmcAdmaMode
+  SdMmcAdma32bMode,
+  SdMmcAdma64bV3Mode,
+  SdMmcAdma64bV4Mode
 } SD_MMC_HC_TRANSFER_MODE;
+
+//
+// The ADMA transfer lengths supported by SD Host Controller
+//
+typedef enum {
+  SdMmcAdmaLen16b,
+  SdMmcAdmaLen26b
+} SD_MMC_HC_ADMA_LENGTH_MODE;
 
 //
 // The maximum data length of each descriptor line
 //
-#define ADMA_MAX_DATA_PER_LINE     0x10000
+#define ADMA_MAX_DATA_PER_LINE_16B  SIZE_64KB
+#define ADMA_MAX_DATA_PER_LINE_26B  SIZE_64MB
+
+//
+// ADMA descriptor for 32b addressing.
+//
+typedef struct {
+  UINT32    Valid       : 1;
+  UINT32    End         : 1;
+  UINT32    Int         : 1;
+  UINT32    Reserved    : 1;
+  UINT32    Act         : 2;
+  UINT32    UpperLength : 10;
+  UINT32    LowerLength : 16;
+  UINT32    Address;
+} SD_MMC_HC_ADMA_32_DESC_LINE;
+
+//
+// ADMA descriptor for 64b addressing.
+//
+typedef struct {
+  UINT32    Valid       : 1;
+  UINT32    End         : 1;
+  UINT32    Int         : 1;
+  UINT32    Reserved    : 1;
+  UINT32    Act         : 2;
+  UINT32    UpperLength : 10;
+  UINT32    LowerLength : 16;
+  UINT32    LowerAddress;
+  UINT32    UpperAddress;
+} SD_MMC_HC_ADMA_64_V3_DESC_LINE;
 
 typedef struct {
-  UINT32 Valid:1;
-  UINT32 End:1;
-  UINT32 Int:1;
-  UINT32 Reserved:1;
-  UINT32 Act:2;
-  UINT32 Reserved1:10;
-  UINT32 Length:16;
-  UINT32 Address;
-} SD_MMC_HC_ADMA_DESC_LINE;
+  UINT32    Valid       : 1;
+  UINT32    End         : 1;
+  UINT32    Int         : 1;
+  UINT32    Reserved    : 1;
+  UINT32    Act         : 2;
+  UINT32    UpperLength : 10;
+  UINT32    LowerLength : 16;
+  UINT32    LowerAddress;
+  UINT32    UpperAddress;
+  UINT32    Reserved1;
+} SD_MMC_HC_ADMA_64_V4_DESC_LINE;
 
-#define SD_MMC_SDMA_BOUNDARY          512 * 1024
-#define SD_MMC_SDMA_ROUND_UP(x, n)    (((x) + n) & ~(n - 1))
+#define SD_MMC_SDMA_BOUNDARY  512 * 1024
+#define SD_MMC_SDMA_ROUND_UP(x, n)  (((x) + n) & ~(n - 1))
 
 typedef struct {
-  UINT8    FirstBar:3;        // bit 0:2
-  UINT8    Reserved:1;        // bit 3
-  UINT8    SlotNum:3;         // bit 4:6
-  UINT8    Reserved1:1;       // bit 7
+  UINT8    FirstBar  : 3;     // bit 0:2
+  UINT8    Reserved  : 1;     // bit 3
+  UINT8    SlotNum   : 3;     // bit 4:6
+  UINT8    Reserved1 : 1;     // bit 7
 } SD_MMC_HC_SLOT_INFO;
 
 typedef struct {
-  UINT32   TimeoutFreq:6;     // bit 0:5
-  UINT32   Reserved:1;        // bit 6
-  UINT32   TimeoutUnit:1;     // bit 7
-  UINT32   BaseClkFreq:8;     // bit 8:15
-  UINT32   MaxBlkLen:2;       // bit 16:17
-  UINT32   BusWidth8:1;       // bit 18
-  UINT32   Adma2:1;           // bit 19
-  UINT32   Reserved2:1;       // bit 20
-  UINT32   HighSpeed:1;       // bit 21
-  UINT32   Sdma:1;            // bit 22
-  UINT32   SuspRes:1;         // bit 23
-  UINT32   Voltage33:1;       // bit 24
-  UINT32   Voltage30:1;       // bit 25
-  UINT32   Voltage18:1;       // bit 26
-  UINT32   Reserved3:1;       // bit 27
-  UINT32   SysBus64:1;        // bit 28
-  UINT32   AsyncInt:1;        // bit 29
-  UINT32   SlotType:2;        // bit 30:31
-  UINT32   Sdr50:1;           // bit 32
-  UINT32   Sdr104:1;          // bit 33
-  UINT32   Ddr50:1;           // bit 34
-  UINT32   Reserved4:1;       // bit 35
-  UINT32   DriverTypeA:1;     // bit 36
-  UINT32   DriverTypeC:1;     // bit 37
-  UINT32   DriverTypeD:1;     // bit 38
-  UINT32   DriverType4:1;     // bit 39
-  UINT32   TimerCount:4;      // bit 40:43
-  UINT32   Reserved5:1;       // bit 44
-  UINT32   TuningSDR50:1;     // bit 45
-  UINT32   RetuningMod:2;     // bit 46:47
-  UINT32   ClkMultiplier:8;   // bit 48:55
-  UINT32   Reserved6:7;       // bit 56:62
-  UINT32   Hs400:1;           // bit 63
+  UINT32    TimeoutFreq   : 6; // bit 0:5
+  UINT32    Reserved      : 1; // bit 6
+  UINT32    TimeoutUnit   : 1; // bit 7
+  UINT32    BaseClkFreq   : 8; // bit 8:15
+  UINT32    MaxBlkLen     : 2; // bit 16:17
+  UINT32    BusWidth8     : 1; // bit 18
+  UINT32    Adma2         : 1; // bit 19
+  UINT32    Reserved2     : 1; // bit 20
+  UINT32    HighSpeed     : 1; // bit 21
+  UINT32    Sdma          : 1; // bit 22
+  UINT32    SuspRes       : 1; // bit 23
+  UINT32    Voltage33     : 1; // bit 24
+  UINT32    Voltage30     : 1; // bit 25
+  UINT32    Voltage18     : 1; // bit 26
+  UINT32    SysBus64V4    : 1; // bit 27
+  UINT32    SysBus64V3    : 1; // bit 28
+  UINT32    AsyncInt      : 1; // bit 29
+  UINT32    SlotType      : 2; // bit 30:31
+  UINT32    Sdr50         : 1; // bit 32
+  UINT32    Sdr104        : 1; // bit 33
+  UINT32    Ddr50         : 1; // bit 34
+  UINT32    UhsII         : 1; // bit 35
+  UINT32    DriverTypeA   : 1; // bit 36
+  UINT32    DriverTypeC   : 1; // bit 37
+  UINT32    DriverTypeD   : 1; // bit 38
+  UINT32    DriverType4   : 1; // bit 39
+  UINT32    TimerCount    : 4; // bit 40:43
+  UINT32    Reserved4     : 1; // bit 44
+  UINT32    TuningSDR50   : 1; // bit 45
+  UINT32    RetuningMod   : 2; // bit 46:47
+  UINT32    ClkMultiplier : 8; // bit 48:55
+  UINT32    Reserved5     : 3; // bit 56:58
+  UINT32    Adma3         : 1; // bit 59
+  UINT32    Vdd2Voltage18 : 1; // bit 60
+  UINT32    Reserved6     : 2; // bit 61:62
+  UINT32    Hs400         : 1; // bit 63
 } SD_MMC_HC_SLOT_CAP;
+
+//
+// SD Host controller version
+//
+#define SD_MMC_HC_CTRL_VER_100  0x00
+#define SD_MMC_HC_CTRL_VER_200  0x01
+#define SD_MMC_HC_CTRL_VER_300  0x02
+#define SD_MMC_HC_CTRL_VER_400  0x03
+#define SD_MMC_HC_CTRL_VER_410  0x04
+#define SD_MMC_HC_CTRL_VER_420  0x05
+
+//
+// SD Host controller V4 enhancements
+//
+#define SD_MMC_HC_V4_EN                BIT12
+#define SD_MMC_HC_64_ADDR_EN           BIT13
+#define SD_MMC_HC_26_DATA_LEN_ADMA_EN  BIT10
 
 /**
   Dump the content of SD/MMC host controller's Capability Register.
@@ -144,8 +219,8 @@ typedef struct {
 **/
 VOID
 DumpCapabilityReg (
-  IN UINT8                Slot,
-  IN SD_MMC_HC_SLOT_CAP   *Capability
+  IN UINT8               Slot,
+  IN SD_MMC_HC_SLOT_CAP  *Capability
   );
 
 /**
@@ -162,9 +237,9 @@ DumpCapabilityReg (
 EFI_STATUS
 EFIAPI
 SdMmcHcGetSlotInfo (
-  IN     EFI_PCI_IO_PROTOCOL   *PciIo,
-     OUT UINT8                 *FirstBar,
-     OUT UINT8                 *SlotNum
+  IN     EFI_PCI_IO_PROTOCOL  *PciIo,
+  OUT UINT8                   *FirstBar,
+  OUT UINT8                   *SlotNum
   );
 
 /**
@@ -193,12 +268,12 @@ SdMmcHcGetSlotInfo (
 EFI_STATUS
 EFIAPI
 SdMmcHcRwMmio (
-  IN     EFI_PCI_IO_PROTOCOL   *PciIo,
-  IN     UINT8                 BarIndex,
-  IN     UINT32                Offset,
-  IN     BOOLEAN               Read,
-  IN     UINT8                 Count,
-  IN OUT VOID                  *Data
+  IN     EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN     UINT8                BarIndex,
+  IN     UINT32               Offset,
+  IN     BOOLEAN              Read,
+  IN     UINT8                Count,
+  IN OUT VOID                 *Data
   );
 
 /**
@@ -225,11 +300,11 @@ SdMmcHcRwMmio (
 EFI_STATUS
 EFIAPI
 SdMmcHcOrMmio (
-  IN  EFI_PCI_IO_PROTOCOL      *PciIo,
-  IN  UINT8                    BarIndex,
-  IN  UINT32                   Offset,
-  IN  UINT8                    Count,
-  IN  VOID                     *OrData
+  IN  EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN  UINT8                BarIndex,
+  IN  UINT32               Offset,
+  IN  UINT8                Count,
+  IN  VOID                 *OrData
   );
 
 /**
@@ -256,11 +331,11 @@ SdMmcHcOrMmio (
 EFI_STATUS
 EFIAPI
 SdMmcHcAndMmio (
-  IN  EFI_PCI_IO_PROTOCOL      *PciIo,
-  IN  UINT8                    BarIndex,
-  IN  UINT32                   Offset,
-  IN  UINT8                    Count,
-  IN  VOID                     *AndData
+  IN  EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN  UINT8                BarIndex,
+  IN  UINT32               Offset,
+  IN  UINT8                Count,
+  IN  VOID                 *AndData
   );
 
 /**
@@ -288,29 +363,31 @@ SdMmcHcAndMmio (
 EFI_STATUS
 EFIAPI
 SdMmcHcWaitMmioSet (
-  IN  EFI_PCI_IO_PROTOCOL       *PciIo,
-  IN  UINT8                     BarIndex,
-  IN  UINT32                    Offset,
-  IN  UINT8                     Count,
-  IN  UINT64                    MaskValue,
-  IN  UINT64                    TestValue,
-  IN  UINT64                    Timeout
+  IN  EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN  UINT8                BarIndex,
+  IN  UINT32               Offset,
+  IN  UINT8                Count,
+  IN  UINT64               MaskValue,
+  IN  UINT64               TestValue,
+  IN  UINT64               Timeout
   );
 
 /**
-  Software reset the specified SD/MMC host controller.
+  Get the controller version information from the specified slot.
 
-  @param[in] PciIo          The PCI IO protocol instance.
-  @param[in] Slot           The slot number of the SD card to send the command to.
+  @param[in]  PciIo           The PCI IO protocol instance.
+  @param[in]  Slot            The slot number of the SD card to send the command to.
+  @param[out] Version         The buffer to store the version information.
 
-  @retval EFI_SUCCESS       The software reset executes successfully.
-  @retval Others            The software reset fails.
+  @retval EFI_SUCCESS         The operation executes successfully.
+  @retval Others              The operation fails.
 
 **/
 EFI_STATUS
-SdMmcHcReset (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot
+SdMmcHcGetControllerVersion (
+  IN  EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN  UINT8                Slot,
+  OUT UINT16               *Version
   );
 
 /**
@@ -326,8 +403,8 @@ SdMmcHcReset (
 **/
 EFI_STATUS
 SdMmcHcEnableInterrupt (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot
   );
 
 /**
@@ -345,7 +422,7 @@ EFI_STATUS
 SdMmcHcGetCapability (
   IN     EFI_PCI_IO_PROTOCOL  *PciIo,
   IN     UINT8                Slot,
-     OUT SD_MMC_HC_SLOT_CAP   *Capability
+  OUT SD_MMC_HC_SLOT_CAP      *Capability
   );
 
 /**
@@ -363,7 +440,7 @@ EFI_STATUS
 SdMmcHcGetMaxCurrent (
   IN     EFI_PCI_IO_PROTOCOL  *PciIo,
   IN     UINT8                Slot,
-     OUT UINT64               *MaxCurrent
+  OUT UINT64                  *MaxCurrent
   );
 
 /**
@@ -383,9 +460,9 @@ SdMmcHcGetMaxCurrent (
 **/
 EFI_STATUS
 SdMmcHcCardDetect (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-     OUT BOOLEAN            *MediaPresent
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  OUT BOOLEAN             *MediaPresent
   );
 
 /**
@@ -402,30 +479,23 @@ SdMmcHcCardDetect (
 **/
 EFI_STATUS
 SdMmcHcStopClock (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot
   );
 
 /**
-  SD/MMC card clock supply.
+  Start the SD clock.
 
-  Refer to SD Host Controller Simplified spec 3.0 Section 3.2.1 for details.
+  @param[in] PciIo  The PCI IO protocol instance.
+  @param[in] Slot   The slot number.
 
-  @param[in] PciIo          The PCI IO protocol instance.
-  @param[in] Slot           The slot number of the SD card to send the command to.
-  @param[in] ClockFreq      The max clock frequency to be set. The unit is KHz.
-  @param[in] Capability     The capability of the slot.
-
-  @retval EFI_SUCCESS       The clock is supplied successfully.
-  @retval Others            The clock isn't supplied successfully.
-
+  @retval EFI_SUCCESS  Succeeded to start the SD clock.
+  @retval Others       Failed to start the SD clock.
 **/
 EFI_STATUS
-SdMmcHcClockSupply (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN UINT64                 ClockFreq,
-  IN SD_MMC_HC_SLOT_CAP     Capability
+SdMmcHcStartSdClock (
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot
   );
 
 /**
@@ -443,9 +513,9 @@ SdMmcHcClockSupply (
 **/
 EFI_STATUS
 SdMmcHcPowerControl (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN UINT8                  PowerCtrl
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  IN UINT8                PowerCtrl
   );
 
 /**
@@ -463,27 +533,9 @@ SdMmcHcPowerControl (
 **/
 EFI_STATUS
 SdMmcHcSetBusWidth (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN UINT16                 BusWidth
-  );
-
-/**
-  Supply SD/MMC card with lowest clock frequency at initialization.
-
-  @param[in] PciIo          The PCI IO protocol instance.
-  @param[in] Slot           The slot number of the SD card to send the command to.
-  @param[in] Capability     The capability of the slot.
-
-  @retval EFI_SUCCESS       The clock is supplied successfully.
-  @retval Others            The clock isn't supplied successfully.
-
-**/
-EFI_STATUS
-SdMmcHcInitClockFreq (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN SD_MMC_HC_SLOT_CAP     Capability
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  IN UINT16               BusWidth
   );
 
 /**
@@ -501,9 +553,9 @@ SdMmcHcInitClockFreq (
 **/
 EFI_STATUS
 SdMmcHcInitPowerVoltage (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN SD_MMC_HC_SLOT_CAP     Capability
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  IN SD_MMC_HC_SLOT_CAP   Capability
   );
 
 /**
@@ -520,27 +572,42 @@ SdMmcHcInitPowerVoltage (
 **/
 EFI_STATUS
 SdMmcHcInitTimeoutCtrl (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot
   );
 
 /**
-  Initial SD/MMC host controller with lowest clock frequency, max power and max timeout value
-  at initialization.
+  Set SD Host Controller control 2 registry according to selected speed.
 
-  @param[in] PciIo          The PCI IO protocol instance.
-  @param[in] Slot           The slot number of the SD card to send the command to.
-  @param[in] Capability     The capability of the slot.
+  @param[in] ControllerHandle The handle of the controller.
+  @param[in] PciIo            The PCI IO protocol instance.
+  @param[in] Slot             The slot number of the SD card to send the command to.
+  @param[in] Timing           The timing to select.
 
-  @retval EFI_SUCCESS       The host controller is initialized successfully.
-  @retval Others            The host controller isn't initialized successfully.
-
+  @retval EFI_SUCCESS         The timing is set successfully.
+  @retval Others              The timing isn't set successfully.
 **/
 EFI_STATUS
-SdMmcHcInitHost (
-  IN EFI_PCI_IO_PROTOCOL    *PciIo,
-  IN UINT8                  Slot,
-  IN SD_MMC_HC_SLOT_CAP     Capability
+SdMmcHcUhsSignaling (
+  IN EFI_HANDLE           ControllerHandle,
+  IN EFI_PCI_IO_PROTOCOL  *PciIo,
+  IN UINT8                Slot,
+  IN SD_MMC_BUS_MODE      Timing
   );
 
-#endif
+/**
+  Set driver strength in host controller.
+
+  @param[in] PciIo           The PCI IO protocol instance.
+  @param[in] SlotIndex       The slot index of the card.
+  @param[in] DriverStrength  DriverStrength to set in the controller.
+
+  @retval EFI_SUCCESS  Driver strength programmed successfully.
+  @retval Others       Failed to set driver strength.
+**/
+EFI_STATUS
+SdMmcSetDriverStrength (
+  IN EFI_PCI_IO_PROTOCOL      *PciIo,
+  IN UINT8                    SlotIndex,
+  IN SD_DRIVER_STRENGTH_TYPE  DriverStrength
+  );

@@ -1,23 +1,15 @@
 /** @file
   The PCI configuration Library Services that carry out PCI configuration and enable
   the PCI operations to be replayed during an S3 resume. This library class
-  maps directly on top of the PciLib class. 
+  maps directly on top of the PciLib class.
 
-  Copyright (c) 2006 - 2012, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions
-  of the BSD License which accompanies this distribution.  The
-  full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __S3_PCI_LIB_H__
-#define __S3_PCI_LIB_H__
+#pragma once
 
 /**
   Macro that converts PCI Bus, PCI Device, PCI Function and PCI Register to an
@@ -32,12 +24,12 @@
   @return The encoded PCI address.
 
 **/
-#define S3_PCI_LIB_ADDRESS(Bus,Device,Function,Register)   \
+#define S3_PCI_LIB_ADDRESS(Bus, Device, Function, Register)   \
   (((Register) & 0xfff) | (((Function) & 0x07) << 12) | (((Device) & 0x1f) << 15) | (((Bus) & 0xff) << 20))
 
 /**
- 
-  Reads and returns the 8-bit PCI configuration register specified by Address, 
+
+  Reads and returns the 8-bit PCI configuration register specified by Address,
   and saves the value in the S3 script to be replayed on S3 resume.
   This function must guarantee that all PCI read and write operations are
   serialized.
@@ -813,7 +805,7 @@ S3PciAndThenOr32 (
   If StartBit is greater than 31, then ASSERT().
   If EndBit is greater than 31, then ASSERT().
   If EndBit is less than StartBit, then ASSERT().
- 
+
   @param[in] Address    The PCI configuration register to read.
   @param[in] StartBit   The ordinal of the least significant bit in the bit field.
                         Range 0..31.
@@ -992,7 +984,7 @@ S3PciBitFieldAndThenOr32 (
   Size into the buffer specified by Buffer. This function only allows the PCI
   configuration registers from a single PCI function to be read. Size is
   returned. When possible 32-bit PCI configuration read cycles are used to read
-  from StartAdress to StartAddress + Size. Due to alignment restrictions, 8-bit
+  from StartAddress to StartAddress + Size. Due to alignment restrictions, 8-bit
   and 16-bit PCI configuration read cycles may be used at the beginning and the
   end of the range.
 
@@ -1025,7 +1017,7 @@ S3PciReadBuffer (
   Size from the buffer specified by Buffer. This function only allows the PCI
   configuration registers from a single PCI function to be written. Size is
   returned. When possible 32-bit PCI configuration write cycles are used to
-  write from StartAdress to StartAddress + Size. Due to alignment restrictions,
+  write from StartAddress to StartAddress + Size. Due to alignment restrictions,
   8-bit and 16-bit PCI configuration write cycles may be used at the beginning
   and the end of the range.
 
@@ -1048,5 +1040,3 @@ S3PciWriteBuffer (
   IN UINTN  Size,
   IN VOID   *Buffer
   );
-
-#endif

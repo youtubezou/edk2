@@ -3,13 +3,7 @@
   and DevPathToText Protocol.
 
 Copyright (c) 2006 - 2013, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -22,7 +16,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/DevicePathLib.h>
 #include <Library/PcdLib.h>
 
-GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_UTILITIES_PROTOCOL mDevicePathUtilities = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_UTILITIES_PROTOCOL  mDevicePathUtilities = {
   GetDevicePathSize,
   DuplicateDevicePath,
   AppendDevicePath,
@@ -33,12 +27,12 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_UTILITIES_PROTOCOL mDevicePa
   CreateDeviceNode
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_TO_TEXT_PROTOCOL   mDevicePathToText = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_TO_TEXT_PROTOCOL  mDevicePathToText = {
   ConvertDeviceNodeToText,
   ConvertDevicePathToText
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_FROM_TEXT_PROTOCOL mDevicePathFromText = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_FROM_TEXT_PROTOCOL  mDevicePathFromText = {
   ConvertTextToDeviceNode,
   ConvertTextToDevicePath
 };
@@ -59,8 +53,8 @@ GLOBAL_REMOVE_IF_UNREFERENCED CONST EFI_DEVICE_PATH_FROM_TEXT_PROTOCOL mDevicePa
 EFI_STATUS
 EFIAPI
 DevicePathEntryPoint (
-  IN EFI_HANDLE           ImageHandle,
-  IN EFI_SYSTEM_TABLE     *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS  Status;
@@ -72,16 +66,21 @@ DevicePathEntryPoint (
     if (FeaturePcdGet (PcdDevicePathSupportDevicePathFromText)) {
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Handle,
-                      &gEfiDevicePathUtilitiesProtocolGuid, &mDevicePathUtilities,
-                      &gEfiDevicePathToTextProtocolGuid,    &mDevicePathToText,
-                      &gEfiDevicePathFromTextProtocolGuid,  &mDevicePathFromText,
+                      &gEfiDevicePathUtilitiesProtocolGuid,
+                      &mDevicePathUtilities,
+                      &gEfiDevicePathToTextProtocolGuid,
+                      &mDevicePathToText,
+                      &gEfiDevicePathFromTextProtocolGuid,
+                      &mDevicePathFromText,
                       NULL
                       );
     } else {
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Handle,
-                      &gEfiDevicePathUtilitiesProtocolGuid, &mDevicePathUtilities,
-                      &gEfiDevicePathToTextProtocolGuid,    &mDevicePathToText,
+                      &gEfiDevicePathUtilitiesProtocolGuid,
+                      &mDevicePathUtilities,
+                      &gEfiDevicePathToTextProtocolGuid,
+                      &mDevicePathToText,
                       NULL
                       );
     }
@@ -89,17 +88,21 @@ DevicePathEntryPoint (
     if (FeaturePcdGet (PcdDevicePathSupportDevicePathFromText)) {
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Handle,
-                      &gEfiDevicePathUtilitiesProtocolGuid, &mDevicePathUtilities,
-                      &gEfiDevicePathFromTextProtocolGuid,  &mDevicePathFromText,
+                      &gEfiDevicePathUtilitiesProtocolGuid,
+                      &mDevicePathUtilities,
+                      &gEfiDevicePathFromTextProtocolGuid,
+                      &mDevicePathFromText,
                       NULL
                       );
     } else {
       Status = gBS->InstallMultipleProtocolInterfaces (
                       &Handle,
-                      &gEfiDevicePathUtilitiesProtocolGuid, &mDevicePathUtilities,
+                      &gEfiDevicePathUtilitiesProtocolGuid,
+                      &mDevicePathUtilities,
                       NULL
                       );
     }
   }
+
   return Status;
 }

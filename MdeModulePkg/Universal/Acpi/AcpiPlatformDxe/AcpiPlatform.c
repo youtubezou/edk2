@@ -1,16 +1,10 @@
 /** @file
   Sample ACPI Platform Driver
 
-  Copyright (c) 2008 - 2011, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
+  Copyright (c) 2008 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-
-**/ 
+**/
 
 #include <PiDxe.h>
 
@@ -38,18 +32,18 @@
 **/
 EFI_STATUS
 LocateFvInstanceWithTables (
-  OUT EFI_FIRMWARE_VOLUME2_PROTOCOL **Instance
+  OUT EFI_FIRMWARE_VOLUME2_PROTOCOL  **Instance
   )
 {
-  EFI_STATUS                    Status;
-  EFI_HANDLE                    *HandleBuffer;
-  UINTN                         NumberOfHandles;
-  EFI_FV_FILETYPE               FileType;
-  UINT32                        FvStatus;
-  EFI_FV_FILE_ATTRIBUTES        Attributes;
-  UINTN                         Size;
-  UINTN                         Index;
-  EFI_FIRMWARE_VOLUME2_PROTOCOL *FvInstance;
+  EFI_STATUS                     Status;
+  EFI_HANDLE                     *HandleBuffer;
+  UINTN                          NumberOfHandles;
+  EFI_FV_FILETYPE                FileType;
+  UINT32                         FvStatus;
+  EFI_FV_FILE_ATTRIBUTES         Attributes;
+  UINTN                          Size;
+  UINTN                          Index;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL  *FvInstance;
 
   FvStatus = 0;
 
@@ -57,20 +51,18 @@ LocateFvInstanceWithTables (
   // Locate protocol.
   //
   Status = gBS->LocateHandleBuffer (
-                   ByProtocol,
-                   &gEfiFirmwareVolume2ProtocolGuid,
-                   NULL,
-                   &NumberOfHandles,
-                   &HandleBuffer
-                   );
+                  ByProtocol,
+                  &gEfiFirmwareVolume2ProtocolGuid,
+                  NULL,
+                  &NumberOfHandles,
+                  &HandleBuffer
+                  );
   if (EFI_ERROR (Status)) {
     //
     // Defined errors at this time are not found and out of resources.
     //
     return Status;
   }
-
-
 
   //
   // Looking for FV with ACPI storage file
@@ -82,10 +74,10 @@ LocateFvInstanceWithTables (
     // This should not fail because of LocateHandleBuffer
     //
     Status = gBS->HandleProtocol (
-                     HandleBuffer[Index],
-                     &gEfiFirmwareVolume2ProtocolGuid,
-                     (VOID**) &FvInstance
-                     );
+                    HandleBuffer[Index],
+                    &gEfiFirmwareVolume2ProtocolGuid,
+                    (VOID **)&FvInstance
+                    );
     ASSERT_EFI_ERROR (Status);
 
     //
@@ -93,7 +85,7 @@ LocateFvInstanceWithTables (
     //
     Status = FvInstance->ReadFile (
                            FvInstance,
-                           (EFI_GUID*)PcdGetPtr (PcdAcpiTableStorageFile),
+                           (EFI_GUID *)PcdGetPtr (PcdAcpiTableStorageFile),
                            NULL,
                            &Size,
                            &FileType,
@@ -123,7 +115,6 @@ LocateFvInstanceWithTables (
   return Status;
 }
 
-
 /**
   This function calculates and updates an UINT8 checksum.
 
@@ -133,11 +124,11 @@ LocateFvInstanceWithTables (
 **/
 VOID
 AcpiPlatformChecksum (
-  IN UINT8      *Buffer,
-  IN UINTN      Size
+  IN UINT8  *Buffer,
+  IN UINTN  Size
   )
 {
-  UINTN ChecksumOffset;
+  UINTN  ChecksumOffset;
 
   ChecksumOffset = OFFSET_OF (EFI_ACPI_DESCRIPTION_HEADER, Checksum);
 
@@ -149,9 +140,8 @@ AcpiPlatformChecksum (
   //
   // Update checksum value
   //
-  Buffer[ChecksumOffset] = CalculateCheckSum8(Buffer, Size);
+  Buffer[ChecksumOffset] = CalculateCheckSum8 (Buffer, Size);
 }
-
 
 /**
   Entrypoint of Acpi Platform driver.
@@ -167,8 +157,8 @@ AcpiPlatformChecksum (
 EFI_STATUS
 EFIAPI
 AcpiPlatformEntryPoint (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS                     Status;
@@ -188,7 +178,7 @@ AcpiPlatformEntryPoint (
   //
   // Find the AcpiTable protocol
   //
-  Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID**)&AcpiTable);
+  Status = gBS->LocateProtocol (&gEfiAcpiTableProtocolGuid, NULL, (VOID **)&AcpiTable);
   if (EFI_ERROR (Status)) {
     return EFI_ABORTED;
   }
@@ -200,33 +190,33 @@ AcpiPlatformEntryPoint (
   if (EFI_ERROR (Status)) {
     return EFI_ABORTED;
   }
+
   //
   // Read tables from the storage file.
   //
   while (Status == EFI_SUCCESS) {
-
     Status = FwVol->ReadSection (
                       FwVol,
-                      (EFI_GUID*)PcdGetPtr (PcdAcpiTableStorageFile),
+                      (EFI_GUID *)PcdGetPtr (PcdAcpiTableStorageFile),
                       EFI_SECTION_RAW,
                       Instance,
-                      (VOID**) &CurrentTable,
+                      (VOID **)&CurrentTable,
                       &Size,
                       &FvStatus
                       );
-    if (!EFI_ERROR(Status)) {
+    if (!EFI_ERROR (Status)) {
       //
       // Add the table
       //
       TableHandle = 0;
 
-      TableSize = ((EFI_ACPI_DESCRIPTION_HEADER *) CurrentTable)->Length;
+      TableSize = ((EFI_ACPI_DESCRIPTION_HEADER *)CurrentTable)->Length;
       ASSERT (Size >= TableSize);
 
       //
       // Checksum ACPI table
       //
-      AcpiPlatformChecksum ((UINT8*)CurrentTable, TableSize);
+      AcpiPlatformChecksum ((UINT8 *)CurrentTable, TableSize);
 
       //
       // Install ACPI table
@@ -243,7 +233,7 @@ AcpiPlatformEntryPoint (
       //
       gBS->FreePool (CurrentTable);
 
-      if (EFI_ERROR(Status)) {
+      if (EFI_ERROR (Status)) {
         return EFI_ABORTED;
       }
 
@@ -255,6 +245,8 @@ AcpiPlatformEntryPoint (
     }
   }
 
-  return EFI_SUCCESS;
+  //
+  // The driver does not require to be kept loaded.
+  //
+  return EFI_REQUEST_UNLOAD_IMAGE;
 }
-

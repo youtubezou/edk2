@@ -3,18 +3,20 @@
 
   Copyright (C) 2014, Citrix Ltd.
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __XEN_HYPERCALL_LIB_H__
-#define __XEN_HYPERCALL_LIB_H__
+#pragma once
+
+/**
+  Initialise library.
+**/
+RETURN_STATUS
+EFIAPI
+XenHypercallLibInit (
+  VOID
+  );
 
 /**
   Check if the Xen Hypercall library is able to make calls to the Xen
@@ -58,8 +60,9 @@ XenHypercall2 (
   @return   The value of the asked parameter or 0 in case of error.
 **/
 UINT64
+EFIAPI
 XenHypercallHvmGetParam (
-  UINT32 Index
+  UINT32  Index
   );
 
 /**
@@ -72,9 +75,10 @@ XenHypercallHvmGetParam (
            otherwise, an error code.
 **/
 INTN
+EFIAPI
 XenHypercallMemoryOp (
-  IN     UINTN Operation,
-  IN OUT VOID *Arguments
+  IN     UINTN  Operation,
+  IN OUT VOID   *Arguments
   );
 
 /**
@@ -87,9 +91,15 @@ XenHypercallMemoryOp (
            otherwise, an error code.
 **/
 INTN
+EFIAPI
 XenHypercallEventChannelOp (
-  IN     INTN Operation,
-  IN OUT VOID *Arguments
+  IN     INTN  Operation,
+  IN OUT VOID  *Arguments
   );
 
-#endif
+INTN
+EFIAPI
+XenHypercallSchedOp (
+  IN     INTN  Operation,
+  IN OUT VOID  *Arguments
+  );

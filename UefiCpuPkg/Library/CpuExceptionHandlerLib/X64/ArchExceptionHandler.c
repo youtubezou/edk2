@@ -1,14 +1,8 @@
 /** @file
   x64 CPU Exception Handler.
 
-  Copyright (c) 2012 - 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2012 - 2022, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -23,13 +17,13 @@
 **/
 VOID
 ArchUpdateIdtEntry (
-  IN IA32_IDT_GATE_DESCRIPTOR        *IdtEntry,
-  IN UINTN                           InterruptHandler
+  OUT IA32_IDT_GATE_DESCRIPTOR  *IdtEntry,
+  IN  UINTN                     InterruptHandler
   )
 {
   IdtEntry->Bits.OffsetLow   = (UINT16)(UINTN)InterruptHandler;
   IdtEntry->Bits.OffsetHigh  = (UINT16)((UINTN)InterruptHandler >> 16);
-  IdtEntry->Bits.OffsetUpper = (UINT32)((UINTN)InterruptHandler >> 32);	
+  IdtEntry->Bits.OffsetUpper = (UINT32)((UINTN)InterruptHandler >> 32);
   IdtEntry->Bits.GateType    = IA32_IDT_GATE_TYPE_INTERRUPT_32;
 }
 
@@ -41,65 +35,231 @@ ArchUpdateIdtEntry (
 **/
 UINTN
 ArchGetIdtHandler (
-  IN IA32_IDT_GATE_DESCRIPTOR        *IdtEntry
+  IN IA32_IDT_GATE_DESCRIPTOR  *IdtEntry
   )
 {
-  return IdtEntry->Bits.OffsetLow + (((UINTN) IdtEntry->Bits.OffsetHigh)  << 16) +
-                                    (((UINTN) IdtEntry->Bits.OffsetUpper) << 32);
+  return IdtEntry->Bits.OffsetLow + (((UINTN)IdtEntry->Bits.OffsetHigh)  << 16) +
+         (((UINTN)IdtEntry->Bits.OffsetUpper) << 32);
 }
 
 /**
   Save CPU exception context when handling EFI_VECTOR_HANDOFF_HOOK_AFTER case.
 
-  @param ExceptionType  Exception type.
-  @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
+  @param[in] ExceptionType        Exception type.
+  @param[in] SystemContext        Pointer to EFI_SYSTEM_CONTEXT.
+  @param[in] ExceptionHandlerData Pointer to exception handler data.
 **/
 VOID
 ArchSaveExceptionContext (
-  IN UINTN                ExceptionType,
-  IN EFI_SYSTEM_CONTEXT   SystemContext 
+  IN UINTN                   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT      SystemContext,
+  IN EXCEPTION_HANDLER_DATA  *ExceptionHandlerData
   )
 {
-  IA32_EFLAGS32           Eflags;
+  IA32_EFLAGS32          Eflags;
+  RESERVED_VECTORS_DATA  *ReservedVectors;
+
+  ReservedVectors = ExceptionHandlerData->ReservedVectors;
   //
-  // Save Exception context in global variable
+  // Save Exception context in global variable in first entry of the exception handler.
+  // So when original exception handler returns to the new exception handler (second entry),
+  // the Eflags/Cs/Eip/ExceptionData can be used.
   //
-  mReservedVectors[ExceptionType].OldSs         = SystemContext.SystemContextX64->Ss;
-  mReservedVectors[ExceptionType].OldSp         = SystemContext.SystemContextX64->Rsp;
-  mReservedVectors[ExceptionType].OldFlags      = SystemContext.SystemContextX64->Rflags;
-  mReservedVectors[ExceptionType].OldCs         = SystemContext.SystemContextX64->Cs;
-  mReservedVectors[ExceptionType].OldIp         = SystemContext.SystemContextX64->Rip;
-  mReservedVectors[ExceptionType].ExceptionData = SystemContext.SystemContextX64->ExceptionData;
+  ReservedVectors[ExceptionType].OldSs         = SystemContext.SystemContextX64->Ss;
+  ReservedVectors[ExceptionType].OldSp         = SystemContext.SystemContextX64->Rsp;
+  ReservedVectors[ExceptionType].OldFlags      = SystemContext.SystemContextX64->Rflags;
+  ReservedVectors[ExceptionType].OldCs         = SystemContext.SystemContextX64->Cs;
+  ReservedVectors[ExceptionType].OldIp         = SystemContext.SystemContextX64->Rip;
+  ReservedVectors[ExceptionType].ExceptionData = SystemContext.SystemContextX64->ExceptionData;
   //
   // Clear IF flag to avoid old IDT handler enable interrupt by IRET
   //
-  Eflags.UintN = SystemContext.SystemContextX64->Rflags;
-  Eflags.Bits.IF = 0; 
+  Eflags.UintN                           = SystemContext.SystemContextX64->Rflags;
+  Eflags.Bits.IF                         = 0;
   SystemContext.SystemContextX64->Rflags = Eflags.UintN;
   //
-  // Modify the EIP in stack, then old IDT handler will return to the stub code
+  // Modify the EIP in stack, then old IDT handler will return to HookAfterStubBegin.
   //
-  SystemContext.SystemContextX64->Rip = (UINTN) mReservedVectors[ExceptionType].HookAfterStubHeaderCode;
+  SystemContext.SystemContextX64->Rip = (UINTN)ReservedVectors[ExceptionType].HookAfterStubHeaderCode;
 }
 
 /**
   Restore CPU exception context when handling EFI_VECTOR_HANDOFF_HOOK_AFTER case.
 
-  @param ExceptionType  Exception type.
-  @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
+  @param[in] ExceptionType        Exception type.
+  @param[in] SystemContext        Pointer to EFI_SYSTEM_CONTEXT.
+  @param[in] ExceptionHandlerData Pointer to exception handler data.
 **/
 VOID
 ArchRestoreExceptionContext (
-  IN UINTN                ExceptionType,
-  IN EFI_SYSTEM_CONTEXT   SystemContext 
+  IN UINTN                   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT      SystemContext,
+  IN EXCEPTION_HANDLER_DATA  *ExceptionHandlerData
   )
 {
-  SystemContext.SystemContextX64->Ss            = mReservedVectors[ExceptionType].OldSs;
-  SystemContext.SystemContextX64->Rsp           = mReservedVectors[ExceptionType].OldSp;
-  SystemContext.SystemContextX64->Rflags        = mReservedVectors[ExceptionType].OldFlags;
-  SystemContext.SystemContextX64->Cs            = mReservedVectors[ExceptionType].OldCs;
-  SystemContext.SystemContextX64->Rip           = mReservedVectors[ExceptionType].OldIp;
-  SystemContext.SystemContextX64->ExceptionData = mReservedVectors[ExceptionType].ExceptionData;
+  RESERVED_VECTORS_DATA  *ReservedVectors;
+
+  ReservedVectors                               = ExceptionHandlerData->ReservedVectors;
+  SystemContext.SystemContextX64->Ss            = ReservedVectors[ExceptionType].OldSs;
+  SystemContext.SystemContextX64->Rsp           = ReservedVectors[ExceptionType].OldSp;
+  SystemContext.SystemContextX64->Rflags        = ReservedVectors[ExceptionType].OldFlags;
+  SystemContext.SystemContextX64->Cs            = ReservedVectors[ExceptionType].OldCs;
+  SystemContext.SystemContextX64->Rip           = ReservedVectors[ExceptionType].OldIp;
+  SystemContext.SystemContextX64->ExceptionData = ReservedVectors[ExceptionType].ExceptionData;
+}
+
+/**
+  Setup separate stacks for certain exception handlers.
+
+  @param[in]       Buffer        Point to buffer used to separate exception stack.
+  @param[in, out]  BufferSize    On input, it indicates the byte size of Buffer.
+                                 If the size is not enough, the return status will
+                                 be EFI_BUFFER_TOO_SMALL, and output BufferSize
+                                 will be the size it needs.
+
+  @retval EFI_SUCCESS             The stacks are assigned successfully.
+  @retval EFI_BUFFER_TOO_SMALL    This BufferSize is too small.
+  @retval EFI_UNSUPPORTED         This function is not supported.
+**/
+EFI_STATUS
+ArchSetupExceptionStack (
+  IN     VOID   *Buffer,
+  IN OUT UINTN  *BufferSize
+  )
+{
+  IA32_DESCRIPTOR           Gdtr;
+  IA32_DESCRIPTOR           Idtr;
+  IA32_IDT_GATE_DESCRIPTOR  *IdtTable;
+  IA32_TSS_DESCRIPTOR       *TssDesc;
+  IA32_TASK_STATE_SEGMENT   *Tss;
+  VOID                      *NewGdtTable;
+  UINTN                     StackTop;
+  UINTN                     Index;
+  UINTN                     Vector;
+  UINTN                     TssBase;
+  UINT8                     *StackSwitchExceptions;
+  UINTN                     NeedBufferSize;
+
+  if (BufferSize == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  //
+  // Interrupt stack table supports only 7 vectors.
+  //
+  if (CPU_STACK_SWITCH_EXCEPTION_NUMBER > ARRAY_SIZE (Tss->IST)) {
+    return EFI_UNSUPPORTED;
+  }
+
+  //
+  // Total needed size includes stack size, new GDT table size, TSS size.
+  // Add another DESCRIPTOR size for alignment requiremet.
+  //
+  // Layout of memory needed for each processor:
+  //    --------------------------------
+  //    |                              |
+  //    |          Stack Size          |  X ExceptionNumber
+  //    |                              |
+  //    --------------------------------
+  //    |          Alignment           |  (just in case)
+  //    --------------------------------
+  //    |                              |
+  //    |         Original GDT         |
+  //    |                              |
+  //    --------------------------------
+  //    |                              |
+  //    |  Exception task descriptors  |  X 1
+  //    |                              |
+  //    --------------------------------
+  //    |                              |
+  //    | Exception task-state segment |  X 1
+  //    |                              |
+  //    --------------------------------
+  //
+  AsmReadGdtr (&Gdtr);
+  NeedBufferSize = CPU_STACK_SWITCH_EXCEPTION_NUMBER * CPU_KNOWN_GOOD_STACK_SIZE +
+                   sizeof (IA32_TSS_DESCRIPTOR) +
+                   Gdtr.Limit + 1 + CPU_TSS_DESC_SIZE +
+                   CPU_TSS_SIZE;
+
+  if (*BufferSize < NeedBufferSize) {
+    *BufferSize = NeedBufferSize;
+    return EFI_BUFFER_TOO_SMALL;
+  }
+
+  if (Buffer == NULL) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  AsmReadIdtr (&Idtr);
+  StackSwitchExceptions = CPU_STACK_SWITCH_EXCEPTION_LIST;
+  StackTop              = (UINTN)Buffer + CPU_STACK_SWITCH_EXCEPTION_NUMBER * CPU_KNOWN_GOOD_STACK_SIZE;
+  NewGdtTable           = ALIGN_POINTER (StackTop, sizeof (IA32_TSS_DESCRIPTOR));
+  TssDesc               = (IA32_TSS_DESCRIPTOR *)((UINTN)NewGdtTable + Gdtr.Limit + 1);
+  Tss                   = (IA32_TASK_STATE_SEGMENT *)((UINTN)TssDesc + CPU_TSS_DESC_SIZE);
+
+  CopyMem (NewGdtTable, (VOID *)Gdtr.Base, Gdtr.Limit + 1);
+  Gdtr.Base  = (UINTN)NewGdtTable;
+  Gdtr.Limit = (UINT16)(Gdtr.Limit + CPU_TSS_DESC_SIZE);
+
+  //
+  // Fixup current task descriptor. Task-state segment for current task will
+  // be filled by processor during task switching.
+  //
+  TssBase = (UINTN)Tss;
+
+  TssDesc->Uint128.Uint64   = 0;
+  TssDesc->Uint128.Uint64_1 = 0;
+  TssDesc->Bits.LimitLow    = sizeof (IA32_TASK_STATE_SEGMENT) - 1;
+  TssDesc->Bits.BaseLow     = (UINT16)TssBase;
+  TssDesc->Bits.BaseMidl    = (UINT8)(TssBase >> 16);
+  TssDesc->Bits.Type        = IA32_GDT_TYPE_TSS;
+  TssDesc->Bits.P           = 1;
+  TssDesc->Bits.LimitHigh   = 0;
+  TssDesc->Bits.BaseMidh    = (UINT8)(TssBase >> 24);
+  TssDesc->Bits.BaseHigh    = (UINT32)(TssBase >> 32);
+
+  //
+  // Fixup exception task descriptor and task-state segment
+  //
+  ZeroMem (Tss, sizeof (*Tss));
+  //
+  // Plus 1 byte is for compact stack layout in case StackTop is already aligned.
+  //
+  StackTop = StackTop - CPU_STACK_ALIGNMENT + 1;
+  StackTop = (UINTN)ALIGN_POINTER (StackTop, CPU_STACK_ALIGNMENT);
+  IdtTable = (IA32_IDT_GATE_DESCRIPTOR  *)Idtr.Base;
+  for (Index = 0; Index < CPU_STACK_SWITCH_EXCEPTION_NUMBER; ++Index) {
+    //
+    // Fixup IST
+    //
+    Tss->IST[Index] = StackTop;
+    StackTop       -= CPU_KNOWN_GOOD_STACK_SIZE;
+
+    //
+    // Set the IST field to enable corresponding IST
+    //
+    Vector = StackSwitchExceptions[Index];
+    if ((Vector >= X86_CPU_INTERRUPT_NUM) ||
+        (Vector >= (Idtr.Limit + 1) / sizeof (IA32_IDT_GATE_DESCRIPTOR)))
+    {
+      continue;
+    }
+
+    IdtTable[Vector].Bits.Reserved_0 = (UINT8)(Index + 1);
+  }
+
+  //
+  // Publish GDT
+  //
+  AsmWriteGdtr (&Gdtr);
+
+  //
+  // Load current task
+  //
+  AsmWriteTr ((UINT16)((UINTN)TssDesc - Gdtr.Base));
+
+  return EFI_SUCCESS;
 }
 
 /**
@@ -109,20 +269,39 @@ ArchRestoreExceptionContext (
   @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
 **/
 VOID
-DumpCpuContent (
-  IN EFI_EXCEPTION_TYPE   ExceptionType,
-  IN EFI_SYSTEM_CONTEXT   SystemContext
+EFIAPI
+DumpCpuContext (
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  IN EFI_SYSTEM_CONTEXT  SystemContext
   )
 {
-  UINTN                   ImageBase;
-  UINTN                   EntryPoint;
-
   InternalPrintMessage (
     "!!!! X64 Exception Type - %02x(%a)  CPU Apic ID - %08x !!!!\n",
     ExceptionType,
     GetExceptionNameStr (ExceptionType),
     GetApicId ()
     );
+  if ((mErrorCodeFlag & (1 << ExceptionType)) != 0) {
+    InternalPrintMessage (
+      "ExceptionData - %016lx",
+      SystemContext.SystemContextX64->ExceptionData
+      );
+    if (ExceptionType == EXCEPT_IA32_PAGE_FAULT) {
+      InternalPrintMessage (
+        "  I:%x R:%x U:%x W:%x P:%x PK:%x SS:%x SGX:%x",
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_ID)   != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_RSVD) != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_US)   != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_WR)   != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_P)    != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_PK)   != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_SS)   != 0,
+        (SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_SGX)  != 0
+        );
+    }
+
+    InternalPrintMessage ("\n");
+  }
 
   InternalPrintMessage (
     "RIP  - %016lx, CS  - %016lx, RFLAGS - %016lx\n",
@@ -130,12 +309,6 @@ DumpCpuContent (
     SystemContext.SystemContextX64->Cs,
     SystemContext.SystemContextX64->Rflags
     );
-  if (mErrorCodeFlag & (1 << ExceptionType)) {
-    InternalPrintMessage (
-      "ExceptionData - %016lx\n",
-      SystemContext.SystemContextX64->ExceptionData
-      );
-  }
   InternalPrintMessage (
     "RAX  - %016lx, RCX - %016lx, RDX - %016lx\n",
     SystemContext.SystemContextX64->Rax,
@@ -216,20 +389,37 @@ DumpCpuContent (
     SystemContext.SystemContextX64->Idtr[1],
     SystemContext.SystemContextX64->Tr
     );
-	InternalPrintMessage (
+  InternalPrintMessage (
     "FXSAVE_STATE - %016lx\n",
     &SystemContext.SystemContextX64->FxSaveState
     );
+}
 
+/**
+  Display CPU information.
+
+  @param ExceptionType  Exception type.
+  @param SystemContext  Pointer to EFI_SYSTEM_CONTEXT.
+**/
+VOID
+DumpImageAndCpuContent (
+  IN EFI_EXCEPTION_TYPE  ExceptionType,
+  IN EFI_SYSTEM_CONTEXT  SystemContext
+  )
+{
+  DumpCpuContext (ExceptionType, SystemContext);
   //
-  // Find module image base and module entry point by RIP
+  // Dump module image base and module entry point by RIP
   //
-  ImageBase = FindModuleImageBase (SystemContext.SystemContextX64->Rip, &EntryPoint);
-  if (ImageBase != 0) {
-    InternalPrintMessage (
-      " (ImageBase=%016lx, EntryPoint=%016lx) !!!!\n",
-      ImageBase,
-      EntryPoint
-      );
+  if ((ExceptionType == EXCEPT_IA32_PAGE_FAULT) &&
+      ((SystemContext.SystemContextX64->ExceptionData & IA32_PF_EC_ID) != 0))
+  {
+    //
+    // The RIP in SystemContext could not be used
+    // if it is page fault with I/D set.
+    //
+    DumpModuleImageInfo ((*(UINTN *)(UINTN)SystemContext.SystemContextX64->Rsp));
+  } else {
+    DumpModuleImageInfo (SystemContext.SystemContextX64->Rip);
   }
 }

@@ -3,13 +3,7 @@
 
   Copyright (C) 2014, Gabriel L. Somlo <somlo@cmu.edu>
 
-  This program and the accompanying materials are licensed and made
-  available under the terms and conditions of the BSD License which
-  accompanies this distribution.   The full text of the license may
-  be found at http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include <Library/DebugLib.h>
@@ -20,7 +14,7 @@
 //
 // Cached ACPI Timer IO Address
 //
-STATIC UINT32 mAcpiTimerIoAddr;
+STATIC UINT32  mAcpiTimerIoAddr;
 
 /**
   The constructor function caches the ACPI tick counter address, and,
@@ -35,12 +29,12 @@ AcpiTimerLibConstructor (
   VOID
   )
 {
-  UINT16 HostBridgeDevId;
-  UINTN Pmba;
-  UINT32 PmbaAndVal;
-  UINT32 PmbaOrVal;
-  UINTN AcpiCtlReg;
-  UINT8 AcpiEnBit;
+  UINT16  HostBridgeDevId;
+  UINTN   Pmba;
+  UINT32  PmbaAndVal;
+  UINT32  PmbaOrVal;
+  UINTN   AcpiCtlReg;
+  UINT8   AcpiEnBit;
 
   //
   // Query Host Bridge DID to determine platform type
@@ -61,9 +55,16 @@ AcpiTimerLibConstructor (
       AcpiCtlReg = POWER_MGMT_REGISTER_Q35 (ICH9_ACPI_CNTL);
       AcpiEnBit  = ICH9_ACPI_CNTL_ACPI_EN;
       break;
+    case CLOUDHV_DEVICE_ID:
+      mAcpiTimerIoAddr =  CLOUDHV_ACPI_TIMER_IO_ADDRESS;
+      return RETURN_SUCCESS;
     default:
-      DEBUG ((EFI_D_ERROR, "%a: Unknown Host Bridge Device ID: 0x%04x\n",
-        __FUNCTION__, HostBridgeDevId));
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: Unknown Host Bridge Device ID: 0x%04x\n",
+        __func__,
+        HostBridgeDevId
+        ));
       ASSERT (FALSE);
       return RETURN_UNSUPPORTED;
   }

@@ -4,19 +4,12 @@
   Allow platform to provide EDID information to the producer of the Graphics Output
   protocol.
 
-  Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EDID_OVERRIDE_H__
-#define __EDID_OVERRIDE_H__
+#pragma once
 
 #define EFI_EDID_OVERRIDE_PROTOCOL_GUID \
   { \
@@ -25,8 +18,8 @@
 
 typedef struct _EFI_EDID_OVERRIDE_PROTOCOL EFI_EDID_OVERRIDE_PROTOCOL;
 
-#define EFI_EDID_OVERRIDE_DONT_OVERRIDE   0x01
-#define EFI_EDID_OVERRIDE_ENABLE_HOT_PLUG 0x02
+#define EFI_EDID_OVERRIDE_DONT_OVERRIDE    0x01
+#define EFI_EDID_OVERRIDE_ENABLE_HOT_PLUG  0x02
 
 /**
   Returns policy information and potentially a replacement EDID for the specified video output device.
@@ -50,18 +43,16 @@ EFI_STATUS
   IN  EFI_EDID_OVERRIDE_PROTOCOL          *This,
   IN  EFI_HANDLE                          *ChildHandle,
   OUT UINT32                              *Attributes,
-  IN OUT UINTN                            *EdidSize,
-  IN OUT UINT8                            **Edid
+  OUT UINTN                               *EdidSize,
+  OUT UINT8                               **Edid
   );
 
 ///
-/// This protocol is produced by the platform to allow the platform to provide 
+/// This protocol is produced by the platform to allow the platform to provide
 /// EDID information to the producer of the Graphics Output protocol.
 ///
 struct _EFI_EDID_OVERRIDE_PROTOCOL {
-  EFI_EDID_OVERRIDE_PROTOCOL_GET_EDID   GetEdid;
+  EFI_EDID_OVERRIDE_PROTOCOL_GET_EDID    GetEdid;
 };
-                                             
-extern EFI_GUID gEfiEdidOverrideProtocolGuid;
 
-#endif
+extern EFI_GUID  gEfiEdidOverrideProtocolGuid;

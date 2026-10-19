@@ -3,18 +3,11 @@
   Firmare Volume Block driver.
 
   Copyright (c) 2009 - 2011, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __PLATFORM_FVB_LIB__
-#define __PLATFORM_FVB_LIB__
+#pragma once
 
 #include <Protocol/FirmwareVolumeBlock.h>
 
@@ -34,13 +27,12 @@
 VOID
 EFIAPI
 PlatformFvbDataRead (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL *This,
-  IN        EFI_LBA                             Lba,
-  IN        UINTN                               Offset,
-  IN        UINTN                               NumBytes,
-  IN        UINT8                               *Buffer
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN        EFI_LBA                              Lba,
+  IN        UINTN                                Offset,
+  IN        UINTN                                NumBytes,
+  IN        UINT8                                *Buffer
   );
-
 
 /**
   This function will be called following a call to the
@@ -63,7 +55,6 @@ PlatformFvbDataWritten (
   IN        UINT8                                *Buffer
   );
 
-
 /**
   This function will be called following a call to the
   EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL Erase function.
@@ -78,10 +69,6 @@ PlatformFvbDataWritten (
 VOID
 EFIAPI
 PlatformFvbBlocksErased (
-  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL *This,
-  IN  VA_LIST       List
+  IN CONST  EFI_FIRMWARE_VOLUME_BLOCK2_PROTOCOL  *This,
+  IN  VA_LIST                                    List
   );
-
-
-#endif
-

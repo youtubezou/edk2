@@ -1,19 +1,12 @@
 /** @file
-  PCI resouces support functions declaration for PCI Bus module.
+  PCI resources support functions declaration for PCI Bus module.
 
-Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _EFI_PCI_RESOURCE_SUPPORT_H_
-#define _EFI_PCI_RESOURCE_SUPPORT_H_
+#pragma once
 
 typedef enum {
   PciResUsageTypical,
@@ -23,18 +16,18 @@ typedef enum {
 #define PCI_RESOURCE_SIGNATURE  SIGNATURE_32 ('p', 'c', 'r', 'c')
 
 typedef struct {
-  UINT32              Signature;
-  LIST_ENTRY          Link;
-  LIST_ENTRY          ChildList;
-  PCI_IO_DEVICE       *PciDev;
-  UINT64              Alignment;
-  UINT64              Offset;
-  UINT8               Bar;
-  PCI_BAR_TYPE        ResType;
-  UINT64              Length;
-  BOOLEAN             Reserved;
-  PCI_RESOURCE_USAGE  ResourceUsage;
-  BOOLEAN             Virtual;
+  UINT32                Signature;
+  LIST_ENTRY            Link;
+  LIST_ENTRY            ChildList;
+  PCI_IO_DEVICE         *PciDev;
+  UINT64                Alignment;
+  UINT64                Offset;
+  UINT8                 Bar;
+  PCI_BAR_TYPE          ResType;
+  UINT64                Length;
+  BOOLEAN               Reserved;
+  PCI_RESOURCE_USAGE    ResourceUsage;
+  BOOLEAN               Virtual;
 } PCI_RESOURCE_NODE;
 
 #define RESOURCE_NODE_FROM_LINK(a) \
@@ -49,8 +42,8 @@ typedef struct {
 **/
 VOID
 SkipVGAAperture (
-  OUT UINT64   *Start,
-  IN  UINT64   Length
+  OUT UINT64  *Start,
+  IN  UINT64  Length
   );
 
 /**
@@ -62,13 +55,18 @@ SkipVGAAperture (
 **/
 VOID
 SkipIsaAliasAperture (
-  OUT UINT64   *Start,
-  IN  UINT64   Length
+  OUT UINT64  *Start,
+  IN  UINT64  Length
   );
 
 /**
   This function inserts a resource node into the resource list.
-  The resource list is sorted in descend order.
+  The resource list is sorted in descending order of alignment. Resource
+  nodes with the same alignment are sorted by the remainder of their
+  length modulo the alignment: nodes without a remainder come first,
+  followed by the others in descending order of the remainder. Resource
+  nodes that rank equal, such as BARs of the same size, keep their
+  insertion order.
 
   @param Bridge  PCI resource node for bridge.
   @param ResNode Resource node want to be inserted.
@@ -76,17 +74,17 @@ SkipIsaAliasAperture (
 **/
 VOID
 InsertResourceNode (
-  IN OUT PCI_RESOURCE_NODE   *Bridge,
-  IN     PCI_RESOURCE_NODE   *ResNode
+  IN OUT PCI_RESOURCE_NODE  *Bridge,
+  IN     PCI_RESOURCE_NODE  *ResNode
   );
 
 /**
   This routine is used to merge two different resource trees in need of
-  resoure degradation.
+  resource degradation.
 
   For example, if an upstream PPB doesn't support,
   prefetchable memory decoding, the PCI bus driver will choose to call this function
-  to merge prefectchable memory resource list into normal memory list.
+  to merge prefetchable memory resource list into normal memory list.
 
   If the TypeMerge is TRUE, Res resource type is changed to the type of destination resource
   type.
@@ -100,9 +98,9 @@ InsertResourceNode (
 **/
 VOID
 MergeResourceTree (
-  IN PCI_RESOURCE_NODE   *Dst,
-  IN PCI_RESOURCE_NODE   *Res,
-  IN BOOLEAN             TypeMerge
+  IN PCI_RESOURCE_NODE  *Dst,
+  IN PCI_RESOURCE_NODE  *Res,
+  IN BOOLEAN            TypeMerge
   );
 
 /**
@@ -114,23 +112,23 @@ MergeResourceTree (
 **/
 VOID
 CalculateApertureIo16 (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   );
 
 /**
   This function is used to calculate the resource aperture
   for a given bridge device.
 
-  @param Bridge      PCI resouce node for given bridge device.
+  @param Bridge      PCI resource node for given bridge device.
 
 **/
 VOID
 CalculateResourceAperture (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   );
 
 /**
-  Get IO/Memory resource infor for given PCI device.
+  Get IO/Memory resource info for given PCI device.
 
   @param PciDev     Pci device instance.
   @param IoNode     Resource info node for IO .
@@ -142,12 +140,12 @@ CalculateResourceAperture (
 **/
 VOID
 GetResourceFromDevice (
-  IN     PCI_IO_DEVICE     *PciDev,
-  IN OUT PCI_RESOURCE_NODE *IoNode,
-  IN OUT PCI_RESOURCE_NODE *Mem32Node,
-  IN OUT PCI_RESOURCE_NODE *PMem32Node,
-  IN OUT PCI_RESOURCE_NODE *Mem64Node,
-  IN OUT PCI_RESOURCE_NODE *PMem64Node
+  IN     PCI_IO_DEVICE      *PciDev,
+  IN OUT PCI_RESOURCE_NODE  *IoNode,
+  IN OUT PCI_RESOURCE_NODE  *Mem32Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem32Node,
+  IN OUT PCI_RESOURCE_NODE  *Mem64Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -166,17 +164,16 @@ GetResourceFromDevice (
 **/
 PCI_RESOURCE_NODE *
 CreateResourceNode (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN UINT64                Length,
-  IN UINT64                Alignment,
-  IN UINT8                 Bar,
-  IN PCI_BAR_TYPE          ResType,
-  IN PCI_RESOURCE_USAGE    ResUsage
+  IN PCI_IO_DEVICE       *PciDev,
+  IN UINT64              Length,
+  IN UINT64              Alignment,
+  IN UINT8               Bar,
+  IN PCI_BAR_TYPE        ResType,
+  IN PCI_RESOURCE_USAGE  ResUsage
   );
 
 /**
-  This function is used to extract resource request from
-  IOV VF device node list.
+  This function is used to create a IOV VF resource node.
 
   @param PciDev       Pci device instance.
   @param Length       Length of Io/Memory resource.
@@ -185,18 +182,18 @@ CreateResourceNode (
   @param ResType      Type of resource: IO/Memory.
   @param ResUsage     Resource usage.
 
-  @return PCI resource node created for given PCI device.
+  @return PCI resource node created for given VF PCI device.
           NULL means PCI resource node is not created.
 
 **/
 PCI_RESOURCE_NODE *
 CreateVfResourceNode (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN UINT64                Length,
-  IN UINT64                Alignment,
-  IN UINT8                 Bar,
-  IN PCI_BAR_TYPE          ResType,
-  IN PCI_RESOURCE_USAGE    ResUsage
+  IN PCI_IO_DEVICE       *PciDev,
+  IN UINT64              Length,
+  IN UINT64              Alignment,
+  IN UINT8               Bar,
+  IN PCI_BAR_TYPE        ResType,
+  IN PCI_RESOURCE_USAGE  ResUsage
   );
 
 /**
@@ -213,12 +210,12 @@ CreateVfResourceNode (
 **/
 VOID
 CreateResourceMap (
-  IN     PCI_IO_DEVICE     *Bridge,
-  IN OUT PCI_RESOURCE_NODE *IoNode,
-  IN OUT PCI_RESOURCE_NODE *Mem32Node,
-  IN OUT PCI_RESOURCE_NODE *PMem32Node,
-  IN OUT PCI_RESOURCE_NODE *Mem64Node,
-  IN OUT PCI_RESOURCE_NODE *PMem64Node
+  IN     PCI_IO_DEVICE      *Bridge,
+  IN OUT PCI_RESOURCE_NODE  *IoNode,
+  IN OUT PCI_RESOURCE_NODE  *Mem32Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem32Node,
+  IN OUT PCI_RESOURCE_NODE  *Mem64Node,
+  IN OUT PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -234,12 +231,12 @@ CreateResourceMap (
 **/
 VOID
 ResourcePaddingPolicy (
-  IN PCI_IO_DEVICE     *PciDev,
-  IN PCI_RESOURCE_NODE *IoNode,
-  IN PCI_RESOURCE_NODE *Mem32Node,
-  IN PCI_RESOURCE_NODE *PMem32Node,
-  IN PCI_RESOURCE_NODE *Mem64Node,
-  IN PCI_RESOURCE_NODE *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -258,11 +255,11 @@ ResourcePaddingPolicy (
 **/
 VOID
 DegradeResource (
-  IN PCI_IO_DEVICE     *Bridge,
-  IN PCI_RESOURCE_NODE *Mem32Node,
-  IN PCI_RESOURCE_NODE *PMem32Node,
-  IN PCI_RESOURCE_NODE *Mem64Node,
-  IN PCI_RESOURCE_NODE *PMem64Node
+  IN PCI_IO_DEVICE      *Bridge,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -277,80 +274,80 @@ DegradeResource (
 **/
 BOOLEAN
 BridgeSupportResourceDecode (
-  IN PCI_IO_DEVICE *Bridge,
-  IN UINT32        Decode
+  IN PCI_IO_DEVICE  *Bridge,
+  IN UINT32         Decode
   );
 
 /**
   This function is used to program the resource allocated
   for each resource node under specified bridge.
 
-  @param Base     Base address of resource to be progammed.
+  @param Base     Base address of resource to be programmed.
   @param Bridge   PCI resource node for the bridge device.
 
-  @retval EFI_SUCCESS            Successfully to program all resouces
+  @retval EFI_SUCCESS            Successfully to program all resources
                                  on given PCI bridge device.
   @retval EFI_OUT_OF_RESOURCES   Base is all one.
 
 **/
 EFI_STATUS
 ProgramResource (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Bridge
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Bridge
   );
 
 /**
   Program Bar register for PCI device.
 
-  @param Base  Base address for PCI device resource to be progammed.
-  @param Node  Point to resoure node structure.
+  @param Base  Base address for PCI device resource to be programmed.
+  @param Node  Point to resource node structure.
 
 **/
 VOID
 ProgramBar (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   );
 
 /**
   Program IOV VF Bar register for PCI device.
 
-  @param Base  Base address for PCI device resource to be progammed.
-  @param Node  Point to resoure node structure.
+  @param Base  Base address for PCI device resource to be programmed.
+  @param Node  Point to resource node structure.
 
 **/
 EFI_STATUS
 ProgramVfBar (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   );
 
 /**
-  Program PCI-PCI bridge apperture.
+  Program PCI-PCI bridge aperture.
 
   @param Base  Base address for resource.
-  @param Node  Point to resoure node structure.
+  @param Node  Point to resource node structure.
 
 **/
 VOID
 ProgramPpbApperture (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   );
 
 /**
   Program parent bridge for Option Rom.
 
-  @param PciDevice      Pci deivce instance.
-  @param OptionRomBase  Base address for Optiona Rom.
+  @param PciDevice      Pci device instance.
+  @param OptionRomBase  Base address for Option Rom.
   @param Enable         Enable or disable PCI memory.
 
 **/
 VOID
-ProgrameUpstreamBridgeForRom (
-  IN PCI_IO_DEVICE   *PciDevice,
-  IN UINT32          OptionRomBase,
-  IN BOOLEAN         Enable
+ProgramUpstreamBridgeForRom (
+  IN PCI_IO_DEVICE  *PciDevice,
+  IN UINT32         OptionRomBase,
+  IN BOOLEAN        Enable
   );
 
 /**
@@ -364,7 +361,7 @@ ProgrameUpstreamBridgeForRom (
 **/
 BOOLEAN
 ResourceRequestExisted (
-  IN PCI_RESOURCE_NODE    *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   );
 
 /**
@@ -377,19 +374,19 @@ ResourceRequestExisted (
 **/
 VOID
 InitializeResourcePool (
-  IN OUT PCI_RESOURCE_NODE   *ResourcePool,
-  IN     PCI_BAR_TYPE        ResourceType
+  IN OUT PCI_RESOURCE_NODE  *ResourcePool,
+  IN     PCI_BAR_TYPE       ResourceType
   );
 
 /**
-  Destory given resource tree.
+  Destroy given resource tree.
 
   @param Bridge  PCI resource root node of resource tree.
 
 **/
 VOID
 DestroyResourceTree (
-  IN PCI_RESOURCE_NODE *Bridge
+  IN PCI_RESOURCE_NODE  *Bridge
   );
 
 /**
@@ -405,12 +402,12 @@ DestroyResourceTree (
 **/
 VOID
 ResourcePaddingForCardBusBridge (
-  IN PCI_IO_DEVICE        *PciDev,
-  IN PCI_RESOURCE_NODE    *IoNode,
-  IN PCI_RESOURCE_NODE    *Mem32Node,
-  IN PCI_RESOURCE_NODE    *PMem32Node,
-  IN PCI_RESOURCE_NODE    *Mem64Node,
-  IN PCI_RESOURCE_NODE    *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -422,8 +419,8 @@ ResourcePaddingForCardBusBridge (
 **/
 VOID
 ProgramP2C (
-  IN UINT64            Base,
-  IN PCI_RESOURCE_NODE *Node
+  IN UINT64             Base,
+  IN PCI_RESOURCE_NODE  *Node
   );
 
 /**
@@ -439,12 +436,12 @@ ProgramP2C (
 **/
 VOID
 ApplyResourcePadding (
-  IN PCI_IO_DEVICE         *PciDev,
-  IN PCI_RESOURCE_NODE     *IoNode,
-  IN PCI_RESOURCE_NODE     *Mem32Node,
-  IN PCI_RESOURCE_NODE     *PMem32Node,
-  IN PCI_RESOURCE_NODE     *Mem64Node,
-  IN PCI_RESOURCE_NODE     *PMem64Node
+  IN PCI_IO_DEVICE      *PciDev,
+  IN PCI_RESOURCE_NODE  *IoNode,
+  IN PCI_RESOURCE_NODE  *Mem32Node,
+  IN PCI_RESOURCE_NODE  *PMem32Node,
+  IN PCI_RESOURCE_NODE  *Mem64Node,
+  IN PCI_RESOURCE_NODE  *PMem64Node
   );
 
 /**
@@ -457,7 +454,5 @@ ApplyResourcePadding (
 **/
 VOID
 GetResourcePaddingPpb (
-  IN  PCI_IO_DEVICE                  *PciIoDevice
+  IN  PCI_IO_DEVICE  *PciIoDevice
   );
-
-#endif

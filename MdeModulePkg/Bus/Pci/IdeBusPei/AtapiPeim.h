@@ -1,21 +1,14 @@
 /** @file
 Private Include file for IdeBus PEIM.
 
-Copyright (c) 2006 - 2015, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _RECOVERY_ATAPI_H_
-#define _RECOVERY_ATAPI_H_
+#pragma once
 
 #include <PiPei.h>
 
@@ -33,12 +26,11 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/MemoryAllocationLib.h>
 #include <Library/PcdLib.h>
 
-
 #include <IndustryStandard/Atapi.h>
 
-#define MAX_SENSE_KEY_COUNT 6
-#define MAX_IDE_CHANNELS    4  // Ide and Sata Primary, Secondary Channel.
-#define MAX_IDE_DEVICES     8  // Ide, Sata Primary, Secondary and Master, Slave device.
+#define MAX_SENSE_KEY_COUNT  6
+#define MAX_IDE_CHANNELS     4 // Ide and Sata Primary, Secondary Channel.
+#define MAX_IDE_DEVICES      8 // Ide, Sata Primary, Secondary and Master, Slave device.
 
 typedef enum {
   IdePrimary    = 0,
@@ -47,72 +39,69 @@ typedef enum {
 } EFI_IDE_CHANNEL;
 
 typedef enum {
-  IdeMaster     = 0,
-  IdeSlave      = 1,
-  IdeMaxDevice  = 2
+  IdeMaster    = 0,
+  IdeSlave     = 1,
+  IdeMaxDevice = 2
 } EFI_IDE_DEVICE;
 
 //
 // IDE Registers
 //
 typedef union {
-  UINT16  Command;        /* when write */
-  UINT16  Status;         /* when read */
+  UINT16    Command;      /* when write */
+  UINT16    Status;       /* when read */
 } IDE_CMD_OR_STATUS;
 
 typedef union {
-  UINT16  Error;          /* when read */
-  UINT16  Feature;        /* when write */
+  UINT16    Error;        /* when read */
+  UINT16    Feature;      /* when write */
 } IDE_ERROR_OR_FEATURE;
 
 typedef union {
-  UINT16  AltStatus;      /* when read */
-  UINT16  DeviceControl;  /* when write */
+  UINT16    AltStatus;     /* when read */
+  UINT16    DeviceControl; /* when write */
 } IDE_ALTSTATUS_OR_DEVICECONTROL;
 
 //
 // IDE registers set
 //
 typedef struct {
-  UINT16                          Data;
-  IDE_ERROR_OR_FEATURE            Reg1;
-  UINT16                          SectorCount;
-  UINT16                          SectorNumber;
-  UINT16                          CylinderLsb;
-  UINT16                          CylinderMsb;
-  UINT16                          Head;
-  IDE_CMD_OR_STATUS               Reg;
+  UINT16                            Data;
+  IDE_ERROR_OR_FEATURE              Reg1;
+  UINT16                            SectorCount;
+  UINT16                            SectorNumber;
+  UINT16                            CylinderLsb;
+  UINT16                            CylinderMsb;
+  UINT16                            Head;
+  IDE_CMD_OR_STATUS                 Reg;
 
-  IDE_ALTSTATUS_OR_DEVICECONTROL  Alt;
-  UINT16                          DriveAddress;
+  IDE_ALTSTATUS_OR_DEVICECONTROL    Alt;
+  UINT16                            DriveAddress;
 } IDE_BASE_REGISTERS;
 
 typedef struct {
-
-  UINTN                   DevicePosition;
-  EFI_PEI_BLOCK_IO_MEDIA  MediaInfo;
-  EFI_PEI_BLOCK_IO2_MEDIA MediaInfo2;
-
+  UINTN                      DevicePosition;
+  EFI_PEI_BLOCK_IO_MEDIA     MediaInfo;
+  EFI_PEI_BLOCK_IO2_MEDIA    MediaInfo2;
 } PEI_ATAPI_DEVICE_INFO;
 
 #define ATAPI_BLK_IO_DEV_SIGNATURE  SIGNATURE_32 ('a', 'b', 'i', 'o')
 typedef struct {
-  UINTN                           Signature;
+  UINTN                             Signature;
 
-  EFI_PEI_RECOVERY_BLOCK_IO_PPI   AtapiBlkIo;
-  EFI_PEI_RECOVERY_BLOCK_IO2_PPI  AtapiBlkIo2;
-  EFI_PEI_PPI_DESCRIPTOR          PpiDescriptor;
-  EFI_PEI_PPI_DESCRIPTOR          PpiDescriptor2;
-  PEI_ATA_CONTROLLER_PPI          *AtaControllerPpi;
+  EFI_PEI_RECOVERY_BLOCK_IO_PPI     AtapiBlkIo;
+  EFI_PEI_RECOVERY_BLOCK_IO2_PPI    AtapiBlkIo2;
+  EFI_PEI_PPI_DESCRIPTOR            PpiDescriptor;
+  EFI_PEI_PPI_DESCRIPTOR            PpiDescriptor2;
+  PEI_ATA_CONTROLLER_PPI            *AtaControllerPpi;
 
-  UINTN                           DeviceCount;
-  PEI_ATAPI_DEVICE_INFO           DeviceInfo[MAX_IDE_DEVICES];   //for max 8 device
-  IDE_BASE_REGISTERS              IdeIoPortReg[MAX_IDE_CHANNELS]; //for max 4 channel.
+  UINTN                             DeviceCount;
+  PEI_ATAPI_DEVICE_INFO             DeviceInfo[MAX_IDE_DEVICES];    // for max 8 device
+  IDE_BASE_REGISTERS                IdeIoPortReg[MAX_IDE_CHANNELS]; // for max 4 channel.
 } ATAPI_BLK_IO_DEV;
 
-#define PEI_RECOVERY_ATAPI_FROM_BLKIO_THIS(a) CR (a, ATAPI_BLK_IO_DEV, AtapiBlkIo, ATAPI_BLK_IO_DEV_SIGNATURE)
-#define PEI_RECOVERY_ATAPI_FROM_BLKIO2_THIS(a) CR (a, ATAPI_BLK_IO_DEV, AtapiBlkIo2, ATAPI_BLK_IO_DEV_SIGNATURE)
-
+#define PEI_RECOVERY_ATAPI_FROM_BLKIO_THIS(a)   CR (a, ATAPI_BLK_IO_DEV, AtapiBlkIo, ATAPI_BLK_IO_DEV_SIGNATURE)
+#define PEI_RECOVERY_ATAPI_FROM_BLKIO2_THIS(a)  CR (a, ATAPI_BLK_IO_DEV, AtapiBlkIo2, ATAPI_BLK_IO_DEV_SIGNATURE)
 
 #define STALL_1_MILLI_SECOND  1000  // stall 1 ms
 #define STALL_1_SECONDS       1000 * STALL_1_MILLI_SECOND
@@ -140,16 +129,16 @@ typedef struct {
 /**
   Gets the count of block I/O devices that one specific block driver detects.
 
-  This function is used for getting the count of block I/O devices that one 
+  This function is used for getting the count of block I/O devices that one
   specific block driver detects.  To the PEI ATAPI driver, it returns the number
-  of all the detected ATAPI devices it detects during the enumeration process. 
-  To the PEI legacy floppy driver, it returns the number of all the legacy 
-  devices it finds during its enumeration process. If no device is detected, 
-  then the function will return zero.  
-  
-  @param[in]  PeiServices          General-purpose services that are available 
+  of all the detected ATAPI devices it detects during the enumeration process.
+  To the PEI legacy floppy driver, it returns the number of all the legacy
+  devices it finds during its enumeration process. If no device is detected,
+  then the function will return zero.
+
+  @param[in]  PeiServices          General-purpose services that are available
                                    to every PEIM.
-  @param[in]  This                 Indicates the EFI_PEI_RECOVERY_BLOCK_IO_PPI 
+  @param[in]  This                 Indicates the EFI_PEI_RECOVERY_BLOCK_IO_PPI
                                    instance.
   @param[out] NumberBlockDevices   The number of block I/O devices discovered.
 
@@ -159,35 +148,35 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 AtapiGetNumberOfBlockDevices (
-  IN   EFI_PEI_SERVICES                  **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI     *This,
-  OUT  UINTN                             *NumberBlockDevices
+  IN   EFI_PEI_SERVICES               **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI  *This,
+  OUT  UINTN                          *NumberBlockDevices
   );
 
 /**
   Gets a block device's media information.
 
-  This function will provide the caller with the specified block device's media 
-  information. If the media changes, calling this function will update the media 
+  This function will provide the caller with the specified block device's media
+  information. If the media changes, calling this function will update the media
   information accordingly.
 
   @param[in]  PeiServices   General-purpose services that are available to every
                             PEIM
   @param[in]  This          Indicates the EFI_PEI_RECOVERY_BLOCK_IO_PPI instance.
-  @param[in]  DeviceIndex   Specifies the block device to which the function wants 
-                            to talk. Because the driver that implements Block I/O 
-                            PPIs will manage multiple block devices, the PPIs that 
-                            want to talk to a single device must specify the 
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk. Because the driver that implements Block I/O
+                            PPIs will manage multiple block devices, the PPIs that
+                            want to talk to a single device must specify the
                             device index that was assigned during the enumeration
-                            process. This index is a number from one to 
+                            process. This index is a number from one to
                             NumberBlockDevices.
-  @param[out] MediaInfo     The media information of the specified block media.  
-                            The caller is responsible for the ownership of this 
+  @param[out] MediaInfo     The media information of the specified block media.
+                            The caller is responsible for the ownership of this
                             data structure.
-  
-  @retval EFI_SUCCESS           Media information about the specified block device 
+
+  @retval EFI_SUCCESS           Media information about the specified block device
                                 was obtained successfully.
-  @retval EFI_DEVICE_ERROR      Cannot get the media information due to a hardware 
+  @retval EFI_DEVICE_ERROR      Cannot get the media information due to a hardware
                                 error.
   @retval Others                Other failure occurs.
 
@@ -195,40 +184,40 @@ AtapiGetNumberOfBlockDevices (
 EFI_STATUS
 EFIAPI
 AtapiGetBlockDeviceMediaInfo (
-  IN   EFI_PEI_SERVICES                     **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI        *This,
-  IN   UINTN                                DeviceIndex,
-  OUT  EFI_PEI_BLOCK_IO_MEDIA               *MediaInfo
+  IN   EFI_PEI_SERVICES               **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI  *This,
+  IN   UINTN                          DeviceIndex,
+  OUT  EFI_PEI_BLOCK_IO_MEDIA         *MediaInfo
   );
 
 /**
   Reads the requested number of blocks from the specified block device.
 
-  The function reads the requested number of blocks from the device. All the 
+  The function reads the requested number of blocks from the device. All the
   blocks are read, or an error is returned. If there is no media in the device,
   the function returns EFI_NO_MEDIA.
 
-  @param[in]  PeiServices   General-purpose services that are available to 
+  @param[in]  PeiServices   General-purpose services that are available to
                             every PEIM.
   @param[in]  This          Indicates the EFI_PEI_RECOVERY_BLOCK_IO_PPI instance.
-  @param[in]  DeviceIndex   Specifies the block device to which the function wants 
-                            to talk. Because the driver that implements Block I/O 
-                            PPIs will manage multiple block devices, the PPIs that 
-                            want to talk to a single device must specify the device 
-                            index that was assigned during the enumeration process. 
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk. Because the driver that implements Block I/O
+                            PPIs will manage multiple block devices, the PPIs that
+                            want to talk to a single device must specify the device
+                            index that was assigned during the enumeration process.
                             This index is a number from one to NumberBlockDevices.
   @param[in]  StartLBA      The starting logical block address (LBA) to read from
                             on the device
   @param[in]  BufferSize    The size of the Buffer in bytes. This number must be
                             a multiple of the intrinsic block size of the device.
   @param[out] Buffer        A pointer to the destination buffer for the data.
-                            The caller is responsible for the ownership of the 
+                            The caller is responsible for the ownership of the
                             buffer.
-                         
+
   @retval EFI_SUCCESS             The data was read correctly from the device.
-  @retval EFI_DEVICE_ERROR        The device reported an error while attempting 
+  @retval EFI_DEVICE_ERROR        The device reported an error while attempting
                                   to perform the read operation.
-  @retval EFI_INVALID_PARAMETER   The read request contains LBAs that are not 
+  @retval EFI_INVALID_PARAMETER   The read request contains LBAs that are not
                                   valid, or the buffer is not properly aligned.
   @retval EFI_NO_MEDIA            There is no media in the device.
   @retval EFI_BAD_BUFFER_SIZE     The BufferSize parameter is not a multiple of
@@ -238,12 +227,12 @@ AtapiGetBlockDeviceMediaInfo (
 EFI_STATUS
 EFIAPI
 AtapiReadBlocks (
-  IN   EFI_PEI_SERVICES                  **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI     *This,
-  IN   UINTN                             DeviceIndex,
-  IN   EFI_PEI_LBA                       StartLBA,
-  IN   UINTN                             BufferSize,
-  OUT  VOID                              *Buffer
+  IN   EFI_PEI_SERVICES               **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO_PPI  *This,
+  IN   UINTN                          DeviceIndex,
+  IN   EFI_PEI_LBA                    StartLBA,
+  IN   UINTN                          BufferSize,
+  OUT  VOID                           *Buffer
   );
 
 /**
@@ -268,9 +257,9 @@ AtapiReadBlocks (
 EFI_STATUS
 EFIAPI
 AtapiGetNumberOfBlockDevices2 (
-  IN   EFI_PEI_SERVICES                  **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI    *This,
-  OUT  UINTN                             *NumberBlockDevices
+  IN   EFI_PEI_SERVICES                **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI  *This,
+  OUT  UINTN                           *NumberBlockDevices
   );
 
 /**
@@ -304,10 +293,10 @@ AtapiGetNumberOfBlockDevices2 (
 EFI_STATUS
 EFIAPI
 AtapiGetBlockDeviceMediaInfo2 (
-  IN   EFI_PEI_SERVICES                     **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI       *This,
-  IN   UINTN                                DeviceIndex,
-  OUT  EFI_PEI_BLOCK_IO2_MEDIA              *MediaInfo
+  IN   EFI_PEI_SERVICES                **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI  *This,
+  IN   UINTN                           DeviceIndex,
+  OUT  EFI_PEI_BLOCK_IO2_MEDIA         *MediaInfo
   );
 
 /**
@@ -347,12 +336,12 @@ AtapiGetBlockDeviceMediaInfo2 (
 EFI_STATUS
 EFIAPI
 AtapiReadBlocks2 (
-  IN   EFI_PEI_SERVICES                  **PeiServices,
-  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI    *This,
-  IN   UINTN                             DeviceIndex,
-  IN   EFI_PEI_LBA                       StartLBA,
-  IN   UINTN                             BufferSize,
-  OUT  VOID                              *Buffer
+  IN   EFI_PEI_SERVICES                **PeiServices,
+  IN   EFI_PEI_RECOVERY_BLOCK_IO2_PPI  *This,
+  IN   UINTN                           DeviceIndex,
+  IN   EFI_PEI_LBA                     StartLBA,
+  IN   UINTN                           BufferSize,
+  OUT  VOID                            *Buffer
   );
 
 //
@@ -374,7 +363,7 @@ AtapiEnumerateDevices (
 
 /**
   Detect Atapi devices.
-  
+
   @param[in]  AtapiBlkIoDev   A pointer to atapi block IO device.
   @param[in]  DevicePosition  An integer to signify device position.
   @param[out] MediaInfo       The media information of the specified block media.
@@ -386,15 +375,15 @@ AtapiEnumerateDevices (
 **/
 BOOLEAN
 DiscoverAtapiDevice (
-  IN  ATAPI_BLK_IO_DEV              *AtapiBlkIoDev,
-  IN  UINTN                         DevicePosition,
-  OUT EFI_PEI_BLOCK_IO_MEDIA        *MediaInfo,
-  OUT EFI_PEI_BLOCK_IO2_MEDIA       *MediaInfo2
+  IN  ATAPI_BLK_IO_DEV         *AtapiBlkIoDev,
+  IN  UINTN                    DevicePosition,
+  OUT EFI_PEI_BLOCK_IO_MEDIA   *MediaInfo,
+  OUT EFI_PEI_BLOCK_IO2_MEDIA  *MediaInfo2
   );
 
 /**
   Detect if an IDE controller exists in specified position.
-  
+
   @param[in]  AtapiBlkIoDev   A pointer to atapi block IO device.
   @param[in]  DevicePosition  An integer to signify device position.
 
@@ -404,13 +393,13 @@ DiscoverAtapiDevice (
 **/
 BOOLEAN
 DetectIDEController (
-  IN  ATAPI_BLK_IO_DEV   *AtapiBlkIoDev,
-  IN  UINTN              DevicePosition
+  IN  ATAPI_BLK_IO_DEV  *AtapiBlkIoDev,
+  IN  UINTN             DevicePosition
   );
 
 /**
   Wait specified time interval to poll for BSY bit clear in the Status Register.
-  
+
   @param[in]  AtapiBlkIoDev          A pointer to atapi block IO device.
   @param[in]  IdeIoRegisters         A pointer to IDE IO registers.
   @param[in]  TimeoutInMilliSeconds  Time specified in milliseconds.
@@ -428,7 +417,7 @@ WaitForBSYClear (
 
 /**
   Wait specified time interval to poll for DRDY bit set in the Status register.
-  
+
   @param[in]  AtapiBlkIoDev          A pointer to atapi block IO device.
   @param[in]  IdeIoRegisters         A pointer to IDE IO registers.
   @param[in]  TimeoutInMilliSeconds  Time specified in milliseconds.
@@ -446,7 +435,7 @@ DRDYReady (
 
 /**
   Wait specified time interval to poll for DRQ bit clear in the Status Register.
-  
+
   @param[in]  AtapiBlkIoDev          A pointer to atapi block IO device.
   @param[in]  IdeIoRegisters         A pointer to IDE IO registers.
   @param[in]  TimeoutInMilliSeconds  Time specified in milliseconds.
@@ -464,7 +453,7 @@ DRQClear (
 
 /**
   Wait specified time interval to poll for DRQ bit clear in the Alternate Status Register.
-  
+
   @param[in]  AtapiBlkIoDev          A pointer to atapi block IO device.
   @param[in]  IdeIoRegisters         A pointer to IDE IO registers.
   @param[in]  TimeoutInMilliSeconds  Time specified in milliseconds.
@@ -530,12 +519,12 @@ DRQReady2 (
 **/
 EFI_STATUS
 CheckErrorStatus (
-  IN  ATAPI_BLK_IO_DEV    *AtapiBlkIoDev,
-  IN  UINT16              StatusReg
+  IN  ATAPI_BLK_IO_DEV  *AtapiBlkIoDev,
+  IN  UINT16            StatusReg
   );
 
 /**
-  Idendify Atapi devices.
+  Identify Atapi devices.
 
   @param[in]  AtapiBlkIoDev     A pointer to atapi block IO device.
   @param[in]  DevicePosition    An integer to signify device position.
@@ -546,8 +535,8 @@ CheckErrorStatus (
 **/
 EFI_STATUS
 ATAPIIdentify (
-  IN  ATAPI_BLK_IO_DEV        *AtapiBlkIoDev,
-  IN  UINTN                   DevicePosition
+  IN  ATAPI_BLK_IO_DEV  *AtapiBlkIoDev,
+  IN  UINTN             DevicePosition
   );
 
 /**
@@ -563,13 +552,13 @@ ATAPIIdentify (
 **/
 EFI_STATUS
 TestUnitReady (
-  IN  ATAPI_BLK_IO_DEV    *AtapiBlkIoDev,
-  IN  UINTN               DevicePosition
-  ) ;
+  IN  ATAPI_BLK_IO_DEV  *AtapiBlkIoDev,
+  IN  UINTN             DevicePosition
+  );
 
 /**
   Send out ATAPI commands conforms to the Packet Command with PIO Data In Protocol.
-  
+
   @param[in]  AtapiBlkIoDev         A pointer to atapi block IO device.
   @param[in]  DevicePosition        An integer to signify device position.
   @param[in]  Packet                A pointer to ATAPI command packet.
@@ -607,16 +596,16 @@ AtapiPacketCommandIn (
 **/
 EFI_STATUS
 Inquiry (
-  IN  ATAPI_BLK_IO_DEV              *AtapiBlkIoDev,
-  IN  UINTN                         DevicePosition,
-  OUT EFI_PEI_BLOCK_IO_MEDIA        *MediaInfo,
-  OUT EFI_PEI_BLOCK_IO2_MEDIA       *MediaInfo2
+  IN  ATAPI_BLK_IO_DEV         *AtapiBlkIoDev,
+  IN  UINTN                    DevicePosition,
+  OUT EFI_PEI_BLOCK_IO_MEDIA   *MediaInfo,
+  OUT EFI_PEI_BLOCK_IO2_MEDIA  *MediaInfo2
   );
 
-/**  
-  Used before read/write blocks from/to ATAPI device media. 
+/**
+  Used before read/write blocks from/to ATAPI device media.
   Since ATAPI device media is removable, it is necessary to detect
-  whether media is present and get current present media's information.  
+  whether media is present and get current present media's information.
 
   @param[in]  AtapiBlkIoDev     A pointer to atapi block IO device.
   @param[in]  DevicePosition    An integer to signify device position.
@@ -630,13 +619,13 @@ Inquiry (
 **/
 EFI_STATUS
 DetectMedia (
-  IN  ATAPI_BLK_IO_DEV              *AtapiBlkIoDev,
-  IN  UINTN                         DevicePosition,
-  IN OUT EFI_PEI_BLOCK_IO_MEDIA     *MediaInfo,
-  IN OUT EFI_PEI_BLOCK_IO2_MEDIA    *MediaInfo2
+  IN  ATAPI_BLK_IO_DEV            *AtapiBlkIoDev,
+  IN  UINTN                       DevicePosition,
+  IN OUT EFI_PEI_BLOCK_IO_MEDIA   *MediaInfo,
+  IN OUT EFI_PEI_BLOCK_IO2_MEDIA  *MediaInfo2
   );
 
-/**  
+/**
   Reset specified Atapi device.
 
   @param[in]  AtapiBlkIoDev     A pointer to atapi block IO device.
@@ -654,7 +643,7 @@ ResetDevice (
   IN  BOOLEAN           Extensive
   );
 
-/**  
+/**
   Sends out ATAPI Request Sense Packet Command to the specified device.
 
   @param[in]      AtapiBlkIoDev   A pointer to atapi block IO device.
@@ -674,7 +663,7 @@ RequestSense (
   IN OUT  UINT8                 *SenseCounts
   );
 
-/**  
+/**
   Sends out ATAPI Read Capacity Packet Command to the specified device.
   This command will return the information regarding the capacity of the
   media in the device.
@@ -690,13 +679,13 @@ RequestSense (
 **/
 EFI_STATUS
 ReadCapacity (
-  IN  ATAPI_BLK_IO_DEV              *AtapiBlkIoDev,
-  IN  UINTN                         DevicePosition,
-  IN OUT EFI_PEI_BLOCK_IO_MEDIA     *MediaInfo,
-  IN OUT EFI_PEI_BLOCK_IO2_MEDIA    *MediaInfo2
+  IN  ATAPI_BLK_IO_DEV            *AtapiBlkIoDev,
+  IN  UINTN                       DevicePosition,
+  IN OUT EFI_PEI_BLOCK_IO_MEDIA   *MediaInfo,
+  IN OUT EFI_PEI_BLOCK_IO2_MEDIA  *MediaInfo2
   );
 
-/**  
+/**
   Perform read from disk in block unit.
 
   @param[in]  AtapiBlkIoDev   A pointer to atapi block IO device.
@@ -712,15 +701,15 @@ ReadCapacity (
 **/
 EFI_STATUS
 ReadSectors (
-  IN  ATAPI_BLK_IO_DEV    *AtapiBlkIoDev,
-  IN  UINTN               DevicePosition,
-  IN  VOID                *Buffer,
-  IN  EFI_PEI_LBA         StartLba,
-  IN  UINTN               NumberOfBlocks,
-  IN  UINTN               BlockSize
+  IN  ATAPI_BLK_IO_DEV  *AtapiBlkIoDev,
+  IN  UINTN             DevicePosition,
+  IN  VOID              *Buffer,
+  IN  EFI_PEI_LBA       StartLba,
+  IN  UINTN             NumberOfBlocks,
+  IN  UINTN             BlockSize
   );
 
-/**  
+/**
   Check if there is media according to sense data.
 
   @param[in]  SenseData   Pointer to sense data.
@@ -732,27 +721,27 @@ ReadSectors (
 **/
 BOOLEAN
 IsNoMedia (
-  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
-  IN  UINTN                 SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
+  IN  UINTN                     SenseCounts
   );
 
-/**  
+/**
   Check if device state is unclear according to sense data.
 
   @param[in]  SenseData   Pointer to sense data.
   @param[in]  SenseCounts Count of sense data.
 
   @retval TRUE    Device state is unclear
-  @retval FALSE   Device state is clear  
+  @retval FALSE   Device state is clear
 
 **/
 BOOLEAN
 IsDeviceStateUnclear (
-  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
-  IN  UINTN                 SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
+  IN  UINTN                     SenseCounts
   );
 
-/**  
+/**
   Check if there is media error according to sense data.
 
   @param[in]  SenseData   Pointer to sense data.
@@ -764,11 +753,11 @@ IsDeviceStateUnclear (
 **/
 BOOLEAN
 IsMediaError (
-  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
-  IN  UINTN                 SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
+  IN  UINTN                     SenseCounts
   );
 
-/**  
+/**
   Check if drive is ready according to sense data.
 
   @param[in]  SenseData   Pointer to sense data.
@@ -781,9 +770,7 @@ IsMediaError (
 **/
 BOOLEAN
 IsDriveReady (
-  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
-  IN  UINTN                 SenseCounts,
-  OUT BOOLEAN               *NeedRetry
+  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
+  IN  UINTN                     SenseCounts,
+  OUT BOOLEAN                   *NeedRetry
   );
-
-#endif

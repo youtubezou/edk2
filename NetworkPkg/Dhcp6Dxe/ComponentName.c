@@ -1,20 +1,13 @@
 /** @file
   UEFI Component Name(2) protocol implementation for Dhcp6 driver.
 
-  Copyright (c) 2009 - 2016, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "Dhcp6Impl.h"
-
 
 /**
   Retrieves a Unicode string that is the user-readable name of the driver.
@@ -62,7 +55,6 @@ Dhcp6ComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
-
 
 /**
   Retrieves a Unicode string that is the user-readable name of the controller
@@ -135,18 +127,17 @@ Dhcp6ComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 Dhcp6ComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
-
 
 //
 // EFI Component Name Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL    gDhcp6ComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gDhcp6ComponentName = {
   Dhcp6ComponentNameGetDriverName,
   Dhcp6ComponentNameGetControllerName,
   "eng"
@@ -155,13 +146,13 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL    gDhcp6ComponentName
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL   gDhcp6ComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) Dhcp6ComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) Dhcp6ComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gDhcp6ComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)Dhcp6ComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)Dhcp6ComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE       mDhcp6DriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mDhcp6DriverNameTable[] = {
   {
     "eng;en",
     L"DHCP6 Protocol Driver"
@@ -172,9 +163,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE       mDhcp6DriverNameTab
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE   *gDhcp6ControllerNameTable = NULL;
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  *gDhcp6ControllerNameTable = NULL;
 
-CHAR16 *mDhcp6ControllerName[] = {
+CHAR16  *mDhcp6ControllerName[] = {
   L"DHCPv6 (State=0, Init)",
   L"DHCPv6 (State=1, Selecting)",
   L"DHCPv6 (State=2, Requesting)",
@@ -247,19 +238,19 @@ Dhcp6ComponentNameGetDriverName (
 
   @param  Dhcp6[in]                   A pointer to the EFI_DHCP6_PROTOCOL.
 
-  
+
   @retval EFI_SUCCESS                 Update the ControllerNameTable of this instance successfully.
   @retval EFI_INVALID_PARAMETER       The input parameter is invalid.
-  
+
 **/
 EFI_STATUS
 UpdateName (
-  IN   EFI_DHCP6_PROTOCOL             *Dhcp6
+  IN   EFI_DHCP6_PROTOCOL  *Dhcp6
   )
 {
-  EFI_STATUS                       Status;
-  EFI_DHCP6_MODE_DATA              Dhcp6ModeData;
-  CHAR16                           *HandleName;
+  EFI_STATUS           Status;
+  EFI_DHCP6_MODE_DATA  Dhcp6ModeData;
+  CHAR16               *HandleName;
 
   if (Dhcp6 == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -272,24 +263,26 @@ UpdateName (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   if (gDhcp6ControllerNameTable != NULL) {
     FreeUnicodeStringTable (gDhcp6ControllerNameTable);
     gDhcp6ControllerNameTable = NULL;
   }
-  
+
   if (Dhcp6ModeData.Ia == NULL) {
     HandleName = L"DHCPv6 (No configured IA)";
   } else {
     if (Dhcp6ModeData.Ia->State > Dhcp6Rebinding) {
       return EFI_DEVICE_ERROR;
     }
+
     HandleName = mDhcp6ControllerName[Dhcp6ModeData.Ia->State];
   }
 
   if (Dhcp6ModeData.Ia != NULL) {
     FreePool (Dhcp6ModeData.Ia);
   }
+
   if (Dhcp6ModeData.ClientId != NULL) {
     FreePool (Dhcp6ModeData.ClientId);
   }
@@ -304,7 +297,7 @@ UpdateName (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-  
+
   return AddUnicodeString2 (
            "en",
            gDhcp6ComponentName2.SupportedLanguages,
@@ -385,15 +378,15 @@ UpdateName (
 EFI_STATUS
 EFIAPI
 Dhcp6ComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS                    Status;
-  EFI_DHCP6_PROTOCOL            *Dhcp6;
+  EFI_STATUS          Status;
+  EFI_DHCP6_PROTOCOL  *Dhcp6;
 
   //
   // Only provide names for child handles.
@@ -401,13 +394,13 @@ Dhcp6ComponentNameGetControllerName (
   if (ChildHandle == NULL) {
     return EFI_UNSUPPORTED;
   }
-  
-  // 
-  // Make sure this driver produced ChildHandle 
-  // 
+
+  //
+  // Make sure this driver produced ChildHandle
+  //
   Status = EfiTestChildHandle (
              ControllerHandle,
-             ChildHandle, 
+             ChildHandle,
              &gEfiUdp6ProtocolGuid
              );
   if (EFI_ERROR (Status)) {
@@ -420,7 +413,7 @@ Dhcp6ComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   ChildHandle,
                   &gEfiDhcp6ProtocolGuid,
-                  (VOID **)&Dhcp6, 
+                  (VOID **)&Dhcp6,
                   NULL,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -445,4 +438,3 @@ Dhcp6ComponentNameGetControllerName (
            (BOOLEAN)(This == &gDhcp6ComponentName)
            );
 }
-

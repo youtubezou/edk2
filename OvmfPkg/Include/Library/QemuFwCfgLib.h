@@ -4,61 +4,14 @@
   Copyright (c) 2011 - 2013, Intel Corporation. All rights reserved.<BR>
   Copyright (C) 2013, Red Hat, Inc.
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __FW_CFG_LIB__
-#define __FW_CFG_LIB__
+#pragma once
 
-//
-// The size, in bytes, of names of firmware configuration files, including at
-// least one terminating NUL byte.
-//
-#define QEMU_FW_CFG_FNAME_SIZE 56
-
-typedef enum {
-  QemuFwCfgItemSignature            = 0x0000,
-  QemuFwCfgItemInterfaceVersion     = 0x0001,
-  QemuFwCfgItemSystemUuid           = 0x0002,
-  QemuFwCfgItemRamSize              = 0x0003,
-  QemuFwCfgItemGraphicsEnabled      = 0x0004,
-  QemuFwCfgItemSmpCpuCount          = 0x0005,
-  QemuFwCfgItemMachineId            = 0x0006,
-  QemuFwCfgItemKernelAddress        = 0x0007,
-  QemuFwCfgItemKernelSize           = 0x0008,
-  QemuFwCfgItemKernelCommandLine    = 0x0009,
-  QemuFwCfgItemInitrdAddress        = 0x000a,
-  QemuFwCfgItemInitrdSize           = 0x000b,
-  QemuFwCfgItemBootDevice           = 0x000c,
-  QemuFwCfgItemNumaData             = 0x000d,
-  QemuFwCfgItemBootMenu             = 0x000e,
-  QemuFwCfgItemMaximumCpuCount      = 0x000f,
-  QemuFwCfgItemKernelEntry          = 0x0010,
-  QemuFwCfgItemKernelData           = 0x0011,
-  QemuFwCfgItemInitrdData           = 0x0012,
-  QemuFwCfgItemCommandLineAddress   = 0x0013,
-  QemuFwCfgItemCommandLineSize      = 0x0014,
-  QemuFwCfgItemCommandLineData      = 0x0015,
-  QemuFwCfgItemKernelSetupAddress   = 0x0016,
-  QemuFwCfgItemKernelSetupSize      = 0x0017,
-  QemuFwCfgItemKernelSetupData      = 0x0018,
-  QemuFwCfgItemFileDir              = 0x0019,
-
-  QemuFwCfgItemX86AcpiTables        = 0x8000,
-  QemuFwCfgItemX86SmbiosTables      = 0x8001,
-  QemuFwCfgItemX86Irq0Override      = 0x8002,
-  QemuFwCfgItemX86E820Table         = 0x8003,
-  QemuFwCfgItemX86HpetData          = 0x8004,
-
-} FIRMWARE_CONFIG_ITEM;
-
+#include <IndustryStandard/QemuFwCfg.h>
+#include <Library/PlatformInitLib.h>
 
 /**
   Returns a boolean indicating if the firmware configuration interface
@@ -76,7 +29,6 @@ QemuFwCfgIsAvailable (
   VOID
   );
 
-
 /**
   Selects a firmware configuration item for reading.
 
@@ -89,9 +41,8 @@ QemuFwCfgIsAvailable (
 VOID
 EFIAPI
 QemuFwCfgSelectItem (
-  IN FIRMWARE_CONFIG_ITEM   QemuFwCfgItem
+  IN FIRMWARE_CONFIG_ITEM  QemuFwCfgItem
   );
-
 
 /**
   Reads firmware configuration bytes into a buffer
@@ -107,10 +58,9 @@ QemuFwCfgSelectItem (
 VOID
 EFIAPI
 QemuFwCfgReadBytes (
-  IN UINTN                  Size,
-  IN VOID                   *Buffer  OPTIONAL
+  IN UINTN  Size,
+  IN VOID   *Buffer  OPTIONAL
   );
-
 
 /**
   Writes firmware configuration bytes from a buffer
@@ -126,10 +76,24 @@ QemuFwCfgReadBytes (
 VOID
 EFIAPI
 QemuFwCfgWriteBytes (
-  IN UINTN                  Size,
-  IN VOID                   *Buffer
+  IN UINTN  Size,
+  IN VOID   *Buffer
   );
 
+/**
+  Skip bytes in the firmware configuration item.
+
+  Increase the offset of the firmware configuration item without transferring
+  bytes between the item and a caller-provided buffer. Subsequent read, write
+  or skip operations will commence at the increased offset.
+
+  @param[in] Size  Number of bytes to skip.
+**/
+VOID
+EFIAPI
+QemuFwCfgSkipBytes (
+  IN UINTN  Size
+  );
 
 /**
   Reads a UINT8 firmware configuration value
@@ -143,7 +107,6 @@ QemuFwCfgRead8 (
   VOID
   );
 
-
 /**
   Reads a UINT16 firmware configuration value
 
@@ -155,7 +118,6 @@ EFIAPI
 QemuFwCfgRead16 (
   VOID
   );
-
 
 /**
   Reads a UINT32 firmware configuration value
@@ -169,7 +131,6 @@ QemuFwCfgRead32 (
   VOID
   );
 
-
 /**
   Reads a UINT64 firmware configuration value
 
@@ -181,7 +142,6 @@ EFIAPI
 QemuFwCfgRead64 (
   VOID
   );
-
 
 /**
   Find the configuration item corresponding to the firmware configuration file.
@@ -204,35 +164,21 @@ QemuFwCfgFindFile (
   OUT  UINTN                 *Size
   );
 
-
 /**
-  Returns a boolean indicating if the firmware configuration interface is
-  available for library-internal purposes.
+  OVMF reads configuration data from QEMU via fw_cfg.
+  For Td-Guest VMM is out of TCB and the configuration data is untrusted.
+  From the security perpective the configuration data shall be measured
+  before it is consumed.
+  This function reads the fw_cfg items and cached them. In the meanwhile these
+  fw_cfg items are measured as well. This is to avoid changing the order when
+  reading the fw_cfg process, which depends on multiple factors(depex, order in
+  the Firmware volume).
 
-  This function never changes fw_cfg state.
-
-  @retval    TRUE   The interface is available internally.
-  @retval    FALSE  The interface is not available internally.
-**/
-BOOLEAN
+  @retval  RETURN_SUCCESS   - Successfully cache with measurement
+  @retval  Others           - As the error code indicates
+ */
+RETURN_STATUS
 EFIAPI
-InternalQemuFwCfgIsAvailable (
-  VOID
+QemuFwCfgInitCache (
+  IN OUT EFI_HOB_PLATFORM_INFO  *PlatformInfoHob
   );
-
-
-/**
-  Determine if S3 support is explicitly enabled.
-
-  @retval  TRUE   if S3 support is explicitly enabled.
-           FALSE  otherwise. This includes unavailability of the firmware
-                  configuration interface.
-**/
-BOOLEAN
-EFIAPI
-QemuFwCfgS3Enabled (
-  VOID
-  );
-
-#endif
-

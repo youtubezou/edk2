@@ -5,18 +5,11 @@
 
   Copyright (C) 2014, Red Hat, Inc.
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _PLATFORM_CONFIG_H_
-#define _PLATFORM_CONFIG_H_
+#pragma once
 
 #include <Base.h>
 
@@ -29,8 +22,8 @@ typedef struct {
   //
   // preferred graphics console resolution when booting
   //
-  UINT32 HorizontalResolution;
-  UINT32 VerticalResolution;
+  UINT32    HorizontalResolution;
+  UINT32    VerticalResolution;
 } PLATFORM_CONFIG;
 #pragma pack()
 
@@ -40,20 +33,21 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 PlatformConfigSave (
-  IN PLATFORM_CONFIG *PlatformConfig
+  IN PLATFORM_CONFIG  *PlatformConfig
   );
 
 EFI_STATUS
 EFIAPI
 PlatformConfigLoad (
-  OUT PLATFORM_CONFIG *PlatformConfig,
-  OUT UINT64          *OptionalElements
+  OUT PLATFORM_CONFIG  *PlatformConfig,
+  OUT UINT64           *OptionalElements
   );
 
 //
 // Feature flags for OptionalElements.
 //
-#define PLATFORM_CONFIG_F_GRAPHICS_RESOLUTION BIT0
-#define PLATFORM_CONFIG_F_DOWNGRADE           BIT63
+#define PLATFORM_CONFIG_F_GRAPHICS_RESOLUTION  BIT0
+#define PLATFORM_CONFIG_F_DOWNGRADE            BIT63
 
-#endif // _PLATFORM_CONFIG_H_
+extern CHAR16  mVariableName[];
+extern CHAR16  mHiiFormName[];

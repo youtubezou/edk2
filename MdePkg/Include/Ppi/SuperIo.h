@@ -1,22 +1,15 @@
 /** @file
   This PPI provides the super I/O register access functionality.
 
-  Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Revision Reference:
   This PPI is from PI Version 1.2.1.
 
 **/
 
-#ifndef __EFI_SUPER_IO_PPI_H__
-#define __EFI_SUPER_IO_PPI_H__
+#pragma once
 
 #include <Protocol/SuperIo.h>
 
@@ -25,16 +18,16 @@
     0x23a464ad, 0xcb83, 0x48b8, {0x94, 0xab, 0x1a, 0x6f, 0xef, 0xcf, 0xe5, 0x22} \
   }
 
-typedef struct _EFI_SIO_PPI EFI_SIO_PPI;
-typedef struct _EFI_SIO_PPI *PEFI_SIO_PPI;
+typedef struct _EFI_SIO_PPI  EFI_SIO_PPI;
+typedef struct _EFI_SIO_PPI  *PEFI_SIO_PPI;
 
 typedef UINT16 EFI_SIO_REGISTER;
-#define EFI_SIO_REG(ldn,reg)    (EFI_SIO_REGISTER) (((ldn) << 8) | reg)
-#define EFI_SIO_LDN_GLOBAL      0xFF
+#define EFI_SIO_REG(ldn, reg)  (EFI_SIO_REGISTER) (((ldn) << 8) | reg)
+#define EFI_SIO_LDN_GLOBAL  0xFF
 
 /**
   Read a Super I/O register.
- 
+
   The register is specified as an 8-bit logical device number and an 8-bit
   register value. The logical device numbers for specific SIO devices can be
   determined using the Info member of the PPI structure.
@@ -47,8 +40,8 @@ typedef UINT16 EFI_SIO_REGISTER;
                       track the current state of the configuration mode (if any)
                       and turn on configuration mode (if necessary) prior to
                       register access.
-  @param Register     A value specifying the logical device number (bits 15:8) 
-                      and the register to read (bits 7:0). The logical device 
+  @param Register     A value specifying the logical device number (bits 15:8)
+                      and the register to read (bits 7:0). The logical device
                       number of EFI_SIO_LDN_GLOBAL indicates that global
                       registers will be used.
   @param IoData       A pointer to the returned register value.
@@ -85,8 +78,8 @@ EFI_STATUS
                       track the current state of the configuration mode (if any)
                       and turn on configuration mode (if necessary) prior to
                       register access.
-  @param Register     A value specifying the logical device number (bits 15:8) 
-                      and the register to read (bits 7:0). The logical device 
+  @param Register     A value specifying the logical device number (bits 15:8)
+                      and the register to read (bits 7:0). The logical device
                       number of EFI_SIO_LDN_GLOBAL indicates that global
                       registers will be used.
   @param IoData       A pointer to the returned register value.
@@ -97,7 +90,7 @@ EFI_STATUS
   @retval EFI_INVALID_PARAMETERS Register was out of range for this device.
   @retval EFI_INVALID_PARAMETERS IoData was NULL
   @retval EFI_DEVICE_ERROR       There was a device fault or the device was not present.
-**/ 
+**/
 typedef
 EFI_STATUS
 (EFIAPI *EFI_PEI_SIO_REGISTER_WRITE)(
@@ -129,7 +122,7 @@ EFI_STATUS
 
   @retval EFI_SUCCESS             The operation completed successfully.
   @retval EFI_INVALID_PARAMETERS  Command is NULL.
-**/ 
+**/
 typedef
 EFI_STATUS
 (EFIAPI *EFI_PEI_SIO_REGISTER_MODIFY)(
@@ -142,15 +135,15 @@ EFI_STATUS
 ///
 /// Specifies the end of the information list.
 ///
-#define EFI_ACPI_PNP_HID_END       EFI_PNP_ID (0x0000)
+#define EFI_ACPI_PNP_HID_END  EFI_PNP_ID (0x0000)
 
-typedef UINT32                     EFI_ACPI_HID;
-typedef UINT32                     EFI_ACPI_UID;
+typedef UINT32 EFI_ACPI_HID;
+typedef UINT32 EFI_ACPI_UID;
 #pragma pack(1)
 typedef struct _EFI_SIO_INFO {
-  EFI_ACPI_HID                     Hid;
-  EFI_ACPI_UID                     Uid;
-  UINT8                            Ldn;
+  EFI_ACPI_HID    Hid;
+  EFI_ACPI_UID    Uid;
+  UINT8           Ldn;
 } EFI_SIO_INFO, *PEFI_SIO_INFO;
 #pragma pack()
 
@@ -164,26 +157,24 @@ struct _EFI_SIO_PPI {
   ///
   /// This function reads a register's value from the Super I/O controller.
   ///
-  EFI_PEI_SIO_REGISTER_READ   Read;
+  EFI_PEI_SIO_REGISTER_READ      Read;
   ///
   /// This function writes a value to a register in the Super I/O controller.
   ///
-  EFI_PEI_SIO_REGISTER_WRITE  Write;
+  EFI_PEI_SIO_REGISTER_WRITE     Write;
   ///
   /// This function modifies zero or more registers in the Super I/O controller
   /// using a table.
   ///
-  EFI_PEI_SIO_REGISTER_MODIFY Modify;
+  EFI_PEI_SIO_REGISTER_MODIFY    Modify;
   ///
   /// This GUID uniquely identifies the Super I/O controller.
   ///
-  EFI_GUID                    SioGuid;
+  EFI_GUID                       SioGuid;
   ///
   /// This pointer is to an array which maps EISA identifiers to logical devices numbers.
   ///
-  PEFI_SIO_INFO               Info;
+  PEFI_SIO_INFO                  Info;
 };
 
-extern EFI_GUID gEfiSioPpiGuid;
-
-#endif 
+extern EFI_GUID  gEfiSioPpiGuid;

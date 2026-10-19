@@ -1,14 +1,8 @@
 /** @file
 handles console redirection from boot manager
 
-Copyright (c) 2004 - 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -37,7 +31,7 @@ MatchDevicePaths (
   EFI_DEVICE_PATH_PROTOCOL  *DevicePathInst;
   UINTN                     Size;
 
-  if (Multi == NULL || Single  == NULL) {
+  if ((Multi == NULL) || (Single  == NULL)) {
     return FALSE;
   }
 
@@ -75,14 +69,14 @@ MatchDevicePaths (
 **/
 BOOLEAN
 IsIsaSerialNode (
-  IN ACPI_HID_DEVICE_PATH *Acpi
+  IN ACPI_HID_DEVICE_PATH  *Acpi
   )
 {
-  return (BOOLEAN) (
-      (DevicePathType (Acpi) == ACPI_DEVICE_PATH) &&
-      (DevicePathSubType (Acpi) == ACPI_DP) &&
-      (ReadUnaligned32 (&Acpi->HID) == EISA_PNP_ID (0x0501))
-      );
+  return (BOOLEAN)(
+                   (DevicePathType (Acpi) == ACPI_DEVICE_PATH) &&
+                   (DevicePathSubType (Acpi) == ACPI_DP) &&
+                   (ReadUnaligned32 (&Acpi->HID) == EISA_PNP_ID (0x0501))
+                   );
 }
 
 /**
@@ -100,11 +94,11 @@ UpdateComAttributeFromVariable (
 
 /**
   Update the multi-instance device path of Terminal Device based on
-  the global TerminalMenu. If ChangeTernimal is TRUE, the terminal 
+  the global TerminalMenu. If ChangeTernimal is TRUE, the terminal
   device path in the Terminal Device in TerminalMenu is also updated.
 
   @param DevicePath      The multi-instance device path.
-  @param ChangeTerminal  TRUE, then device path in the Terminal Device 
+  @param ChangeTerminal  TRUE, then device path in the Terminal Device
                          in TerminalMenu is also updated; FALSE, no update.
 
   @return EFI_SUCCESS    The function completes successfully.
@@ -125,20 +119,20 @@ ChangeTerminalDevicePath (
   BM_TERMINAL_CONTEXT       *NewTerminalContext;
   BM_MENU_ENTRY             *NewMenuEntry;
 
-  Node  = DevicePath;
-  Node  = NextDevicePathNode (Node);
-  Com   = 0;
+  Node = DevicePath;
+  Node = NextDevicePathNode (Node);
+  Com  = 0;
   while (!IsDevicePathEnd (Node)) {
-    Acpi = (ACPI_HID_DEVICE_PATH *) Node;
+    Acpi = (ACPI_HID_DEVICE_PATH *)Node;
     if (IsIsaSerialNode (Acpi)) {
       CopyMem (&Com, &Acpi->UID, sizeof (UINT32));
     }
 
     NewMenuEntry = BOpt_GetMenuEntry (&TerminalMenu, Com);
 
-    NewTerminalContext = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
     if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node) == MSG_UART_DP)) {
-      Uart = (UART_DEVICE_PATH *) Node;
+      Uart = (UART_DEVICE_PATH *)Node;
       CopyMem (
         &Uart->BaudRate,
         &NewTerminalContext->BaudRate,
@@ -170,7 +164,7 @@ ChangeTerminalDevicePath (
         Node1 = NextDevicePathNode (Node1);
         while (!IsDevicePathEnd (Node1)) {
           if ((DevicePathType (Node1) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node1) == MSG_UART_DP)) {
-            Uart1 = (UART_DEVICE_PATH *) Node1;
+            Uart1 = (UART_DEVICE_PATH *)Node1;
             CopyMem (
               &Uart1->BaudRate,
               &NewTerminalContext->BaudRate,
@@ -196,11 +190,13 @@ ChangeTerminalDevicePath (
               );
             break;
           }
+
           //
           // end if
           //
           Node1 = NextDevicePathNode (Node1);
         }
+
         //
         // end while
         //
@@ -212,7 +208,6 @@ ChangeTerminalDevicePath (
   }
 
   return EFI_SUCCESS;
-
 }
 
 /**
@@ -235,23 +230,23 @@ ChangeVariableDevicePath (
   BM_TERMINAL_CONTEXT       *NewTerminalContext;
   BM_MENU_ENTRY             *NewMenuEntry;
 
-  Node  = DevicePath;
-  Node  = NextDevicePathNode (Node);
-  Com   = 0;
+  Node = DevicePath;
+  Node = NextDevicePathNode (Node);
+  Com  = 0;
   while (!IsDevicePathEnd (Node)) {
-    Acpi = (ACPI_HID_DEVICE_PATH *) Node;
+    Acpi = (ACPI_HID_DEVICE_PATH *)Node;
     if (IsIsaSerialNode (Acpi)) {
       CopyMem (&Com, &Acpi->UID, sizeof (UINT32));
     }
 
     if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node) == MSG_UART_DP)) {
       NewMenuEntry = BOpt_GetMenuEntry (
-                      &TerminalMenu,
-                      Com
-                      );
+                       &TerminalMenu,
+                       Com
+                       );
       ASSERT (NewMenuEntry != NULL);
-      NewTerminalContext  = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
-      Uart                = (UART_DEVICE_PATH *) Node;
+      NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
+      Uart               = (UART_DEVICE_PATH *)Node;
       CopyMem (
         &Uart->BaudRate,
         &NewTerminalContext->BaudRate,
@@ -293,8 +288,8 @@ ChangeVariableDevicePath (
 **/
 BOOLEAN
 RetrieveUartUid (
-  IN EFI_HANDLE   Handle,
-  IN OUT UINT32   *AcpiUid
+  IN EFI_HANDLE  Handle,
+  IN OUT UINT32  *AcpiUid
   )
 {
   EFI_STATUS                Status;
@@ -304,27 +299,29 @@ RetrieveUartUid (
   Status = gBS->HandleProtocol (
                   Handle,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **) &DevicePath
+                  (VOID **)&DevicePath
                   );
   if (EFI_ERROR (Status)) {
     return FALSE;
   }
 
   Acpi = NULL;
-  for (; !IsDevicePathEnd (DevicePath); DevicePath = NextDevicePathNode (DevicePath)) {
+  for ( ; !IsDevicePathEnd (DevicePath); DevicePath = NextDevicePathNode (DevicePath)) {
     if ((DevicePathType (DevicePath) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (DevicePath) == MSG_UART_DP)) {
       break;
     }
+
     //
     // Acpi points to the node before the Uart node
     //
-    Acpi = (ACPI_HID_DEVICE_PATH *) DevicePath;
+    Acpi = (ACPI_HID_DEVICE_PATH *)DevicePath;
   }
 
   if ((Acpi != NULL) && IsIsaSerialNode (Acpi)) {
     if (AcpiUid != NULL) {
       CopyMem (AcpiUid, &Acpi->UID, sizeof (UINT32));
     }
+
     return TRUE;
   } else {
     return FALSE;
@@ -339,8 +336,8 @@ RetrieveUartUid (
 **/
 VOID
 SortedUartHandle (
-  IN  EFI_HANDLE *Handles,
-  IN  UINTN      NoHandles
+  IN  EFI_HANDLE  *Handles,
+  IN  UINTN       NoHandles
   )
 {
   UINTN       Index1;
@@ -355,6 +352,7 @@ SortedUartHandle (
     if (!RetrieveUartUid (Handles[Index1], &AcpiUid1)) {
       continue;
     }
+
     TempHandle  = Handles[Index1];
     Position    = Index1;
     TempAcpiUid = AcpiUid1;
@@ -363,12 +361,14 @@ SortedUartHandle (
       if (!RetrieveUartUid (Handles[Index2], &AcpiUid2)) {
         continue;
       }
+
       if (AcpiUid2 < TempAcpiUid) {
         TempAcpiUid = AcpiUid2;
         TempHandle  = Handles[Index2];
         Position    = Index2;
       }
     }
+
     Handles[Position] = Handles[Index1];
     Handles[Index1]   = TempHandle;
   }
@@ -388,9 +388,9 @@ SortedUartHandle (
 **/
 BOOLEAN
 IsTerminalDevicePath (
-  IN  EFI_DEVICE_PATH_PROTOCOL *DevicePath,
-  OUT TYPE_OF_TERMINAL         *Termi,
-  OUT UINTN                    *Com
+  IN  EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  OUT TYPE_OF_TERMINAL          *Termi,
+  OUT UINTN                     *Com
   );
 
 /**
@@ -428,13 +428,13 @@ LocateSerialIo (
   //
   InitializeListHead (&TerminalMenu.Head);
   TerminalMenu.MenuNumber = 0;
-  Status = gBS->LocateHandleBuffer (
-                  ByProtocol,
-                  &gEfiSerialIoProtocolGuid,
-                  NULL,
-                  &NoHandles,
-                  &Handles
-                  );
+  Status                  = gBS->LocateHandleBuffer (
+                                   ByProtocol,
+                                   &gEfiSerialIoProtocolGuid,
+                                   NULL,
+                                   &NoHandles,
+                                   &Handles
+                                   );
   if (EFI_ERROR (Status)) {
     //
     // No serial ports present
@@ -453,20 +453,21 @@ LocateSerialIo (
     // Check to see whether the handle has DevicePath Protocol installed
     //
     gBS->HandleProtocol (
-          Handles[Index],
-          &gEfiDevicePathProtocolGuid,
-          (VOID **) &DevicePath
-          );
+           Handles[Index],
+           &gEfiDevicePathProtocolGuid,
+           (VOID **)&DevicePath
+           );
 
     Acpi = NULL;
     for (Node = DevicePath; !IsDevicePathEnd (Node); Node = NextDevicePathNode (Node)) {
       if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node) == MSG_UART_DP)) {
         break;
       }
+
       //
       // Acpi points to the node before Uart node
       //
-      Acpi = (ACPI_HID_DEVICE_PATH *) Node;
+      Acpi = (ACPI_HID_DEVICE_PATH *)Node;
     }
 
     if ((Acpi != NULL) && IsIsaSerialNode (Acpi)) {
@@ -476,7 +477,7 @@ LocateSerialIo (
         return EFI_OUT_OF_RESOURCES;
       }
 
-      NewTerminalContext = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+      NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
       CopyMem (&NewMenuEntry->OptionNumber, &Acpi->UID, sizeof (UINT32));
       NewTerminalContext->DevicePath = DuplicateDevicePath (DevicePath);
       //
@@ -497,10 +498,10 @@ LocateSerialIo (
       NewMenuEntry->HelpStringToken = NewMenuEntry->DisplayStringToken;
 
       gBS->HandleProtocol (
-            Handles[Index],
-            &gEfiSerialIoProtocolGuid,
-            (VOID **) &SerialIo
-            );
+             Handles[Index],
+             &gEfiSerialIoProtocolGuid,
+             (VOID **)&SerialIo
+             );
 
       CopyMem (
         &NewTerminalContext->BaudRate,
@@ -529,6 +530,7 @@ LocateSerialIo (
       TerminalMenu.MenuNumber++;
     }
   }
+
   if (Handles != NULL) {
     FreePool (Handles);
   }
@@ -536,9 +538,9 @@ LocateSerialIo (
   //
   // Get L"ConOut", L"ConIn" and L"ErrOut" from the Var
   //
-  GetEfiGlobalVariable2 (L"ConOut", (VOID**)&OutDevicePath, NULL);
-  GetEfiGlobalVariable2 (L"ConIn", (VOID**)&InpDevicePath, NULL);
-  GetEfiGlobalVariable2 (L"ErrOut", (VOID**)&ErrDevicePath, NULL);
+  GetEfiGlobalVariable2 (L"ConOut", (VOID **)&OutDevicePath, NULL);
+  GetEfiGlobalVariable2 (L"ConIn", (VOID **)&InpDevicePath, NULL);
+  GetEfiGlobalVariable2 (L"ErrOut", (VOID **)&ErrDevicePath, NULL);
   if (OutDevicePath != NULL) {
     UpdateComAttributeFromVariable (OutDevicePath);
   }
@@ -557,26 +559,27 @@ LocateSerialIo (
       return EFI_NOT_FOUND;
     }
 
-    NewTerminalContext                = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
 
-    NewTerminalContext->TerminalType  = 0;
-    NewTerminalContext->IsConIn       = FALSE;
-    NewTerminalContext->IsConOut      = FALSE;
-    NewTerminalContext->IsStdErr      = FALSE;
+    NewTerminalContext->TerminalType = 0;
+    NewTerminalContext->IsConIn      = FALSE;
+    NewTerminalContext->IsConOut     = FALSE;
+    NewTerminalContext->IsStdErr     = FALSE;
 
-    Vendor.Header.Type                = MESSAGING_DEVICE_PATH;
-    Vendor.Header.SubType             = MSG_VENDOR_DP;
+    Vendor.Header.Type    = MESSAGING_DEVICE_PATH;
+    Vendor.Header.SubType = MSG_VENDOR_DP;
 
     for (Index2 = 0; Index2 < (ARRAY_SIZE (TerminalTypeGuid)); Index2++) {
       CopyMem (&Vendor.Guid, &TerminalTypeGuid[Index2], sizeof (EFI_GUID));
       SetDevicePathNodeLength (&Vendor.Header, sizeof (VENDOR_DEVICE_PATH));
       NewDevicePath = AppendDevicePathNode (
                         NewTerminalContext->DevicePath,
-                        (EFI_DEVICE_PATH_PROTOCOL *) &Vendor
+                        (EFI_DEVICE_PATH_PROTOCOL *)&Vendor
                         );
       if (NewMenuEntry->HelpString != NULL) {
         FreePool (NewMenuEntry->HelpString);
       }
+
       //
       // NewMenuEntry->HelpString = UiDevicePathToStr (NewDevicePath);
       // NewMenuEntry->DisplayString = NewMenuEntry->HelpString;
@@ -588,18 +591,18 @@ LocateSerialIo (
       NewMenuEntry->HelpStringToken = NewMenuEntry->DisplayStringToken;
 
       if (MatchDevicePaths (OutDevicePath, NewDevicePath)) {
-        NewTerminalContext->IsConOut      = TRUE;
-        NewTerminalContext->TerminalType  = (UINT8) Index2;
+        NewTerminalContext->IsConOut     = TRUE;
+        NewTerminalContext->TerminalType = (UINT8)Index2;
       }
 
       if (MatchDevicePaths (InpDevicePath, NewDevicePath)) {
-        NewTerminalContext->IsConIn       = TRUE;
-        NewTerminalContext->TerminalType  = (UINT8) Index2;
+        NewTerminalContext->IsConIn      = TRUE;
+        NewTerminalContext->TerminalType = (UINT8)Index2;
       }
 
       if (MatchDevicePaths (ErrDevicePath, NewDevicePath)) {
-        NewTerminalContext->IsStdErr      = TRUE;
-        NewTerminalContext->TerminalType  = (UINT8) Index2;
+        NewTerminalContext->IsStdErr     = TRUE;
+        NewTerminalContext->TerminalType = (UINT8)Index2;
       }
     }
   }
@@ -630,24 +633,24 @@ UpdateComAttributeFromVariable (
   BM_TERMINAL_CONTEXT       *NewTerminalContext;
   UINTN                     Index;
 
-  Node            = DevicePath;
-  Node            = NextDevicePathNode (Node);
-  TerminalNumber  = 0;
+  Node           = DevicePath;
+  Node           = NextDevicePathNode (Node);
+  TerminalNumber = 0;
   for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
     while (!IsDevicePathEnd (Node)) {
-      Acpi = (ACPI_HID_DEVICE_PATH *) Node;
+      Acpi = (ACPI_HID_DEVICE_PATH *)Node;
       if (IsIsaSerialNode (Acpi)) {
         CopyMem (&TerminalNumber, &Acpi->UID, sizeof (UINT32));
       }
 
       if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node) == MSG_UART_DP)) {
-        Uart          = (UART_DEVICE_PATH *) Node;
-        NewMenuEntry  = BOpt_GetMenuEntry (&TerminalMenu, TerminalNumber);
+        Uart         = (UART_DEVICE_PATH *)Node;
+        NewMenuEntry = BOpt_GetMenuEntry (&TerminalMenu, TerminalNumber);
         if (NULL == NewMenuEntry) {
           return EFI_NOT_FOUND;
         }
 
-        NewTerminalContext = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
+        NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
         CopyMem (
           &NewTerminalContext->BaudRate,
           &Uart->BaudRate,
@@ -672,15 +675,15 @@ UpdateComAttributeFromVariable (
           sizeof (UINT8)
           );
 
-        SerialNode  = NewTerminalContext->DevicePath;
-        SerialNode  = NextDevicePathNode (SerialNode);
+        SerialNode = NewTerminalContext->DevicePath;
+        SerialNode = NextDevicePathNode (SerialNode);
         while (!IsDevicePathEnd (SerialNode)) {
           if ((DevicePathType (SerialNode) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (SerialNode) == MSG_UART_DP)) {
             //
             // Update following device paths according to
             // previous acquired uart attributes
             //
-            Uart1 = (UART_DEVICE_PATH *) SerialNode;
+            Uart1 = (UART_DEVICE_PATH *)SerialNode;
             CopyMem (
               &Uart1->BaudRate,
               &NewTerminalContext->BaudRate,
@@ -708,6 +711,7 @@ UpdateComAttributeFromVariable (
 
           SerialNode = NextDevicePathNode (SerialNode);
         }
+
         //
         // end while
         //
@@ -715,6 +719,7 @@ UpdateComAttributeFromVariable (
 
       Node = NextDevicePathNode (Node);
     }
+
     //
     // end while
     //
@@ -732,7 +737,7 @@ UpdateComAttributeFromVariable (
                          and BM_CONSOLE_ERR_CONTEXT_SELECT.
 
   @retval EFI_UNSUPPORTED The type passed in is not in the 3 types defined.
-  @retval EFI_NOT_FOUND   If the EFI Variable defined in UEFI spec with name "ConOutDev", 
+  @retval EFI_NOT_FOUND   If the EFI Variable defined in UEFI spec with name "ConOutDev",
                           "ConInDev" or "ConErrDev" doesn't exists.
   @retval EFI_OUT_OF_RESOURCES Not enough resource to complete the operations.
   @retval EFI_SUCCESS          Function completes successfully.
@@ -740,7 +745,7 @@ UpdateComAttributeFromVariable (
 **/
 EFI_STATUS
 GetConsoleMenu (
-  IN UINTN              ConsoleMenuType
+  IN UINTN  ConsoleMenuType
   )
 {
   EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
@@ -761,26 +766,26 @@ GetConsoleMenu (
   AllDevicePath = NULL;
   AllCount      = 0;
   switch (ConsoleMenuType) {
-  case BM_CONSOLE_IN_CONTEXT_SELECT:
-    ConsoleMenu   = &ConsoleInpMenu;
-    GetEfiGlobalVariable2 (L"ConIn", (VOID**)&DevicePath, NULL);
-    GetEfiGlobalVariable2 (L"ConInDev", (VOID**)&AllDevicePath, NULL);
-    break;
+    case BM_CONSOLE_IN_CONTEXT_SELECT:
+      ConsoleMenu = &ConsoleInpMenu;
+      GetEfiGlobalVariable2 (L"ConIn", (VOID **)&DevicePath, NULL);
+      GetEfiGlobalVariable2 (L"ConInDev", (VOID **)&AllDevicePath, NULL);
+      break;
 
-  case BM_CONSOLE_OUT_CONTEXT_SELECT:
-    ConsoleMenu   = &ConsoleOutMenu;
-    GetEfiGlobalVariable2 (L"ConOut", (VOID**)&DevicePath, NULL);
-    GetEfiGlobalVariable2 (L"ConOutDev", (VOID**)&AllDevicePath, NULL);
-    break;
+    case BM_CONSOLE_OUT_CONTEXT_SELECT:
+      ConsoleMenu = &ConsoleOutMenu;
+      GetEfiGlobalVariable2 (L"ConOut", (VOID **)&DevicePath, NULL);
+      GetEfiGlobalVariable2 (L"ConOutDev", (VOID **)&AllDevicePath, NULL);
+      break;
 
-  case BM_CONSOLE_ERR_CONTEXT_SELECT:
-    ConsoleMenu   = &ConsoleErrMenu;
-    GetEfiGlobalVariable2 (L"ErrOut", (VOID**)&DevicePath, NULL);
-    GetEfiGlobalVariable2 (L"ErrOutDev", (VOID**)&AllDevicePath, NULL);
-    break;
+    case BM_CONSOLE_ERR_CONTEXT_SELECT:
+      ConsoleMenu = &ConsoleErrMenu;
+      GetEfiGlobalVariable2 (L"ErrOut", (VOID **)&DevicePath, NULL);
+      GetEfiGlobalVariable2 (L"ErrOutDev", (VOID **)&AllDevicePath, NULL);
+      break;
 
-  default:
-    return EFI_UNSUPPORTED;
+    default:
+      return EFI_UNSUPPORTED;
   }
 
   if (NULL == AllDevicePath) {
@@ -797,19 +802,27 @@ GetConsoleMenu (
   MultiDevicePath = AllDevicePath;
   Index2          = 0;
   for (Index = 0; Index < AllCount; Index++) {
-    DevicePathInst  = GetNextDevicePathInstance (&MultiDevicePath, &Size);
+    DevicePathInst = GetNextDevicePathInstance (&MultiDevicePath, &Size);
+    if (DevicePathInst == NULL) {
+      ASSERT (DevicePathInst != NULL);
+      continue;
+    }
 
-    NewMenuEntry    = BOpt_CreateMenuEntry (BM_CONSOLE_CONTEXT_SELECT);
+    NewMenuEntry = BOpt_CreateMenuEntry (BM_CONSOLE_CONTEXT_SELECT);
     if (NULL == NewMenuEntry) {
       return EFI_OUT_OF_RESOURCES;
     }
 
-    NewConsoleContext             = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;
-    NewMenuEntry->OptionNumber    = Index2;
+    NewConsoleContext          = (BM_CONSOLE_CONTEXT *)NewMenuEntry->VariableContext;
+    NewMenuEntry->OptionNumber = Index2;
 
     NewConsoleContext->DevicePath = DuplicateDevicePath (DevicePathInst);
-    ASSERT (NewConsoleContext->DevicePath != NULL);
-    NewMenuEntry->DisplayString   = EfiLibStrFromDatahub (NewConsoleContext->DevicePath);
+    if (NewConsoleContext->DevicePath == NULL) {
+      ASSERT (NewConsoleContext->DevicePath != NULL);
+      return EFI_OUT_OF_RESOURCES;
+    }
+
+    NewMenuEntry->DisplayString = EfiLibStrFromDatahub (NewConsoleContext->DevicePath);
     if (NULL == NewMenuEntry->DisplayString) {
       NewMenuEntry->DisplayString = UiDevicePathToStr (NewConsoleContext->DevicePath);
     }
@@ -893,9 +906,9 @@ FreeAllConsoles (
 **/
 BOOLEAN
 IsTerminalDevicePath (
-  IN  EFI_DEVICE_PATH_PROTOCOL *DevicePath,
-  OUT TYPE_OF_TERMINAL         *Termi,
-  OUT UINTN                    *Com
+  IN  EFI_DEVICE_PATH_PROTOCOL  *DevicePath,
+  OUT TYPE_OF_TERMINAL          *Termi,
+  OUT UINTN                     *Com
   )
 {
   BOOLEAN                   IsTerminal;
@@ -903,6 +916,7 @@ IsTerminalDevicePath (
   VENDOR_DEVICE_PATH        *Vendor;
   UART_DEVICE_PATH          *Uart;
   ACPI_HID_DEVICE_PATH      *Acpi;
+  UINTN                     Index;
 
   IsTerminal = FALSE;
 
@@ -913,57 +927,43 @@ IsTerminalDevicePath (
     //
     // Vendor points to the node before the End node
     //
-    Vendor = (VENDOR_DEVICE_PATH *) Node;
+    Vendor = (VENDOR_DEVICE_PATH *)Node;
 
     if ((DevicePathType (Node) == MESSAGING_DEVICE_PATH) && (DevicePathSubType (Node) == MSG_UART_DP)) {
-      Uart = (UART_DEVICE_PATH *) Node;
+      Uart = (UART_DEVICE_PATH *)Node;
     }
 
     if (Uart == NULL) {
       //
       // Acpi points to the node before the UART node
       //
-      Acpi = (ACPI_HID_DEVICE_PATH *) Node;
+      Acpi = (ACPI_HID_DEVICE_PATH *)Node;
     }
   }
 
-  if (Vendor == NULL ||
-      DevicePathType (Vendor) != MESSAGING_DEVICE_PATH ||
-      DevicePathSubType (Vendor) != MSG_VENDOR_DP ||
-      Uart == NULL) {
+  if ((Vendor == NULL) ||
+      (DevicePathType (Vendor) != MESSAGING_DEVICE_PATH) ||
+      (DevicePathSubType (Vendor) != MSG_VENDOR_DP) ||
+      (Uart == NULL))
+  {
     return FALSE;
   }
 
   //
-  // There are four kinds of Terminal types
+  // There are 9 kinds of Terminal types
   // check to see whether this devicepath
   // is one of that type
   //
-  if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[0])) {
-    *Termi      = TerminalTypePcAnsi;
-    IsTerminal  = TRUE;
-  } else {
-    if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[1])) {
-      *Termi      = TerminalTypeVt100;
-      IsTerminal  = TRUE;
-    } else {
-      if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[2])) {
-        *Termi      = TerminalTypeVt100Plus;
-        IsTerminal  = TRUE;
-      } else {
-        if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[3])) {
-          *Termi      = TerminalTypeVtUtf8;
-          IsTerminal  = TRUE;
-        } else {
-          if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[4])) {
-            *Termi      = TerminalTypeTtyTerm;
-            IsTerminal  = TRUE;
-          } else {
-            IsTerminal = FALSE;
-          }
-        }
-      }
+  for (Index = 0; Index < ARRAY_SIZE (TerminalTypeGuid); Index++) {
+    if (CompareGuid (&Vendor->Guid, &TerminalTypeGuid[Index])) {
+      *Termi     = Index;
+      IsTerminal = TRUE;
+      break;
     }
+  }
+
+  if (Index == ARRAY_SIZE (TerminalTypeGuid)) {
+    IsTerminal = FALSE;
   }
 
   if (!IsTerminal) {
@@ -986,28 +986,28 @@ IsTerminalDevicePath (
 **/
 VOID
 GetConsoleOutMode (
-  IN  BMM_CALLBACK_DATA    *CallbackData
+  IN  BMM_CALLBACK_DATA  *CallbackData
   )
 {
-  UINTN                         Col;
-  UINTN                         Row;
-  UINTN                         CurrentCol;
-  UINTN                         CurrentRow;
-  UINTN                         Mode;
-  UINTN                         MaxMode;
-  EFI_STATUS                    Status;
+  UINTN                            Col;
+  UINTN                            Row;
+  UINTN                            CurrentCol;
+  UINTN                            CurrentRow;
+  UINTN                            Mode;
+  UINTN                            MaxMode;
+  EFI_STATUS                       Status;
   EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *ConOut;
 
-  ConOut   = gST->ConOut;
-  MaxMode  = (UINTN) (ConOut->Mode->MaxMode);
+  ConOut  = gST->ConOut;
+  MaxMode = (UINTN)(ConOut->Mode->MaxMode);
 
   CurrentCol = PcdGet32 (PcdSetupConOutColumn);
   CurrentRow = PcdGet32 (PcdSetupConOutRow);
   for (Mode = 0; Mode < MaxMode; Mode++) {
     Status = ConOut->QueryMode (ConOut, Mode, &Col, &Row);
-    if (!EFI_ERROR(Status)) {
-      if (CurrentCol == Col && CurrentRow == Row) {
-        CallbackData->BmmFakeNvData.ConsoleOutMode = (UINT16) Mode;
+    if (!EFI_ERROR (Status)) {
+      if ((CurrentCol == Col) && (CurrentRow == Row)) {
+        CallbackData->BmmFakeNvData.ConsoleOutMode = (UINT16)Mode;
         break;
       }
     }
@@ -1021,25 +1021,34 @@ GetConsoleOutMode (
 
   @param CallbackData    The BMM context data.
 
-**/  
-VOID  
+**/
+VOID
 GetConsoleInCheck (
-  IN  BMM_CALLBACK_DATA    *CallbackData
+  IN  BMM_CALLBACK_DATA  *CallbackData
   )
 {
-  UINT16              Index;
-  BM_MENU_ENTRY       *NewMenuEntry; 
-  UINT8               *ConInCheck;
-  BM_CONSOLE_CONTEXT  *NewConsoleContext;
+  UINTN                Index;
+  BM_MENU_ENTRY        *NewMenuEntry;
+  UINT8                *ConInCheck;
+  BM_CONSOLE_CONTEXT   *NewConsoleContext;
+  BM_TERMINAL_CONTEXT  *NewTerminalContext;
 
   ASSERT (CallbackData != NULL);
 
   ConInCheck = &CallbackData->BmmFakeNvData.ConsoleInCheck[0];
   for (Index = 0; ((Index < ConsoleInpMenu.MenuNumber) && \
-       (Index < MAX_MENU_NUMBER)) ; Index++) {  
+                   (Index < MAX_MENU_NUMBER)); Index++)
+  {
     NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleInpMenu, Index);
-    NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
+    NewConsoleContext = (BM_CONSOLE_CONTEXT *)NewMenuEntry->VariableContext;
     ConInCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry       = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleInpMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConInCheck[Index + ConsoleInpMenu.MenuNumber] = NewTerminalContext->IsConIn;
   }
 }
 
@@ -1050,24 +1059,33 @@ GetConsoleInCheck (
 
   @param CallbackData    The BMM context data.
 
-**/      
-VOID    
+**/
+VOID
 GetConsoleOutCheck (
-  IN  BMM_CALLBACK_DATA    *CallbackData
+  IN  BMM_CALLBACK_DATA  *CallbackData
   )
 {
-  UINT16              Index;
-  BM_MENU_ENTRY       *NewMenuEntry; 
-  UINT8               *ConOutCheck;
-  BM_CONSOLE_CONTEXT  *NewConsoleContext;
-  
+  UINTN                Index;
+  BM_MENU_ENTRY        *NewMenuEntry;
+  UINT8                *ConOutCheck;
+  BM_CONSOLE_CONTEXT   *NewConsoleContext;
+  BM_TERMINAL_CONTEXT  *NewTerminalContext;
+
   ASSERT (CallbackData != NULL);
   ConOutCheck = &CallbackData->BmmFakeNvData.ConsoleOutCheck[0];
   for (Index = 0; ((Index < ConsoleOutMenu.MenuNumber) && \
-       (Index < MAX_MENU_NUMBER)) ; Index++) {  
-    NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleOutMenu, Index);
-    NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
+                   (Index < MAX_MENU_NUMBER)); Index++)
+  {
+    NewMenuEntry       = BOpt_GetMenuEntry (&ConsoleOutMenu, Index);
+    NewConsoleContext  = (BM_CONSOLE_CONTEXT *)NewMenuEntry->VariableContext;
     ConOutCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry       = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleOutMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConOutCheck[Index + ConsoleOutMenu.MenuNumber] = NewTerminalContext->IsConOut;
   }
 }
 
@@ -1078,24 +1096,33 @@ GetConsoleOutCheck (
 
   @param CallbackData    The BMM context data.
 
-**/        
-VOID  
+**/
+VOID
 GetConsoleErrCheck (
-  IN  BMM_CALLBACK_DATA    *CallbackData
+  IN  BMM_CALLBACK_DATA  *CallbackData
   )
 {
-  UINT16              Index;
-  BM_MENU_ENTRY       *NewMenuEntry; 
-  UINT8               *ConErrCheck;
-  BM_CONSOLE_CONTEXT  *NewConsoleContext;
+  UINTN                Index;
+  BM_MENU_ENTRY        *NewMenuEntry;
+  UINT8                *ConErrCheck;
+  BM_CONSOLE_CONTEXT   *NewConsoleContext;
+  BM_TERMINAL_CONTEXT  *NewTerminalContext;
 
   ASSERT (CallbackData != NULL);
   ConErrCheck = &CallbackData->BmmFakeNvData.ConsoleErrCheck[0];
   for (Index = 0; ((Index < ConsoleErrMenu.MenuNumber) && \
-       (Index < MAX_MENU_NUMBER)) ; Index++) {  
-    NewMenuEntry      = BOpt_GetMenuEntry (&ConsoleErrMenu, Index);
-    NewConsoleContext = (BM_CONSOLE_CONTEXT *) NewMenuEntry->VariableContext;  
+                   (Index < MAX_MENU_NUMBER)); Index++)
+  {
+    NewMenuEntry       = BOpt_GetMenuEntry (&ConsoleErrMenu, Index);
+    NewConsoleContext  = (BM_CONSOLE_CONTEXT *)NewMenuEntry->VariableContext;
     ConErrCheck[Index] = NewConsoleContext->IsActive;
+  }
+
+  for (Index = 0; Index < TerminalMenu.MenuNumber; Index++) {
+    NewMenuEntry       = BOpt_GetMenuEntry (&TerminalMenu, Index);
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
+    ASSERT (Index + ConsoleErrMenu.MenuNumber < MAX_MENU_NUMBER);
+    ConErrCheck[Index + ConsoleErrMenu.MenuNumber] = NewTerminalContext->IsStdErr;
   }
 }
 
@@ -1107,56 +1134,58 @@ GetConsoleErrCheck (
   @param CallbackData    The BMM context data.
 
 **/
-VOID  
+VOID
 GetTerminalAttribute (
-  IN  BMM_CALLBACK_DATA    *CallbackData
+  IN  BMM_CALLBACK_DATA  *CallbackData
   )
 {
   BMM_FAKE_NV_DATA     *CurrentFakeNVMap;
   BM_MENU_ENTRY        *NewMenuEntry;
-  BM_TERMINAL_CONTEXT  *NewTerminalContext;    
-  UINT16               TerminalIndex;  
+  BM_TERMINAL_CONTEXT  *NewTerminalContext;
+  UINTN                TerminalIndex;
   UINT8                AttributeIndex;
 
   ASSERT (CallbackData != NULL);
 
-  CurrentFakeNVMap = &CallbackData->BmmFakeNvData;     
+  CurrentFakeNVMap = &CallbackData->BmmFakeNvData;
   for (TerminalIndex = 0; ((TerminalIndex < TerminalMenu.MenuNumber) && \
-       (TerminalIndex < MAX_MENU_NUMBER)); TerminalIndex++) {  
-    NewMenuEntry        = BOpt_GetMenuEntry (&TerminalMenu, TerminalIndex);
-    NewTerminalContext  = (BM_TERMINAL_CONTEXT *) NewMenuEntry->VariableContext;
-    for (AttributeIndex = 0; AttributeIndex < sizeof (BaudRateList) / sizeof (BaudRateList [0]); AttributeIndex++) {
-      if (NewTerminalContext->BaudRate == (UINT64) (BaudRateList[AttributeIndex].Value)) {
+                           (TerminalIndex < MAX_MENU_NUMBER)); TerminalIndex++)
+  {
+    NewMenuEntry       = BOpt_GetMenuEntry (&TerminalMenu, TerminalIndex);
+    NewTerminalContext = (BM_TERMINAL_CONTEXT *)NewMenuEntry->VariableContext;
+    for (AttributeIndex = 0; AttributeIndex < sizeof (BaudRateList) / sizeof (BaudRateList[0]); AttributeIndex++) {
+      if (NewTerminalContext->BaudRate == (UINT64)(BaudRateList[AttributeIndex].Value)) {
         NewTerminalContext->BaudRateIndex = AttributeIndex;
         break;
       }
     }
+
     for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (DataBitsList); AttributeIndex++) {
-      if (NewTerminalContext->DataBits == (UINT64) (DataBitsList[AttributeIndex].Value)) {
+      if (NewTerminalContext->DataBits == (UINT64)(DataBitsList[AttributeIndex].Value)) {
         NewTerminalContext->DataBitsIndex = AttributeIndex;
         break;
       }
-    }    
+    }
 
     for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (ParityList); AttributeIndex++) {
-      if (NewTerminalContext->Parity == (UINT64) (ParityList[AttributeIndex].Value)) {
+      if (NewTerminalContext->Parity == (UINT64)(ParityList[AttributeIndex].Value)) {
         NewTerminalContext->ParityIndex = AttributeIndex;
         break;
       }
     }
 
     for (AttributeIndex = 0; AttributeIndex < ARRAY_SIZE (StopBitsList); AttributeIndex++) {
-      if (NewTerminalContext->StopBits == (UINT64) (StopBitsList[AttributeIndex].Value)) {
+      if (NewTerminalContext->StopBits == (UINT64)(StopBitsList[AttributeIndex].Value)) {
         NewTerminalContext->StopBitsIndex = AttributeIndex;
         break;
       }
     }
+
     CurrentFakeNVMap->COMBaudRate[TerminalIndex]     = NewTerminalContext->BaudRateIndex;
     CurrentFakeNVMap->COMDataRate[TerminalIndex]     = NewTerminalContext->DataBitsIndex;
     CurrentFakeNVMap->COMStopBits[TerminalIndex]     = NewTerminalContext->StopBitsIndex;
-    CurrentFakeNVMap->COMParity[TerminalIndex]       = NewTerminalContext->ParityIndex; 
+    CurrentFakeNVMap->COMParity[TerminalIndex]       = NewTerminalContext->ParityIndex;
     CurrentFakeNVMap->COMTerminalType[TerminalIndex] = NewTerminalContext->TerminalType;
     CurrentFakeNVMap->COMFlowControl[TerminalIndex]  = NewTerminalContext->FlowControl;
   }
 }
-

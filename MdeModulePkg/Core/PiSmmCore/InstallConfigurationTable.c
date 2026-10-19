@@ -1,20 +1,14 @@
 /** @file
   System Management System Table Services SmmInstallConfigurationTable service
 
-  Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials are licensed and made available 
-  under the terms and conditions of the BSD License which accompanies this 
-  distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "PiSmmCore.h"
 
-#define CONFIG_TABLE_SIZE_INCREASED 0x10
+#define CONFIG_TABLE_SIZE_INCREASED  0x10
 
 UINTN  mSmmSystemTableAllocateSize = 0;
 
@@ -46,6 +40,7 @@ SmmInstallConfigurationTable (
 {
   UINTN                    Index;
   EFI_CONFIGURATION_TABLE  *ConfigurationTable;
+  EFI_CONFIGURATION_TABLE  *OldTable;
 
   //
   // If Guid is NULL, then this operation cannot be performed
@@ -72,7 +67,7 @@ SmmInstallConfigurationTable (
     if (Table != NULL) {
       //
       // If Table is not NULL, then this is a modify operation.
-      // Modify the table enty and return.
+      // Modify the table entry and return.
       //
       ConfigurationTable[Index].VendorTable = Table;
       return EFI_SUCCESS;
@@ -91,7 +86,6 @@ SmmInstallConfigurationTable (
       &(ConfigurationTable[Index + 1]),
       (gSmmCoreSmst.NumberOfTableEntries - Index) * sizeof (EFI_CONFIGURATION_TABLE)
       );
-
   } else {
     //
     // No matching GUIDs were found, so this is an add operation.
@@ -111,7 +105,7 @@ SmmInstallConfigurationTable (
       // Allocate a table with one additional entry.
       //
       mSmmSystemTableAllocateSize += (CONFIG_TABLE_SIZE_INCREASED * sizeof (EFI_CONFIGURATION_TABLE));
-      ConfigurationTable = AllocatePool (mSmmSystemTableAllocateSize);
+      ConfigurationTable           = AllocatePool (mSmmSystemTableAllocateSize);
       if (ConfigurationTable == NULL) {
         //
         // If a new table could not be allocated, then return an error.
@@ -130,15 +124,30 @@ SmmInstallConfigurationTable (
           );
 
         //
-        // Free Old Table
+        // Record the old table pointer.
         //
-        FreePool (gSmmCoreSmst.SmmConfigurationTable);
-      }
+        OldTable = gSmmCoreSmst.SmmConfigurationTable;
 
-      //
-      // Update System Table
-      //
-      gSmmCoreSmst.SmmConfigurationTable = ConfigurationTable;
+        //
+        // As the SmmInstallConfigurationTable() may be re-entered by FreePool() in
+        // its calling stack, updating System table to the new table pointer must
+        // be done before calling FreePool() to free the old table.
+        // It can make sure the gSmmCoreSmst.SmmConfigurationTable point to the new
+        // table and avoid the errors of use-after-free to the old table by the
+        // reenter of SmmInstallConfigurationTable() in FreePool()'s calling stack.
+        //
+        gSmmCoreSmst.SmmConfigurationTable = ConfigurationTable;
+
+        //
+        // Free the old table after updating System Table to the new table pointer.
+        //
+        FreePool (OldTable);
+      } else {
+        //
+        // Update System Table
+        //
+        gSmmCoreSmst.SmmConfigurationTable = ConfigurationTable;
+      }
     }
 
     //

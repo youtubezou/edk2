@@ -4,18 +4,11 @@
 
   Copyright (C) 2016, Linaro Ltd.
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _VIRTIO_RNG_DXE_H_
-#define _VIRTIO_RNG_DXE_H_
+#pragma once
 
 #include <Protocol/ComponentName.h>
 #include <Protocol/DriverBinding.h>
@@ -23,7 +16,7 @@
 
 #include <IndustryStandard/Virtio.h>
 
-#define VIRTIO_RNG_SIG SIGNATURE_32 ('V', 'R', 'N', 'G')
+#define VIRTIO_RNG_SIG  SIGNATURE_32 ('V', 'R', 'N', 'G')
 
 typedef struct {
   //
@@ -38,9 +31,9 @@ typedef struct {
   EFI_EVENT                 ExitBoot;       // DriverBindingStart   0
   VRING                     Ring;           // VirtioRingInit       2
   EFI_RNG_PROTOCOL          Rng;            // VirtioRngInit        1
+  VOID                      *RingMap;       // VirtioRingMap        2
+  BOOLEAN                   Ready;
 } VIRTIO_RNG_DEV;
 
 #define VIRTIO_ENTROPY_SOURCE_FROM_RNG(RngPointer) \
           CR (RngPointer, VIRTIO_RNG_DEV, Rng, VIRTIO_RNG_SIG)
-
-#endif

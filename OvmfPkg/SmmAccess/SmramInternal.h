@@ -3,33 +3,37 @@
   Functions and types shared by the SMM accessor PEI and DXE modules.
 
   Copyright (C) 2015, Red Hat, Inc.
+  Copyright (c) 2024 Intel Corporation.
 
-  This program and the accompanying materials are licensed and made available
-  under the terms and conditions of the BSD License which accompanies this
-  distribution. The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, WITHOUT
-  WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <Pi/PiMultiPhase.h>
 
+#include <Guid/SmramMemoryReserve.h>
+#include <Library/HobLib.h>
+
 //
-// We'll have two SMRAM ranges.
+// The value of PcdQ35TsegMbytes is saved into this variable at module startup.
 //
-// The first is a tiny one that hosts an SMM_S3_RESUME_STATE object, to be
-// filled in by the CPU SMM driver during normal boot, for the PEI instance of
-// the LockBox library (which will rely on the object during S3 resume).
-//
-// The other SMRAM range is the main one, for the SMM core and the SMM drivers.
-//
-typedef enum {
-  DescIdxSmmS3ResumeState = 0,
-  DescIdxMain             = 1,
-  DescIdxCount            = 2
-} DESCRIPTOR_INDEX;
+extern UINT16  mQ35TsegMbytes;
+
+/**
+  Save PcdQ35TsegMbytes into mQ35TsegMbytes.
+**/
+VOID
+InitQ35TsegMbytes (
+  VOID
+  );
+
+/**
+  Save PcdQ35SmramAtDefaultSmbase into mQ35SmramAtDefaultSmbase.
+**/
+VOID
+InitQ35SmramAtDefaultSmbase (
+  VOID
+  );
 
 /**
   Read the MCH_SMRAM and ESMRAMC registers, and update the LockState and
@@ -47,8 +51,8 @@ typedef enum {
 **/
 VOID
 GetStates (
-  OUT BOOLEAN *LockState,
-  OUT BOOLEAN *OpenState
+  OUT BOOLEAN  *LockState,
+  OUT BOOLEAN  *OpenState
   );
 
 //
@@ -64,26 +68,24 @@ GetStates (
 
 EFI_STATUS
 SmramAccessOpen (
-  OUT BOOLEAN *LockState,
-  OUT BOOLEAN *OpenState
+  OUT BOOLEAN  *LockState,
+  OUT BOOLEAN  *OpenState
   );
 
 EFI_STATUS
 SmramAccessClose (
-  OUT BOOLEAN *LockState,
-  OUT BOOLEAN *OpenState
+  OUT BOOLEAN  *LockState,
+  OUT BOOLEAN  *OpenState
   );
 
 EFI_STATUS
 SmramAccessLock (
-  OUT    BOOLEAN *LockState,
-  IN OUT BOOLEAN *OpenState
+  OUT    BOOLEAN  *LockState,
+  IN OUT BOOLEAN  *OpenState
   );
 
 EFI_STATUS
 SmramAccessGetCapabilities (
-  IN BOOLEAN                  LockState,
-  IN BOOLEAN                  OpenState,
-  IN OUT UINTN                *SmramMapSize,
-  IN OUT EFI_SMRAM_DESCRIPTOR *SmramMap
+  IN OUT UINTN                 *SmramMapSize,
+  IN OUT EFI_SMRAM_DESCRIPTOR  *SmramMap
   );

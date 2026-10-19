@@ -3,14 +3,7 @@
 
 Copyright (c) 2011, Intel Corporation. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions
-of the BSD License which accompanies this distribution.  The
-full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -28,15 +21,15 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gXhciComponentName = 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gXhciComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) XhciComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) XhciComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gXhciComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)XhciComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)XhciComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mXhciDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mXhciDriverNameTable[] = {
   { "eng;en", L"Usb Xhci Driver" },
-  { NULL , NULL }
+  { NULL,     NULL               }
 };
 
 /**
@@ -173,9 +166,9 @@ XhciComponentNameGetControllerName (
   OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS           Status;
-  EFI_USB2_HC_PROTOCOL *Usb2Hc;
-  USB_XHCI_INSTANCE    *XhciDev;
+  EFI_STATUS            Status;
+  EFI_USB2_HC_PROTOCOL  *Usb2Hc;
+  USB_XHCI_INSTANCE     *XhciDev;
 
   //
   // This is a device driver, so ChildHandle must be NULL.
@@ -202,7 +195,7 @@ XhciComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiUsb2HcProtocolGuid,
-                  (VOID **) &Usb2Hc,
+                  (VOID **)&Usb2Hc,
                   gXhciDriverBinding.DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -220,5 +213,4 @@ XhciComponentNameGetControllerName (
            ControllerName,
            (BOOLEAN)(This == &gXhciComponentName)
            );
-
 }

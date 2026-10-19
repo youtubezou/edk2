@@ -1,14 +1,8 @@
 /** @file
    TCG MOR (Memory Overwrite Request) Lock Control Driver SMM wrapper.
-   
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials 
-are licensed and made available under the terms and conditions of the BSD License 
-which accompanies this distribution.  The full text of the license may be found at 
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS, 
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -19,7 +13,7 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/SmmVariable.h>
 #include "TcgMorLock.h"
 
-EFI_SMM_VARIABLE_PROTOCOL *mSmmVariable;
+EFI_SMM_VARIABLE_PROTOCOL  *mSmmVariable;
 
 /**
   This service is a wrapper for the UEFI Runtime Service GetVariable().
@@ -46,11 +40,11 @@ EFI_SMM_VARIABLE_PROTOCOL *mSmmVariable;
 EFI_STATUS
 EFIAPI
 InternalGetVariable (
-  IN      CHAR16                   *VariableName,
-  IN      EFI_GUID                 *VendorGuid,
-  OUT     UINT32                   *Attributes OPTIONAL,
-  IN OUT  UINTN                    *DataSize,
-  OUT     VOID                     *Data
+  IN      CHAR16    *VariableName,
+  IN      EFI_GUID  *VendorGuid,
+  OUT     UINT32    *Attributes OPTIONAL,
+  IN OUT  UINTN     *DataSize,
+  OUT     VOID      *Data
   )
 {
   return mSmmVariable->SmmGetVariable (
@@ -82,7 +76,7 @@ InternalGetVariable (
   @retval  EFI_DEVICE_ERROR       The variable could not be saved due to a hardware failure.
   @retval  EFI_WRITE_PROTECTED    The variable in question is read-only.
   @retval  EFI_WRITE_PROTECTED    The variable in question cannot be deleted.
-  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS
+  @retval  EFI_SECURITY_VIOLATION The variable could not be written due to EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS
                                   set but the AuthInfo does NOT pass the validation check carried
                                   out by the firmware.
   @retval  EFI_NOT_FOUND          The variable trying to be updated or deleted was not found.
@@ -91,11 +85,11 @@ InternalGetVariable (
 EFI_STATUS
 EFIAPI
 InternalSetVariable (
-  IN CHAR16                       *VariableName,
-  IN EFI_GUID                     *VendorGuid,
-  IN UINT32                       Attributes,
-  IN UINTN                        DataSize,
-  IN VOID                         *Data
+  IN CHAR16    *VariableName,
+  IN EFI_GUID  *VendorGuid,
+  IN UINT32    Attributes,
+  IN UINTN     DataSize,
+  IN VOID      *Data
   )
 {
   return mSmmVariable->SmmSetVariable (
@@ -119,8 +113,8 @@ InternalSetVariable (
 EFI_STATUS
 EFIAPI
 MorLockDriverEntryPointSmm (
-  IN EFI_HANDLE         ImageHandle,
-  IN EFI_SYSTEM_TABLE   *SystemTable
+  IN EFI_HANDLE        ImageHandle,
+  IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
   EFI_STATUS                    Status;
@@ -129,20 +123,20 @@ MorLockDriverEntryPointSmm (
   //
   // This driver link to Smm Variable driver
   //
-  DEBUG ((EFI_D_INFO, "MorLockDriverEntryPointSmm\n"));
-  
+  DEBUG ((DEBUG_INFO, "MorLockDriverEntryPointSmm\n"));
+
   Status = gSmst->SmmLocateProtocol (
-                  &gEfiSmmVariableProtocolGuid,
-                  NULL,
-                  (VOID **) &mSmmVariable
-                  );
+                    &gEfiSmmVariableProtocolGuid,
+                    NULL,
+                    (VOID **)&mSmmVariable
+                    );
   ASSERT_EFI_ERROR (Status);
 
   Status = gSmst->SmmLocateProtocol (
-                  &gEdkiiSmmVarCheckProtocolGuid,
-                  NULL,
-                  (VOID **) &SmmVarCheck
-                  );
+                    &gEdkiiSmmVarCheckProtocolGuid,
+                    NULL,
+                    (VOID **)&SmmVarCheck
+                    );
   ASSERT_EFI_ERROR (Status);
 
   Status = MorLockDriverInit ();
@@ -155,4 +149,3 @@ MorLockDriverEntryPointSmm (
 
   return Status;
 }
-

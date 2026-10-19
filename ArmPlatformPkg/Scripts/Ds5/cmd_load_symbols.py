@@ -1,17 +1,13 @@
 #
-#  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
+#  Copyright (c) 2011-2021, Arm Limited. All rights reserved.
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 from arm_ds.debugger_v1 import Debugger
 from arm_ds.debugger_v1 import DebugException
+
+from console_loader import load_symbol_from_console
 
 import re, sys, getopt
 
@@ -27,12 +23,16 @@ def usage():
     print "-m,--sysmem=(base,size): System Memory region"
     print "-f,--fv=(base,size): Firmware region"
     print "-r,--rom=(base,size): ROM region"
+    print "-i,--input=: Filename for the EDK2 console output"
+    print "-o,--objdump=: Path to the objdump tool"
 
 verbose = False
 load_all = False
 report_file = None
+input_file = None
+objdump = None
 regions = []
-opts,args = getopt.getopt(sys.argv[1:], "hvar:vm:vr:vf:v", ["help","verbose","all","report=","sysmem=","rom=","fv="])
+opts,args = getopt.getopt(sys.argv[1:], "hvar:i:o:vm:vr:vf:v", ["help","verbose","all","report=","sysmem=","rom=","fv=","input=","objdump="])
 if (opts is None) or (not opts):
     report_file = '../../../report.log'
 else:
@@ -61,6 +61,10 @@ else:
         elif o in ("-r","--rom"):
             region_type = edk2_debugger.ArmPlatformDebugger.REGION_TYPE_ROM
             regex = region_reg
+        elif o in ("-i","--input"):
+            input_file = a
+        elif o in ("-o", "--objdump"):
+            objdump = a
         else:
             assert False, "Unhandled option (%s)" % o
 
@@ -81,11 +85,10 @@ else:
 debugger = Debugger()
 
 # Initialisation commands
-ec = debugger.getExecutionContext(0)
+ec = debugger.getCurrentExecutionContext()
 ec.getExecutionService().stop()
-ec.getExecutionService().waitForStop()
 # in case the execution context reference is out of date
-ec = debugger.getExecutionContext(0)
+ec = debugger.getCurrentExecutionContext()
 
 try:
     armplatform_debugger = edk2_debugger.ArmPlatformDebugger(ec, report_file, regions, verbose)
@@ -100,3 +103,6 @@ except Exception, (ErrorClass, ErrorMessage):
     print "Error(%s): %s" % (ErrorClass, ErrorMessage)
 except DebugException, de:
     print "DebugError: %s" % (de.getMessage())
+
+if input_file:
+    load_symbol_from_console(ec, input_file, objdump, verbose)

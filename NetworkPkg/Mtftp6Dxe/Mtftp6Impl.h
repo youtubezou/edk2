@@ -1,20 +1,13 @@
 /** @file
   Mtftp6 internal data structure and definition declaration.
 
-  Copyright (c) 2009 - 2012, Intel Corporation. All rights reserved. <BR>
+  Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved. <BR>
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __EFI_MTFTP6_IMPL_H__
-#define __EFI_MTFTP6_IMPL_H__
+#pragma once
 
 #include <Uefi.h>
 
@@ -31,99 +24,114 @@
 #include <Library/NetLib.h>
 #include <Library/PrintLib.h>
 
-typedef struct _MTFTP6_SERVICE  MTFTP6_SERVICE;
-typedef struct _MTFTP6_INSTANCE MTFTP6_INSTANCE;
+typedef struct _MTFTP6_SERVICE   MTFTP6_SERVICE;
+typedef struct _MTFTP6_INSTANCE  MTFTP6_INSTANCE;
 
 #include "Mtftp6Driver.h"
 #include "Mtftp6Option.h"
 #include "Mtftp6Support.h"
 
-#define MTFTP6_SERVICE_SIGNATURE       SIGNATURE_32 ('M', 'F', '6', 'S')
-#define MTFTP6_INSTANCE_SIGNATURE      SIGNATURE_32 ('M', 'F', '6', 'I')
+#define MTFTP6_SERVICE_SIGNATURE   SIGNATURE_32 ('M', 'F', '6', 'S')
+#define MTFTP6_INSTANCE_SIGNATURE  SIGNATURE_32 ('M', 'F', '6', 'I')
 
-#define MTFTP6_DEFAULT_SERVER_CMD_PORT 69
-#define MTFTP6_DEFAULT_TIMEOUT         3
-#define MTFTP6_GET_MAPPING_TIMEOUT     3
-#define MTFTP6_DEFAULT_MAX_RETRY       5
-#define MTFTP6_DEFAULT_BLK_SIZE        512
-#define MTFTP6_TICK_PER_SECOND         10000000U
+#define MTFTP6_DEFAULT_SERVER_CMD_PORT  69
+#define MTFTP6_DEFAULT_TIMEOUT          3
+#define MTFTP6_GET_MAPPING_TIMEOUT      3
+#define MTFTP6_DEFAULT_MAX_RETRY        5
+#define MTFTP6_DEFAULT_BLK_SIZE         512
+#define MTFTP6_DEFAULT_WINDOWSIZE       1
+#define MTFTP6_TICK_PER_SECOND          10000000U
 
-#define MTFTP6_SERVICE_FROM_THIS(a)    CR (a, MTFTP6_SERVICE, ServiceBinding, MTFTP6_SERVICE_SIGNATURE)
-#define MTFTP6_INSTANCE_FROM_THIS(a)   CR (a, MTFTP6_INSTANCE, Mtftp6, MTFTP6_INSTANCE_SIGNATURE)
+#define MTFTP6_SERVICE_FROM_THIS(a)   CR (a, MTFTP6_SERVICE, ServiceBinding, MTFTP6_SERVICE_SIGNATURE)
+#define MTFTP6_INSTANCE_FROM_THIS(a)  CR (a, MTFTP6_INSTANCE, Mtftp6, MTFTP6_INSTANCE_SIGNATURE)
 
-extern EFI_MTFTP6_PROTOCOL             gMtftp6ProtocolTemplate;
+extern EFI_MTFTP6_PROTOCOL  gMtftp6ProtocolTemplate;
 
-typedef struct _MTFTP6_GETINFO_CONTEXT{
-  EFI_MTFTP6_PACKET             **Packet;
-  UINT32                        *PacketLen;
-  EFI_STATUS                    Status;
+typedef struct _MTFTP6_GETINFO_CONTEXT {
+  EFI_MTFTP6_PACKET    **Packet;
+  UINT32               *PacketLen;
+  EFI_STATUS           Status;
 } MTFTP6_GETINFO_CONTEXT;
 
 //
 // Control block for MTFTP6 instance, it's per configuration data.
 //
 struct _MTFTP6_INSTANCE {
-  UINT32                        Signature;
-  EFI_HANDLE                    Handle;
-  LIST_ENTRY                    Link;
-  EFI_MTFTP6_PROTOCOL           Mtftp6;
-  MTFTP6_SERVICE                *Service;
-  EFI_MTFTP6_CONFIG_DATA        *Config;
+  UINT32                    Signature;
+  EFI_HANDLE                Handle;
+  LIST_ENTRY                Link;
+  EFI_MTFTP6_PROTOCOL       Mtftp6;
+  MTFTP6_SERVICE            *Service;
+  EFI_MTFTP6_CONFIG_DATA    *Config;
 
-  EFI_MTFTP6_TOKEN              *Token;
-  MTFTP6_EXT_OPTION_INFO        ExtInfo;
+  EFI_MTFTP6_TOKEN          *Token;
+  MTFTP6_EXT_OPTION_INFO    ExtInfo;
 
-  UINT16                        BlkSize;
-  UINT16                        LastBlk;
-  LIST_ENTRY                    BlkList;
+  UINT16                    BlkSize;
+  UINT16                    LastBlk;
+  LIST_ENTRY                BlkList;
 
-  EFI_IPv6_ADDRESS              ServerIp;
-  UINT16                        ServerCmdPort;
-  UINT16                        ServerDataPort;
-  UDP_IO                        *UdpIo;
+  UINT16                    Operation;
 
-  EFI_IPv6_ADDRESS              McastIp;
-  UINT16                        McastPort;
-  UDP_IO                        *McastUdpIo;
+  UINT16                    WindowSize;
 
-  NET_BUF                       *LastPacket;
-  UINT32                        CurRetry;
-  UINT32                        MaxRetry;
-  UINT32                        PacketToLive;
-  UINT32                        Timeout;
+  //
+  // Record the total received and saved block number.
+  //
+  UINT64                    TotalBlock;
 
-  EFI_TPL                       OldTpl;
-  BOOLEAN                       IsTransmitted;
-  BOOLEAN                       IsMaster;
-  BOOLEAN                       InDestroy;
+  //
+  // Record the acked block number.
+  //
+  UINT64                    AckedBlock;
+
+  EFI_IPv6_ADDRESS          ServerIp;
+  UINT16                    ServerCmdPort;
+  UINT16                    ServerDataPort;
+  UDP_IO                    *UdpIo;
+
+  EFI_IPv6_ADDRESS          McastIp;
+  UINT16                    McastPort;
+  UDP_IO                    *McastUdpIo;
+
+  NET_BUF                   *LastPacket;
+  UINT32                    CurRetry;
+  UINT32                    MaxRetry;
+  UINT32                    PacketToLive;
+  UINT32                    Timeout;
+
+  EFI_TPL                   OldTpl;
+  BOOLEAN                   IsTransmitted;
+  BOOLEAN                   IsMaster;
+  BOOLEAN                   InDestroy;
 };
 
 //
 // Control block for MTFTP6 service, it's per Nic handle.
 //
 struct _MTFTP6_SERVICE {
-  UINT32                        Signature;
-  EFI_SERVICE_BINDING_PROTOCOL  ServiceBinding;
-  EFI_HANDLE                    Controller;
-  EFI_HANDLE                    Image;
+  UINT32                          Signature;
+  EFI_SERVICE_BINDING_PROTOCOL    ServiceBinding;
+  EFI_HANDLE                      Controller;
+  EFI_HANDLE                      Image;
 
-  UINT16                        ChildrenNum;
-  LIST_ENTRY                    Children;
+  UINT16                          ChildrenNum;
+  LIST_ENTRY                      Children;
   //
   // It is used to be as internal calculagraph for all instances.
   //
-  EFI_EVENT                     Timer;
+  EFI_EVENT                       Timer;
   //
   // It is used to maintain the parent-child relationship between
   // mtftp driver and udp driver.
   //
-  UDP_IO                        *DummyUdpIo;
+  UDP_IO                          *DummyUdpIo;
 };
 
 typedef struct {
-  EFI_SERVICE_BINDING_PROTOCOL  *ServiceBinding;
-  UINTN                         NumberOfChildren;
-  EFI_HANDLE                    *ChildHandleBuffer;
+  EFI_SERVICE_BINDING_PROTOCOL    *ServiceBinding;
+  UINTN                           NumberOfChildren;
+  EFI_HANDLE                      *ChildHandleBuffer;
 } MTFTP6_DESTROY_CHILD_IN_HANDLE_BUF_CONTEXT;
 
 /**
@@ -144,8 +152,8 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 EfiMtftp6GetModeData (
-  IN  EFI_MTFTP6_PROTOCOL    *This,
-  OUT EFI_MTFTP6_MODE_DATA   *ModeData
+  IN  EFI_MTFTP6_PROTOCOL   *This,
+  OUT EFI_MTFTP6_MODE_DATA  *ModeData
   );
 
 /**
@@ -170,11 +178,11 @@ EfiMtftp6GetModeData (
                                  - This is NULL.
                                  - MtftpConfigData.StationIp is neither zero nor one
                                    of the configured IP addresses in the underlying IPv6 driver.
-                                 - MtftpCofigData.ServerIp is not a valid IPv6 unicast address.
+                                 - MtftpConfigData.ServerIp is not a valid IPv6 unicast address.
                                  Note: It does not match the UEFI 2.3 Specification.
   @retval  EFI_ACCESS_DENIED     - The configuration could not be changed at this time because there
                                    is some MTFTP background operation in progress.
-                                 - MtftpCofigData.LocalPort is already in use.
+                                 - MtftpConfigData.LocalPort is already in use.
                                  Note: It does not match the UEFI 2.3 Specification.
   @retval  EFI_NO_MAPPING        The underlying IPv6 driver was responsible for choosing a source
                                  address for this instance, but no source address was available for use.
@@ -189,8 +197,8 @@ EfiMtftp6GetModeData (
 EFI_STATUS
 EFIAPI
 EfiMtftp6Configure (
-  IN EFI_MTFTP6_PROTOCOL    *This,
-  IN EFI_MTFTP6_CONFIG_DATA *MtftpConfigData     OPTIONAL
+  IN EFI_MTFTP6_PROTOCOL     *This,
+  IN EFI_MTFTP6_CONFIG_DATA  *MtftpConfigData     OPTIONAL
   );
 
 /**
@@ -249,14 +257,14 @@ EfiMtftp6Configure (
 EFI_STATUS
 EFIAPI
 EfiMtftp6GetInfo (
-  IN  EFI_MTFTP6_PROTOCOL      *This,
-  IN  EFI_MTFTP6_OVERRIDE_DATA *OverrideData         OPTIONAL,
-  IN  UINT8                    *Filename,
-  IN  UINT8                    *ModeStr              OPTIONAL,
-  IN  UINT8                    OptionCount,
-  IN  EFI_MTFTP6_OPTION        *OptionList           OPTIONAL,
-  OUT UINT32                   *PacketLength,
-  OUT EFI_MTFTP6_PACKET        **Packet              OPTIONAL
+  IN  EFI_MTFTP6_PROTOCOL       *This,
+  IN  EFI_MTFTP6_OVERRIDE_DATA  *OverrideData         OPTIONAL,
+  IN  UINT8                     *Filename,
+  IN  UINT8                     *ModeStr              OPTIONAL,
+  IN  UINT8                     OptionCount,
+  IN  EFI_MTFTP6_OPTION         *OptionList           OPTIONAL,
+  OUT UINT32                    *PacketLength,
+  OUT EFI_MTFTP6_PACKET         **Packet              OPTIONAL
   );
 
 /**
@@ -292,11 +300,11 @@ EfiMtftp6GetInfo (
 EFI_STATUS
 EFIAPI
 EfiMtftp6ParseOptions (
-  IN     EFI_MTFTP6_PROTOCOL    *This,
-  IN     UINT32                 PacketLen,
-  IN     EFI_MTFTP6_PACKET      *Packet,
-  OUT    UINT32                 *OptionCount,
-  OUT    EFI_MTFTP6_OPTION      **OptionList          OPTIONAL
+  IN     EFI_MTFTP6_PROTOCOL  *This,
+  IN     UINT32               PacketLen,
+  IN     EFI_MTFTP6_PACKET    *Packet,
+  OUT    UINT32               *OptionCount,
+  OUT    EFI_MTFTP6_OPTION    **OptionList          OPTIONAL
   );
 
 /**
@@ -342,8 +350,8 @@ EfiMtftp6ParseOptions (
 EFI_STATUS
 EFIAPI
 EfiMtftp6ReadFile (
-  IN EFI_MTFTP6_PROTOCOL    *This,
-  IN EFI_MTFTP6_TOKEN       *Token
+  IN EFI_MTFTP6_PROTOCOL  *This,
+  IN EFI_MTFTP6_TOKEN     *Token
   );
 
 /**
@@ -391,8 +399,8 @@ EfiMtftp6ReadFile (
 EFI_STATUS
 EFIAPI
 EfiMtftp6WriteFile (
-  IN EFI_MTFTP6_PROTOCOL    *This,
-  IN EFI_MTFTP6_TOKEN       *Token
+  IN EFI_MTFTP6_PROTOCOL  *This,
+  IN EFI_MTFTP6_TOKEN     *Token
   );
 
 /**
@@ -438,8 +446,8 @@ EfiMtftp6WriteFile (
 EFI_STATUS
 EFIAPI
 EfiMtftp6ReadDirectory (
-  IN EFI_MTFTP6_PROTOCOL        *This,
-  IN EFI_MTFTP6_TOKEN           *Token
+  IN EFI_MTFTP6_PROTOCOL  *This,
+  IN EFI_MTFTP6_TOKEN     *Token
   );
 
 /**
@@ -469,7 +477,5 @@ EfiMtftp6ReadDirectory (
 EFI_STATUS
 EFIAPI
 EfiMtftp6Poll (
-  IN EFI_MTFTP6_PROTOCOL    *This
+  IN EFI_MTFTP6_PROTOCOL  *This
   );
-
-#endif

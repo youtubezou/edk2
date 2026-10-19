@@ -1,18 +1,11 @@
 /** @file
 Implementation of PcdLib class library for DXE phase.
 
-Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials                          
-are licensed and made available under the terms and conditions of the BSD License         
-which accompanies this distribution.  The full text of the license may be found at        
-http://opensource.org/licenses/bsd-license.php                                            
-                                                                                          
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 
 **/
-
 
 #include <PiDxe.h>
 
@@ -26,10 +19,10 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Library/UefiBootServicesTableLib.h>
 #include <Library/BaseMemoryLib.h>
 
-PCD_PROTOCOL                *mPcd       = NULL;
-EFI_PCD_PROTOCOL            *mPiPcd     = NULL;
-GET_PCD_INFO_PROTOCOL       *mPcdInfo   = NULL;
-EFI_GET_PCD_INFO_PROTOCOL   *mPiPcdInfo = NULL;
+PCD_PROTOCOL               *mPcd       = NULL;
+EFI_PCD_PROTOCOL           *mPiPcd     = NULL;
+GET_PCD_INFO_PROTOCOL      *mPcdInfo   = NULL;
+EFI_GET_PCD_INFO_PROTOCOL  *mPiPcdInfo = NULL;
 
 /**
   Retrieves the PI PCD protocol from the handle database.
@@ -46,13 +39,14 @@ GetPiPcdProtocol (
 
   if (mPiPcd == NULL) {
     //
-    // PI Pcd protocol defined in PI 1.2 vol3 should be installed before the module 
+    // PI Pcd protocol defined in PI 1.2 vol3 should be installed before the module
     // access DynamicEx type PCD.
     //
-    Status = gBS->LocateProtocol (&gEfiPcdProtocolGuid, NULL, (VOID **) &mPiPcd);
+    Status = gBS->LocateProtocol (&gEfiPcdProtocolGuid, NULL, (VOID **)&mPiPcd);
     ASSERT_EFI_ERROR (Status);
     ASSERT (mPiPcd != NULL);
   }
+
   return mPiPcd;
 }
 
@@ -73,11 +67,12 @@ GetPcdProtocol (
     //
     // PCD protocol need to be installed before the module access Dynamic type PCD.
     // But dynamic type PCD is not required in PI 1.2 specification.
-    // 
+    //
     Status = gBS->LocateProtocol (&gPcdProtocolGuid, NULL, (VOID **)&mPcd);
     ASSERT_EFI_ERROR (Status);
     ASSERT (mPcd != NULL);
   }
+
   return mPcd;
 }
 
@@ -98,6 +93,7 @@ GetPiPcdInfoProtocolPointer (
     ASSERT_EFI_ERROR (Status);
     ASSERT (mPiPcdInfo != NULL);
   }
+
   return mPiPcdInfo;
 }
 
@@ -109,7 +105,7 @@ GetPiPcdInfoProtocolPointer (
 GET_PCD_INFO_PROTOCOL *
 GetPcdInfoProtocolPointer (
   VOID
-  ) 
+  )
 {
   EFI_STATUS  Status;
 
@@ -118,6 +114,7 @@ GetPcdInfoProtocolPointer (
     ASSERT_EFI_ERROR (Status);
     ASSERT (mPcdInfo != NULL);
   }
+
   return mPcdInfo;
 }
 
@@ -135,62 +132,56 @@ GetPcdInfoProtocolPointer (
 UINTN
 EFIAPI
 LibPcdSetSku (
-  IN UINTN   SkuId
+  IN UINTN  SkuId
   )
 {
-  GetPcdProtocol()->SetSku (SkuId);
+  GetPcdProtocol ()->SetSku (SkuId);
 
   return SkuId;
 }
 
-
-
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the 8-bit value for the token specified by TokenNumber. 
+
+  Returns the 8-bit value for the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
 
-  @return Returns the 8-bit value for the token specified by TokenNumber. 
+  @return Returns the 8-bit value for the token specified by TokenNumber.
 
 **/
 UINT8
 EFIAPI
 LibPcdGet8 (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->Get8 (TokenNumber);
+  return GetPcdProtocol ()->Get8 (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the 16-bit value for the token specified by TokenNumber. 
+
+  Returns the 16-bit value for the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
 
-  @return Returns the 16-bit value for the token specified by TokenNumber. 
+  @return Returns the 16-bit value for the token specified by TokenNumber.
 
 **/
 UINT16
 EFIAPI
 LibPcdGet16 (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->Get16 (TokenNumber);
+  return GetPcdProtocol ()->Get16 (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the 32-bit value for the token specified by TokenNumber. 
+
+  Returns the 32-bit value for the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
 
@@ -200,17 +191,15 @@ LibPcdGet16 (
 UINT32
 EFIAPI
 LibPcdGet32 (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->Get32 (TokenNumber);
+  return GetPcdProtocol ()->Get32 (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
+
   Returns the 64-bit value for the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
@@ -221,17 +210,15 @@ LibPcdGet32 (
 UINT64
 EFIAPI
 LibPcdGet64 (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->Get64 (TokenNumber);
+  return GetPcdProtocol ()->Get64 (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
+
   Returns the pointer to the buffer of the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
@@ -242,62 +229,56 @@ LibPcdGet64 (
 VOID *
 EFIAPI
 LibPcdGetPtr (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->GetPtr (TokenNumber);
+  return GetPcdProtocol ()->GetPtr (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the Boolean value of the token specified by TokenNumber. 
+
+  Returns the Boolean value of the token specified by TokenNumber.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
 
-  @return Returns the Boolean value of the token specified by TokenNumber. 
+  @return Returns the Boolean value of the token specified by TokenNumber.
 
 **/
-BOOLEAN 
+BOOLEAN
 EFIAPI
 LibPcdGetBool (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->GetBool (TokenNumber);
+  return GetPcdProtocol ()->GetBool (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve the size of a given PCD token.
 
   @param[in]  TokenNumber The PCD token number to retrieve a current value for.
 
-  @return Returns the size of the token specified by TokenNumber. 
+  @return Returns the size of the token specified by TokenNumber.
 
 **/
 UINTN
 EFIAPI
 LibPcdGetSize (
-  IN UINTN             TokenNumber
+  IN UINTN  TokenNumber
   )
 {
-  return GetPcdProtocol()->GetSize (TokenNumber);
+  return GetPcdProtocol ()->GetSize (TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the 8-bit value for the token specified by TokenNumber and Guid.
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid         The pointer to a 128-bit unique value that designates 
+  Returns the 8-bit value for the token specified by TokenNumber and Guid.
+
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid         The pointer to a 128-bit unique value that designates
                            which namespace to retrieve a value from.
   @param[in]  TokenNumber  The PCD token number to retrieve a current value for.
 
@@ -307,24 +288,23 @@ LibPcdGetSize (
 UINT8
 EFIAPI
 LibPcdGetEx8 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
-  
-  return GetPiPcdProtocol()->Get8 (Guid, TokenNumber);
-}
 
+  return GetPiPcdProtocol ()->Get8 (Guid, TokenNumber);
+}
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
 
   Returns the 16-bit value for the token specified by TokenNumber and Guid.
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid         The pointer to a 128-bit unique value that designates 
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid         The pointer to a 128-bit unique value that designates
                            which namespace to retrieve a value from.
   @param[in]  TokenNumber  The PCD token number to retrieve a current value for.
 
@@ -334,21 +314,20 @@ LibPcdGetEx8 (
 UINT16
 EFIAPI
 LibPcdGetEx16 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Get16 (Guid, TokenNumber);
+  return GetPiPcdProtocol ()->Get16 (Guid, TokenNumber);
 }
-
 
 /**
   Returns the 32-bit value for the token specified by TokenNumber and Guid.
-  If Guid is NULL, then ASSERT(). 
+  If Guid is NULL, then ASSERT().
 
-  @param[in]  Guid         The pointer to a 128-bit unique value that designates 
+  @param[in]  Guid         The pointer to a 128-bit unique value that designates
                            which namespace to retrieve a value from.
   @param[in]  TokenNumber  The PCD token number to retrieve a current value for.
 
@@ -358,25 +337,23 @@ LibPcdGetEx16 (
 UINT32
 EFIAPI
 LibPcdGetEx32 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Get32 (Guid, TokenNumber);
+  return GetPiPcdProtocol ()->Get32 (Guid, TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the 64-bit value for the token specified by TokenNumber and Guid.
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid          The pointer to a 128-bit unique value that designates 
+  Returns the 64-bit value for the token specified by TokenNumber and Guid.
+
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid          The pointer to a 128-bit unique value that designates
                             which namespace to retrieve a value from.
   @param[in]  TokenNumber   The PCD token number to retrieve a current value for.
 
@@ -386,25 +363,23 @@ LibPcdGetEx32 (
 UINT64
 EFIAPI
 LibPcdGetEx64 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
-  
-  return GetPiPcdProtocol()->Get64 (Guid, TokenNumber);
+
+  return GetPiPcdProtocol ()->Get64 (Guid, TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the pointer to the buffer of token specified by TokenNumber and Guid.
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid          The pointer to a 128-bit unique value that designates 
+  Returns the pointer to the buffer of token specified by TokenNumber and Guid.
+
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid          The pointer to a 128-bit unique value that designates
                             which namespace to retrieve a value from.
   @param[in]  TokenNumber   The PCD token number to retrieve a current value for.
 
@@ -414,25 +389,23 @@ LibPcdGetEx64 (
 VOID *
 EFIAPI
 LibPcdGetExPtr (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->GetPtr (Guid, TokenNumber);
+  return GetPiPcdProtocol ()->GetPtr (Guid, TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve a value for a given PCD token.
-  
-  Returns the Boolean value of the token specified by TokenNumber and Guid. 
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid          The pointer to a 128-bit unique value that designates 
+  Returns the Boolean value of the token specified by TokenNumber and Guid.
+
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid          The pointer to a 128-bit unique value that designates
                             which namespace to retrieve a value from.
   @param[in]  TokenNumber   The PCD token number to retrieve a current value for.
 
@@ -442,25 +415,23 @@ LibPcdGetExPtr (
 BOOLEAN
 EFIAPI
 LibPcdGetExBool (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->GetBool (Guid, TokenNumber);
+  return GetPiPcdProtocol ()->GetBool (Guid, TokenNumber);
 }
-
-
 
 /**
   This function provides a means by which to retrieve the size of a given PCD token.
-  
-  Returns the size of the token specified by TokenNumber and Guid. 
-  
-  If Guid is NULL, then ASSERT(). 
 
-  @param[in]  Guid          The pointer to a 128-bit unique value that designates 
+  Returns the size of the token specified by TokenNumber and Guid.
+
+  If Guid is NULL, then ASSERT().
+
+  @param[in]  Guid          The pointer to a 128-bit unique value that designates
                             which namespace to retrieve a value from.
   @param[in]  TokenNumber   The PCD token number to retrieve a current value for.
 
@@ -470,414 +441,14 @@ LibPcdGetExBool (
 UINTN
 EFIAPI
 LibPcdGetExSize (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->GetSize (Guid, TokenNumber);
+  return GetPiPcdProtocol ()->GetSize (Guid, TokenNumber);
 }
-
-
-
-#ifndef DISABLE_NEW_DEPRECATED_INTERFACES
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 8-bit value for the token specified by TokenNumber 
-  to the value specified by Value.  Value is returned.
-
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 8-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT8
-EFIAPI
-LibPcdSet8 (
-  IN UINTN             TokenNumber,
-  IN UINT8             Value
-  )
-{
-  GetPcdProtocol()->Set8 (TokenNumber, Value);
-  
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 16-bit value for the token specified by TokenNumber 
-  to the value specified by Value.  Value is returned.
-
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 16-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT16
-EFIAPI
-LibPcdSet16 (
-  IN UINTN             TokenNumber,
-  IN UINT16            Value
-  )
-{
-  GetPcdProtocol()->Set16 (TokenNumber, Value);
-  
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 32-bit value for the token specified by TokenNumber 
-  to the value specified by Value.  Value is returned.
-
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 32-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT32
-EFIAPI
-LibPcdSet32 (
-  IN UINTN             TokenNumber,
-  IN UINT32            Value
-  )
-{
-  GetPcdProtocol()->Set32 (TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 64-bit value for the token specified by TokenNumber 
-  to the value specified by Value.  Value is returned.
-  
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 64-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT64
-EFIAPI
-LibPcdSet64 (
-  IN UINTN             TokenNumber,
-  IN UINT64            Value
-  )
-{
-  GetPcdProtocol()->Set64 (TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets a buffer for the token specified by TokenNumber to the value 
-  specified by Buffer and SizeOfBuffer.  Buffer is returned.  
-  If SizeOfBuffer is greater than the maximum size support by TokenNumber, 
-  then set SizeOfBuffer to the maximum size supported by TokenNumber and 
-  return NULL to indicate that the set operation was not actually performed.
-
-  If SizeOfBuffer is set to MAX_ADDRESS, then SizeOfBuffer must be set to the 
-  maximum size supported by TokenName and NULL must be returned.
-  
-  If SizeOfBuffer is NULL, then ASSERT().
-  If SizeOfBuffer > 0 and Buffer is NULL, then ASSERT().
-  
-  @param[in]      TokenNumber   The PCD token number to set a current value for.
-  @param[in, out] SizeOfBuffer  The size, in bytes, of Buffer.
-  @param[in]      Buffer        A pointer to the buffer to set.
-
-  @return Return the pointer for the buffer been set.
-
-**/
-VOID *
-EFIAPI
-LibPcdSetPtr (
-  IN        UINTN             TokenNumber,
-  IN OUT    UINTN             *SizeOfBuffer,
-  IN CONST  VOID              *Buffer
-  )
-{
-  EFI_STATUS Status;
-  UINTN      InputSizeOfBuffer;
-
-  ASSERT (SizeOfBuffer != NULL);
-
-  if (*SizeOfBuffer > 0) {
-    ASSERT (Buffer != NULL);
-  }
-
-  InputSizeOfBuffer = *SizeOfBuffer;
-  Status = GetPcdProtocol()->SetPtr (TokenNumber, SizeOfBuffer, (VOID *) Buffer);
-  if (EFI_ERROR (Status) && (*SizeOfBuffer < InputSizeOfBuffer)) {
-    return NULL;
-  }
-
-  return (VOID *)Buffer;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the Boolean value for the token specified by TokenNumber 
-  to the value specified by Value.  Value is returned.
-
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The boolean value to set.
-
-  @return Return the value that was set.
-
-**/
-BOOLEAN
-EFIAPI
-LibPcdSetBool (
-  IN UINTN             TokenNumber,
-  IN BOOLEAN           Value
-  )
-{
-  GetPcdProtocol()->SetBool (TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 8-bit value for the token specified by TokenNumber and 
-  Guid to the value specified by Value. Value is returned.
-
-  If Guid is NULL, then ASSERT().
-
-  @param[in]  Guid          The pointer to a 128-bit unique value that 
-                            designates which namespace to set a value from.
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 8-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT8
-EFIAPI
-LibPcdSetEx8 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber,
-  IN UINT8             Value
-  )
-{
-  ASSERT (Guid != NULL);
-
-  GetPiPcdProtocol()->Set8 (Guid, TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 16-bit value for the token specified by TokenNumber and 
-  Guid to the value specified by Value. Value is returned.
-
-  If Guid is NULL, then ASSERT().
-
-  @param[in]  Guid          The pointer to a 128-bit unique value that 
-                            designates which namespace to set a value from.
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 16-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT16
-EFIAPI
-LibPcdSetEx16 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber,
-  IN UINT16            Value
-  )
-{
-  ASSERT (Guid != NULL);
-
-  GetPiPcdProtocol()->Set16 (Guid, TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 32-bit value for the token specified by TokenNumber and 
-  Guid to the value specified by Value. Value is returned.
-
-  If Guid is NULL, then ASSERT().
-
-  @param[in]  Guid          The pointer to a 128-bit unique value that 
-                            designates which namespace to set a value from.
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 32-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT32
-EFIAPI
-LibPcdSetEx32 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber,
-  IN UINT32            Value
-  )
-{
-  ASSERT (Guid != NULL);
-
-  GetPiPcdProtocol()->Set32 (Guid, TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the 64-bit value for the token specified by TokenNumber and 
-  Guid to the value specified by Value. Value is returned.
-
-  If Guid is NULL, then ASSERT().
-
-  @param[in]  Guid          The pointer to a 128-bit unique value that 
-                            designates which namespace to set a value from.
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The 64-bit value to set.
-
-  @return Return the value that was set.
-
-**/
-UINT64
-EFIAPI
-LibPcdSetEx64 (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber,
-  IN UINT64            Value
-  )
-{
-  ASSERT (Guid != NULL);
-
-  GetPiPcdProtocol()->Set64 (Guid, TokenNumber, Value);
-
-  return Value;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets a buffer for the token specified by TokenNumber to the value specified by 
-  Buffer and SizeOfBuffer.  Buffer is returned.  If SizeOfBuffer is greater than 
-  the maximum size support by TokenNumber, then set SizeOfBuffer to the maximum size 
-  supported by TokenNumber and return NULL to indicate that the set operation 
-  was not actually performed.
-  
-  If Guid is NULL, then ASSERT().
-  If SizeOfBuffer is NULL, then ASSERT().
-  If SizeOfBuffer > 0 and Buffer is NULL, then ASSERT().
-  
-  @param[in]  Guid              The pointer to a 128-bit unique value that 
-                                designates which namespace to set a value from.
-  @param[in]  TokenNumber       The PCD token number to set a current value for.
-  @param[in, out] SizeOfBuffer  The size, in bytes, of Buffer.
-  @param[in]  Buffer            A pointer to the buffer to set.
-
-  @return Return the pointer to the buffer been set.
-
-**/
-VOID *
-EFIAPI
-LibPcdSetExPtr (
-  IN      CONST GUID        *Guid,
-  IN      UINTN             TokenNumber,
-  IN OUT  UINTN             *SizeOfBuffer,
-  IN      VOID              *Buffer
-  )
-{
-  EFI_STATUS  Status;
-  UINTN       InputSizeOfBuffer;
-
-  ASSERT (Guid != NULL);
-
-  ASSERT (SizeOfBuffer != NULL);
-
-  if (*SizeOfBuffer > 0) {
-    ASSERT (Buffer != NULL);
-  }
-
-  InputSizeOfBuffer = *SizeOfBuffer;
-  Status = GetPiPcdProtocol()->SetPtr (Guid, TokenNumber, SizeOfBuffer, Buffer);
-  if (EFI_ERROR (Status) && (*SizeOfBuffer < InputSizeOfBuffer)) {
-    return NULL;
-  }
-
-  return Buffer;
-}
-
-
-
-/**
-  This function provides a means by which to set a value for a given PCD token.
-  
-  Sets the Boolean value for the token specified by TokenNumber and 
-  Guid to the value specified by Value. Value is returned.
-
-  If Guid is NULL, then ASSERT().
-
-  @param[in]  Guid          The pointer to a 128-bit unique value that 
-                            designates which namespace to set a value from.
-  @param[in]  TokenNumber   The PCD token number to set a current value for.
-  @param[in]  Value         The Boolean value to set.
-
-  @return Return the value that was set.
-
-**/
-BOOLEAN
-EFIAPI
-LibPcdSetExBool (
-  IN CONST GUID        *Guid,
-  IN UINTN             TokenNumber,
-  IN BOOLEAN           Value
-  )
-{
-  ASSERT (Guid != NULL);
-
-  GetPiPcdProtocol()->SetBool (Guid, TokenNumber, Value);
-
-  return Value;
-}
-#endif
 
 /**
   This function provides a means by which to set a value for a given PCD token.
@@ -894,11 +465,11 @@ LibPcdSetExBool (
 RETURN_STATUS
 EFIAPI
 LibPcdSet8S (
-  IN UINTN          TokenNumber,
-  IN UINT8          Value
+  IN UINTN  TokenNumber,
+  IN UINT8  Value
   )
 {
-  return GetPcdProtocol()->Set8 (TokenNumber, Value);
+  return GetPcdProtocol ()->Set8 (TokenNumber, Value);
 }
 
 /**
@@ -916,11 +487,11 @@ LibPcdSet8S (
 RETURN_STATUS
 EFIAPI
 LibPcdSet16S (
-  IN UINTN          TokenNumber,
-  IN UINT16         Value
+  IN UINTN   TokenNumber,
+  IN UINT16  Value
   )
 {
-  return GetPcdProtocol()->Set16 (TokenNumber, Value);
+  return GetPcdProtocol ()->Set16 (TokenNumber, Value);
 }
 
 /**
@@ -938,11 +509,11 @@ LibPcdSet16S (
 RETURN_STATUS
 EFIAPI
 LibPcdSet32S (
-  IN UINTN          TokenNumber,
-  IN UINT32         Value
+  IN UINTN   TokenNumber,
+  IN UINT32  Value
   )
 {
-  return GetPcdProtocol()->Set32 (TokenNumber, Value);
+  return GetPcdProtocol ()->Set32 (TokenNumber, Value);
 }
 
 /**
@@ -960,11 +531,11 @@ LibPcdSet32S (
 RETURN_STATUS
 EFIAPI
 LibPcdSet64S (
-  IN UINTN          TokenNumber,
-  IN UINT64         Value
+  IN UINTN   TokenNumber,
+  IN UINT64  Value
   )
 {
-  return GetPcdProtocol()->Set64 (TokenNumber, Value);
+  return GetPcdProtocol ()->Set64 (TokenNumber, Value);
 }
 
 /**
@@ -992,9 +563,9 @@ LibPcdSet64S (
 RETURN_STATUS
 EFIAPI
 LibPcdSetPtrS (
-  IN       UINTN    TokenNumber,
-  IN OUT   UINTN    *SizeOfBuffer,
-  IN CONST VOID     *Buffer
+  IN       UINTN  TokenNumber,
+  IN OUT   UINTN  *SizeOfBuffer,
+  IN CONST VOID   *Buffer
   )
 {
   ASSERT (SizeOfBuffer != NULL);
@@ -1003,7 +574,7 @@ LibPcdSetPtrS (
     ASSERT (Buffer != NULL);
   }
 
-  return GetPcdProtocol()->SetPtr (TokenNumber, SizeOfBuffer, (VOID *) Buffer);
+  return GetPcdProtocol ()->SetPtr (TokenNumber, SizeOfBuffer, (VOID *)Buffer);
 }
 
 /**
@@ -1021,11 +592,11 @@ LibPcdSetPtrS (
 RETURN_STATUS
 EFIAPI
 LibPcdSetBoolS (
-  IN UINTN          TokenNumber,
-  IN BOOLEAN        Value
+  IN UINTN    TokenNumber,
+  IN BOOLEAN  Value
   )
 {
-  return GetPcdProtocol()->SetBool (TokenNumber, Value);
+  return GetPcdProtocol ()->SetBool (TokenNumber, Value);
 }
 
 /**
@@ -1047,14 +618,14 @@ LibPcdSetBoolS (
 RETURN_STATUS
 EFIAPI
 LibPcdSetEx8S (
-  IN CONST GUID     *Guid,
-  IN UINTN          TokenNumber,
-  IN UINT8          Value
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber,
+  IN UINT8       Value
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Set8 (Guid, TokenNumber, Value);
+  return GetPiPcdProtocol ()->Set8 (Guid, TokenNumber, Value);
 }
 
 /**
@@ -1076,14 +647,14 @@ LibPcdSetEx8S (
 RETURN_STATUS
 EFIAPI
 LibPcdSetEx16S (
-  IN CONST GUID     *Guid,
-  IN UINTN          TokenNumber,
-  IN UINT16         Value
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber,
+  IN UINT16      Value
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Set16 (Guid, TokenNumber, Value);
+  return GetPiPcdProtocol ()->Set16 (Guid, TokenNumber, Value);
 }
 
 /**
@@ -1105,14 +676,14 @@ LibPcdSetEx16S (
 RETURN_STATUS
 EFIAPI
 LibPcdSetEx32S (
-  IN CONST GUID     *Guid,
-  IN UINTN          TokenNumber,
-  IN UINT32         Value
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber,
+  IN UINT32      Value
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Set32 (Guid, TokenNumber, Value);
+  return GetPiPcdProtocol ()->Set32 (Guid, TokenNumber, Value);
 }
 
 /**
@@ -1134,14 +705,14 @@ LibPcdSetEx32S (
 RETURN_STATUS
 EFIAPI
 LibPcdSetEx64S (
-  IN CONST GUID     *Guid,
-  IN UINTN          TokenNumber,
-  IN UINT64         Value
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber,
+  IN UINT64      Value
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->Set64 (Guid, TokenNumber, Value);
+  return GetPiPcdProtocol ()->Set64 (Guid, TokenNumber, Value);
 }
 
 /**
@@ -1169,10 +740,10 @@ LibPcdSetEx64S (
 RETURN_STATUS
 EFIAPI
 LibPcdSetExPtrS (
-  IN CONST GUID     *Guid,
-  IN       UINTN    TokenNumber,
-  IN OUT   UINTN    *SizeOfBuffer,
-  IN       VOID     *Buffer
+  IN CONST GUID   *Guid,
+  IN       UINTN  TokenNumber,
+  IN OUT   UINTN  *SizeOfBuffer,
+  IN       VOID   *Buffer
   )
 {
   ASSERT (Guid != NULL);
@@ -1183,7 +754,7 @@ LibPcdSetExPtrS (
     ASSERT (Buffer != NULL);
   }
 
-  return GetPiPcdProtocol()->SetPtr (Guid, TokenNumber, SizeOfBuffer, Buffer);
+  return GetPiPcdProtocol ()->SetPtr (Guid, TokenNumber, SizeOfBuffer, Buffer);
 }
 
 /**
@@ -1205,60 +776,58 @@ LibPcdSetExPtrS (
 RETURN_STATUS
 EFIAPI
 LibPcdSetExBoolS (
-  IN CONST GUID     *Guid,
-  IN UINTN          TokenNumber,
-  IN BOOLEAN        Value
+  IN CONST GUID  *Guid,
+  IN UINTN       TokenNumber,
+  IN BOOLEAN     Value
   )
 {
   ASSERT (Guid != NULL);
 
-  return GetPiPcdProtocol()->SetBool (Guid, TokenNumber, Value);
+  return GetPiPcdProtocol ()->SetBool (Guid, TokenNumber, Value);
 }
 
 /**
   Set up a notification function that is called when a specified token is set.
-  
-  When the token specified by TokenNumber and Guid is set, 
-  then notification function specified by NotificationFunction is called.  
+
+  When the token specified by TokenNumber and Guid is set,
+  then notification function specified by NotificationFunction is called.
   If Guid is NULL, then the default token space is used.
   If NotificationFunction is NULL, then ASSERT().
 
-  @param[in]  Guid                  The pointer to a 128-bit unique value that designates which 
-                                    namespace to set a value from.  If NULL, then the default 
+  @param[in]  Guid                  The pointer to a 128-bit unique value that designates which
+                                    namespace to set a value from.  If NULL, then the default
                                     token space is used.
   @param[in]  TokenNumber           The PCD token number to monitor.
-  @param[in]  NotificationFunction  The function to call when the token 
+  @param[in]  NotificationFunction  The function to call when the token
                                     specified by Guid and TokenNumber is set.
 
 **/
 VOID
 EFIAPI
 LibPcdCallbackOnSet (
-  IN CONST GUID               *Guid,       OPTIONAL
-  IN UINTN                    TokenNumber,
-  IN PCD_CALLBACK             NotificationFunction
+  IN CONST GUID    *Guid        OPTIONAL,
+  IN UINTN         TokenNumber,
+  IN PCD_CALLBACK  NotificationFunction
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT (NotificationFunction != NULL);
 
-  Status = GetPiPcdProtocol()->CallbackOnSet (Guid, TokenNumber, (EFI_PCD_PROTOCOL_CALLBACK) NotificationFunction);
+  Status = GetPiPcdProtocol ()->CallbackOnSet (Guid, TokenNumber, (EFI_PCD_PROTOCOL_CALLBACK)NotificationFunction);
   ASSERT_EFI_ERROR (Status);
 
   return;
 }
 
-
-
 /**
-  Disable a notification function that was established with LibPcdCallbackonSet().
-  
+  Disable a notification function that was established with LibPcdCallbackOnSet().
+
   Disable a notification function that was previously established with LibPcdCallbackOnSet().
   If NotificationFunction is NULL, then ASSERT().
-  If LibPcdCallbackOnSet() was not previously called with Guid, TokenNumber, 
+  If LibPcdCallbackOnSet() was not previously called with Guid, TokenNumber,
   and NotificationFunction, then ASSERT().
-  
+
   @param[in]  Guid                 Specify the GUID token space.
   @param[in]  TokenNumber          Specify the token number.
   @param[in]  NotificationFunction The callback function to be unregistered.
@@ -1267,67 +836,63 @@ LibPcdCallbackOnSet (
 VOID
 EFIAPI
 LibPcdCancelCallback (
-  IN CONST GUID               *Guid,       OPTIONAL
-  IN UINTN                    TokenNumber,
-  IN PCD_CALLBACK             NotificationFunction
+  IN CONST GUID    *Guid        OPTIONAL,
+  IN UINTN         TokenNumber,
+  IN PCD_CALLBACK  NotificationFunction
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
   ASSERT (NotificationFunction != NULL);
-    
-  Status = GetPiPcdProtocol()->CancelCallback (Guid, TokenNumber, (EFI_PCD_PROTOCOL_CALLBACK) NotificationFunction);
+
+  Status = GetPiPcdProtocol ()->CancelCallback (Guid, TokenNumber, (EFI_PCD_PROTOCOL_CALLBACK)NotificationFunction);
   ASSERT_EFI_ERROR (Status);
 
   return;
 }
 
-
-
 /**
   Retrieves the next token in a token space.
-  
-  Retrieves the next PCD token number from the token space specified by Guid.  
-  If Guid is NULL, then the default token space is used.  If TokenNumber is 0, 
-  then the first token number is returned.  Otherwise, the token number that 
-  follows TokenNumber in the token space is returned.  If TokenNumber is the last 
-  token number in the token space, then 0 is returned.  
-  
+
+  Retrieves the next PCD token number from the token space specified by Guid.
+  If Guid is NULL, then the default token space is used.  If TokenNumber is 0,
+  then the first token number is returned.  Otherwise, the token number that
+  follows TokenNumber in the token space is returned.  If TokenNumber is the last
+  token number in the token space, then 0 is returned.
+
   If TokenNumber is not 0 and is not in the token space specified by Guid, then ASSERT().
 
-  @param[in]  Guid        The pointer to a 128-bit unique value that designates which namespace 
+  @param[in]  Guid        The pointer to a 128-bit unique value that designates which namespace
                           to set a value from.  If NULL, then the default token space is used.
-  @param[in]  TokenNumber The previous PCD token number.  If 0, then retrieves the first PCD 
+  @param[in]  TokenNumber The previous PCD token number.  If 0, then retrieves the first PCD
                           token number.
 
   @return The next valid token number.
 
 **/
-UINTN           
+UINTN
 EFIAPI
 LibPcdGetNextToken (
-  IN CONST GUID               *Guid,       OPTIONAL
-  IN UINTN                    TokenNumber
+  IN CONST GUID  *Guid        OPTIONAL,
+  IN UINTN       TokenNumber
   )
 {
-  EFI_STATUS    Status;
+  EFI_STATUS  Status;
 
-  Status = GetPiPcdProtocol()->GetNextToken (Guid, &TokenNumber);
+  Status = GetPiPcdProtocol ()->GetNextToken (Guid, &TokenNumber);
   ASSERT (!EFI_ERROR (Status) || TokenNumber == 0);
 
   return TokenNumber;
 }
 
-
-
 /**
   Used to retrieve the list of available PCD token space GUIDs.
-  
+
   Returns the PCD token space GUID that follows TokenSpaceGuid in the list of token spaces
   in the platform.
   If TokenSpaceGuid is NULL, then a pointer to the first PCD token spaces returned.
   If TokenSpaceGuid is the last PCD token space GUID in the list, then NULL is returned.
-  
+
   @param  TokenSpaceGuid  The pointer to the a PCD token space GUID.
 
   @return The next valid token namespace.
@@ -1339,60 +904,60 @@ LibPcdGetNextTokenSpace (
   IN CONST GUID  *TokenSpaceGuid
   )
 {
-  GetPiPcdProtocol()->GetNextTokenSpace (&TokenSpaceGuid);
+  GetPiPcdProtocol ()->GetNextTokenSpace (&TokenSpaceGuid);
 
   return (GUID *)TokenSpaceGuid;
 }
 
-
 /**
   Sets a value of a patchable PCD entry that is type pointer.
-  
-  Sets the PCD entry specified by PatchVariable to the value specified by Buffer 
-  and SizeOfBuffer.  Buffer is returned.  If SizeOfBuffer is greater than 
-  MaximumDatumSize, then set SizeOfBuffer to MaximumDatumSize and return 
-  NULL to indicate that the set operation was not actually performed.  
-  If SizeOfBuffer is set to MAX_ADDRESS, then SizeOfBuffer must be set to 
+
+  Sets the PCD entry specified by PatchVariable to the value specified by Buffer
+  and SizeOfBuffer.  Buffer is returned.  If SizeOfBuffer is greater than
+  MaximumDatumSize, then set SizeOfBuffer to MaximumDatumSize and return
+  NULL to indicate that the set operation was not actually performed.
+  If SizeOfBuffer is set to MAX_ADDRESS, then SizeOfBuffer must be set to
   MaximumDatumSize and NULL must be returned.
-  
+
   If PatchVariable is NULL, then ASSERT().
   If SizeOfBuffer is NULL, then ASSERT().
   If SizeOfBuffer > 0 and Buffer is NULL, then ASSERT().
 
-  @param[out] PatchVariable     A pointer to the global variable in a module that is 
+  @param[out] PatchVariable     A pointer to the global variable in a module that is
                                 the target of the set operation.
   @param[in] MaximumDatumSize   The maximum size allowed for the PCD entry specified by PatchVariable.
   @param[in, out] SizeOfBuffer  A pointer to the size, in bytes, of Buffer.
   @param[in] Buffer             A pointer to the buffer to used to set the target variable.
-  
+
   @return Return the pointer to the buffer been set.
 
 **/
 VOID *
 EFIAPI
 LibPatchPcdSetPtr (
-  OUT       VOID        *PatchVariable,
-  IN        UINTN       MaximumDatumSize,
-  IN OUT    UINTN       *SizeOfBuffer,
-  IN CONST  VOID        *Buffer
+  OUT       VOID   *PatchVariable,
+  IN        UINTN  MaximumDatumSize,
+  IN OUT    UINTN  *SizeOfBuffer,
+  IN CONST  VOID   *Buffer
   )
 {
   ASSERT (PatchVariable != NULL);
   ASSERT (SizeOfBuffer  != NULL);
-  
+
   if (*SizeOfBuffer > 0) {
     ASSERT (Buffer != NULL);
   }
 
   if ((*SizeOfBuffer > MaximumDatumSize) ||
-      (*SizeOfBuffer == MAX_ADDRESS)) {
+      (*SizeOfBuffer == MAX_ADDRESS))
+  {
     *SizeOfBuffer = MaximumDatumSize;
     return NULL;
   }
-    
+
   CopyMem (PatchVariable, Buffer, *SizeOfBuffer);
-  
-  return (VOID *) Buffer;
+
+  return (VOID *)Buffer;
 }
 
 /**
@@ -1414,28 +979,29 @@ LibPatchPcdSetPtr (
   @param[in] MaximumDatumSize   The maximum size allowed for the PCD entry specified by PatchVariable.
   @param[in, out] SizeOfBuffer  A pointer to the size, in bytes, of Buffer.
   @param[in] Buffer             A pointer to the buffer to used to set the target variable.
-  
+
   @return The status of the set operation.
 
 **/
 RETURN_STATUS
 EFIAPI
 LibPatchPcdSetPtrS (
-  OUT       VOID     *PatchVariable,
-  IN       UINTN    MaximumDatumSize,
-  IN OUT   UINTN    *SizeOfBuffer,
-  IN CONST VOID     *Buffer
+  OUT       VOID  *PatchVariable,
+  IN       UINTN  MaximumDatumSize,
+  IN OUT   UINTN  *SizeOfBuffer,
+  IN CONST VOID   *Buffer
   )
 {
   ASSERT (PatchVariable != NULL);
   ASSERT (SizeOfBuffer  != NULL);
-  
+
   if (*SizeOfBuffer > 0) {
     ASSERT (Buffer != NULL);
   }
 
   if ((*SizeOfBuffer > MaximumDatumSize) ||
-      (*SizeOfBuffer == MAX_ADDRESS)) {
+      (*SizeOfBuffer == MAX_ADDRESS))
+  {
     *SizeOfBuffer = MaximumDatumSize;
     return RETURN_INVALID_PARAMETER;
   }
@@ -1445,60 +1011,60 @@ LibPatchPcdSetPtrS (
   return RETURN_SUCCESS;
 }
 
-
 /**
   Sets a value and size of a patchable PCD entry that is type pointer.
-  
-  Sets the PCD entry specified by PatchVariable to the value specified by Buffer 
-  and SizeOfBuffer.  Buffer is returned.  If SizeOfBuffer is greater than 
-  MaximumDatumSize, then set SizeOfBuffer to MaximumDatumSize and return 
-  NULL to indicate that the set operation was not actually performed.  
-  If SizeOfBuffer is set to MAX_ADDRESS, then SizeOfBuffer must be set to 
+
+  Sets the PCD entry specified by PatchVariable to the value specified by Buffer
+  and SizeOfBuffer.  Buffer is returned.  If SizeOfBuffer is greater than
+  MaximumDatumSize, then set SizeOfBuffer to MaximumDatumSize and return
+  NULL to indicate that the set operation was not actually performed.
+  If SizeOfBuffer is set to MAX_ADDRESS, then SizeOfBuffer must be set to
   MaximumDatumSize and NULL must be returned.
-  
+
   If PatchVariable is NULL, then ASSERT().
   If SizeOfPatchVariable is NULL, then ASSERT().
   If SizeOfBuffer is NULL, then ASSERT().
   If SizeOfBuffer > 0 and Buffer is NULL, then ASSERT().
 
-  @param[out] PatchVariable     A pointer to the global variable in a module that is 
+  @param[out] PatchVariable     A pointer to the global variable in a module that is
                                 the target of the set operation.
   @param[out] SizeOfPatchVariable A pointer to the size, in bytes, of PatchVariable.
   @param[in] MaximumDatumSize   The maximum size allowed for the PCD entry specified by PatchVariable.
   @param[in, out] SizeOfBuffer  A pointer to the size, in bytes, of Buffer.
   @param[in] Buffer             A pointer to the buffer to used to set the target variable.
-  
+
   @return Return the pointer to the buffer been set.
 
 **/
 VOID *
 EFIAPI
 LibPatchPcdSetPtrAndSize (
-  OUT       VOID        *PatchVariable,
-  OUT       UINTN       *SizeOfPatchVariable,
-  IN        UINTN       MaximumDatumSize,
-  IN OUT    UINTN       *SizeOfBuffer,
-  IN CONST  VOID        *Buffer
+  OUT       VOID   *PatchVariable,
+  OUT       UINTN  *SizeOfPatchVariable,
+  IN        UINTN  MaximumDatumSize,
+  IN OUT    UINTN  *SizeOfBuffer,
+  IN CONST  VOID   *Buffer
   )
 {
   ASSERT (PatchVariable != NULL);
   ASSERT (SizeOfPatchVariable != NULL);
   ASSERT (SizeOfBuffer  != NULL);
-  
+
   if (*SizeOfBuffer > 0) {
     ASSERT (Buffer != NULL);
   }
 
   if ((*SizeOfBuffer > MaximumDatumSize) ||
-      (*SizeOfBuffer == MAX_ADDRESS)) {
+      (*SizeOfBuffer == MAX_ADDRESS))
+  {
     *SizeOfBuffer = MaximumDatumSize;
     return NULL;
   }
-    
+
   CopyMem (PatchVariable, Buffer, *SizeOfBuffer);
   *SizeOfPatchVariable = *SizeOfBuffer;
-  
-  return (VOID *) Buffer;
+
+  return (VOID *)Buffer;
 }
 
 /**
@@ -1522,30 +1088,31 @@ LibPatchPcdSetPtrAndSize (
   @param[in] MaximumDatumSize   The maximum size allowed for the PCD entry specified by PatchVariable.
   @param[in, out] SizeOfBuffer  A pointer to the size, in bytes, of Buffer.
   @param[in] Buffer             A pointer to the buffer to used to set the target variable.
-  
+
   @return The status of the set operation.
 
 **/
 RETURN_STATUS
 EFIAPI
 LibPatchPcdSetPtrAndSizeS (
-  OUT      VOID     *PatchVariable,
-  OUT      UINTN    *SizeOfPatchVariable,
-  IN       UINTN    MaximumDatumSize,
-  IN OUT   UINTN    *SizeOfBuffer,
-  IN CONST VOID     *Buffer
+  OUT      VOID   *PatchVariable,
+  OUT      UINTN  *SizeOfPatchVariable,
+  IN       UINTN  MaximumDatumSize,
+  IN OUT   UINTN  *SizeOfBuffer,
+  IN CONST VOID   *Buffer
   )
 {
   ASSERT (PatchVariable != NULL);
   ASSERT (SizeOfPatchVariable != NULL);
   ASSERT (SizeOfBuffer  != NULL);
-  
+
   if (*SizeOfBuffer > 0) {
     ASSERT (Buffer != NULL);
   }
 
   if ((*SizeOfBuffer > MaximumDatumSize) ||
-      (*SizeOfBuffer == MAX_ADDRESS)) {
+      (*SizeOfBuffer == MAX_ADDRESS))
+  {
     *SizeOfBuffer = MaximumDatumSize;
     return RETURN_INVALID_PARAMETER;
   }
@@ -1571,13 +1138,13 @@ LibPatchPcdSetPtrAndSizeS (
 VOID
 EFIAPI
 LibPcdGetInfo (
-  IN        UINTN           TokenNumber,
-  OUT       PCD_INFO        *PcdInfo
+  IN        UINTN     TokenNumber,
+  OUT       PCD_INFO  *PcdInfo
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  Status = GetPcdInfoProtocolPointer()->GetInfo (TokenNumber, (EFI_PCD_INFO *) PcdInfo);
+  Status = GetPcdInfoProtocolPointer ()->GetInfo (TokenNumber, (EFI_PCD_INFO *)PcdInfo);
   ASSERT_EFI_ERROR (Status);
 }
 
@@ -1597,14 +1164,14 @@ LibPcdGetInfo (
 VOID
 EFIAPI
 LibPcdGetInfoEx (
-  IN CONST  GUID            *Guid,
-  IN        UINTN           TokenNumber,
-  OUT       PCD_INFO        *PcdInfo
+  IN CONST  GUID      *Guid,
+  IN        UINTN     TokenNumber,
+  OUT       PCD_INFO  *PcdInfo
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
 
-  Status = GetPiPcdInfoProtocolPointer()->GetInfo (Guid, TokenNumber, (EFI_PCD_INFO *) PcdInfo);
+  Status = GetPiPcdInfoProtocolPointer ()->GetInfo (Guid, TokenNumber, (EFI_PCD_INFO *)PcdInfo);
   ASSERT_EFI_ERROR (Status);
 }
 
@@ -1621,6 +1188,5 @@ LibPcdGetSku (
   VOID
   )
 {
-  return GetPiPcdInfoProtocolPointer()->GetSku ();
+  return GetPiPcdInfoProtocolPointer ()->GetSku ();
 }
-

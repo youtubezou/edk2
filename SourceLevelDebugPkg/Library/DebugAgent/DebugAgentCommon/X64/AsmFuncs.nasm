@@ -1,13 +1,7 @@
 ;------------------------------------------------------------------------------
 ;
-; Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-; This program and the accompanying materials
-; are licensed and made available under the terms and conditions of the BSD License
-; which accompanies this distribution.  The full text of the license may be found at
-; http://opensource.org/licenses/bsd-license.php.
-;
-; THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-; WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+; Copyright (c) 2016 - 2022, Intel Corporation. All rights reserved.<BR>
+; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ; Module Name:
 ;
@@ -299,7 +293,7 @@ NoExtrPush:
     rep     stosq
     pop     rcx
     mov     rdi, rsp
-    db 0xf, 0xae, 00000111y ;fxsave [rdi]
+    fxsave  [rdi]
 
     ;; save the exception data
     push    qword [rbp + 16]
@@ -320,7 +314,7 @@ NoExtrPush:
     add     rsp, 8
 
     mov     rsi, rsp
-    db 0xf, 0xae, 00001110y ; fxrstor [rsi]
+    fxrstor [rsi]
     add     rsp, 512
 
     ;; UINT64  Dr0, Dr1, Dr2, Dr3, Dr6, Dr7;

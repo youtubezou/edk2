@@ -1,13 +1,7 @@
 /**@file
 
 Copyright (c) 2006, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 Module Name:
 
@@ -22,6 +16,7 @@ Abstract:
 //
 // EFI Component Name Functions
 //
+
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -68,7 +63,6 @@ EmuBlockIoComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
-
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -141,17 +135,17 @@ EmuBlockIoComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuBlockIoComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   );
 
 //
 // EFI Component Name Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED  EFI_COMPONENT_NAME_PROTOCOL     gEmuBlockIoComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED  EFI_COMPONENT_NAME_PROTOCOL  gEmuBlockIoComponentName = {
   EmuBlockIoComponentNameGetDriverName,
   EmuBlockIoComponentNameGetControllerName,
   "eng"
@@ -160,16 +154,15 @@ GLOBAL_REMOVE_IF_UNREFERENCED  EFI_COMPONENT_NAME_PROTOCOL     gEmuBlockIoCompon
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gEmuBlockIoComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) EmuBlockIoComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) EmuBlockIoComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gEmuBlockIoComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)EmuBlockIoComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)EmuBlockIoComponentNameGetControllerName,
   "en"
 };
 
-
-EFI_UNICODE_STRING_TABLE mEmuBlockIoDriverNameTable[] = {
+EFI_UNICODE_STRING_TABLE  mEmuBlockIoDriverNameTable[] = {
   { "eng;en", L"Emu Block I/O Driver" },
-  { NULL , NULL }
+  { NULL,     NULL                    }
 };
 
 /**
@@ -220,12 +213,12 @@ EmuBlockIoComponentNameGetDriverName (
   )
 {
   return LookupUnicodeString2 (
-          Language,
-          This->SupportedLanguages,
-          mEmuBlockIoDriverNameTable,
-          DriverName,
+           Language,
+           This->SupportedLanguages,
+           mEmuBlockIoDriverNameTable,
+           DriverName,
            (BOOLEAN)(This == &gEmuBlockIoComponentName)
-          );
+           );
 }
 
 /**
@@ -299,16 +292,16 @@ EmuBlockIoComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 EmuBlockIoComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS              Status;
-  EFI_BLOCK_IO_PROTOCOL   *BlockIo;
-  EMU_BLOCK_IO_PRIVATE    *Private;
+  EFI_STATUS             Status;
+  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+  EMU_BLOCK_IO_PRIVATE   *Private;
 
   //
   // This is a device driver, so ChildHandle must be NULL.
@@ -316,6 +309,7 @@ EmuBlockIoComponentNameGetControllerName (
   if (ChildHandle != NULL) {
     return EFI_UNSUPPORTED;
   }
+
   //
   // Make sure this driver is currently managing ControllerHandle
   //
@@ -327,6 +321,7 @@ EmuBlockIoComponentNameGetControllerName (
   if (EFI_ERROR (Status)) {
     return EFI_UNSUPPORTED;
   }
+
   //
   // Get our context back
   //
@@ -345,10 +340,10 @@ EmuBlockIoComponentNameGetControllerName (
   Private = EMU_BLOCK_IO_PRIVATE_DATA_FROM_THIS (BlockIo);
 
   return LookupUnicodeString2 (
-          Language,
+           Language,
            This->SupportedLanguages,
            Private->ControllerNameTable,
            ControllerName,
            (BOOLEAN)(This == &gEmuBlockIoComponentName)
-          );
+           );
 }

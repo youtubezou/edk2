@@ -3,13 +3,7 @@
 #
 #  Copyright (c) 2007 - 2010, Intel Corporation. All rights reserved.<BR>
 #
-#  This program and the accompanying materials
-#  are licensed and made available under the terms and conditions of the BSD License
-#  which accompanies this distribution.  The full text of the license may be found at
-#  http://opensource.org/licenses/bsd-license.php
-#
-#  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
 
@@ -44,24 +38,6 @@ class PP_Directive :
     #
     def __init__(self, Str, Begin, End):
         self.Content = Str
-        self.StartPos = Begin
-        self.EndPos = End
-
-## The description of assignment expression and start & end position
-#
-#
-class AssignmentExpression :
-    ## The constructor
-    #
-    #   @param  self        The object pointer
-    #   @param  Str         The message to record
-    #   @param  Begin       The start position tuple.
-    #   @param  End         The end position tuple.
-    #
-    def __init__(self, Lvalue, Op, Exp, Begin, End):
-        self.Name = Lvalue
-        self.Operator = Op
-        self.Value = Exp
         self.StartPos = Begin
         self.EndPos = End
 

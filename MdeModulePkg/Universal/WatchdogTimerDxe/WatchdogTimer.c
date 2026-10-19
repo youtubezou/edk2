@@ -1,14 +1,8 @@
 /** @file
   Implementation of Watchdog Timer Architectural Protocol using UEFI APIs.
-  
-Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
 
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -43,7 +37,6 @@ EFI_WATCHDOG_TIMER_NOTIFY  mWatchdogTimerNotifyFunction = NULL;
 //
 EFI_EVENT  mWatchdogTimerEvent;
 
-
 /**
   Notification function that is called if the watchdog timer is fired.
 
@@ -62,8 +55,8 @@ EFI_EVENT  mWatchdogTimerEvent;
 VOID
 EFIAPI
 WatchdogTimerDriverExpires (
-  IN EFI_EVENT    Timer,
-  IN VOID         *Context
+  IN EFI_EVENT  Timer,
+  IN VOID       *Context
   )
 {
   REPORT_STATUS_CODE (EFI_ERROR_CODE | EFI_ERROR_MINOR, (EFI_COMPUTING_UNIT_HOST_PROCESSOR | EFI_CU_HP_EC_TIMER_EXPIRED));
@@ -74,15 +67,14 @@ WatchdogTimerDriverExpires (
   if (mWatchdogTimerNotifyFunction != NULL) {
     mWatchdogTimerNotifyFunction (mWatchdogTimerPeriod);
   }
-  
-  DEBUG ((EFI_D_ERROR, "Watchdog Timer resetting system\n"));
+
+  DEBUG ((DEBUG_ERROR, "Watchdog Timer resetting system\n"));
 
   //
   // Reset the platform
   //
   gRT->ResetSystem (EfiResetCold, EFI_TIMEOUT, 0, NULL);
 }
-
 
 /**
   Registers a handler that is to be invoked when the watchdog timer fires.
@@ -118,14 +110,15 @@ WatchdogTimerDriverRegisterHandler (
   // If NotifyFunction is NULL, and a handler was not previously registered,
   // return EFI_INVALID_PARAMETER.
   //
-  if (NotifyFunction == NULL && mWatchdogTimerNotifyFunction == NULL) {
+  if ((NotifyFunction == NULL) && (mWatchdogTimerNotifyFunction == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
+
   //
   // If NotifyFunction is not NULL, and a handler is already registered,
   // return EFI_ALREADY_STARTED.
   //
-  if (NotifyFunction != NULL && mWatchdogTimerNotifyFunction != NULL) {
+  if ((NotifyFunction != NULL) && (mWatchdogTimerNotifyFunction != NULL)) {
     return EFI_ALREADY_STARTED;
   }
 

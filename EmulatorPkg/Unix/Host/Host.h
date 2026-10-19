@@ -1,26 +1,21 @@
 /*++ @file
 
-Copyright (c) 2006 - 2011, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2008 - 2011, Apple Inc. All rights reserved.<BR>
 
-This program and the accompanying materials
-are licensed and made available under the terms and conditions of the BSD License
-which accompanies this distribution.  The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php
-
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef _SEC_MAIN_H__
-#define _SEC_MAIN_H__
+#pragma once
 
 //
 // Name mangle to prevent build errors. I.e conflicts between EFI and OS
 //
 #define NTOHL   _UNIX_EFI_NAME_MANGLE_NTOHL_
+#define NTOHLL  _UNIX_EFI_NAME_MANGLE_NTOHLL_
 #define HTONL   _UNIX_EFI_NAME_MANGLE_HTONL_
+#define HTONLL  _UNIX_EFI_NAME_MANGLE_HTONLL_
 #define NTOHS   _UNIX_EFI_NAME_MANGLE_NTOHS_
 #define HTONS   _UNIX_EFI_NAME_MANGLE_HTOHS_
 #define B0      _UNIX_EFI_NAME_MANGLE_B0_
@@ -34,9 +29,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <sys/time.h>
 
 #if __CYGWIN__
-#include <sys/dirent.h>
+  #include <sys/dirent.h>
 #else
-#include <sys/dir.h>
+  #include <sys/dir.h>
 #endif
 
 #include <sys/mman.h>
@@ -60,29 +55,30 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <ifaddrs.h>
 
 #ifdef __APPLE__
-#include <net/if_dl.h>
-#include <net/bpf.h>
-#include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/disk.h>
+  #include <net/if_dl.h>
+  #include <net/bpf.h>
+  #include <sys/param.h>
+  #include <sys/mount.h>
+  #include <sys/disk.h>
 #define _XOPEN_SOURCE
-#ifndef _Bool
-  #define _Bool char // for clang debug
-#endif
+  #ifndef _Bool
+#define _Bool  char  // for clang debug
+  #endif
 #else
-#include <termio.h>
-#include <sys/vfs.h>
-#include <linux/fs.h>
+  #include <sys/vfs.h>
+  #include <linux/fs.h>
 #endif
 
 #include <utime.h>
 
 #undef NTOHL
+#undef NTOHLL
 #undef HTONL
+#undef HTONLL
 #undef NTOHS
 #undef HTONS
 #undef B0
-
+#undef CR3
 
 #include <PiPei.h>
 #include <Uefi.h>
@@ -108,7 +104,6 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Protocol/SimplePointer.h>
 #include <Protocol/SimpleTextIn.h>
 #include <Protocol/SimpleTextInEx.h>
-#include <Protocol/UgaDraw.h>
 #include <Protocol/SimpleFileSystem.h>
 
 #include <Protocol/EmuThunk.h>
@@ -122,30 +117,26 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 #include <Guid/FileSystemInfo.h>
 #include <Guid/FileSystemVolumeLabelInfo.h>
 
-
 #include "Gasket.h"
 
-
-#define STACK_SIZE                0x20000
+#define STACK_SIZE  0x20000
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS  Address;
-  UINT64                Size;
+  EFI_PHYSICAL_ADDRESS    Address;
+  UINT64                  Size;
 } EMU_FD_INFO;
 
 typedef struct {
-  EFI_PHYSICAL_ADDRESS  Memory;
-  UINT64                Size;
+  EFI_PHYSICAL_ADDRESS    Memory;
+  UINT64                  Size;
 } EMU_SYSTEM_MEMORY;
 
-
-#define MAX_IMAGE_CONTEXT_TO_MOD_HANDLE_ARRAY_SIZE 0x100
+#define MAX_IMAGE_CONTEXT_TO_MOD_HANDLE_ARRAY_SIZE  0x100
 
 typedef struct {
-  PE_COFF_LOADER_IMAGE_CONTEXT   *ImageContext;
-  VOID                           *ModHandle;
+  PE_COFF_LOADER_IMAGE_CONTEXT    *ImageContext;
+  VOID                            *ModHandle;
 } IMAGE_CONTEXT_TO_MOD_HANDLE;
-
 
 EFI_STATUS
 EFIAPI
@@ -165,18 +156,18 @@ main (
 
 VOID
 SecLoadFromCore (
-  IN  UINTN   LargestRegion,
-  IN  UINTN   LargestRegionSize,
-  IN  UINTN   BootFirmwareVolumeBase,
-  IN  VOID    *PeiCoreFile
+  IN  UINTN  LargestRegion,
+  IN  UINTN  LargestRegionSize,
+  IN  UINTN  BootFirmwareVolumeBase,
+  IN  VOID   *PeiCoreFile
   );
 
 EFI_STATUS
 SecLoadFile (
-  IN  VOID                    *Pe32Data,
-  IN  EFI_PHYSICAL_ADDRESS    *ImageAddress,
-  IN  UINT64                  *ImageSize,
-  IN  EFI_PHYSICAL_ADDRESS    *EntryPoint
+  IN  VOID                  *Pe32Data,
+  IN  EFI_PHYSICAL_ADDRESS  *ImageAddress,
+  IN  UINT64                *ImageSize,
+  IN  EFI_PHYSICAL_ADDRESS  *EntryPoint
   );
 
 EFI_STATUS
@@ -194,23 +185,23 @@ SecFfsFindNextFile (
 
 EFI_STATUS
 SecFfsFindSectionData (
-  IN EFI_SECTION_TYPE      SectionType,
-  IN EFI_FFS_FILE_HEADER   *FfsFileHeader,
-  IN OUT VOID              **SectionData
+  IN EFI_SECTION_TYPE     SectionType,
+  IN EFI_FFS_FILE_HEADER  *FfsFileHeader,
+  IN OUT VOID             **SectionData
   );
 
 EFI_STATUS
 EFIAPI
 SecUnixPeCoffLoaderLoadAsDll (
-  IN CHAR8    *PdbFileName,
-  IN VOID     **ImageEntryPoint,
-  OUT VOID    **ModHandle
+  IN CHAR8  *PdbFileName,
+  IN VOID   **ImageEntryPoint,
+  OUT VOID  **ModHandle
   );
 
 EFI_STATUS
 EFIAPI
 SecUnixPeCoffLoaderFreeLibrary (
-  OUT VOID    *ModHandle
+  OUT VOID  *ModHandle
   );
 
 EFI_STATUS
@@ -232,52 +223,50 @@ GasketSecUnixFdAddress (
   )
 ;
 
-
 EFI_STATUS
 GetImageReadFunction (
-  IN PE_COFF_LOADER_IMAGE_CONTEXT          *ImageContext,
-  IN EFI_PHYSICAL_ADDRESS                  *TopOfMemory
+  IN PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext,
+  IN EFI_PHYSICAL_ADDRESS          *TopOfMemory
   );
 
 EFI_STATUS
 EFIAPI
 SecImageRead (
-  IN     VOID    *FileHandle,
-  IN     UINTN   FileOffset,
-  IN OUT UINTN   *ReadSize,
-  OUT    VOID    *Buffer
+  IN     VOID   *FileHandle,
+  IN     UINTN  FileOffset,
+  IN OUT UINTN  *ReadSize,
+  OUT    VOID   *Buffer
   );
 
 CHAR16                            *
 AsciiToUnicode (
-  IN  CHAR8   *Ascii,
-  IN  UINTN   *StrLen OPTIONAL
+  IN  CHAR8  *Ascii,
+  IN  UINTN  *StrLen OPTIONAL
   );
 
 UINTN
 CountSeparatorsInString (
-  IN  const CHAR16   *String,
-  IN  CHAR16   Separator
+  IN  const CHAR16  *String,
+  IN  CHAR16        Separator
   );
 
 EFI_STATUS
 EFIAPI
 SecTemporaryRamSupport (
-  IN CONST EFI_PEI_SERVICES   **PeiServices,
-  IN EFI_PHYSICAL_ADDRESS     TemporaryMemoryBase,
-  IN EFI_PHYSICAL_ADDRESS     PermanentMemoryBase,
-  IN UINTN                    CopySize
+  IN CONST EFI_PEI_SERVICES  **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS    TemporaryMemoryBase,
+  IN EFI_PHYSICAL_ADDRESS    PermanentMemoryBase,
+  IN UINTN                   CopySize
   );
 
 EFI_STATUS
 EFIAPI
 GasketSecTemporaryRamSupport (
-  IN CONST EFI_PEI_SERVICES   **PeiServices,
-  IN EFI_PHYSICAL_ADDRESS     TemporaryMemoryBase,
-  IN EFI_PHYSICAL_ADDRESS     PermanentMemoryBase,
-  IN UINTN                    CopySize
+  IN CONST EFI_PEI_SERVICES  **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS    TemporaryMemoryBase,
+  IN EFI_PHYSICAL_ADDRESS    PermanentMemoryBase,
+  IN UINTN                   CopySize
   );
-
 
 RETURN_STATUS
 EFIAPI
@@ -298,12 +287,11 @@ SecPeCoffLoaderUnloadImageExtraAction (
   IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
   );
 
-
 VOID
 PeiSwitchStacks (
   IN      SWITCH_STACK_ENTRY_POINT  EntryPoint,
-  IN      VOID                      *Context1,  OPTIONAL
-  IN      VOID                      *Context2,  OPTIONAL
+  IN      VOID                      *Context1   OPTIONAL,
+  IN      VOID                      *Context2   OPTIONAL,
   IN      VOID                      *NewStack
   );
 
@@ -312,13 +300,13 @@ SecInitThunkProtocol (
   VOID
   );
 
-
 EFI_PHYSICAL_ADDRESS *
 MapMemory (
-  INTN fd,
-  UINT64 length,
-  INTN   prot,
-  INTN   flags);
+  INTN    fd,
+  UINT64  length,
+  INTN    prot,
+  INTN    flags
+  );
 
 EFI_STATUS
 MapFile (
@@ -336,21 +324,32 @@ MapFd0 (
 
 BOOLEAN
 EfiSystemMemoryRange (
-  IN  VOID *MemoryAddress
+  IN  VOID  *MemoryAddress
   );
 
+VOID
+SecSleep (
+  UINT64  Nanoseconds
+  );
 
-VOID SecSleep (UINT64 Nanoseconds);
-VOID SecEnableInterrupt (VOID);
-VOID SecDisableInterrupt (VOID);
-BOOLEAN SecInterruptEanbled (VOID);
+VOID
+SecEnableInterrupt (
+  VOID
+  );
 
+VOID
+SecDisableInterrupt (
+  VOID
+  );
 
-extern EMU_THUNK_PROTOCOL    gEmuThunkProtocol;
-extern EMU_IO_THUNK_PROTOCOL gX11ThunkIo;
-extern EMU_IO_THUNK_PROTOCOL gPosixFileSystemThunkIo;
-extern EMU_IO_THUNK_PROTOCOL gPthreadThunkIo;
-extern EMU_IO_THUNK_PROTOCOL gBlockIoThunkIo;
-extern EMU_IO_THUNK_PROTOCOL gSnpThunkIo;
+BOOLEAN
+SecInterruptEanbled (
+  VOID
+  );
 
-#endif
+extern EMU_THUNK_PROTOCOL     gEmuThunkProtocol;
+extern EMU_IO_THUNK_PROTOCOL  gX11ThunkIo;
+extern EMU_IO_THUNK_PROTOCOL  gPosixFileSystemThunkIo;
+extern EMU_IO_THUNK_PROTOCOL  gPthreadThunkIo;
+extern EMU_IO_THUNK_PROTOCOL  gBlockIoThunkIo;
+extern EMU_IO_THUNK_PROTOCOL  gSnpThunkIo;

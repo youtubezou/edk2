@@ -2,13 +2,7 @@
   Save Non-Volatile Variables to a file system.
 
   Copyright (c) 2009, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -16,8 +10,7 @@
 #include <Library/DebugLib.h>
 #include <Library/NvVarsFileLib.h>
 
-EFI_HANDLE    mNvVarsFileLibFsHandle = NULL;
-
+EFI_HANDLE  mNvVarsFileLibFsHandle = NULL;
 
 /**
   Attempts to connect the NvVarsFileLib to the specified file system.
@@ -32,10 +25,16 @@ EFI_HANDLE    mNvVarsFileLibFsHandle = NULL;
 EFI_STATUS
 EFIAPI
 ConnectNvVarsToFileSystem (
-  IN EFI_HANDLE    FsHandle
+  IN EFI_HANDLE  FsHandle
   )
 {
-  EFI_STATUS Status;
+  EFI_STATUS  Status;
+
+  if (FeaturePcdGet (PcdSecureBootSupported) ||
+      FeaturePcdGet (PcdBootRestrictToFirmware))
+  {
+    return EFI_UNSUPPORTED;
+  }
 
   //
   // We might fail to load the variable, since the file system initially
@@ -54,7 +53,6 @@ ConnectNvVarsToFileSystem (
 
   return Status;
 }
-
 
 /**
   Update non-volatile variables stored on the file system.
@@ -79,5 +77,3 @@ UpdateNvVarsOnFileSystem (
     return SaveNvVarsToFs (mNvVarsFileLibFsHandle);
   }
 }
-
-

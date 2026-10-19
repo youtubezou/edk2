@@ -4,13 +4,7 @@
   Copyright (c) 2008 - 2012, Intel Corporation. All rights reserved.<BR>
   Copyright (c) 2011, Andrei Warkentin <andreiw@motorola.com>
 
-  This program and the accompanying materials are
-  licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -36,20 +30,20 @@
 **/
 VOID
 InternalAcpiDelay (
-  IN      UINT32                    Delay
+  IN      UINT32  Delay
   )
 {
-  UINT32                            Ticks;
-  UINT32                            Times;
+  UINT32  Ticks;
+  UINT32  Times;
 
-  Times    = Delay >> 22;
-  Delay   &= BIT22 - 1;
+  Times  = Delay >> 22;
+  Delay &= BIT22 - 1;
   do {
     //
     // The target timer count is calculated here
     //
-    Ticks    = InternalAcpiGetTimerTick () + Delay;
-    Delay    = BIT22;
+    Ticks = InternalAcpiGetTimerTick () + Delay;
+    Delay = BIT22;
     //
     // Wait until time out
     // Delay >= 2^23 could not be handled by this function
@@ -74,7 +68,7 @@ InternalAcpiDelay (
 UINTN
 EFIAPI
 MicroSecondDelay (
-  IN      UINTN                     MicroSeconds
+  IN      UINTN  MicroSeconds
   )
 {
   InternalAcpiDelay (
@@ -102,7 +96,7 @@ MicroSecondDelay (
 UINTN
 EFIAPI
 NanoSecondDelay (
-  IN      UINTN                     NanoSeconds
+  IN      UINTN  NanoSeconds
   )
 {
   InternalAcpiDelay (
@@ -164,8 +158,8 @@ GetPerformanceCounter (
 UINT64
 EFIAPI
 GetPerformanceCounterProperties (
-  OUT      UINT64                    *StartValue,  OPTIONAL
-  OUT      UINT64                    *EndValue     OPTIONAL
+  OUT      UINT64  *StartValue   OPTIONAL,
+  OUT      UINT64  *EndValue     OPTIONAL
   )
 {
   if (StartValue != NULL) {
@@ -193,7 +187,7 @@ GetPerformanceCounterProperties (
 UINT64
 EFIAPI
 GetTimeInNanoSecond (
-  IN      UINT64                     Ticks
+  IN      UINT64  Ticks
   )
 {
   UINT64  NanoSeconds;
@@ -210,7 +204,7 @@ GetTimeInNanoSecond (
   // Frequency < 0x100000000, so Remainder < 0x100000000, then (Remainder * 1,000,000,000)
   // will not overflow 64-bit.
   //
-  NanoSeconds += DivU64x32 (MultU64x32 ((UINT64) Remainder, 1000000000u), ACPI_TIMER_FREQUENCY);
+  NanoSeconds += DivU64x32 (MultU64x32 ((UINT64)Remainder, 1000000000u), ACPI_TIMER_FREQUENCY);
 
   return NanoSeconds;
 }

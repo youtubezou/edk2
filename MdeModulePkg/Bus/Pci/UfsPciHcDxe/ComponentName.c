@@ -2,14 +2,8 @@
   UfsHcDxe driver produces EFI_UFS_HOST_CONTROLLER_PROTOCOL. The upper layer module
   uses it to query the MMIO base address of the UFS host controller.
 
-  Copyright (c) 2014, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php.
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -18,7 +12,7 @@
 //
 // EFI Component Name Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL gUfsHcComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gUfsHcComponentName = {
   UfsHcComponentNameGetDriverName,
   UfsHcComponentNameGetControllerName,
   "eng"
@@ -27,24 +21,24 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL gUfsHcComponentName = 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gUfsHcComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) UfsHcComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) UfsHcComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gUfsHcComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)UfsHcComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)UfsHcComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUfsHcDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUfsHcDriverNameTable[] = {
   {
     "eng;en",
     L"Universal Flash Storage (UFS) Pci Host Controller Driver"
   },
-  { 
+  {
     NULL,
     NULL
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUfsHcControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUfsHcControllerNameTable[] = {
   {
     "eng;en",
     L"Universal Flash Storage (UFS) Pci Host Controller"
@@ -97,9 +91,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUfsHcControllerNameTable
 EFI_STATUS
 EFIAPI
 UfsHcComponentNameGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL       *This,
-  IN  CHAR8                             *Language,
-  OUT CHAR16                            **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -182,16 +176,16 @@ UfsHcComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 UfsHcComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
-  IN  EFI_HANDLE                                      ControllerHandle,
-  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
-  IN  CHAR8                                           *Language,
-  OUT CHAR16                                          **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
+  IN  EFI_HANDLE                   ControllerHandle,
+  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
+  IN  CHAR8                        *Language,
+  OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS                    Status;
+  EFI_STATUS  Status;
 
-  if (Language == NULL || ControllerName == NULL) {
+  if ((Language == NULL) || (ControllerName == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -221,5 +215,4 @@ UfsHcComponentNameGetControllerName (
            ControllerName,
            (BOOLEAN)(This == &gUfsHcComponentName)
            );
-
 }

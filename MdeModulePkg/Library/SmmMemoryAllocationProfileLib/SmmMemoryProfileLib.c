@@ -1,14 +1,8 @@
 /** @file
   Support routines for memory profile for Smm phase drivers.
 
-  Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials                          
-  are licensed and made available under the terms and conditions of the BSD License         
-  which accompanies this distribution.  The full text of the license may be found at        
-  http://opensource.org/licenses/bsd-license.php.                                            
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+  Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -20,8 +14,8 @@
 
 #include <Guid/MemoryProfile.h>
 
-EDKII_MEMORY_PROFILE_PROTOCOL     *mLibProfileProtocol;
-EDKII_SMM_MEMORY_PROFILE_PROTOCOL *mLibSmmProfileProtocol;
+EDKII_MEMORY_PROFILE_PROTOCOL      *mLibProfileProtocol;
+EDKII_SMM_MEMORY_PROFILE_PROTOCOL  *mLibSmmProfileProtocol;
 
 /**
   Check whether the start address of buffer is within any of the SMRAM ranges.
@@ -34,7 +28,7 @@ EDKII_SMM_MEMORY_PROFILE_PROTOCOL *mLibSmmProfileProtocol;
 BOOLEAN
 EFIAPI
 BufferInSmram (
-  IN VOID *Buffer
+  IN VOID  *Buffer
   );
 
 /**
@@ -53,7 +47,7 @@ SmmMemoryProfileLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                Status;
+  EFI_STATUS  Status;
 
   //
   // Locate Profile Protocol
@@ -104,18 +98,19 @@ SmmMemoryProfileLibConstructor (
 EFI_STATUS
 EFIAPI
 MemoryProfileLibRecord (
-  IN PHYSICAL_ADDRESS           CallerAddress,
-  IN MEMORY_PROFILE_ACTION      Action,
-  IN EFI_MEMORY_TYPE            MemoryType,
-  IN VOID                       *Buffer,
-  IN UINTN                      Size,
-  IN CHAR8                      *ActionString OPTIONAL
+  IN PHYSICAL_ADDRESS       CallerAddress,
+  IN MEMORY_PROFILE_ACTION  Action,
+  IN EFI_MEMORY_TYPE        MemoryType,
+  IN VOID                   *Buffer,
+  IN UINTN                  Size,
+  IN CHAR8                  *ActionString OPTIONAL
   )
 {
   if (BufferInSmram (Buffer)) {
     if (mLibSmmProfileProtocol == NULL) {
       return EFI_UNSUPPORTED;
     }
+
     return mLibSmmProfileProtocol->Record (
                                      mLibSmmProfileProtocol,
                                      CallerAddress,
@@ -129,6 +124,7 @@ MemoryProfileLibRecord (
     if (mLibProfileProtocol == NULL) {
       return EFI_UNSUPPORTED;
     }
+
     return mLibProfileProtocol->Record (
                                   mLibProfileProtocol,
                                   CallerAddress,
@@ -140,4 +136,3 @@ MemoryProfileLibRecord (
                                   );
   }
 }
-

@@ -1,14 +1,8 @@
 /** @file
   Implementation of EFI_COMPONENT_NAME_PROTOCOL and EFI_COMPONENT_NAME2_PROTOCOL protocol.
 
-Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-This program and the accompanying materials are licensed and made available under 
-the terms and conditions of the BSD License that accompanies this distribution.  
-The full text of the license may be found at
-http://opensource.org/licenses/bsd-license.php.                                          
-    
-THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
+SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
@@ -17,9 +11,9 @@ WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 ///
 /// Component Name Protocol instance
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED 
+GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_COMPONENT_NAME_PROTOCOL  gHttpBootDxeComponentName = {
-  (EFI_COMPONENT_NAME_GET_DRIVER_NAME)    HttpBootDxeComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME_GET_DRIVER_NAME)HttpBootDxeComponentNameGetDriverName,
   (EFI_COMPONENT_NAME_GET_CONTROLLER_NAME)HttpBootDxeComponentNameGetControllerName,
   "eng"
 };
@@ -27,7 +21,7 @@ EFI_COMPONENT_NAME_PROTOCOL  gHttpBootDxeComponentName = {
 ///
 /// Component Name 2 Protocol instance
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED 
+GLOBAL_REMOVE_IF_UNREFERENCED
 EFI_COMPONENT_NAME2_PROTOCOL  gHttpBootDxeComponentName2 = {
   HttpBootDxeComponentNameGetDriverName,
   HttpBootDxeComponentNameGetControllerName,
@@ -37,19 +31,19 @@ EFI_COMPONENT_NAME2_PROTOCOL  gHttpBootDxeComponentName2 = {
 ///
 /// Table of driver names
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED 
-EFI_UNICODE_STRING_TABLE mHttpBootDxeDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED
+EFI_UNICODE_STRING_TABLE  mHttpBootDxeDriverNameTable[] = {
   { "eng;en", (CHAR16 *)L"UEFI HTTP Boot Driver" },
-  { NULL, NULL }
+  { NULL,     NULL                               }
 };
 
 ///
 /// Table of controller names
 ///
-GLOBAL_REMOVE_IF_UNREFERENCED 
-EFI_UNICODE_STRING_TABLE mHttpBootDxeControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED
+EFI_UNICODE_STRING_TABLE  mHttpBootDxeControllerNameTable[] = {
   { "eng;en", (CHAR16 *)L"UEFI Http Boot Controller" },
-  { NULL, NULL }
+  { NULL,     NULL                                   }
 };
 
 /**
@@ -87,7 +81,7 @@ HttpBootDxeComponentNameGetDriverName (
            This->SupportedLanguages,
            mHttpBootDxeDriverNameTable,
            DriverName,
-           (BOOLEAN) (This != &gHttpBootDxeComponentName2)
+           (BOOLEAN)(This != &gHttpBootDxeComponentName2)
            );
 }
 
@@ -141,17 +135,17 @@ HttpBootDxeComponentNameGetControllerName (
   OUT CHAR16                        **ControllerName
   )
 {
-  EFI_STATUS                      Status;
-  EFI_HANDLE                      NicHandle;
-  UINT32                          *Id;
+  EFI_STATUS  Status;
+  EFI_HANDLE  NicHandle;
+  UINT32      *Id;
 
-  if (ControllerHandle == NULL || ChildHandle != NULL) {
+  if ((ControllerHandle == NULL) || (ChildHandle != NULL)) {
     return EFI_UNSUPPORTED;
   }
-  
+
   NicHandle = HttpBootGetNicByIp4Children (ControllerHandle);
   if (NicHandle == NULL) {
-    NicHandle = HttpBootGetNicByIp6Children(ControllerHandle);
+    NicHandle = HttpBootGetNicByIp6Children (ControllerHandle);
     if (NicHandle == NULL) {
       return EFI_UNSUPPORTED;
     }
@@ -163,7 +157,7 @@ HttpBootDxeComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   NicHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **) &Id,
+                  (VOID **)&Id,
                   NULL,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -179,5 +173,4 @@ HttpBootDxeComponentNameGetControllerName (
            ControllerName,
            (BOOLEAN)(This != &gHttpBootDxeComponentName2)
            );
-
 }

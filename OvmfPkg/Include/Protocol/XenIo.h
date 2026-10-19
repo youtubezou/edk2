@@ -1,7 +1,7 @@
 /** @file
   XenIo protocol to abstract arch specific details
 
-  The Xen implementations for the Intel and ARM archictures differ in the way
+  The Xen implementations for the Intel and ARM architectures differ in the way
   the base address of the grant table is communicated to the guest. The former
   uses a virtual PCI device, while the latter uses a device tree node.
   In order to allow the XenBusDxe UEFI driver to be reused for the non-PCI
@@ -10,18 +10,11 @@
 
   Copyright (C) 2014, Linaro Ltd.
 
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef __PROTOCOL_XENIO_H__
-#define __PROTOCOL_XENIO_H__
+#pragma once
 
 #include <IndustryStandard/Xen/xen.h>
 
@@ -40,9 +33,7 @@ struct _XENIO_PROTOCOL {
   //
   // Protocol data fields
   //
-  EFI_PHYSICAL_ADDRESS          GrantTableAddress;
+  EFI_PHYSICAL_ADDRESS    GrantTableAddress;
 };
 
-extern EFI_GUID gXenIoProtocolGuid;
-
-#endif
+extern EFI_GUID  gXenIoProtocolGuid;
